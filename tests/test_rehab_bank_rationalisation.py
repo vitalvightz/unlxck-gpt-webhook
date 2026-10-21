@@ -255,7 +255,9 @@ def test_metadata_generator_and_seed_idempotence_still_hold(tmp_path, monkeypatc
     data = tmp_path / "data"
     data.mkdir()
     names = ("rehab_bank.json", "rehab_metadata_review.json", "rehab_pathways.json")
-    original = {name: (ROOT / "data" / name).read_bytes() for name in names}
+    from tests.rehab_inventory_history import pre_restore_expansion_bytes
+    # Dated seed: later RESTORE publication is reconstructed from its exact history fixture.
+    original = {name: pre_restore_expansion_bytes(name) for name in names}
     for name, value in original.items():
         (data / name).write_bytes(value)
     monkeypatch.setattr(seed_nonspecific_msk_family, "ROOT", tmp_path)

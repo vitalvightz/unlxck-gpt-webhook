@@ -23,6 +23,14 @@ OPTIONS = [
 ]
 
 
+# Source-dosed RESTORE expansion: bank options joined per live profile.
+EXPANSION_COUNTS = {
+    "wrist_sprain": 1, "wrist_stiffness": 1, "quads_contusion": 2, "biceps_contusion": 1, "triceps_contusion": 1,
+    "forearm_contusion": 2, "shoulder_pain": 2, "shoulder_tightness": 2, "shoulder_soreness": 2, "elbow_pain": 1,
+    "elbow_stiffness": 1, "wrist_pain": 2, "knee_pain": 3, "hip_pain": 2, "neck_tightness": 2, "neck_soreness": 2,
+}
+
+
 def candidate(identity):
     return next((deepcopy(g), deepcopy(d)) for g in get_rehab_bank() for d in g["drills"] if d["id"] == identity)
 
@@ -36,9 +44,11 @@ def test_current_complete_bank_options_expand_five_pilots_and_open_no_stages():
         assert new.live_stages == old.live_stages
         assert new.transitions == old.transitions
         assert new.prescriptions[:len(old.prescriptions)] == old.prescriptions
-        if old.policy_id not in {option[0][0] for option in OPTIONS}:
+        if old.policy_id not in {option[0][0] for option in OPTIONS} | set(EXPANSION_COUNTS):
             assert old == new
-    assert sum(len(p.prescriptions) for p in after) - sum(len(p.prescriptions) for p in before) == 5
+    added = {o.policy_id: len(n.prescriptions) - len(o.prescriptions) for o, n in zip(before, after)}
+    assert sum(added.values()) == 5 + sum(EXPANSION_COUNTS.values())
+    assert {k: v for k, v in added.items() if k in EXPANSION_COUNTS} == EXPANSION_COUNTS
     expected_counts = [(1, 1, 2), (1, 2, 1), (1, 3, 1), (1, 2, 1), (1, 2, 0)]
     for option, counts in zip(OPTIONS, expected_counts):
         policy = next(p for p in after if p.policy_id == option[0][0])

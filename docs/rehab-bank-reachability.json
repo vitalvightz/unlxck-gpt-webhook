@@ -1,8 +1,8 @@
 {
   "input_sha256": {
-    "data/rehab_bank.json": "809bb404d81fe38f17d7941d5a7394f954859d135fbc5262a486111322944368",
-    "data/rehab_metadata_review.json": "99f856fe4510209a352cd715518b6f416a36e43583403266ee7339ee601ba4fa",
-    "data/rehab_pathways.json": "01be23b20d171c66d4f2b9dfe4d51258c3fb8e42551558d8a2eb14ca5a30d0c9",
+    "data/rehab_bank.json": "604e9aad5a55e39a71d62b0d27327fd9eec20d492bccf4fee0fa95f8aa620af6",
+    "data/rehab_metadata_review.json": "6a5946c72da0c89cb44e20ae7a76ef99c0f148a0e786d55328795b61bc4effd0",
+    "data/rehab_pathways.json": "02c1cc0b89e9f72d8bc1651d46391f63c745f02bd743b1b80fefbdf1a72e6cac",
     "docs/rehab-advanced-candidate-review.json": "cfd575d558de8a062d080e5404822a131dddba06491fa4ec07769dde7b585618"
   },
   "outside_active_profile_ids": {
@@ -3727,9 +3727,10 @@
       "dormant_count": 2,
       "exact_bank_count": 3,
       "injury_type": "contusion",
-      "live_prescription_count": 1,
+      "live_prescription_count": 2,
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "policy_id": "biceps_contusion",
       "region": "biceps",
@@ -3765,7 +3766,14 @@
           "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [],
+          "rejections": [
+            {
+              "drill_id": "bicep_soreness_active_supination_elbow_flexion",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
@@ -3864,6 +3872,12 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "bicep_soreness_active_supination_elbow_flexion",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
@@ -3956,43 +3970,9 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
-            }
-          ],
-          "surfaced_by_equipment": [
+            },
             {
-              "equipment": [],
-              "surfaced_ids": []
-            }
-          ],
-          "surfaced_by_severity": {
-            "low": [],
-            "moderate": []
-          },
-          "unknown_side_ids": []
-        },
-        "restore": {
-          "alternative_exact_count": 0,
-          "approved_exact_ids": [],
-          "availability": "closed",
-          "bundle_ids": [],
-          "declared_requirements": [],
-          "eligible_by_severity": {
-            "high": [],
-            "low": [],
-            "moderate": [],
-            "unknown": []
-          },
-          "eligible_exact_ids": [],
-          "eligible_including_protective_fallback_ids": [],
-          "empty_equipment_ids": [],
-          "gate_reasons": [
-            "target_stage_not_activated"
-          ],
-          "permission_entry_supported": false,
-          "recovery_rule": "hold",
-          "rejections": [
-            {
-              "drill_id": "biceps_contusion_recovery_support",
+              "drill_id": "bicep_soreness_active_supination_elbow_flexion",
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
@@ -4009,6 +3989,61 @@
             "moderate": []
           },
           "unknown_side_ids": []
+        },
+        "restore": {
+          "alternative_exact_count": 0,
+          "approved_exact_ids": [
+            "bicep_soreness_active_supination_elbow_flexion"
+          ],
+          "availability": "baseline_reachable",
+          "bundle_ids": [],
+          "declared_requirements": [],
+          "eligible_by_severity": {
+            "high": [],
+            "low": [
+              "bicep_soreness_active_supination_elbow_flexion",
+              "biceps_contusion_recovery_support"
+            ],
+            "moderate": [
+              "bicep_soreness_active_supination_elbow_flexion",
+              "biceps_contusion_recovery_support"
+            ],
+            "unknown": []
+          },
+          "eligible_exact_ids": [
+            "bicep_soreness_active_supination_elbow_flexion"
+          ],
+          "eligible_including_protective_fallback_ids": [
+            "bicep_soreness_active_supination_elbow_flexion",
+            "biceps_contusion_recovery_support"
+          ],
+          "empty_equipment_ids": [
+            "bicep_soreness_active_supination_elbow_flexion",
+            "biceps_contusion_recovery_support"
+          ],
+          "gate_reasons": [],
+          "permission_entry_supported": false,
+          "recovery_rule": "hold",
+          "rejections": [],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": [
+                "bicep_soreness_active_supination_elbow_flexion"
+              ]
+            }
+          ],
+          "surfaced_by_severity": {
+            "low": [
+              "bicep_soreness_active_supination_elbow_flexion"
+            ],
+            "moderate": [
+              "bicep_soreness_active_supination_elbow_flexion"
+            ]
+          },
+          "unknown_side_ids": [
+            "biceps_contusion_recovery_support"
+          ]
         },
         "return": {
           "alternative_exact_count": 0,
@@ -4085,6 +4120,12 @@
           "rejections": [
             {
               "drill_id": "biceps_contusion_recovery_support",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "bicep_soreness_active_supination_elbow_flexion",
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
@@ -7620,9 +7661,10 @@
       "dormant_count": 2,
       "exact_bank_count": 3,
       "injury_type": "pain",
-      "live_prescription_count": 1,
+      "live_prescription_count": 2,
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "policy_id": "elbow_pain",
       "region": "elbow",
@@ -7658,7 +7700,14 @@
           "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [],
+          "rejections": [
+            {
+              "drill_id": "elbow_stiffness_active_elbow_flexion_extension_with_dowel",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
@@ -7757,6 +7806,12 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "elbow_stiffness_active_elbow_flexion_extension_with_dowel",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
@@ -7849,43 +7904,9 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
-            }
-          ],
-          "surfaced_by_equipment": [
+            },
             {
-              "equipment": [],
-              "surfaced_ids": []
-            }
-          ],
-          "surfaced_by_severity": {
-            "low": [],
-            "moderate": []
-          },
-          "unknown_side_ids": []
-        },
-        "restore": {
-          "alternative_exact_count": 0,
-          "approved_exact_ids": [],
-          "availability": "closed",
-          "bundle_ids": [],
-          "declared_requirements": [],
-          "eligible_by_severity": {
-            "high": [],
-            "low": [],
-            "moderate": [],
-            "unknown": []
-          },
-          "eligible_exact_ids": [],
-          "eligible_including_protective_fallback_ids": [],
-          "empty_equipment_ids": [],
-          "gate_reasons": [
-            "target_stage_not_activated"
-          ],
-          "permission_entry_supported": false,
-          "recovery_rule": "hold",
-          "rejections": [
-            {
-              "drill_id": "elbow_pain_recovery_support",
+              "drill_id": "elbow_stiffness_active_elbow_flexion_extension_with_dowel",
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
@@ -7902,6 +7923,61 @@
             "moderate": []
           },
           "unknown_side_ids": []
+        },
+        "restore": {
+          "alternative_exact_count": 0,
+          "approved_exact_ids": [
+            "elbow_stiffness_active_elbow_flexion_extension_with_dowel"
+          ],
+          "availability": "baseline_reachable",
+          "bundle_ids": [],
+          "declared_requirements": [],
+          "eligible_by_severity": {
+            "high": [],
+            "low": [
+              "elbow_pain_recovery_support",
+              "elbow_stiffness_active_elbow_flexion_extension_with_dowel"
+            ],
+            "moderate": [
+              "elbow_pain_recovery_support",
+              "elbow_stiffness_active_elbow_flexion_extension_with_dowel"
+            ],
+            "unknown": []
+          },
+          "eligible_exact_ids": [
+            "elbow_stiffness_active_elbow_flexion_extension_with_dowel"
+          ],
+          "eligible_including_protective_fallback_ids": [
+            "elbow_pain_recovery_support",
+            "elbow_stiffness_active_elbow_flexion_extension_with_dowel"
+          ],
+          "empty_equipment_ids": [
+            "elbow_pain_recovery_support",
+            "elbow_stiffness_active_elbow_flexion_extension_with_dowel"
+          ],
+          "gate_reasons": [],
+          "permission_entry_supported": false,
+          "recovery_rule": "hold",
+          "rejections": [],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": [
+                "elbow_stiffness_active_elbow_flexion_extension_with_dowel"
+              ]
+            }
+          ],
+          "surfaced_by_severity": {
+            "low": [
+              "elbow_stiffness_active_elbow_flexion_extension_with_dowel"
+            ],
+            "moderate": [
+              "elbow_stiffness_active_elbow_flexion_extension_with_dowel"
+            ]
+          },
+          "unknown_side_ids": [
+            "elbow_pain_recovery_support"
+          ]
         },
         "return": {
           "alternative_exact_count": 0,
@@ -7978,6 +8054,12 @@
           "rejections": [
             {
               "drill_id": "elbow_pain_recovery_support",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "elbow_stiffness_active_elbow_flexion_extension_with_dowel",
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
@@ -8514,30 +8596,6 @@
             "dose_or_self_paced_prescription_needs_approval",
             "equipment_not_defined"
           ],
-          "drill_id": "elbow_stiffness_active_elbow_flexion_extension_with_dowel",
-          "equipment": null,
-          "missing_metadata": [
-            "rehab_stage",
-            "equipment",
-            "load",
-            "impact",
-            "velocity"
-          ],
-          "prior_review_disposition": null,
-          "prior_review_next_action": null,
-          "prior_review_reason": null,
-          "reviewed": false,
-          "stored_stage": null
-        },
-        {
-          "blockers": [
-            "no_approved_live_prescription",
-            "clinical_metadata_not_reviewed",
-            "stage_not_authorised",
-            "missing_mechanical_metadata",
-            "dose_or_self_paced_prescription_needs_approval",
-            "equipment_not_defined"
-          ],
           "drill_id": "elbow_stiffness_wrist_to_shoulder_slides_on_wall",
           "equipment": null,
           "missing_metadata": [
@@ -8555,16 +8613,17 @@
           "stored_stage": null
         }
       ],
-      "dormant_count": 2,
+      "dormant_count": 1,
       "exact_bank_count": 3,
       "injury_type": "stiffness",
-      "live_prescription_count": 1,
+      "live_prescription_count": 2,
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "policy_id": "elbow_stiffness",
       "region": "elbow",
-      "reviewed_exact_type_count": 1,
+      "reviewed_exact_type_count": 2,
       "stages": {
         "calm": {
           "alternative_exact_count": 0,
@@ -8596,7 +8655,14 @@
           "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [],
+          "rejections": [
+            {
+              "drill_id": "elbow_stiffness_active_elbow_flexion_extension_with_dowel",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
@@ -8695,6 +8761,12 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "elbow_stiffness_active_elbow_flexion_extension_with_dowel",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
@@ -8787,43 +8859,9 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
-            }
-          ],
-          "surfaced_by_equipment": [
+            },
             {
-              "equipment": [],
-              "surfaced_ids": []
-            }
-          ],
-          "surfaced_by_severity": {
-            "low": [],
-            "moderate": []
-          },
-          "unknown_side_ids": []
-        },
-        "restore": {
-          "alternative_exact_count": 0,
-          "approved_exact_ids": [],
-          "availability": "closed",
-          "bundle_ids": [],
-          "declared_requirements": [],
-          "eligible_by_severity": {
-            "high": [],
-            "low": [],
-            "moderate": [],
-            "unknown": []
-          },
-          "eligible_exact_ids": [],
-          "eligible_including_protective_fallback_ids": [],
-          "empty_equipment_ids": [],
-          "gate_reasons": [
-            "target_stage_not_activated"
-          ],
-          "permission_entry_supported": false,
-          "recovery_rule": "hold",
-          "rejections": [
-            {
-              "drill_id": "elbow_stiffness_recovery_support",
+              "drill_id": "elbow_stiffness_active_elbow_flexion_extension_with_dowel",
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
@@ -8840,6 +8878,61 @@
             "moderate": []
           },
           "unknown_side_ids": []
+        },
+        "restore": {
+          "alternative_exact_count": 0,
+          "approved_exact_ids": [
+            "elbow_stiffness_active_elbow_flexion_extension_with_dowel"
+          ],
+          "availability": "baseline_reachable",
+          "bundle_ids": [],
+          "declared_requirements": [],
+          "eligible_by_severity": {
+            "high": [],
+            "low": [
+              "elbow_stiffness_active_elbow_flexion_extension_with_dowel",
+              "elbow_stiffness_recovery_support"
+            ],
+            "moderate": [
+              "elbow_stiffness_active_elbow_flexion_extension_with_dowel",
+              "elbow_stiffness_recovery_support"
+            ],
+            "unknown": []
+          },
+          "eligible_exact_ids": [
+            "elbow_stiffness_active_elbow_flexion_extension_with_dowel"
+          ],
+          "eligible_including_protective_fallback_ids": [
+            "elbow_stiffness_active_elbow_flexion_extension_with_dowel",
+            "elbow_stiffness_recovery_support"
+          ],
+          "empty_equipment_ids": [
+            "elbow_stiffness_active_elbow_flexion_extension_with_dowel",
+            "elbow_stiffness_recovery_support"
+          ],
+          "gate_reasons": [],
+          "permission_entry_supported": false,
+          "recovery_rule": "hold",
+          "rejections": [],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": [
+                "elbow_stiffness_active_elbow_flexion_extension_with_dowel"
+              ]
+            }
+          ],
+          "surfaced_by_severity": {
+            "low": [
+              "elbow_stiffness_active_elbow_flexion_extension_with_dowel"
+            ],
+            "moderate": [
+              "elbow_stiffness_active_elbow_flexion_extension_with_dowel"
+            ]
+          },
+          "unknown_side_ids": [
+            "elbow_stiffness_recovery_support"
+          ]
         },
         "return": {
           "alternative_exact_count": 0,
@@ -8916,6 +9009,12 @@
           "rejections": [
             {
               "drill_id": "elbow_stiffness_recovery_support",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "elbow_stiffness_active_elbow_flexion_extension_with_dowel",
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
@@ -11975,9 +12074,10 @@
       "dormant_count": 2,
       "exact_bank_count": 3,
       "injury_type": "contusion",
-      "live_prescription_count": 1,
+      "live_prescription_count": 3,
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "policy_id": "forearm_contusion",
       "region": "forearm",
@@ -12013,10 +12113,31 @@
           "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [],
+          "rejections": [
+            {
+              "drill_id": "forearm_soreness_passive_wrist_circles_tabletop_support",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            },
+            {
+              "drill_id": "forearm_unspecified_stick_rotations_forearm_twist",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": [
+                "forearm_contusion_recovery_support"
+              ]
+            },
+            {
+              "equipment": [
+                "table"
+              ],
               "surfaced_ids": [
                 "forearm_contusion_recovery_support"
               ]
@@ -12112,11 +12233,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "forearm_soreness_passive_wrist_circles_tabletop_support",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "forearm_unspecified_stick_rotations_forearm_twist",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "table"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -12204,11 +12343,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "forearm_soreness_passive_wrist_circles_tabletop_support",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "forearm_unspecified_stick_rotations_forearm_twist",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "table"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -12219,44 +12376,72 @@
           "unknown_side_ids": []
         },
         "restore": {
-          "alternative_exact_count": 0,
-          "approved_exact_ids": [],
-          "availability": "closed",
+          "alternative_exact_count": 1,
+          "approved_exact_ids": [
+            "forearm_soreness_passive_wrist_circles_tabletop_support",
+            "forearm_unspecified_stick_rotations_forearm_twist"
+          ],
+          "availability": "baseline_reachable",
           "bundle_ids": [],
           "declared_requirements": [],
           "eligible_by_severity": {
             "high": [],
-            "low": [],
-            "moderate": [],
+            "low": [
+              "forearm_contusion_recovery_support",
+              "forearm_soreness_passive_wrist_circles_tabletop_support",
+              "forearm_unspecified_stick_rotations_forearm_twist"
+            ],
+            "moderate": [
+              "forearm_contusion_recovery_support",
+              "forearm_soreness_passive_wrist_circles_tabletop_support",
+              "forearm_unspecified_stick_rotations_forearm_twist"
+            ],
             "unknown": []
           },
-          "eligible_exact_ids": [],
-          "eligible_including_protective_fallback_ids": [],
-          "empty_equipment_ids": [],
-          "gate_reasons": [
-            "target_stage_not_activated"
+          "eligible_exact_ids": [
+            "forearm_soreness_passive_wrist_circles_tabletop_support",
+            "forearm_unspecified_stick_rotations_forearm_twist"
           ],
+          "eligible_including_protective_fallback_ids": [
+            "forearm_contusion_recovery_support",
+            "forearm_soreness_passive_wrist_circles_tabletop_support",
+            "forearm_unspecified_stick_rotations_forearm_twist"
+          ],
+          "empty_equipment_ids": [
+            "forearm_contusion_recovery_support",
+            "forearm_unspecified_stick_rotations_forearm_twist"
+          ],
+          "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [
-            {
-              "drill_id": "forearm_contusion_recovery_support",
-              "reasons": [
-                "REJECT_STAGE_NOT_LIVE"
-              ]
-            }
-          ],
+          "rejections": [],
           "surfaced_by_equipment": [
             {
               "equipment": [],
-              "surfaced_ids": []
+              "surfaced_ids": [
+                "forearm_unspecified_stick_rotations_forearm_twist"
+              ]
+            },
+            {
+              "equipment": [
+                "table"
+              ],
+              "surfaced_ids": [
+                "forearm_soreness_passive_wrist_circles_tabletop_support"
+              ]
             }
           ],
           "surfaced_by_severity": {
-            "low": [],
-            "moderate": []
+            "low": [
+              "forearm_soreness_passive_wrist_circles_tabletop_support"
+            ],
+            "moderate": [
+              "forearm_soreness_passive_wrist_circles_tabletop_support"
+            ]
           },
-          "unknown_side_ids": []
+          "unknown_side_ids": [
+            "forearm_contusion_recovery_support"
+          ]
         },
         "return": {
           "alternative_exact_count": 0,
@@ -12336,11 +12521,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "forearm_soreness_passive_wrist_circles_tabletop_support",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "forearm_unspecified_stick_rotations_forearm_twist",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "table"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -17410,9 +17613,10 @@
       "dormant_count": 2,
       "exact_bank_count": 3,
       "injury_type": "pain",
-      "live_prescription_count": 1,
+      "live_prescription_count": 3,
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "policy_id": "hip_pain",
       "region": "hip",
@@ -17448,10 +17652,31 @@
           "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [],
+          "rejections": [
+            {
+              "drill_id": "hip_soreness_mini_band_standing_hip_abduction",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            },
+            {
+              "drill_id": "hip_unspecified_isometric_glute_bridge_hold_30_hip_extension",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": [
+                "hip_pain_recovery_support"
+              ]
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
               "surfaced_ids": [
                 "hip_pain_recovery_support"
               ]
@@ -17547,11 +17772,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "hip_soreness_mini_band_standing_hip_abduction",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "hip_unspecified_isometric_glute_bridge_hold_30_hip_extension",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -17639,11 +17882,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "hip_soreness_mini_band_standing_hip_abduction",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "hip_unspecified_isometric_glute_bridge_hold_30_hip_extension",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -17654,44 +17915,72 @@
           "unknown_side_ids": []
         },
         "restore": {
-          "alternative_exact_count": 0,
-          "approved_exact_ids": [],
-          "availability": "closed",
+          "alternative_exact_count": 1,
+          "approved_exact_ids": [
+            "hip_soreness_mini_band_standing_hip_abduction",
+            "hip_unspecified_isometric_glute_bridge_hold_30_hip_extension"
+          ],
+          "availability": "baseline_reachable",
           "bundle_ids": [],
           "declared_requirements": [],
           "eligible_by_severity": {
             "high": [],
-            "low": [],
-            "moderate": [],
+            "low": [
+              "hip_pain_recovery_support",
+              "hip_soreness_mini_band_standing_hip_abduction",
+              "hip_unspecified_isometric_glute_bridge_hold_30_hip_extension"
+            ],
+            "moderate": [
+              "hip_pain_recovery_support",
+              "hip_soreness_mini_band_standing_hip_abduction",
+              "hip_unspecified_isometric_glute_bridge_hold_30_hip_extension"
+            ],
             "unknown": []
           },
-          "eligible_exact_ids": [],
-          "eligible_including_protective_fallback_ids": [],
-          "empty_equipment_ids": [],
-          "gate_reasons": [
-            "target_stage_not_activated"
+          "eligible_exact_ids": [
+            "hip_soreness_mini_band_standing_hip_abduction",
+            "hip_unspecified_isometric_glute_bridge_hold_30_hip_extension"
           ],
+          "eligible_including_protective_fallback_ids": [
+            "hip_pain_recovery_support",
+            "hip_soreness_mini_band_standing_hip_abduction",
+            "hip_unspecified_isometric_glute_bridge_hold_30_hip_extension"
+          ],
+          "empty_equipment_ids": [
+            "hip_pain_recovery_support",
+            "hip_unspecified_isometric_glute_bridge_hold_30_hip_extension"
+          ],
+          "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [
-            {
-              "drill_id": "hip_pain_recovery_support",
-              "reasons": [
-                "REJECT_STAGE_NOT_LIVE"
-              ]
-            }
-          ],
+          "rejections": [],
           "surfaced_by_equipment": [
             {
               "equipment": [],
-              "surfaced_ids": []
+              "surfaced_ids": [
+                "hip_unspecified_isometric_glute_bridge_hold_30_hip_extension"
+              ]
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
+              "surfaced_ids": [
+                "hip_soreness_mini_band_standing_hip_abduction"
+              ]
             }
           ],
           "surfaced_by_severity": {
-            "low": [],
-            "moderate": []
+            "low": [
+              "hip_soreness_mini_band_standing_hip_abduction"
+            ],
+            "moderate": [
+              "hip_soreness_mini_band_standing_hip_abduction"
+            ]
           },
-          "unknown_side_ids": []
+          "unknown_side_ids": [
+            "hip_pain_recovery_support"
+          ]
         },
         "return": {
           "alternative_exact_count": 0,
@@ -17771,11 +18060,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "hip_soreness_mini_band_standing_hip_abduction",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "hip_unspecified_isometric_glute_bridge_hold_30_hip_extension",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -18346,9 +18653,10 @@
       "dormant_count": 2,
       "exact_bank_count": 3,
       "injury_type": "pain",
-      "live_prescription_count": 1,
+      "live_prescription_count": 4,
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "policy_id": "knee_pain",
       "region": "knee",
@@ -18384,10 +18692,45 @@
           "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [],
+          "rejections": [
+            {
+              "drill_id": "knee_unspecified_sliding_hamstring_curls_sliders_towel",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            },
+            {
+              "drill_id": "knee_unspecified_seated_knee_extension_hold_at_60",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            },
+            {
+              "drill_id": "knee_unspecified_vmo_activation_off_bench_leg_extension_hold",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": [
+                "knee_pain_recovery_support"
+              ]
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
+              "surfaced_ids": [
+                "knee_pain_recovery_support"
+              ]
+            },
+            {
+              "equipment": [
+                "towel"
+              ],
               "surfaced_ids": [
                 "knee_pain_recovery_support"
               ]
@@ -18483,11 +18826,41 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "knee_unspecified_sliding_hamstring_curls_sliders_towel",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "knee_unspecified_seated_knee_extension_hold_at_60",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "knee_unspecified_vmo_activation_off_bench_leg_extension_hold",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "towel"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -18575,11 +18948,41 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "knee_unspecified_sliding_hamstring_curls_sliders_towel",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "knee_unspecified_seated_knee_extension_hold_at_60",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "knee_unspecified_vmo_activation_off_bench_leg_extension_hold",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "towel"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -18590,44 +18993,85 @@
           "unknown_side_ids": []
         },
         "restore": {
-          "alternative_exact_count": 0,
-          "approved_exact_ids": [],
-          "availability": "closed",
+          "alternative_exact_count": 2,
+          "approved_exact_ids": [
+            "knee_unspecified_seated_knee_extension_hold_at_60",
+            "knee_unspecified_sliding_hamstring_curls_sliders_towel",
+            "knee_unspecified_vmo_activation_off_bench_leg_extension_hold"
+          ],
+          "availability": "baseline_reachable",
           "bundle_ids": [],
           "declared_requirements": [],
           "eligible_by_severity": {
             "high": [],
-            "low": [],
-            "moderate": [],
+            "low": [
+              "knee_pain_recovery_support",
+              "knee_unspecified_seated_knee_extension_hold_at_60",
+              "knee_unspecified_sliding_hamstring_curls_sliders_towel",
+              "knee_unspecified_vmo_activation_off_bench_leg_extension_hold"
+            ],
+            "moderate": [
+              "knee_pain_recovery_support",
+              "knee_unspecified_seated_knee_extension_hold_at_60",
+              "knee_unspecified_sliding_hamstring_curls_sliders_towel",
+              "knee_unspecified_vmo_activation_off_bench_leg_extension_hold"
+            ],
             "unknown": []
           },
-          "eligible_exact_ids": [],
-          "eligible_including_protective_fallback_ids": [],
-          "empty_equipment_ids": [],
-          "gate_reasons": [
-            "target_stage_not_activated"
+          "eligible_exact_ids": [
+            "knee_unspecified_seated_knee_extension_hold_at_60",
+            "knee_unspecified_sliding_hamstring_curls_sliders_towel",
+            "knee_unspecified_vmo_activation_off_bench_leg_extension_hold"
           ],
+          "eligible_including_protective_fallback_ids": [
+            "knee_pain_recovery_support",
+            "knee_unspecified_seated_knee_extension_hold_at_60",
+            "knee_unspecified_sliding_hamstring_curls_sliders_towel",
+            "knee_unspecified_vmo_activation_off_bench_leg_extension_hold"
+          ],
+          "empty_equipment_ids": [
+            "knee_pain_recovery_support",
+            "knee_unspecified_sliding_hamstring_curls_sliders_towel"
+          ],
+          "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [
-            {
-              "drill_id": "knee_pain_recovery_support",
-              "reasons": [
-                "REJECT_STAGE_NOT_LIVE"
-              ]
-            }
-          ],
+          "rejections": [],
           "surfaced_by_equipment": [
             {
               "equipment": [],
-              "surfaced_ids": []
+              "surfaced_ids": [
+                "knee_unspecified_sliding_hamstring_curls_sliders_towel"
+              ]
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
+              "surfaced_ids": [
+                "knee_unspecified_seated_knee_extension_hold_at_60"
+              ]
+            },
+            {
+              "equipment": [
+                "towel"
+              ],
+              "surfaced_ids": [
+                "knee_unspecified_vmo_activation_off_bench_leg_extension_hold"
+              ]
             }
           ],
           "surfaced_by_severity": {
-            "low": [],
-            "moderate": []
+            "low": [
+              "knee_unspecified_seated_knee_extension_hold_at_60"
+            ],
+            "moderate": [
+              "knee_unspecified_seated_knee_extension_hold_at_60"
+            ]
           },
-          "unknown_side_ids": []
+          "unknown_side_ids": [
+            "knee_pain_recovery_support"
+          ]
         },
         "return": {
           "alternative_exact_count": 0,
@@ -18707,11 +19151,41 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "knee_unspecified_sliding_hamstring_curls_sliders_towel",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "knee_unspecified_seated_knee_extension_hold_at_60",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "knee_unspecified_vmo_activation_off_bench_leg_extension_hold",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "towel"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -19885,30 +20359,6 @@
             "dose_or_self_paced_prescription_needs_approval",
             "equipment_not_defined"
           ],
-          "drill_id": "neck_soreness_gentle_neck_tilts_assisted",
-          "equipment": null,
-          "missing_metadata": [
-            "rehab_stage",
-            "equipment",
-            "load",
-            "impact",
-            "velocity"
-          ],
-          "prior_review_disposition": null,
-          "prior_review_next_action": null,
-          "prior_review_reason": null,
-          "reviewed": false,
-          "stored_stage": null
-        },
-        {
-          "blockers": [
-            "no_approved_live_prescription",
-            "clinical_metadata_not_reviewed",
-            "stage_not_authorised",
-            "missing_mechanical_metadata",
-            "dose_or_self_paced_prescription_needs_approval",
-            "equipment_not_defined"
-          ],
           "drill_id": "neck_soreness_neck_towel_oscillation_drill",
           "equipment": null,
           "missing_metadata": [
@@ -19949,16 +20399,17 @@
           "stored_stage": null
         }
       ],
-      "dormant_count": 4,
+      "dormant_count": 3,
       "exact_bank_count": 5,
       "injury_type": "soreness",
-      "live_prescription_count": 1,
+      "live_prescription_count": 3,
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "policy_id": "neck_soreness",
       "region": "neck",
-      "reviewed_exact_type_count": 1,
+      "reviewed_exact_type_count": 2,
       "stages": {
         "calm": {
           "alternative_exact_count": 0,
@@ -19990,10 +20441,31 @@
           "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [],
+          "rejections": [
+            {
+              "drill_id": "neck_soreness_gentle_neck_tilts_assisted",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            },
+            {
+              "drill_id": "neck_stiffness_gentle_neck_side_tilts_passive_stretch",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": [
+                "neck_soreness_recovery_support"
+              ]
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
               "surfaced_ids": [
                 "neck_soreness_recovery_support"
               ]
@@ -20089,11 +20561,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "neck_soreness_gentle_neck_tilts_assisted",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "neck_stiffness_gentle_neck_side_tilts_passive_stretch",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -20181,11 +20671,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "neck_soreness_gentle_neck_tilts_assisted",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "neck_stiffness_gentle_neck_side_tilts_passive_stretch",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -20196,44 +20704,72 @@
           "unknown_side_ids": []
         },
         "restore": {
-          "alternative_exact_count": 0,
-          "approved_exact_ids": [],
-          "availability": "closed",
+          "alternative_exact_count": 1,
+          "approved_exact_ids": [
+            "neck_soreness_gentle_neck_tilts_assisted",
+            "neck_stiffness_gentle_neck_side_tilts_passive_stretch"
+          ],
+          "availability": "baseline_reachable",
           "bundle_ids": [],
           "declared_requirements": [],
           "eligible_by_severity": {
             "high": [],
-            "low": [],
-            "moderate": [],
+            "low": [
+              "neck_soreness_gentle_neck_tilts_assisted",
+              "neck_soreness_recovery_support",
+              "neck_stiffness_gentle_neck_side_tilts_passive_stretch"
+            ],
+            "moderate": [
+              "neck_soreness_gentle_neck_tilts_assisted",
+              "neck_soreness_recovery_support",
+              "neck_stiffness_gentle_neck_side_tilts_passive_stretch"
+            ],
             "unknown": []
           },
-          "eligible_exact_ids": [],
-          "eligible_including_protective_fallback_ids": [],
-          "empty_equipment_ids": [],
-          "gate_reasons": [
-            "target_stage_not_activated"
+          "eligible_exact_ids": [
+            "neck_soreness_gentle_neck_tilts_assisted",
+            "neck_stiffness_gentle_neck_side_tilts_passive_stretch"
           ],
+          "eligible_including_protective_fallback_ids": [
+            "neck_soreness_gentle_neck_tilts_assisted",
+            "neck_soreness_recovery_support",
+            "neck_stiffness_gentle_neck_side_tilts_passive_stretch"
+          ],
+          "empty_equipment_ids": [
+            "neck_soreness_gentle_neck_tilts_assisted",
+            "neck_soreness_recovery_support"
+          ],
+          "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [
-            {
-              "drill_id": "neck_soreness_recovery_support",
-              "reasons": [
-                "REJECT_STAGE_NOT_LIVE"
-              ]
-            }
-          ],
+          "rejections": [],
           "surfaced_by_equipment": [
             {
               "equipment": [],
-              "surfaced_ids": []
+              "surfaced_ids": [
+                "neck_soreness_gentle_neck_tilts_assisted"
+              ]
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
+              "surfaced_ids": [
+                "neck_stiffness_gentle_neck_side_tilts_passive_stretch"
+              ]
             }
           ],
           "surfaced_by_severity": {
-            "low": [],
-            "moderate": []
+            "low": [
+              "neck_stiffness_gentle_neck_side_tilts_passive_stretch"
+            ],
+            "moderate": [
+              "neck_stiffness_gentle_neck_side_tilts_passive_stretch"
+            ]
           },
-          "unknown_side_ids": []
+          "unknown_side_ids": [
+            "neck_soreness_recovery_support"
+          ]
         },
         "return": {
           "alternative_exact_count": 0,
@@ -20313,11 +20849,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "neck_soreness_gentle_neck_tilts_assisted",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "neck_stiffness_gentle_neck_side_tilts_passive_stretch",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -20357,27 +20911,18 @@
       "dormant_candidates": [
         {
           "blockers": [
-            "no_approved_live_prescription",
-            "clinical_metadata_not_reviewed",
-            "stage_not_authorised",
-            "missing_mechanical_metadata",
-            "dose_or_self_paced_prescription_needs_approval",
-            "equipment_not_defined"
+            "no_approved_live_prescription"
           ],
           "drill_id": "neck_stiffness_gentle_neck_side_tilts_passive_stretch",
-          "equipment": null,
-          "missing_metadata": [
-            "rehab_stage",
-            "equipment",
-            "load",
-            "impact",
-            "velocity"
+          "equipment": [
+            "chair"
           ],
+          "missing_metadata": [],
           "prior_review_disposition": null,
           "prior_review_next_action": null,
           "prior_review_reason": null,
-          "reviewed": false,
-          "stored_stage": null
+          "reviewed": true,
+          "stored_stage": "restore"
         },
         {
           "blockers": [
@@ -20439,7 +20984,7 @@
       ],
       "policy_id": "neck_stiffness",
       "region": "neck",
-      "reviewed_exact_type_count": 2,
+      "reviewed_exact_type_count": 3,
       "stages": {
         "calm": {
           "alternative_exact_count": 0,
@@ -20929,9 +21474,10 @@
       "dormant_count": 2,
       "exact_bank_count": 3,
       "injury_type": "tightness",
-      "live_prescription_count": 1,
+      "live_prescription_count": 3,
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "policy_id": "neck_tightness",
       "region": "neck",
@@ -20967,10 +21513,31 @@
           "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [],
+          "rejections": [
+            {
+              "drill_id": "neck_soreness_gentle_neck_tilts_assisted",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            },
+            {
+              "drill_id": "neck_stiffness_gentle_neck_side_tilts_passive_stretch",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": [
+                "neck_tightness_recovery_support"
+              ]
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
               "surfaced_ids": [
                 "neck_tightness_recovery_support"
               ]
@@ -21066,11 +21633,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "neck_soreness_gentle_neck_tilts_assisted",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "neck_stiffness_gentle_neck_side_tilts_passive_stretch",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -21158,11 +21743,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "neck_soreness_gentle_neck_tilts_assisted",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "neck_stiffness_gentle_neck_side_tilts_passive_stretch",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -21173,44 +21776,72 @@
           "unknown_side_ids": []
         },
         "restore": {
-          "alternative_exact_count": 0,
-          "approved_exact_ids": [],
-          "availability": "closed",
+          "alternative_exact_count": 1,
+          "approved_exact_ids": [
+            "neck_soreness_gentle_neck_tilts_assisted",
+            "neck_stiffness_gentle_neck_side_tilts_passive_stretch"
+          ],
+          "availability": "baseline_reachable",
           "bundle_ids": [],
           "declared_requirements": [],
           "eligible_by_severity": {
             "high": [],
-            "low": [],
-            "moderate": [],
+            "low": [
+              "neck_soreness_gentle_neck_tilts_assisted",
+              "neck_stiffness_gentle_neck_side_tilts_passive_stretch",
+              "neck_tightness_recovery_support"
+            ],
+            "moderate": [
+              "neck_soreness_gentle_neck_tilts_assisted",
+              "neck_stiffness_gentle_neck_side_tilts_passive_stretch",
+              "neck_tightness_recovery_support"
+            ],
             "unknown": []
           },
-          "eligible_exact_ids": [],
-          "eligible_including_protective_fallback_ids": [],
-          "empty_equipment_ids": [],
-          "gate_reasons": [
-            "target_stage_not_activated"
+          "eligible_exact_ids": [
+            "neck_soreness_gentle_neck_tilts_assisted",
+            "neck_stiffness_gentle_neck_side_tilts_passive_stretch"
           ],
+          "eligible_including_protective_fallback_ids": [
+            "neck_soreness_gentle_neck_tilts_assisted",
+            "neck_stiffness_gentle_neck_side_tilts_passive_stretch",
+            "neck_tightness_recovery_support"
+          ],
+          "empty_equipment_ids": [
+            "neck_soreness_gentle_neck_tilts_assisted",
+            "neck_tightness_recovery_support"
+          ],
+          "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [
-            {
-              "drill_id": "neck_tightness_recovery_support",
-              "reasons": [
-                "REJECT_STAGE_NOT_LIVE"
-              ]
-            }
-          ],
+          "rejections": [],
           "surfaced_by_equipment": [
             {
               "equipment": [],
-              "surfaced_ids": []
+              "surfaced_ids": [
+                "neck_soreness_gentle_neck_tilts_assisted"
+              ]
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
+              "surfaced_ids": [
+                "neck_stiffness_gentle_neck_side_tilts_passive_stretch"
+              ]
             }
           ],
           "surfaced_by_severity": {
-            "low": [],
-            "moderate": []
+            "low": [
+              "neck_stiffness_gentle_neck_side_tilts_passive_stretch"
+            ],
+            "moderate": [
+              "neck_stiffness_gentle_neck_side_tilts_passive_stretch"
+            ]
           },
-          "unknown_side_ids": []
+          "unknown_side_ids": [
+            "neck_tightness_recovery_support"
+          ]
         },
         "return": {
           "alternative_exact_count": 0,
@@ -21290,11 +21921,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "neck_soreness_gentle_neck_tilts_assisted",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "neck_stiffness_gentle_neck_side_tilts_passive_stretch",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -21384,9 +22033,10 @@
       "dormant_count": 2,
       "exact_bank_count": 3,
       "injury_type": "contusion",
-      "live_prescription_count": 1,
+      "live_prescription_count": 3,
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "policy_id": "quads_contusion",
       "region": "quads",
@@ -21422,10 +22072,31 @@
           "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [],
+          "rejections": [
+            {
+              "drill_id": "quads_pain_isometric_quad_flex_straight_leg",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            },
+            {
+              "drill_id": "quads_unspecified_sliding_leg_extensions_towel_under_foot",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": [
+                "quads_contusion_recovery_support"
+              ]
+            },
+            {
+              "equipment": [
+                "towel"
+              ],
               "surfaced_ids": [
                 "quads_contusion_recovery_support"
               ]
@@ -21521,11 +22192,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "quads_pain_isometric_quad_flex_straight_leg",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "quads_unspecified_sliding_leg_extensions_towel_under_foot",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "towel"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -21613,11 +22302,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "quads_pain_isometric_quad_flex_straight_leg",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "quads_unspecified_sliding_leg_extensions_towel_under_foot",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "towel"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -21628,44 +22335,72 @@
           "unknown_side_ids": []
         },
         "restore": {
-          "alternative_exact_count": 0,
-          "approved_exact_ids": [],
-          "availability": "closed",
+          "alternative_exact_count": 1,
+          "approved_exact_ids": [
+            "quads_pain_isometric_quad_flex_straight_leg",
+            "quads_unspecified_sliding_leg_extensions_towel_under_foot"
+          ],
+          "availability": "baseline_reachable",
           "bundle_ids": [],
           "declared_requirements": [],
           "eligible_by_severity": {
             "high": [],
-            "low": [],
-            "moderate": [],
+            "low": [
+              "quads_contusion_recovery_support",
+              "quads_pain_isometric_quad_flex_straight_leg",
+              "quads_unspecified_sliding_leg_extensions_towel_under_foot"
+            ],
+            "moderate": [
+              "quads_contusion_recovery_support",
+              "quads_pain_isometric_quad_flex_straight_leg",
+              "quads_unspecified_sliding_leg_extensions_towel_under_foot"
+            ],
             "unknown": []
           },
-          "eligible_exact_ids": [],
-          "eligible_including_protective_fallback_ids": [],
-          "empty_equipment_ids": [],
-          "gate_reasons": [
-            "target_stage_not_activated"
+          "eligible_exact_ids": [
+            "quads_pain_isometric_quad_flex_straight_leg",
+            "quads_unspecified_sliding_leg_extensions_towel_under_foot"
           ],
+          "eligible_including_protective_fallback_ids": [
+            "quads_contusion_recovery_support",
+            "quads_pain_isometric_quad_flex_straight_leg",
+            "quads_unspecified_sliding_leg_extensions_towel_under_foot"
+          ],
+          "empty_equipment_ids": [
+            "quads_contusion_recovery_support",
+            "quads_pain_isometric_quad_flex_straight_leg"
+          ],
+          "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [
-            {
-              "drill_id": "quads_contusion_recovery_support",
-              "reasons": [
-                "REJECT_STAGE_NOT_LIVE"
-              ]
-            }
-          ],
+          "rejections": [],
           "surfaced_by_equipment": [
             {
               "equipment": [],
-              "surfaced_ids": []
+              "surfaced_ids": [
+                "quads_pain_isometric_quad_flex_straight_leg"
+              ]
+            },
+            {
+              "equipment": [
+                "towel"
+              ],
+              "surfaced_ids": [
+                "quads_unspecified_sliding_leg_extensions_towel_under_foot"
+              ]
             }
           ],
           "surfaced_by_severity": {
-            "low": [],
-            "moderate": []
+            "low": [
+              "quads_unspecified_sliding_leg_extensions_towel_under_foot"
+            ],
+            "moderate": [
+              "quads_unspecified_sliding_leg_extensions_towel_under_foot"
+            ]
           },
-          "unknown_side_ids": []
+          "unknown_side_ids": [
+            "quads_contusion_recovery_support"
+          ]
         },
         "return": {
           "alternative_exact_count": 0,
@@ -21745,11 +22480,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "quads_pain_isometric_quad_flex_straight_leg",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "quads_unspecified_sliding_leg_extensions_towel_under_foot",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "towel"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -25093,9 +25846,10 @@
       "dormant_count": 4,
       "exact_bank_count": 5,
       "injury_type": "pain",
-      "live_prescription_count": 1,
+      "live_prescription_count": 3,
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "policy_id": "shoulder_pain",
       "region": "shoulder",
@@ -25131,10 +25885,31 @@
           "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [],
+          "rejections": [
+            {
+              "drill_id": "shoulder_swelling_pendulum_circles",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            },
+            {
+              "drill_id": "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": [
+                "shoulder_pain_recovery_support"
+              ]
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
               "surfaced_ids": [
                 "shoulder_pain_recovery_support"
               ]
@@ -25230,11 +26005,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "shoulder_swelling_pendulum_circles",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -25322,11 +26115,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "shoulder_swelling_pendulum_circles",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -25337,44 +26148,72 @@
           "unknown_side_ids": []
         },
         "restore": {
-          "alternative_exact_count": 0,
-          "approved_exact_ids": [],
-          "availability": "closed",
+          "alternative_exact_count": 1,
+          "approved_exact_ids": [
+            "shoulder_swelling_pendulum_circles",
+            "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
+          ],
+          "availability": "baseline_reachable",
           "bundle_ids": [],
           "declared_requirements": [],
           "eligible_by_severity": {
             "high": [],
-            "low": [],
-            "moderate": [],
+            "low": [
+              "shoulder_pain_recovery_support",
+              "shoulder_swelling_pendulum_circles",
+              "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
+            ],
+            "moderate": [
+              "shoulder_pain_recovery_support",
+              "shoulder_swelling_pendulum_circles",
+              "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
+            ],
             "unknown": []
           },
-          "eligible_exact_ids": [],
-          "eligible_including_protective_fallback_ids": [],
-          "empty_equipment_ids": [],
-          "gate_reasons": [
-            "target_stage_not_activated"
+          "eligible_exact_ids": [
+            "shoulder_swelling_pendulum_circles",
+            "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
           ],
+          "eligible_including_protective_fallback_ids": [
+            "shoulder_pain_recovery_support",
+            "shoulder_swelling_pendulum_circles",
+            "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
+          ],
+          "empty_equipment_ids": [
+            "shoulder_pain_recovery_support",
+            "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
+          ],
+          "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [
-            {
-              "drill_id": "shoulder_pain_recovery_support",
-              "reasons": [
-                "REJECT_STAGE_NOT_LIVE"
-              ]
-            }
-          ],
+          "rejections": [],
           "surfaced_by_equipment": [
             {
               "equipment": [],
-              "surfaced_ids": []
+              "surfaced_ids": [
+                "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
+              ]
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
+              "surfaced_ids": [
+                "shoulder_swelling_pendulum_circles"
+              ]
             }
           ],
           "surfaced_by_severity": {
-            "low": [],
-            "moderate": []
+            "low": [
+              "shoulder_swelling_pendulum_circles"
+            ],
+            "moderate": [
+              "shoulder_swelling_pendulum_circles"
+            ]
           },
-          "unknown_side_ids": []
+          "unknown_side_ids": [
+            "shoulder_pain_recovery_support"
+          ]
         },
         "return": {
           "alternative_exact_count": 0,
@@ -25454,11 +26293,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "shoulder_swelling_pendulum_circles",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -25613,9 +26470,10 @@
       "dormant_count": 4,
       "exact_bank_count": 5,
       "injury_type": "soreness",
-      "live_prescription_count": 1,
+      "live_prescription_count": 3,
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "policy_id": "shoulder_soreness",
       "region": "shoulder",
@@ -25651,10 +26509,31 @@
           "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [],
+          "rejections": [
+            {
+              "drill_id": "shoulder_swelling_pendulum_circles",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            },
+            {
+              "drill_id": "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": [
+                "shoulder_soreness_recovery_support"
+              ]
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
               "surfaced_ids": [
                 "shoulder_soreness_recovery_support"
               ]
@@ -25750,11 +26629,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "shoulder_swelling_pendulum_circles",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -25842,11 +26739,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "shoulder_swelling_pendulum_circles",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -25857,44 +26772,72 @@
           "unknown_side_ids": []
         },
         "restore": {
-          "alternative_exact_count": 0,
-          "approved_exact_ids": [],
-          "availability": "closed",
+          "alternative_exact_count": 1,
+          "approved_exact_ids": [
+            "shoulder_swelling_pendulum_circles",
+            "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
+          ],
+          "availability": "baseline_reachable",
           "bundle_ids": [],
           "declared_requirements": [],
           "eligible_by_severity": {
             "high": [],
-            "low": [],
-            "moderate": [],
+            "low": [
+              "shoulder_soreness_recovery_support",
+              "shoulder_swelling_pendulum_circles",
+              "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
+            ],
+            "moderate": [
+              "shoulder_soreness_recovery_support",
+              "shoulder_swelling_pendulum_circles",
+              "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
+            ],
             "unknown": []
           },
-          "eligible_exact_ids": [],
-          "eligible_including_protective_fallback_ids": [],
-          "empty_equipment_ids": [],
-          "gate_reasons": [
-            "target_stage_not_activated"
+          "eligible_exact_ids": [
+            "shoulder_swelling_pendulum_circles",
+            "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
           ],
+          "eligible_including_protective_fallback_ids": [
+            "shoulder_soreness_recovery_support",
+            "shoulder_swelling_pendulum_circles",
+            "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
+          ],
+          "empty_equipment_ids": [
+            "shoulder_soreness_recovery_support",
+            "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
+          ],
+          "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [
-            {
-              "drill_id": "shoulder_soreness_recovery_support",
-              "reasons": [
-                "REJECT_STAGE_NOT_LIVE"
-              ]
-            }
-          ],
+          "rejections": [],
           "surfaced_by_equipment": [
             {
               "equipment": [],
-              "surfaced_ids": []
+              "surfaced_ids": [
+                "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
+              ]
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
+              "surfaced_ids": [
+                "shoulder_swelling_pendulum_circles"
+              ]
             }
           ],
           "surfaced_by_severity": {
-            "low": [],
-            "moderate": []
+            "low": [
+              "shoulder_swelling_pendulum_circles"
+            ],
+            "moderate": [
+              "shoulder_swelling_pendulum_circles"
+            ]
           },
-          "unknown_side_ids": []
+          "unknown_side_ids": [
+            "shoulder_soreness_recovery_support"
+          ]
         },
         "return": {
           "alternative_exact_count": 0,
@@ -25974,11 +26917,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "shoulder_swelling_pendulum_circles",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -27936,9 +28897,10 @@
       "dormant_count": 4,
       "exact_bank_count": 5,
       "injury_type": "tightness",
-      "live_prescription_count": 1,
+      "live_prescription_count": 3,
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "policy_id": "shoulder_tightness",
       "region": "shoulder",
@@ -27974,10 +28936,31 @@
           "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [],
+          "rejections": [
+            {
+              "drill_id": "shoulder_swelling_pendulum_circles",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            },
+            {
+              "drill_id": "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": [
+                "shoulder_tightness_recovery_support"
+              ]
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
               "surfaced_ids": [
                 "shoulder_tightness_recovery_support"
               ]
@@ -28073,11 +29056,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "shoulder_swelling_pendulum_circles",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -28165,11 +29166,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "shoulder_swelling_pendulum_circles",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -28180,44 +29199,72 @@
           "unknown_side_ids": []
         },
         "restore": {
-          "alternative_exact_count": 0,
-          "approved_exact_ids": [],
-          "availability": "closed",
+          "alternative_exact_count": 1,
+          "approved_exact_ids": [
+            "shoulder_swelling_pendulum_circles",
+            "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
+          ],
+          "availability": "baseline_reachable",
           "bundle_ids": [],
           "declared_requirements": [],
           "eligible_by_severity": {
             "high": [],
-            "low": [],
-            "moderate": [],
+            "low": [
+              "shoulder_swelling_pendulum_circles",
+              "shoulder_tightness_recovery_support",
+              "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
+            ],
+            "moderate": [
+              "shoulder_swelling_pendulum_circles",
+              "shoulder_tightness_recovery_support",
+              "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
+            ],
             "unknown": []
           },
-          "eligible_exact_ids": [],
-          "eligible_including_protective_fallback_ids": [],
-          "empty_equipment_ids": [],
-          "gate_reasons": [
-            "target_stage_not_activated"
+          "eligible_exact_ids": [
+            "shoulder_swelling_pendulum_circles",
+            "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
           ],
+          "eligible_including_protective_fallback_ids": [
+            "shoulder_swelling_pendulum_circles",
+            "shoulder_tightness_recovery_support",
+            "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
+          ],
+          "empty_equipment_ids": [
+            "shoulder_tightness_recovery_support",
+            "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
+          ],
+          "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [
-            {
-              "drill_id": "shoulder_tightness_recovery_support",
-              "reasons": [
-                "REJECT_STAGE_NOT_LIVE"
-              ]
-            }
-          ],
+          "rejections": [],
           "surfaced_by_equipment": [
             {
               "equipment": [],
-              "surfaced_ids": []
+              "surfaced_ids": [
+                "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel"
+              ]
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
+              "surfaced_ids": [
+                "shoulder_swelling_pendulum_circles"
+              ]
             }
           ],
           "surfaced_by_severity": {
-            "low": [],
-            "moderate": []
+            "low": [
+              "shoulder_swelling_pendulum_circles"
+            ],
+            "moderate": [
+              "shoulder_swelling_pendulum_circles"
+            ]
           },
-          "unknown_side_ids": []
+          "unknown_side_ids": [
+            "shoulder_tightness_recovery_support"
+          ]
         },
         "return": {
           "alternative_exact_count": 0,
@@ -28297,11 +29344,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "shoulder_swelling_pendulum_circles",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -29307,43 +30372,19 @@
           "prior_review_reason": null,
           "reviewed": false,
           "stored_stage": null
-        },
-        {
-          "blockers": [
-            "no_approved_live_prescription",
-            "clinical_metadata_not_reviewed",
-            "stage_not_authorised",
-            "missing_mechanical_metadata",
-            "dose_or_self_paced_prescription_needs_approval",
-            "equipment_not_defined"
-          ],
-          "drill_id": "triceps_contusion_wall_assisted_arm_circles",
-          "equipment": null,
-          "missing_metadata": [
-            "rehab_stage",
-            "function",
-            "equipment",
-            "load",
-            "impact",
-            "velocity"
-          ],
-          "prior_review_disposition": null,
-          "prior_review_next_action": null,
-          "prior_review_reason": null,
-          "reviewed": false,
-          "stored_stage": null
         }
       ],
-      "dormant_count": 2,
+      "dormant_count": 1,
       "exact_bank_count": 3,
       "injury_type": "contusion",
-      "live_prescription_count": 1,
+      "live_prescription_count": 2,
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "policy_id": "triceps_contusion",
       "region": "triceps",
-      "reviewed_exact_type_count": 1,
+      "reviewed_exact_type_count": 2,
       "stages": {
         "calm": {
           "alternative_exact_count": 0,
@@ -29375,7 +30416,14 @@
           "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [],
+          "rejections": [
+            {
+              "drill_id": "triceps_contusion_wall_assisted_arm_circles",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
@@ -29474,6 +30522,12 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "triceps_contusion_wall_assisted_arm_circles",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
@@ -29566,43 +30620,9 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
-            }
-          ],
-          "surfaced_by_equipment": [
+            },
             {
-              "equipment": [],
-              "surfaced_ids": []
-            }
-          ],
-          "surfaced_by_severity": {
-            "low": [],
-            "moderate": []
-          },
-          "unknown_side_ids": []
-        },
-        "restore": {
-          "alternative_exact_count": 0,
-          "approved_exact_ids": [],
-          "availability": "closed",
-          "bundle_ids": [],
-          "declared_requirements": [],
-          "eligible_by_severity": {
-            "high": [],
-            "low": [],
-            "moderate": [],
-            "unknown": []
-          },
-          "eligible_exact_ids": [],
-          "eligible_including_protective_fallback_ids": [],
-          "empty_equipment_ids": [],
-          "gate_reasons": [
-            "target_stage_not_activated"
-          ],
-          "permission_entry_supported": false,
-          "recovery_rule": "hold",
-          "rejections": [
-            {
-              "drill_id": "triceps_contusion_recovery_support",
+              "drill_id": "triceps_contusion_wall_assisted_arm_circles",
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
@@ -29619,6 +30639,61 @@
             "moderate": []
           },
           "unknown_side_ids": []
+        },
+        "restore": {
+          "alternative_exact_count": 0,
+          "approved_exact_ids": [
+            "triceps_contusion_wall_assisted_arm_circles"
+          ],
+          "availability": "baseline_reachable",
+          "bundle_ids": [],
+          "declared_requirements": [],
+          "eligible_by_severity": {
+            "high": [],
+            "low": [
+              "triceps_contusion_recovery_support",
+              "triceps_contusion_wall_assisted_arm_circles"
+            ],
+            "moderate": [
+              "triceps_contusion_recovery_support",
+              "triceps_contusion_wall_assisted_arm_circles"
+            ],
+            "unknown": []
+          },
+          "eligible_exact_ids": [
+            "triceps_contusion_wall_assisted_arm_circles"
+          ],
+          "eligible_including_protective_fallback_ids": [
+            "triceps_contusion_recovery_support",
+            "triceps_contusion_wall_assisted_arm_circles"
+          ],
+          "empty_equipment_ids": [
+            "triceps_contusion_recovery_support",
+            "triceps_contusion_wall_assisted_arm_circles"
+          ],
+          "gate_reasons": [],
+          "permission_entry_supported": false,
+          "recovery_rule": "hold",
+          "rejections": [],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": [
+                "triceps_contusion_wall_assisted_arm_circles"
+              ]
+            }
+          ],
+          "surfaced_by_severity": {
+            "low": [
+              "triceps_contusion_wall_assisted_arm_circles"
+            ],
+            "moderate": [
+              "triceps_contusion_wall_assisted_arm_circles"
+            ]
+          },
+          "unknown_side_ids": [
+            "triceps_contusion_recovery_support"
+          ]
         },
         "return": {
           "alternative_exact_count": 0,
@@ -29695,6 +30770,12 @@
           "rejections": [
             {
               "drill_id": "triceps_contusion_recovery_support",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "triceps_contusion_wall_assisted_arm_circles",
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
@@ -31952,31 +33033,6 @@
             "dose_or_self_paced_prescription_needs_approval",
             "equipment_not_defined"
           ],
-          "drill_id": "wrist_pain_forearm_supination_pronation_paused",
-          "equipment": null,
-          "missing_metadata": [
-            "rehab_stage",
-            "function",
-            "equipment",
-            "load",
-            "impact",
-            "velocity"
-          ],
-          "prior_review_disposition": null,
-          "prior_review_next_action": null,
-          "prior_review_reason": null,
-          "reviewed": false,
-          "stored_stage": null
-        },
-        {
-          "blockers": [
-            "no_approved_live_prescription",
-            "clinical_metadata_not_reviewed",
-            "stage_not_authorised",
-            "missing_mechanical_metadata",
-            "dose_or_self_paced_prescription_needs_approval",
-            "equipment_not_defined"
-          ],
           "drill_id": "wrist_pain_grip_trainer_soft_ball_pulse",
           "equipment": null,
           "missing_metadata": [
@@ -32041,16 +33097,17 @@
           "stored_stage": null
         }
       ],
-      "dormant_count": 4,
+      "dormant_count": 3,
       "exact_bank_count": 5,
       "injury_type": "pain",
-      "live_prescription_count": 1,
+      "live_prescription_count": 3,
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "policy_id": "wrist_pain",
       "region": "wrist",
-      "reviewed_exact_type_count": 1,
+      "reviewed_exact_type_count": 2,
       "stages": {
         "calm": {
           "alternative_exact_count": 0,
@@ -32082,10 +33139,31 @@
           "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [],
+          "rejections": [
+            {
+              "drill_id": "wrist_pain_forearm_supination_pronation_paused",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            },
+            {
+              "drill_id": "wrist_stiffness_theraband_wrist_abduction_adduction",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": [
+                "wrist_pain_recovery_support"
+              ]
+            },
+            {
+              "equipment": [
+                "table"
+              ],
               "surfaced_ids": [
                 "wrist_pain_recovery_support"
               ]
@@ -32181,11 +33259,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "wrist_pain_forearm_supination_pronation_paused",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "wrist_stiffness_theraband_wrist_abduction_adduction",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "table"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -32273,11 +33369,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "wrist_pain_forearm_supination_pronation_paused",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "wrist_stiffness_theraband_wrist_abduction_adduction",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "table"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -32288,44 +33402,72 @@
           "unknown_side_ids": []
         },
         "restore": {
-          "alternative_exact_count": 0,
-          "approved_exact_ids": [],
-          "availability": "closed",
+          "alternative_exact_count": 1,
+          "approved_exact_ids": [
+            "wrist_pain_forearm_supination_pronation_paused",
+            "wrist_stiffness_theraband_wrist_abduction_adduction"
+          ],
+          "availability": "baseline_reachable",
           "bundle_ids": [],
           "declared_requirements": [],
           "eligible_by_severity": {
             "high": [],
-            "low": [],
-            "moderate": [],
+            "low": [
+              "wrist_pain_forearm_supination_pronation_paused",
+              "wrist_pain_recovery_support",
+              "wrist_stiffness_theraband_wrist_abduction_adduction"
+            ],
+            "moderate": [
+              "wrist_pain_forearm_supination_pronation_paused",
+              "wrist_pain_recovery_support",
+              "wrist_stiffness_theraband_wrist_abduction_adduction"
+            ],
             "unknown": []
           },
-          "eligible_exact_ids": [],
-          "eligible_including_protective_fallback_ids": [],
-          "empty_equipment_ids": [],
-          "gate_reasons": [
-            "target_stage_not_activated"
+          "eligible_exact_ids": [
+            "wrist_pain_forearm_supination_pronation_paused",
+            "wrist_stiffness_theraband_wrist_abduction_adduction"
           ],
+          "eligible_including_protective_fallback_ids": [
+            "wrist_pain_forearm_supination_pronation_paused",
+            "wrist_pain_recovery_support",
+            "wrist_stiffness_theraband_wrist_abduction_adduction"
+          ],
+          "empty_equipment_ids": [
+            "wrist_pain_forearm_supination_pronation_paused",
+            "wrist_pain_recovery_support"
+          ],
+          "gate_reasons": [],
           "permission_entry_supported": false,
           "recovery_rule": "hold",
-          "rejections": [
-            {
-              "drill_id": "wrist_pain_recovery_support",
-              "reasons": [
-                "REJECT_STAGE_NOT_LIVE"
-              ]
-            }
-          ],
+          "rejections": [],
           "surfaced_by_equipment": [
             {
               "equipment": [],
-              "surfaced_ids": []
+              "surfaced_ids": [
+                "wrist_pain_forearm_supination_pronation_paused"
+              ]
+            },
+            {
+              "equipment": [
+                "table"
+              ],
+              "surfaced_ids": [
+                "wrist_stiffness_theraband_wrist_abduction_adduction"
+              ]
             }
           ],
           "surfaced_by_severity": {
-            "low": [],
-            "moderate": []
+            "low": [
+              "wrist_stiffness_theraband_wrist_abduction_adduction"
+            ],
+            "moderate": [
+              "wrist_stiffness_theraband_wrist_abduction_adduction"
+            ]
           },
-          "unknown_side_ids": []
+          "unknown_side_ids": [
+            "wrist_pain_recovery_support"
+          ]
         },
         "return": {
           "alternative_exact_count": 0,
@@ -32405,11 +33547,29 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "wrist_pain_forearm_supination_pronation_paused",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "wrist_stiffness_theraband_wrist_abduction_adduction",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
             {
               "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "table"
+              ],
               "surfaced_ids": []
             }
           ],
@@ -32591,7 +33751,7 @@
       "dormant_count": 6,
       "exact_bank_count": 8,
       "injury_type": "sprain",
-      "live_prescription_count": 2,
+      "live_prescription_count": 3,
       "live_stages": [
         "calm",
         "restore"
@@ -32633,6 +33793,12 @@
           "rejections": [
             {
               "drill_id": "wrist_sprain_reviewed_restore",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            },
+            {
+              "drill_id": "wrist_unspecified_finger_extension_with_wrist_flexion",
               "reasons": [
                 "REJECT_STAGE_TOO_ADVANCED"
               ]
@@ -32750,6 +33916,12 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "wrist_unspecified_finger_extension_with_wrist_flexion",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
@@ -32854,6 +34026,12 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "wrist_unspecified_finger_extension_with_wrist_flexion",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
@@ -32875,9 +34053,10 @@
           "unknown_side_ids": []
         },
         "restore": {
-          "alternative_exact_count": 0,
+          "alternative_exact_count": 1,
           "approved_exact_ids": [
-            "wrist_sprain_reviewed_restore"
+            "wrist_sprain_reviewed_restore",
+            "wrist_unspecified_finger_extension_with_wrist_flexion"
           ],
           "availability": "baseline_reachable",
           "bundle_ids": [],
@@ -32886,23 +34065,28 @@
             "high": [],
             "low": [
               "wrist_sprain_recovery_support",
-              "wrist_sprain_reviewed_restore"
+              "wrist_sprain_reviewed_restore",
+              "wrist_unspecified_finger_extension_with_wrist_flexion"
             ],
             "moderate": [
               "wrist_sprain_recovery_support",
-              "wrist_sprain_reviewed_restore"
+              "wrist_sprain_reviewed_restore",
+              "wrist_unspecified_finger_extension_with_wrist_flexion"
             ],
             "unknown": []
           },
           "eligible_exact_ids": [
-            "wrist_sprain_reviewed_restore"
+            "wrist_sprain_reviewed_restore",
+            "wrist_unspecified_finger_extension_with_wrist_flexion"
           ],
           "eligible_including_protective_fallback_ids": [
             "wrist_sprain_recovery_support",
-            "wrist_sprain_reviewed_restore"
+            "wrist_sprain_reviewed_restore",
+            "wrist_unspecified_finger_extension_with_wrist_flexion"
           ],
           "empty_equipment_ids": [
-            "wrist_sprain_recovery_support"
+            "wrist_sprain_recovery_support",
+            "wrist_unspecified_finger_extension_with_wrist_flexion"
           ],
           "gate_reasons": [],
           "permission_entry_supported": false,
@@ -32912,7 +34096,7 @@
             {
               "equipment": [],
               "surfaced_ids": [
-                "wrist_sprain_recovery_support"
+                "wrist_unspecified_finger_extension_with_wrist_flexion"
               ]
             },
             {
@@ -33017,6 +34201,12 @@
             },
             {
               "drill_id": "wrist_sprain_reviewed_restore",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "wrist_unspecified_finger_extension_with_wrist_flexion",
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
@@ -33135,28 +34325,18 @@
         },
         {
           "blockers": [
-            "no_approved_live_prescription",
-            "clinical_metadata_not_reviewed",
-            "stage_not_authorised",
-            "missing_mechanical_metadata",
-            "dose_or_self_paced_prescription_needs_approval",
-            "equipment_not_defined"
+            "no_approved_live_prescription"
           ],
           "drill_id": "wrist_stiffness_theraband_wrist_abduction_adduction",
-          "equipment": null,
-          "missing_metadata": [
-            "rehab_stage",
-            "function",
-            "equipment",
-            "load",
-            "impact",
-            "velocity"
+          "equipment": [
+            "table"
           ],
+          "missing_metadata": [],
           "prior_review_disposition": null,
           "prior_review_next_action": null,
           "prior_review_reason": null,
-          "reviewed": false,
-          "stored_stage": null
+          "reviewed": true,
+          "stored_stage": "restore"
         },
         {
           "blockers": [
@@ -33235,14 +34415,14 @@
       "dormant_count": 5,
       "exact_bank_count": 7,
       "injury_type": "stiffness",
-      "live_prescription_count": 2,
+      "live_prescription_count": 3,
       "live_stages": [
         "calm",
         "restore"
       ],
       "policy_id": "wrist_stiffness",
       "region": "wrist",
-      "reviewed_exact_type_count": 2,
+      "reviewed_exact_type_count": 3,
       "stages": {
         "calm": {
           "alternative_exact_count": 0,
@@ -33277,6 +34457,12 @@
           "rejections": [
             {
               "drill_id": "wrist_stiffness_stick_roll_wrist_flex_ext",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            },
+            {
+              "drill_id": "wrist_unspecified_finger_extension_with_wrist_flexion",
               "reasons": [
                 "REJECT_STAGE_TOO_ADVANCED"
               ]
@@ -33394,6 +34580,12 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "wrist_unspecified_finger_extension_with_wrist_flexion",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
@@ -33498,6 +34690,12 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "wrist_unspecified_finger_extension_with_wrist_flexion",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
             }
           ],
           "surfaced_by_equipment": [
@@ -33519,9 +34717,10 @@
           "unknown_side_ids": []
         },
         "restore": {
-          "alternative_exact_count": 0,
+          "alternative_exact_count": 1,
           "approved_exact_ids": [
-            "wrist_stiffness_stick_roll_wrist_flex_ext"
+            "wrist_stiffness_stick_roll_wrist_flex_ext",
+            "wrist_unspecified_finger_extension_with_wrist_flexion"
           ],
           "availability": "baseline_reachable",
           "bundle_ids": [],
@@ -33530,23 +34729,28 @@
             "high": [],
             "low": [
               "wrist_stiffness_recovery_support",
-              "wrist_stiffness_stick_roll_wrist_flex_ext"
+              "wrist_stiffness_stick_roll_wrist_flex_ext",
+              "wrist_unspecified_finger_extension_with_wrist_flexion"
             ],
             "moderate": [
               "wrist_stiffness_recovery_support",
-              "wrist_stiffness_stick_roll_wrist_flex_ext"
+              "wrist_stiffness_stick_roll_wrist_flex_ext",
+              "wrist_unspecified_finger_extension_with_wrist_flexion"
             ],
             "unknown": []
           },
           "eligible_exact_ids": [
-            "wrist_stiffness_stick_roll_wrist_flex_ext"
+            "wrist_stiffness_stick_roll_wrist_flex_ext",
+            "wrist_unspecified_finger_extension_with_wrist_flexion"
           ],
           "eligible_including_protective_fallback_ids": [
             "wrist_stiffness_recovery_support",
-            "wrist_stiffness_stick_roll_wrist_flex_ext"
+            "wrist_stiffness_stick_roll_wrist_flex_ext",
+            "wrist_unspecified_finger_extension_with_wrist_flexion"
           ],
           "empty_equipment_ids": [
-            "wrist_stiffness_recovery_support"
+            "wrist_stiffness_recovery_support",
+            "wrist_unspecified_finger_extension_with_wrist_flexion"
           ],
           "gate_reasons": [],
           "permission_entry_supported": false,
@@ -33556,7 +34760,7 @@
             {
               "equipment": [],
               "surfaced_ids": [
-                "wrist_stiffness_recovery_support"
+                "wrist_unspecified_finger_extension_with_wrist_flexion"
               ]
             },
             {
@@ -33661,6 +34865,12 @@
             },
             {
               "drill_id": "wrist_stiffness_stick_roll_wrist_flex_ext",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            },
+            {
+              "drill_id": "wrist_unspecified_finger_extension_with_wrist_flexion",
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
@@ -34363,30 +35573,30 @@
     "active_profiles": 64,
     "approved_never_surfaced_ids": [],
     "dormant_blocker_counts": {
-      "clinical_metadata_not_reviewed": 123,
-      "dose_or_self_paced_prescription_needs_approval": 181,
-      "equipment_not_defined": 123,
+      "clinical_metadata_not_reviewed": 117,
+      "dose_or_self_paced_prescription_needs_approval": 175,
+      "equipment_not_defined": 117,
       "individual_resistance_or_demand_not_defined": 17,
-      "missing_mechanical_metadata": 123,
-      "no_approved_live_prescription": 181,
-      "stage_not_authorised": 177
+      "missing_mechanical_metadata": 117,
+      "no_approved_live_prescription": 177,
+      "stage_not_authorised": 171
     },
-    "dormant_exact_active_profile_count": 181,
-    "dormant_unique_identities": 1493,
+    "dormant_exact_active_profile_count": 177,
+    "dormant_unique_identities": 1474,
     "live_by_stage": {
       "calm": 64,
       "load": 5,
-      "restore": 43
+      "restore": 70
     },
-    "live_unique_identities": 111,
+    "live_unique_identities": 130,
     "outside_active_profile_counts": {
       "legacy_surface_inventory": 104,
       "no_active_exact_profile": 548,
       "unassigned_regional_type": 664
     },
-    "reviewed": 169,
+    "reviewed": 188,
     "reviewed_dormant": 58,
-    "surfaced_unique_identities": 111,
+    "surfaced_unique_identities": 130,
     "total_drills": 1604
   }
 }

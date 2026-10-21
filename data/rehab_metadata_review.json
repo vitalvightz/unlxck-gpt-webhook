@@ -2719,61 +2719,81 @@
   },
   {
     "drill_id": "knee_unspecified_sliding_hamstring_curls_sliders_towel",
-    "source_hash": "1c84f3f8ad2d2d34d3f494c62ba290b73b5ffd54a5ca61d5cd240b2c8c24fa0b",
+    "source_hash": "b5942d61f8043406c63a057e84da6c67bbae0a673fc56eaa8bc461c0e51b8b47",
     "location": "knee",
     "injury_type": "unspecified",
-    "name": "Sliding Hamstring Curls (Sliders/Towel)",
-    "notes": "GPP: Eccentric focus → TAPER: Reduce volume, maintain neuromuscular control",
-    "movement_archetype": "eccentric_loading",
+    "name": "Heel slide knee bend",
+    "notes": "Sit or lie with your legs out straight. Slowly bend the knee and hip by sliding the heel of the affected leg towards your bottom only as far as is comfortable, then slide it back until the leg is straight. A smooth floor or a sock makes the slide easier. Do not hold the bend or pull the knee further with your hands. Repeat 10 times. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if the knee locks, gives way, becomes hot and swollen, or you cannot take weight through the leg.",
+    "movement_archetype": "mobility_rom",
     "proposed": {
-      "rehab_stage": null,
-      "function": "tendon_loading",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
-      "target_regions": [
-        "knee"
-      ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": "eccentric",
-      "sport_specificity": "general_rehab",
-      "contact_level": "none",
-      "evidence_notes": null
-    },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
-  },
-  {
-    "drill_id": "knee_unspecified_seated_knee_extension_hold_at_60",
-    "source_hash": "26916712181258b51b8eb4cea4d15918a1a57cc70de55260f83330a4e3490a86",
-    "location": "knee",
-    "injury_type": "unspecified",
-    "name": "Seated Knee Extension (Hold at 60°)",
-    "notes": "GPP: Quad activation without compression → TAPER: Lighten load, emphasize form",
-    "movement_archetype": "activation",
-    "proposed": {
-      "rehab_stage": null,
-      "function": "activation",
-      "equipment": null,
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "minimal",
       "velocity": "low",
       "target_regions": [
         "knee"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "knee joint and surrounding muscles"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf, https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-knee/. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "1c84f3f8ad2d2d34d3f494c62ba290b73b5ffd54a5ca61d5cd240b2c8c24fa0b",
+        "name": "Sliding Hamstring Curls (Sliders/Towel)",
+        "notes": "GPP: Eccentric focus → TAPER: Reduce volume, maintain neuromuscular control"
+      }
+    ]
+  },
+  {
+    "drill_id": "knee_unspecified_seated_knee_extension_hold_at_60",
+    "source_hash": "1f234a21e65d4e02f17fc4a8c7c9bd31f34c8ff8d963cce18f0bac4327a5728c",
+    "location": "knee",
+    "injury_type": "unspecified",
+    "name": "Seated knee straightening hold",
+    "notes": "Sit on a stable chair with both feet on the floor. Slowly straighten the affected knee from the bent position and hold it out straight for 3 seconds, then lower it slowly. Repeat 10 times. No ankle weight, band or forced straightening; keep the movement comfortable. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if the knee locks, gives way, becomes hot and swollen, or you cannot take weight through the leg.",
+    "movement_archetype": "activation",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "activation",
+      "equipment": [
+        "chair"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
+      "target_regions": [
+        "knee"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "quadriceps muscles and knee joint"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "26916712181258b51b8eb4cea4d15918a1a57cc70de55260f83330a4e3490a86",
+        "name": "Seated Knee Extension (Hold at 60°)",
+        "notes": "GPP: Quad activation without compression → TAPER: Lighten load, emphasize form"
+      }
+    ]
   },
   {
     "drill_id": "knee_unspecified_step_downs_eccentric_focus",
@@ -2839,32 +2859,43 @@
   },
   {
     "drill_id": "knee_unspecified_vmo_activation_off_bench_leg_extension_hold",
-    "source_hash": "eb8fd6d851063e6f555d83293f70f5a9daf5939277f2f1889c4409237848fc77",
+    "source_hash": "6512f59f7258371d661a4917c519181ad266c374b7c6a82bf63aba51b7489551",
     "location": "knee",
     "injury_type": "unspecified",
-    "name": "VMO Activation Off Bench (Leg Extension Hold)",
-    "notes": "GPP: Isometric at 30° → SPP: Add ankle weights",
-    "movement_archetype": "isometric",
+    "name": "Heel lift over a rolled towel",
+    "notes": "Sit or lie with a rolled-up towel under the affected knee. Keep the back of the knee on the towel, tighten the thigh and lift the heel until the knee is straight. Hold for 3 seconds, then lower slowly. Repeat 10 times. No ankle weight, band or forced straightening. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if the knee locks, gives way, becomes hot and swollen, or you cannot take weight through the leg.",
+    "movement_archetype": "activation",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
+      "rehab_stage": "restore",
+      "function": "activation",
+      "equipment": [
+        "towel"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "knee"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": "isometric",
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "quadriceps muscles and knee joint"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf, https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-knee/. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "eb8fd6d851063e6f555d83293f70f5a9daf5939277f2f1889c4409237848fc77",
+        "name": "VMO Activation Off Bench (Leg Extension Hold)",
+        "notes": "GPP: Isometric at 30° → SPP: Add ankle weights"
+      }
+    ]
   },
   {
     "drill_id": "knee_unspecified_quadruped_tibial_glides_band_assisted",
@@ -3757,32 +3788,43 @@
   },
   {
     "drill_id": "hip_soreness_mini_band_standing_hip_abduction",
-    "source_hash": "0c39cf40c1c46141b41baa24bc5e50c92951df43cdff4d90d6d591ed8ce12bf2",
+    "source_hash": "65283ab01c5f2ff7c63748e18c7c48da5b87748828c48d4774db565f8356460f",
     "location": "hip",
     "injury_type": "soreness",
-    "name": "Mini-Band Standing Hip Abduction",
-    "notes": "TAPER: Keep activation without triggering fatigue",
-    "movement_archetype": "banded_resistance",
+    "name": "Supported standing hip abduction",
+    "notes": "Stand holding a stable support. Lift the affected leg out to the side without turning it outwards, hold for 5 seconds, then bring it back slowly, keeping your body straight throughout. Repeat 5 times. No band or ankle weight; keep within your pain limits. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for hip pain after a fall, inability to take weight through the leg, a hot swollen joint, fever, or numbness or tingling in the leg.",
+    "movement_archetype": "activation",
     "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "restore",
       "function": "activation",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "equipment": [
+        "stable_support"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
       "target_regions": [
         "hip"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "hip abductor muscles"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://wellbeing.wmas.nhs.uk/wp-content/uploads/2026/02/ADV121-Hip-Pain.pdf. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "0c39cf40c1c46141b41baa24bc5e50c92951df43cdff4d90d6d591ed8ce12bf2",
+        "name": "Mini-Band Standing Hip Abduction",
+        "notes": "TAPER: Keep activation without triggering fatigue"
+      }
+    ]
   },
   {
     "drill_id": "glutes_tightness_pigeon_pose_glute_stretch",
@@ -4373,32 +4415,41 @@
   },
   {
     "drill_id": "quads_pain_isometric_quad_flex_straight_leg",
-    "source_hash": "68547e9a3ee14c5a6309a4dd3445cadcd88a0ed73aa03e931de7fd644a60f1a5",
+    "source_hash": "15817c89ff295843f7c52a0a6f2e07846b33b4956ee9ec2099a56beb29eac842",
     "location": "quads",
     "injury_type": "pain",
-    "name": "Isometric Quad Flex (Straight Leg)",
-    "notes": "SPP: Rebuild control through tension → TAPER: Use between sets to keep motor pattern sharp",
+    "name": "Static quads for a bruised thigh",
+    "notes": "Sit or lie with the affected leg straight out in front of you and supported. Gently tighten the muscles at the front of the thigh, pushing the back of the knee down towards the surface. Hold for 3 seconds, then relax. Repeat 10 times. Do not massage or stretch the bruised muscle, add weight or work through pain. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek urgent assessment for severe or increasing thigh pain or swelling, a tense or very firm thigh, numbness, or pain that keeps worsening when you move the knee.",
     "movement_archetype": "isometric",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
+      "rehab_stage": "restore",
+      "function": "activation",
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "quads"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "quadriceps muscles"
+      ],
       "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf, https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "68547e9a3ee14c5a6309a4dd3445cadcd88a0ed73aa03e931de7fd644a60f1a5",
+        "name": "Isometric Quad Flex (Straight Leg)",
+        "notes": "SPP: Rebuild control through tension → TAPER: Use between sets to keep motor pattern sharp"
+      }
+    ]
   },
   {
     "drill_id": "quads_contusion_light_quad_percussion_massage_gun",
@@ -12266,32 +12317,43 @@
   },
   {
     "drill_id": "shoulder_swelling_pendulum_circles",
-    "source_hash": "c4f40517aafd74f939dbe0c9d6dd00e39446d3df0034db7ac7468ebbe634ce64",
+    "source_hash": "a85d221e1ed4e43691fbbb042e55150529c79a3047f8cb688019d97f72f0386b",
     "location": "shoulder",
     "injury_type": "swelling",
-    "name": "Pendulum Circles",
-    "notes": "TAPER: Drain lymph without active load",
+    "name": "Supported shoulder pendulum swing",
+    "notes": "Lean forwards with your good hand on a stable support and let the affected arm hang down relaxed. Gently swing the arm forwards and backwards, side to side and in small circles in both directions, letting the movement come from your body rather than lifting the arm. Continue for about 1 minute. Do not hold a weight, force the swing or move into pain. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if you cannot lift the arm after an injury, the shoulder looks deformed, or you have pins and needles, numbness, a hot swollen joint or fever.",
     "movement_archetype": "mobility_rom",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [
+        "stable_support"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "minimal",
       "velocity": "low",
       "target_regions": [
         "shoulder"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder joint and surrounding muscles"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/, https://royalberkshire.nhs.uk/media/5scpbnrh/shoulder-active-and-assisted-exercises_oct22.pdf. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "c4f40517aafd74f939dbe0c9d6dd00e39446d3df0034db7ac7468ebbe634ce64",
+        "name": "Pendulum Circles",
+        "notes": "TAPER: Drain lymph without active load"
+      }
+    ]
   },
   {
     "drill_id": "shoulder_swelling_passive_overhead_stick_stretch",
@@ -13715,32 +13777,41 @@
   },
   {
     "drill_id": "bicep_soreness_active_supination_elbow_flexion",
-    "source_hash": "39e3165f3f31f0948a5f40c697627ec68a2b50549b9949bd74599a27558517b5",
+    "source_hash": "3e3722b879cf23d9c8ff63959b30b1110901b1272283ae77dafbef9729a1d570",
     "location": "bicep",
     "injury_type": "soreness",
-    "name": "Active Supination + Elbow Flexion",
-    "notes": "TAPER: Retain contractile control with minimal load",
-    "movement_archetype": "balance_control",
+    "name": "Comfortable elbow bend for a bruised front of the arm",
+    "notes": "Sit or stand with the arm relaxed by your side. Slowly bend the elbow, then straighten it only as far as is comfortable, without stretching the bruised muscle. Repeat 10 times. No weight, band, massage or forced straightening; stop before pain increases. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek urgent assessment for severe or increasing pain or swelling, a tense or very firm arm, numbness, tingling, or a cold or pale hand.",
+    "movement_archetype": "mobility_rom",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "minimal",
       "velocity": "low",
       "target_regions": [
         "bicep"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "biceps muscle and elbow joint"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.esht.nhs.uk/wp-content/uploads/2026/01/2029.pdf, https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "39e3165f3f31f0948a5f40c697627ec68a2b50549b9949bd74599a27558517b5",
+        "name": "Active Supination + Elbow Flexion",
+        "notes": "TAPER: Retain contractile control with minimal load"
+      }
+    ]
   },
   {
     "drill_id": "bicep_contusion_gentle_arm_swings_neutral_grip",
@@ -15152,32 +15223,41 @@
   },
   {
     "drill_id": "triceps_contusion_wall_assisted_arm_circles",
-    "source_hash": "74c00797eddad62eff12fafe0de5696b5a4cd888677c9f055c4b0758836ce644",
+    "source_hash": "06184f52ebadef7d04d3a8f87f242db876f6bfc2bb26956c3f8145b839bf1747",
     "location": "triceps",
     "injury_type": "contusion",
-    "name": "Wall Assisted Arm Circles",
-    "notes": "GPP: Reintroduce motion safely → SPP: Add overhead control",
-    "movement_archetype": "balance_control",
+    "name": "Comfortable elbow bend for a bruised back of the arm",
+    "notes": "Sit or stand with the arm relaxed by your side. Slowly straighten the elbow, then bend it only as far as is comfortable, without stretching the bruised muscle at the back of the arm. Repeat 10 times. No weight, band, wall support, arm circles, massage or forced bending; stop before pain increases. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek urgent assessment for severe or increasing pain or swelling, a tense or very firm arm, numbness, tingling, or a cold or pale hand.",
+    "movement_archetype": "mobility_rom",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "minimal",
       "velocity": "low",
       "target_regions": [
         "triceps"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "triceps muscle and elbow joint"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.esht.nhs.uk/wp-content/uploads/2026/01/2029.pdf, https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "74c00797eddad62eff12fafe0de5696b5a4cd888677c9f055c4b0758836ce644",
+        "name": "Wall Assisted Arm Circles",
+        "notes": "GPP: Reintroduce motion safely → SPP: Add overhead control"
+      }
+    ]
   },
   {
     "drill_id": "triceps_contusion_recovery_support",
@@ -15640,32 +15720,43 @@
   },
   {
     "drill_id": "forearm_soreness_passive_wrist_circles_tabletop_support",
-    "source_hash": "829f28f97923a7ee5b41cf641bec00180e90787a9f0f9dc06570b7aaecca5622",
+    "source_hash": "38b04cd4c70f40a248144662609e61b5af3ad9fb4139224e4107ff137e626aed",
     "location": "forearm",
     "injury_type": "soreness",
-    "name": "Passive Wrist Circles (Tabletop Support)",
-    "notes": "SPP: Maintain range without loading → TAPER: Gentle recovery",
+    "name": "Supported wrist bend forward and back",
+    "notes": "Rest the affected forearm on a table with the hand over the edge. Slowly bend the wrist forward and hold for 5 seconds, then bend it backward and hold for 5 seconds, staying within a comfortable range. Repeat 5 times. No weight, circles or gripping, and do not press on the bruise. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek urgent assessment for severe or increasing pain or swelling, a tense or very firm arm, numbness, tingling, or a cold or pale hand.",
     "movement_archetype": "mobility_rom",
     "proposed": {
-      "rehab_stage": null,
-      "function": "recovery_downregulation",
-      "equipment": null,
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [
+        "table"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "minimal",
       "velocity": "low",
       "target_regions": [
         "forearm"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "forearm muscles and wrist joint"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/, https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "829f28f97923a7ee5b41cf641bec00180e90787a9f0f9dc06570b7aaecca5622",
+        "name": "Passive Wrist Circles (Tabletop Support)",
+        "notes": "SPP: Maintain range without loading → TAPER: Gentle recovery"
+      }
+    ]
   },
   {
     "drill_id": "forearm_soreness_rice_bucket_twists",
@@ -16359,32 +16450,41 @@
   },
   {
     "drill_id": "forearm_unspecified_stick_rotations_forearm_twist",
-    "source_hash": "a01cbb4f78ac5860aa3a6d9ab6f5a0c41de9d3c52558c2f8bcbe03f22ffbfa14",
+    "source_hash": "89a3f9b5dee71efcac115718459f97a3c3a4e2fc6ceeeeb56c970484984342f5",
     "location": "forearm",
     "injury_type": "unspecified",
-    "name": "Stick Rotations (Forearm Twist)",
-    "notes": "GPP: General mobility and endurance → TAPER: Sharpness with no load",
+    "name": "Elbow-at-side forearm turn",
+    "notes": "Keep the affected elbow bent and tucked into your side. Slowly turn your palm up towards the ceiling and hold for 5 seconds, then turn it down towards the floor and hold for 5 seconds. Repeat 5 times within a comfortable range. No stick, weight or gripping, and do not press on the bruise. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek urgent assessment for severe or increasing pain or swelling, a tense or very firm arm, numbness, tingling, or a cold or pale hand.",
     "movement_archetype": "mobility_rom",
     "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "restore",
       "function": "mobility",
-      "equipment": null,
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "minimal",
       "velocity": "low",
       "target_regions": [
         "forearm"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "forearm muscles and joints"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/, https://www.esht.nhs.uk/wp-content/uploads/2026/01/2029.pdf, https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "a01cbb4f78ac5860aa3a6d9ab6f5a0c41de9d3c52558c2f8bcbe03f22ffbfa14",
+        "name": "Stick Rotations (Forearm Twist)",
+        "notes": "GPP: General mobility and endurance → TAPER: Sharpness with no load"
+      }
+    ]
   },
   {
     "drill_id": "forearm_soreness_massage_gun_on_flexors_extensors",
@@ -17298,32 +17398,41 @@
   },
   {
     "drill_id": "elbow_stiffness_active_elbow_flexion_extension_with_dowel",
-    "source_hash": "dcdfb1800c7ad7ac02c4797071c51c2d3d67ddfeaffab76ce795037797b619cf",
+    "source_hash": "7f741fc7c24ab25970a5108ceb4a8a221117114b0c9200e6cd370e3861a9827f",
     "location": "elbow",
     "injury_type": "stiffness",
-    "name": "Active Elbow Flexion/Extension with Dowel",
-    "notes": "GPP: Restore joint rhythm → SPP: Reinforce ROM under light resistance",
+    "name": "Elbow bend and straighten",
+    "notes": "Sit or stand with the arm relaxed. Gently bend and straighten your elbow as far as you can without pain; you should feel no more than a mild to moderate stretch. You can use your other arm to help. Repeat 10 times. No dowel, weight or band, and do not force the elbow straight. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if the elbow locks or looks deformed, you cannot bend or straighten it after an injury, or you have numbness, tingling or a hot swollen joint.",
     "movement_archetype": "mobility_rom",
     "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "restore",
       "function": "mobility",
-      "equipment": null,
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "minimal",
       "velocity": "low",
       "target_regions": [
         "elbow"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "elbow joint and surrounding muscles"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.esht.nhs.uk/wp-content/uploads/2026/01/2029.pdf. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "dcdfb1800c7ad7ac02c4797071c51c2d3d67ddfeaffab76ce795037797b619cf",
+        "name": "Active Elbow Flexion/Extension with Dowel",
+        "notes": "GPP: Restore joint rhythm → SPP: Reinforce ROM under light resistance"
+      }
+    ]
   },
   {
     "drill_id": "elbow_stiffness_wrist_to_shoulder_slides_on_wall",
@@ -18660,32 +18769,41 @@
   },
   {
     "drill_id": "wrist_pain_forearm_supination_pronation_paused",
-    "source_hash": "05c0ed59d9323cf2407a92cc9f051621b99c07175a6fcbcfa77032600282e272",
+    "source_hash": "ccd31e8f998b7423c984dcb18c882d5c536d9d57a2681075a4be9d2a24d26c6b",
     "location": "wrist",
     "injury_type": "pain",
-    "name": "Forearm Supination/Pronation Paused",
-    "notes": "SPP: Reload torsion control → TAPER: Retain mid-range readiness",
-    "movement_archetype": "balance_control",
+    "name": "Elbow-at-side forearm turn with pause",
+    "notes": "Keep the elbow bent and tucked into the side of your body. Slowly turn your wrist so the palm faces up towards the ceiling and hold for 5 seconds, then turn it so the palm faces down and hold for 5 seconds. Repeat 5 times within a comfortable range. No band, weight or gripping. If you feel a sharp pain, reduce the movement or stop. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for a sharp pain that does not settle, numbness or tingling, a hot swollen joint, or pain after a fall onto the hand.",
+    "movement_archetype": "mobility_rom",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "minimal",
       "velocity": "low",
       "target_regions": [
         "wrist"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "wrist and forearm joints"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "05c0ed59d9323cf2407a92cc9f051621b99c07175a6fcbcfa77032600282e272",
+        "name": "Forearm Supination/Pronation Paused",
+        "notes": "SPP: Reload torsion control → TAPER: Retain mid-range readiness"
+      }
+    ]
   },
   {
     "drill_id": "wrist_pain_recovery_support",
@@ -19048,32 +19166,43 @@
   },
   {
     "drill_id": "wrist_stiffness_theraband_wrist_abduction_adduction",
-    "source_hash": "a90024c56fadba9fcb3b2d41970cd37ef8ee49862e3c7749dfdfd4770e7e7ae0",
+    "source_hash": "e1cd89a1391d271b30094ef2167ca65f2b0023a6c7058fdbed99add2f7ea3afa",
     "location": "wrist",
     "injury_type": "stiffness",
-    "name": "Theraband Wrist Abduction/Adduction",
-    "notes": "SPP: Load rarely used axes → TAPER: Short reps priming",
-    "movement_archetype": "banded_resistance",
+    "name": "Side-to-side wrist bend on a table",
+    "notes": "Rest your forearm and hand flat on a table. Slowly bend the wrist in the direction of your thumb and hold for 5 seconds, then bend it towards your little finger and hold for 5 seconds. Repeat 5 times within a comfortable range. No band, weight or pressing down. If you feel a sharp pain, reduce the movement or stop. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for a sharp pain that does not settle, numbness or tingling, a hot swollen joint, or pain after a fall onto the hand.",
+    "movement_archetype": "mobility_rom",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [
+        "table"
+      ],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
       "target_regions": [
         "wrist"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "wrist joint and surrounding tendons"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "a90024c56fadba9fcb3b2d41970cd37ef8ee49862e3c7749dfdfd4770e7e7ae0",
+        "name": "Theraband Wrist Abduction/Adduction",
+        "notes": "SPP: Load rarely used axes → TAPER: Short reps priming"
+      }
+    ]
   },
   {
     "drill_id": "wrist_stiffness_palm_march_wrist_stretch",
@@ -22795,32 +22924,41 @@
   },
   {
     "drill_id": "neck_soreness_gentle_neck_tilts_assisted",
-    "source_hash": "53858143ca76cc612988638a27d66004d27fbe234f334dc7a3a62d29a11c3d9f",
+    "source_hash": "3c39b497160c5330cecc33925be42d5a3c95084a556712323fbbbadf2ff325dd",
     "location": "neck",
     "injury_type": "soreness",
-    "name": "Gentle Neck Tilts (Assisted)",
-    "notes": "TAPER: Maintain low-stress mobility without stimulating CNS",
+    "name": "Seated forward neck bend",
+    "notes": "Sit upright with your shoulders relaxed. Slowly bend your head forward until you feel a gentle stretch at the back of your neck. Hold for about 5 seconds, then lift your head back to the middle. Repeat 5 times. Do not pull your head with your hand or roll your head round; if pain increases, use a smaller movement. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for arm pain, pins and needles, numbness or weakness, dizziness, or neck pain after a fall or blow to the head.",
     "movement_archetype": "mobility_rom",
     "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "restore",
       "function": "mobility",
-      "equipment": null,
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "minimal",
       "velocity": "low",
       "target_regions": [
         "neck"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "neck muscles and joints"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.nhsfife.org/media/33106/neck_pain_v7.pdf. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "53858143ca76cc612988638a27d66004d27fbe234f334dc7a3a62d29a11c3d9f",
+        "name": "Gentle Neck Tilts (Assisted)",
+        "notes": "TAPER: Maintain low-stress mobility without stimulating CNS"
+      }
+    ]
   },
   {
     "drill_id": "neck_soreness_recovery_support",
@@ -23381,32 +23519,43 @@
   },
   {
     "drill_id": "neck_stiffness_gentle_neck_side_tilts_passive_stretch",
-    "source_hash": "b2a215046e366b84086c71c86416f2962e30f238dfaf40a6002abd78b5d9317e",
+    "source_hash": "ea054ba7131155f317fd3f91010f80f7c1071830c454a2b649bde1f74464cd7e",
     "location": "neck",
     "injury_type": "stiffness",
-    "name": "Gentle Neck Side Tilts (Passive Stretch)",
-    "notes": "TAPER: Restore lateral mobility with zero CNS cost",
+    "name": "Seated neck side tilt",
+    "notes": "Sit upright on a stable chair with your shoulders relaxed. Slowly tilt your head towards one shoulder until you feel a gentle stretch on the opposite side. Hold for about 5 seconds, return to the middle and repeat to the other side. Repeat 5 times each side. Do not pull your head with your hand or roll your head round; if pain increases, use a smaller movement. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for arm pain, pins and needles, numbness or weakness, dizziness, or neck pain after a fall or blow to the head.",
     "movement_archetype": "mobility_rom",
     "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "restore",
       "function": "mobility",
-      "equipment": null,
+      "equipment": [
+        "chair"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "minimal",
       "velocity": "low",
       "target_regions": [
         "neck"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "neck muscles and joints"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.nhsfife.org/media/33106/neck_pain_v7.pdf. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "b2a215046e366b84086c71c86416f2962e30f238dfaf40a6002abd78b5d9317e",
+        "name": "Gentle Neck Side Tilts (Passive Stretch)",
+        "notes": "TAPER: Restore lateral mobility with zero CNS cost"
+      }
+    ]
   },
   {
     "drill_id": "neck_stiffness_trap_bar_hang_neck_relaxation",
@@ -36863,32 +37012,41 @@
   },
   {
     "drill_id": "hip_unspecified_isometric_glute_bridge_hold_30_hip_extension",
-    "source_hash": "c1bf8cf2650eb82a2626ca2b54ad2fe1530830d91e6a657cb4cfe12050c94f5b",
+    "source_hash": "f00b5b4abdb91034ce9f5468df28ab33ade236847646c4815b6b2e48361573b2",
     "location": "hip",
     "injury_type": "unspecified",
-    "name": "Isometric Glute Bridge Hold (30° Hip Extension)",
-    "notes": "GPP: 30s holds → SPP: Add marching or single-leg pulses",
-    "movement_archetype": "locomotion",
+    "name": "Double-leg bridge with 5-second hold",
+    "notes": "Lie on your back with your knees bent and feet flat on the floor. Lift your pelvis and lower back off the floor, hold for 5 seconds, then lower down slowly. Repeat 5 times. No single-leg bridge, band or added weight; keep within your pain limits. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for hip pain after a fall, inability to take weight through the leg, a hot swollen joint, fever, or numbness or tingling in the leg.",
+    "movement_archetype": "bodyweight_strength",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "restore",
+      "function": "activation",
+      "equipment": [],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
       "target_regions": [
         "hip"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
-      "sport_specificity": null,
-      "contact_level": null,
-      "evidence_notes": null
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "hip and buttock muscles"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://wellbeing.wmas.nhs.uk/wp-content/uploads/2026/02/ADV121-Hip-Pain.pdf. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "c1bf8cf2650eb82a2626ca2b54ad2fe1530830d91e6a657cb4cfe12050c94f5b",
+        "name": "Isometric Glute Bridge Hold (30° Hip Extension)",
+        "notes": "GPP: 30s holds → SPP: Add marching or single-leg pulses"
+      }
+    ]
   },
   {
     "drill_id": "hip_unspecified_standing_hip_cars_controlled_articular_rotations",
@@ -39244,35 +39402,43 @@
   },
   {
     "drill_id": "quads_unspecified_sliding_leg_extensions_towel_under_foot",
-    "source_hash": "eb39e353d8e5d72a9118020aaf1994f1c773f972ef127a464ff43031f80607f6",
+    "source_hash": "cc24a90c37d1d1de105d077a51922080c45ed0ae48c49f5f785cf9e1138291c3",
     "location": "quads",
     "injury_type": "unspecified",
-    "name": "Sliding Leg Extensions (Towel Under Foot)",
-    "notes": "GPP: Controlled ROM → SPP: Increase speed/tempo",
-    "movement_archetype": "balance_control",
+    "name": "Heel slide knee bend on a towel",
+    "notes": "Sit or lie with your legs out straight and a towel under the heel of the affected leg so it slides easily. Slowly bend the knee by sliding the heel towards your bottom only as far as is comfortable, then slide it back until the leg is straight. Do not hold the bend, pull the knee further with your hands or massage the bruised muscle. Repeat 10 times. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek urgent assessment for severe or increasing thigh pain or swelling, a tense or very firm thigh, numbness, or pain that keeps worsening when you move the knee.",
+    "movement_archetype": "mobility_rom",
     "proposed": {
-      "rehab_stage": null,
-      "function": "control",
-      "equipment": null,
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [
+        "towel"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "minimal",
       "velocity": "low",
       "target_regions": [
         "quads"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "quadriceps muscles and knee joint"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf, https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression."
     },
-    "flags": [
-      "VARIABLE_DEMAND_PROGRESSION",
-      "SPEED_PROGRESSION_IN_NOTES"
-    ],
-    "review_state": "needs_review",
-    "review_version": 1
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "eb39e353d8e5d72a9118020aaf1994f1c773f972ef127a464ff43031f80607f6",
+        "name": "Sliding Leg Extensions (Towel Under Foot)",
+        "notes": "GPP: Controlled ROM → SPP: Increase speed/tempo"
+      }
+    ]
   },
   {
     "drill_id": "quads_unspecified_eccentric_step_downs_3s_lowering",
@@ -41246,32 +41412,41 @@
   },
   {
     "drill_id": "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel",
-    "source_hash": "4fbd7316ed10a5cd79455043e002f08d30fe3a012368412203e9acf4074db8c0",
+    "source_hash": "d02da875be0bede4d960c1a6c372bfb17666827eb357ba226dd0f407efe21863",
     "location": "shoulder",
     "injury_type": "unspecified",
-    "name": "Supine Shoulder Figure-8s (With Dowel)",
-    "notes": "GPP: Enhance rotational capacity → SPP: Narrow grip width",
+    "name": "Lying assisted arm raise",
+    "notes": "Lie on your back. Hold the wrist of the affected arm with your other hand and use it to gently help the affected arm up towards your head, only as far as is comfortable, then slowly lower it. Repeat 5 times. No stick, weight or band, and do not force the arm overhead. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if you cannot lift the arm after an injury, the shoulder looks deformed, or you have pins and needles, numbness, a hot swollen joint or fever.",
     "movement_archetype": "mobility_rom",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "minimal",
       "velocity": "low",
       "target_regions": [
         "shoulder"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder joint and surrounding muscles"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/, https://royalberkshire.nhs.uk/media/5scpbnrh/shoulder-active-and-assisted-exercises_oct22.pdf. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "4fbd7316ed10a5cd79455043e002f08d30fe3a012368412203e9acf4074db8c0",
+        "name": "Supine Shoulder Figure-8s (With Dowel)",
+        "notes": "GPP: Enhance rotational capacity → SPP: Narrow grip width"
+      }
+    ]
   },
   {
     "drill_id": "shoulder_unspecified_dynamic_cross_body_arm_swings_with_counter_rotation",
@@ -44668,32 +44843,41 @@
   },
   {
     "drill_id": "wrist_unspecified_finger_extension_with_wrist_flexion",
-    "source_hash": "c5a20436fec5386d0bf1f33ae2504b9ae4722893c1a2d625492af113136f10da",
+    "source_hash": "6fff0112044b6790ed1ad7506fe8a9799d76076fd094dc900dfc63d680e4b482",
     "location": "wrist",
     "injury_type": "unspecified",
-    "name": "Finger Extension with Wrist Flexion",
-    "notes": "GPP: Isolated control → SPP: Dynamic transitions",
-    "movement_archetype": "balance_control",
+    "name": "Active wrist tenodesis",
+    "notes": "Begin with your fingers and thumb relaxed. Gently bend your wrist forward and let the fingers straighten naturally, to a comfortable point. Then, keeping the fingers relaxed, gently bring the wrist backwards and let the fingers curl naturally into the palm. Hold each end position for 5 seconds. Repeat 5 times. No band, weight or forced stretch. If you feel a sharp pain, reduce the movement or stop. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for a sharp pain that does not settle, numbness or tingling, a hot swollen joint, or pain after a fall onto the hand.",
+    "movement_archetype": "mobility_rom",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "minimal",
       "velocity": "low",
       "target_regions": [
         "wrist"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "wrist joint and finger tendons"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "c5a20436fec5386d0bf1f33ae2504b9ae4722893c1a2d625492af113136f10da",
+        "name": "Finger Extension with Wrist Flexion",
+        "notes": "GPP: Isolated control → SPP: Dynamic transitions"
+      }
+    ]
   },
   {
     "drill_id": "wrist_unspecified_claw_grip_holds_on_rope",

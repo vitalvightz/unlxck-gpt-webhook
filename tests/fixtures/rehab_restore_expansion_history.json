@@ -1,0 +1,1255 @@
+{
+  "purpose": "Exact pre-expansion data for dated inventory/migration tests only. Never read by runtime eligibility.",
+  "source_commit": "a9f428c5c21c797cd7bb2e2009fe00f3428fa0f1",
+  "drills": {
+    "knee_unspecified_sliding_hamstring_curls_sliders_towel": {
+      "after_sha256": "917772dcb96d612f131d85896fc73eab4ac37a8b44e43d68edcfb71096ecf407",
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ],
+      "restore": {
+        "name": "Sliding Hamstring Curls (Sliders/Towel)",
+        "notes": "GPP: Eccentric focus → TAPER: Reduce volume, maintain neuromuscular control",
+        "rehab_stage": null,
+        "function": "tendon_loading",
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      }
+    },
+    "knee_unspecified_seated_knee_extension_hold_at_60": {
+      "after_sha256": "1459811f40b6c098ebd0d76fe58e83831558d8ab373891e43bc0f2d127c36e23",
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ],
+      "restore": {
+        "name": "Seated Knee Extension (Hold at 60°)",
+        "notes": "GPP: Quad activation without compression → TAPER: Lighten load, emphasize form",
+        "rehab_stage": null,
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      }
+    },
+    "knee_unspecified_vmo_activation_off_bench_leg_extension_hold": {
+      "after_sha256": "ab11a72d2d64e16f7c50f241e572f60fad2bbabe89cbf93da0cbac4fd52b7403",
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ],
+      "restore": {
+        "name": "VMO Activation Off Bench (Leg Extension Hold)",
+        "notes": "GPP: Isometric at 30° → SPP: Add ankle weights",
+        "rehab_stage": null,
+        "function": "isometric_analgesia",
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      }
+    },
+    "hip_soreness_mini_band_standing_hip_abduction": {
+      "after_sha256": "9d551dfa1e319f692bbb33aa63ec566f82dc41d3b17c0b460d51811b58efead3",
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ],
+      "restore": {
+        "name": "Mini-Band Standing Hip Abduction",
+        "notes": "TAPER: Keep activation without triggering fatigue",
+        "rehab_stage": null,
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      }
+    },
+    "quads_pain_isometric_quad_flex_straight_leg": {
+      "after_sha256": "f4b0d347e0c35368aa1ac781611f57f52541c7c923cfadbaefdbb3ae2f46828c",
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ],
+      "restore": {
+        "name": "Isometric Quad Flex (Straight Leg)",
+        "notes": "SPP: Rebuild control through tension → TAPER: Use between sets to keep motor pattern sharp",
+        "rehab_stage": null,
+        "function": "isometric_analgesia",
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      }
+    },
+    "shoulder_swelling_pendulum_circles": {
+      "after_sha256": "c791c037b947525d99a520a7a40817bbf820b1a11c61c5fc9924ef1f3880d9aa",
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ],
+      "restore": {
+        "name": "Pendulum Circles",
+        "notes": "TAPER: Drain lymph without active load",
+        "rehab_stage": null,
+        "function": null,
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      }
+    },
+    "bicep_soreness_active_supination_elbow_flexion": {
+      "after_sha256": "322131584877a927d00b307334855ba8afcccef8b74cca6b715457d3f626c88e",
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ],
+      "restore": {
+        "name": "Active Supination + Elbow Flexion",
+        "notes": "TAPER: Retain contractile control with minimal load",
+        "rehab_stage": null,
+        "function": null,
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      }
+    },
+    "triceps_contusion_wall_assisted_arm_circles": {
+      "after_sha256": "6004cbb80b3e046cabe1eac7073c76e00788da0fffacfbee21d8235e6079fba2",
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ],
+      "restore": {
+        "name": "Wall Assisted Arm Circles",
+        "notes": "GPP: Reintroduce motion safely → SPP: Add overhead control",
+        "rehab_stage": null,
+        "function": null,
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      }
+    },
+    "forearm_soreness_passive_wrist_circles_tabletop_support": {
+      "after_sha256": "918800aa4b4c78c4b4a301991e3585fa21d79685b61f4df3ff33bcf2b5c3094b",
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ],
+      "restore": {
+        "name": "Passive Wrist Circles (Tabletop Support)",
+        "notes": "SPP: Maintain range without loading → TAPER: Gentle recovery",
+        "rehab_stage": null,
+        "function": "recovery_downregulation",
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      }
+    },
+    "forearm_unspecified_stick_rotations_forearm_twist": {
+      "after_sha256": "871354a36457070e4c7a88b9b6f50fb4673e0944ea3ded55d71ecd2095cf577f",
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ],
+      "restore": {
+        "name": "Stick Rotations (Forearm Twist)",
+        "notes": "GPP: General mobility and endurance → TAPER: Sharpness with no load",
+        "rehab_stage": null,
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      }
+    },
+    "elbow_stiffness_active_elbow_flexion_extension_with_dowel": {
+      "after_sha256": "8c43a2608d9fc90a9b560972039e190c20ac25655470e927049132598b637827",
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ],
+      "restore": {
+        "name": "Active Elbow Flexion/Extension with Dowel",
+        "notes": "GPP: Restore joint rhythm → SPP: Reinforce ROM under light resistance",
+        "rehab_stage": null,
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      }
+    },
+    "wrist_pain_forearm_supination_pronation_paused": {
+      "after_sha256": "534580d22083290841658086a750cf26e08725463f272355c3d01182242d8324",
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ],
+      "restore": {
+        "name": "Forearm Supination/Pronation Paused",
+        "notes": "SPP: Reload torsion control → TAPER: Retain mid-range readiness",
+        "rehab_stage": null,
+        "function": null,
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      }
+    },
+    "wrist_stiffness_theraband_wrist_abduction_adduction": {
+      "after_sha256": "1149aee5c62e5bfed932d3d0f16d7399d8877cc5780f30be4b3ed126fab4d4b3",
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ],
+      "restore": {
+        "name": "Theraband Wrist Abduction/Adduction",
+        "notes": "SPP: Load rarely used axes → TAPER: Short reps priming",
+        "rehab_stage": null,
+        "function": null,
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      }
+    },
+    "neck_soreness_gentle_neck_tilts_assisted": {
+      "after_sha256": "91a6464214f8a695425b0c0067a5fdfe326ce2aa6363460c0e84e0d2f649467b",
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ],
+      "restore": {
+        "name": "Gentle Neck Tilts (Assisted)",
+        "notes": "TAPER: Maintain low-stress mobility without stimulating CNS",
+        "rehab_stage": null,
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      }
+    },
+    "neck_stiffness_gentle_neck_side_tilts_passive_stretch": {
+      "after_sha256": "f0231264dc499132664395227128be41dc63ad12d75146e74ac0d31b9693ffcb",
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ],
+      "restore": {
+        "name": "Gentle Neck Side Tilts (Passive Stretch)",
+        "notes": "TAPER: Restore lateral mobility with zero CNS cost",
+        "rehab_stage": null,
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      }
+    },
+    "hip_unspecified_isometric_glute_bridge_hold_30_hip_extension": {
+      "after_sha256": "f244c06caeadcef308e421daac772b1fb6cb684c683f419e0775f2d991cc25fe",
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ],
+      "restore": {
+        "name": "Isometric Glute Bridge Hold (30° Hip Extension)",
+        "notes": "GPP: 30s holds → SPP: Add marching or single-leg pulses",
+        "rehab_stage": null,
+        "function": "isometric_analgesia",
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      }
+    },
+    "quads_unspecified_sliding_leg_extensions_towel_under_foot": {
+      "after_sha256": "510dfc145f80cc98a1d56a873e0d5e57c2c280093565bb683cbda0f68a2b826f",
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ],
+      "restore": {
+        "name": "Sliding Leg Extensions (Towel Under Foot)",
+        "notes": "GPP: Controlled ROM → SPP: Increase speed/tempo",
+        "rehab_stage": null,
+        "function": "control",
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      }
+    },
+    "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel": {
+      "after_sha256": "4dc26c5e1c7a10d984b6be139c9d32ef2239983053fa0a843efdef8fabc562b7",
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ],
+      "restore": {
+        "name": "Supine Shoulder Figure-8s (With Dowel)",
+        "notes": "GPP: Enhance rotational capacity → SPP: Narrow grip width",
+        "rehab_stage": null,
+        "function": null,
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      }
+    },
+    "wrist_unspecified_finger_extension_with_wrist_flexion": {
+      "after_sha256": "e5f2c4e52452a5aff192aae2a27b42e28b7d75f8549452398e2a6be86e79c2c5",
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ],
+      "restore": {
+        "name": "Finger Extension with Wrist Flexion",
+        "notes": "GPP: Isolated control → SPP: Dynamic transitions",
+        "rehab_stage": null,
+        "function": null,
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      }
+    }
+  },
+  "reviews": {
+    "knee_unspecified_sliding_hamstring_curls_sliders_towel": {
+      "after_sha256": "401c99fd070116399aa4f865cb0f65c6c2e7f19a2edb333a7e6e2eb8284117d7",
+      "remove": [
+        "source_history"
+      ],
+      "restore": {
+        "source_hash": "1c84f3f8ad2d2d34d3f494c62ba290b73b5ffd54a5ca61d5cd240b2c8c24fa0b",
+        "name": "Sliding Hamstring Curls (Sliders/Towel)",
+        "notes": "GPP: Eccentric focus → TAPER: Reduce volume, maintain neuromuscular control",
+        "movement_archetype": "eccentric_loading",
+        "proposed": {
+          "rehab_stage": null,
+          "function": "tendon_loading",
+          "equipment": null,
+          "impact": null,
+          "load": null,
+          "velocity": null,
+          "target_regions": [
+            "knee"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": "eccentric",
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      }
+    },
+    "knee_unspecified_seated_knee_extension_hold_at_60": {
+      "after_sha256": "fa7afa4ad2828429557ecccdf81602de9ca14479ce0acd889116ebf6343607ca",
+      "remove": [
+        "source_history"
+      ],
+      "restore": {
+        "source_hash": "26916712181258b51b8eb4cea4d15918a1a57cc70de55260f83330a4e3490a86",
+        "name": "Seated Knee Extension (Hold at 60°)",
+        "notes": "GPP: Quad activation without compression → TAPER: Lighten load, emphasize form",
+        "proposed": {
+          "rehab_stage": null,
+          "function": "activation",
+          "equipment": null,
+          "impact": "none",
+          "load": null,
+          "velocity": "low",
+          "target_regions": [
+            "knee"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": null,
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      }
+    },
+    "knee_unspecified_vmo_activation_off_bench_leg_extension_hold": {
+      "after_sha256": "730d44bd25e0f2e27f2b1400480b8bcf6d5d5d0cf2c7adc66a6ba82fb841cdab",
+      "remove": [
+        "source_history"
+      ],
+      "restore": {
+        "source_hash": "eb8fd6d851063e6f555d83293f70f5a9daf5939277f2f1889c4409237848fc77",
+        "name": "VMO Activation Off Bench (Leg Extension Hold)",
+        "notes": "GPP: Isometric at 30° → SPP: Add ankle weights",
+        "movement_archetype": "isometric",
+        "proposed": {
+          "rehab_stage": null,
+          "function": "isometric_analgesia",
+          "equipment": null,
+          "impact": "none",
+          "load": null,
+          "velocity": "low",
+          "target_regions": [
+            "knee"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": "isometric",
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      }
+    },
+    "hip_soreness_mini_band_standing_hip_abduction": {
+      "after_sha256": "58051155cb90cddf5ac568e8e694014fea6f05a8ef2389f248d0bc334e7a9f3c",
+      "remove": [
+        "source_history"
+      ],
+      "restore": {
+        "source_hash": "0c39cf40c1c46141b41baa24bc5e50c92951df43cdff4d90d6d591ed8ce12bf2",
+        "name": "Mini-Band Standing Hip Abduction",
+        "notes": "TAPER: Keep activation without triggering fatigue",
+        "movement_archetype": "banded_resistance",
+        "proposed": {
+          "rehab_stage": null,
+          "function": "activation",
+          "equipment": null,
+          "impact": null,
+          "load": null,
+          "velocity": null,
+          "target_regions": [
+            "hip"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": null,
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      }
+    },
+    "quads_pain_isometric_quad_flex_straight_leg": {
+      "after_sha256": "14567f622d4345f37f415c170cec590a09f2372d6058ad4b8d0fa977dea4dec5",
+      "remove": [
+        "source_history"
+      ],
+      "restore": {
+        "source_hash": "68547e9a3ee14c5a6309a4dd3445cadcd88a0ed73aa03e931de7fd644a60f1a5",
+        "name": "Isometric Quad Flex (Straight Leg)",
+        "notes": "SPP: Rebuild control through tension → TAPER: Use between sets to keep motor pattern sharp",
+        "proposed": {
+          "rehab_stage": null,
+          "function": "isometric_analgesia",
+          "equipment": null,
+          "impact": "none",
+          "load": null,
+          "velocity": "low",
+          "target_regions": [
+            "quads"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": "isometric",
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      }
+    },
+    "shoulder_swelling_pendulum_circles": {
+      "after_sha256": "df937609a8a418a3f4d5e958877001b0d3a84b8fd2e8ed617eb1c4a727d1c604",
+      "remove": [
+        "source_history"
+      ],
+      "restore": {
+        "source_hash": "c4f40517aafd74f939dbe0c9d6dd00e39446d3df0034db7ac7468ebbe634ce64",
+        "name": "Pendulum Circles",
+        "notes": "TAPER: Drain lymph without active load",
+        "proposed": {
+          "rehab_stage": null,
+          "function": null,
+          "equipment": null,
+          "impact": "none",
+          "load": null,
+          "velocity": "low",
+          "target_regions": [
+            "shoulder"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": null,
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      }
+    },
+    "bicep_soreness_active_supination_elbow_flexion": {
+      "after_sha256": "84f2c710aa73ebfb89dc94cc13e1b78f3a53220b58a6d304a57dfcccba611c87",
+      "remove": [
+        "source_history"
+      ],
+      "restore": {
+        "source_hash": "39e3165f3f31f0948a5f40c697627ec68a2b50549b9949bd74599a27558517b5",
+        "name": "Active Supination + Elbow Flexion",
+        "notes": "TAPER: Retain contractile control with minimal load",
+        "movement_archetype": "balance_control",
+        "proposed": {
+          "rehab_stage": null,
+          "function": null,
+          "equipment": null,
+          "impact": "none",
+          "load": null,
+          "velocity": "low",
+          "target_regions": [
+            "bicep"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": null,
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      }
+    },
+    "triceps_contusion_wall_assisted_arm_circles": {
+      "after_sha256": "07c6f32374a43a845ea9bfee2c766af9778ce6c2e02053658401b0ca22d71360",
+      "remove": [
+        "source_history"
+      ],
+      "restore": {
+        "source_hash": "74c00797eddad62eff12fafe0de5696b5a4cd888677c9f055c4b0758836ce644",
+        "name": "Wall Assisted Arm Circles",
+        "notes": "GPP: Reintroduce motion safely → SPP: Add overhead control",
+        "movement_archetype": "balance_control",
+        "proposed": {
+          "rehab_stage": null,
+          "function": null,
+          "equipment": null,
+          "impact": "none",
+          "load": null,
+          "velocity": "low",
+          "target_regions": [
+            "triceps"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": null,
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      }
+    },
+    "forearm_soreness_passive_wrist_circles_tabletop_support": {
+      "after_sha256": "846ad7f0472dd5815755c8a73cc722249953cc2d17d79935886a5bcfcd474d37",
+      "remove": [
+        "source_history"
+      ],
+      "restore": {
+        "source_hash": "829f28f97923a7ee5b41cf641bec00180e90787a9f0f9dc06570b7aaecca5622",
+        "name": "Passive Wrist Circles (Tabletop Support)",
+        "notes": "SPP: Maintain range without loading → TAPER: Gentle recovery",
+        "proposed": {
+          "rehab_stage": null,
+          "function": "recovery_downregulation",
+          "equipment": null,
+          "impact": "none",
+          "load": null,
+          "velocity": "low",
+          "target_regions": [
+            "forearm"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": null,
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      }
+    },
+    "forearm_unspecified_stick_rotations_forearm_twist": {
+      "after_sha256": "8edd35dd61fea1252d319ba39076dc95fc166e1bacadcd6e32fee308c00400be",
+      "remove": [
+        "source_history"
+      ],
+      "restore": {
+        "source_hash": "a01cbb4f78ac5860aa3a6d9ab6f5a0c41de9d3c52558c2f8bcbe03f22ffbfa14",
+        "name": "Stick Rotations (Forearm Twist)",
+        "notes": "GPP: General mobility and endurance → TAPER: Sharpness with no load",
+        "proposed": {
+          "rehab_stage": null,
+          "function": "mobility",
+          "equipment": null,
+          "impact": "none",
+          "load": null,
+          "velocity": "low",
+          "target_regions": [
+            "forearm"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": null,
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      }
+    },
+    "elbow_stiffness_active_elbow_flexion_extension_with_dowel": {
+      "after_sha256": "0cf4b453d07066e6e7ab715c9294336204deaac13ee3ef611192f5c4df6b001c",
+      "remove": [
+        "source_history"
+      ],
+      "restore": {
+        "source_hash": "dcdfb1800c7ad7ac02c4797071c51c2d3d67ddfeaffab76ce795037797b619cf",
+        "name": "Active Elbow Flexion/Extension with Dowel",
+        "notes": "GPP: Restore joint rhythm → SPP: Reinforce ROM under light resistance",
+        "proposed": {
+          "rehab_stage": null,
+          "function": "mobility",
+          "equipment": null,
+          "impact": "none",
+          "load": null,
+          "velocity": "low",
+          "target_regions": [
+            "elbow"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": null,
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      }
+    },
+    "wrist_pain_forearm_supination_pronation_paused": {
+      "after_sha256": "cc74a86b0aee19cf002c8807f966782ca59f51deceaf1192f38acdf428067382",
+      "remove": [
+        "source_history"
+      ],
+      "restore": {
+        "source_hash": "05c0ed59d9323cf2407a92cc9f051621b99c07175a6fcbcfa77032600282e272",
+        "name": "Forearm Supination/Pronation Paused",
+        "notes": "SPP: Reload torsion control → TAPER: Retain mid-range readiness",
+        "movement_archetype": "balance_control",
+        "proposed": {
+          "rehab_stage": null,
+          "function": null,
+          "equipment": null,
+          "impact": "none",
+          "load": null,
+          "velocity": "low",
+          "target_regions": [
+            "wrist"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": null,
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      }
+    },
+    "wrist_stiffness_theraband_wrist_abduction_adduction": {
+      "after_sha256": "97f87f0d49fea3697830077d486fe17ff23aa9aac8a558696d1a1e0bcbba7671",
+      "remove": [
+        "source_history"
+      ],
+      "restore": {
+        "source_hash": "a90024c56fadba9fcb3b2d41970cd37ef8ee49862e3c7749dfdfd4770e7e7ae0",
+        "name": "Theraband Wrist Abduction/Adduction",
+        "notes": "SPP: Load rarely used axes → TAPER: Short reps priming",
+        "movement_archetype": "banded_resistance",
+        "proposed": {
+          "rehab_stage": null,
+          "function": null,
+          "equipment": null,
+          "impact": null,
+          "load": null,
+          "velocity": null,
+          "target_regions": [
+            "wrist"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": null,
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      }
+    },
+    "neck_soreness_gentle_neck_tilts_assisted": {
+      "after_sha256": "7746f0e527aed513de52bc711b236955280f13a9e03f90841676e16cbc6484bc",
+      "remove": [
+        "source_history"
+      ],
+      "restore": {
+        "source_hash": "53858143ca76cc612988638a27d66004d27fbe234f334dc7a3a62d29a11c3d9f",
+        "name": "Gentle Neck Tilts (Assisted)",
+        "notes": "TAPER: Maintain low-stress mobility without stimulating CNS",
+        "proposed": {
+          "rehab_stage": null,
+          "function": "mobility",
+          "equipment": null,
+          "impact": "none",
+          "load": null,
+          "velocity": "low",
+          "target_regions": [
+            "neck"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": null,
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      }
+    },
+    "neck_stiffness_gentle_neck_side_tilts_passive_stretch": {
+      "after_sha256": "2641fe6379fa2d8de92ec8cfbbe041fef8576e1b7e9a86cf4d48617b8ae8333c",
+      "remove": [
+        "source_history"
+      ],
+      "restore": {
+        "source_hash": "b2a215046e366b84086c71c86416f2962e30f238dfaf40a6002abd78b5d9317e",
+        "name": "Gentle Neck Side Tilts (Passive Stretch)",
+        "notes": "TAPER: Restore lateral mobility with zero CNS cost",
+        "proposed": {
+          "rehab_stage": null,
+          "function": "mobility",
+          "equipment": null,
+          "impact": "none",
+          "load": null,
+          "velocity": "low",
+          "target_regions": [
+            "neck"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": null,
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      }
+    },
+    "hip_unspecified_isometric_glute_bridge_hold_30_hip_extension": {
+      "after_sha256": "714470da46d81cc625a2109909b90a23b73d32b48c743abbbf3630924a883183",
+      "remove": [
+        "source_history"
+      ],
+      "restore": {
+        "source_hash": "c1bf8cf2650eb82a2626ca2b54ad2fe1530830d91e6a657cb4cfe12050c94f5b",
+        "name": "Isometric Glute Bridge Hold (30° Hip Extension)",
+        "notes": "GPP: 30s holds → SPP: Add marching or single-leg pulses",
+        "movement_archetype": "locomotion",
+        "proposed": {
+          "rehab_stage": null,
+          "function": "isometric_analgesia",
+          "equipment": null,
+          "impact": null,
+          "load": null,
+          "velocity": null,
+          "target_regions": [
+            "hip"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": null,
+          "sport_specificity": null,
+          "contact_level": null,
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      }
+    },
+    "quads_unspecified_sliding_leg_extensions_towel_under_foot": {
+      "after_sha256": "625e7039fc9775872ad77c1bb2e8a427148837f091c5b94f8d61ab1b721f648b",
+      "remove": [
+        "source_history"
+      ],
+      "restore": {
+        "source_hash": "eb39e353d8e5d72a9118020aaf1994f1c773f972ef127a464ff43031f80607f6",
+        "name": "Sliding Leg Extensions (Towel Under Foot)",
+        "notes": "GPP: Controlled ROM → SPP: Increase speed/tempo",
+        "movement_archetype": "balance_control",
+        "proposed": {
+          "rehab_stage": null,
+          "function": "control",
+          "equipment": null,
+          "impact": "none",
+          "load": null,
+          "velocity": "low",
+          "target_regions": [
+            "quads"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": null,
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "flags": [
+          "VARIABLE_DEMAND_PROGRESSION",
+          "SPEED_PROGRESSION_IN_NOTES"
+        ],
+        "review_state": "needs_review"
+      }
+    },
+    "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel": {
+      "after_sha256": "79479b3de5489a9371c1bca53778a9f55f6fb9428c4671ab2ef9c2787850c960",
+      "remove": [
+        "source_history"
+      ],
+      "restore": {
+        "source_hash": "4fbd7316ed10a5cd79455043e002f08d30fe3a012368412203e9acf4074db8c0",
+        "name": "Supine Shoulder Figure-8s (With Dowel)",
+        "notes": "GPP: Enhance rotational capacity → SPP: Narrow grip width",
+        "proposed": {
+          "rehab_stage": null,
+          "function": null,
+          "equipment": null,
+          "impact": "none",
+          "load": null,
+          "velocity": "low",
+          "target_regions": [
+            "shoulder"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": null,
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      }
+    },
+    "wrist_unspecified_finger_extension_with_wrist_flexion": {
+      "after_sha256": "aca508778e1f47b909d5ebad9e96db50a0dc66e77ab895b729098abd4501aa3d",
+      "remove": [
+        "source_history"
+      ],
+      "restore": {
+        "source_hash": "c5a20436fec5386d0bf1f33ae2504b9ae4722893c1a2d625492af113136f10da",
+        "name": "Finger Extension with Wrist Flexion",
+        "notes": "GPP: Isolated control → SPP: Dynamic transitions",
+        "movement_archetype": "balance_control",
+        "proposed": {
+          "rehab_stage": null,
+          "function": null,
+          "equipment": null,
+          "impact": "none",
+          "load": null,
+          "velocity": "low",
+          "target_regions": [
+            "wrist"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": null,
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      }
+    }
+  },
+  "profiles": {
+    "quads_contusion": {
+      "after_sha256": "fe3d9baf155523b5d2c86546be41f6743b3ef7f00326664dde47c8dff0164fd3",
+      "remove": [],
+      "restore": {
+        "version": 1,
+        "live_stages": [
+          "calm"
+        ],
+        "content_hash": "e7fa20d5dd6b68f04a8e10acea0ee94d11d73dc5bf1f1309193563706dff9437"
+      }
+    },
+    "biceps_contusion": {
+      "after_sha256": "a2af9fc3aabcdc0344ca35b20abf0e564e89d710de18d00615974eba769a8789",
+      "remove": [],
+      "restore": {
+        "version": 1,
+        "live_stages": [
+          "calm"
+        ],
+        "content_hash": "dd72b45ba2c4d80abe117635d02207922f83744e0ea3635bf793181ee19539ae"
+      }
+    },
+    "triceps_contusion": {
+      "after_sha256": "d2621b997e99856b3c6eb6af6ca7048fcdb61ee85b418fc5320405220c946acb",
+      "remove": [],
+      "restore": {
+        "version": 1,
+        "live_stages": [
+          "calm"
+        ],
+        "content_hash": "bba6e81e5e766853416bbd24af7fa9764507d27a9801adf6fb060b83c8e78d4f"
+      }
+    },
+    "forearm_contusion": {
+      "after_sha256": "37cbea96bf92ab9bb4397f7fa50e799f61b739a3936454565a8e2edbf04683be",
+      "remove": [],
+      "restore": {
+        "version": 1,
+        "live_stages": [
+          "calm"
+        ],
+        "content_hash": "5fea1d8c15702d0109dcce92110e1bb7e4f720fea8301b9614402d0bc70ea123"
+      }
+    },
+    "shoulder_pain": {
+      "after_sha256": "e813f4fd42bb4cf631ef1fd2781601f58bdb4b573dc1026dab6136bfefe41aa5",
+      "remove": [],
+      "restore": {
+        "version": 1,
+        "live_stages": [
+          "calm"
+        ],
+        "content_hash": "6b9d69333ffee2fbfbfe0c9eb3c7af979d11cbb11c0db855d2c73b41ecf6d288"
+      }
+    },
+    "elbow_pain": {
+      "after_sha256": "7254f1f8c31cf77af4facfe2baec64780f7cfedc4d0b50315d4fe912553a39c3",
+      "remove": [],
+      "restore": {
+        "version": 1,
+        "live_stages": [
+          "calm"
+        ],
+        "content_hash": "f9b3de457fe5c947ac0d1f65189f9f38b05a6db2ab6e0f3205eaa92e6efc887f"
+      }
+    },
+    "wrist_pain": {
+      "after_sha256": "223d1197d585e805415d35324fbabfa6d6e57e52d391b8706e38b5aa4cdbc370",
+      "remove": [],
+      "restore": {
+        "version": 1,
+        "live_stages": [
+          "calm"
+        ],
+        "content_hash": "7448e0ad955d14164ea068fadf359f4da28f168ee7b66de9cf8966901593dcaa"
+      }
+    },
+    "knee_pain": {
+      "after_sha256": "61823329eb226a4c8554d5f1f6699a67c77c849e2551cfef3c6bcb24188a2ae7",
+      "remove": [],
+      "restore": {
+        "version": 1,
+        "live_stages": [
+          "calm"
+        ],
+        "content_hash": "4331e59eda81ff09fcfd3519475eb471a1787680472d0d3ca0ac68c76d393d9b"
+      }
+    },
+    "hip_pain": {
+      "after_sha256": "7c19f9f6aa7dfba66e8bef35b66b69da25c5d4057fae48c29de76823581c1f3f",
+      "remove": [],
+      "restore": {
+        "version": 1,
+        "live_stages": [
+          "calm"
+        ],
+        "content_hash": "bbf5e30693b986f66840403cb7d9e2a3a4cd379dea0f0258595595da97f6713b"
+      }
+    },
+    "elbow_stiffness": {
+      "after_sha256": "48d7f601844cff5776f4b0b2bd67fbcc1de77d80b1f8b90d5c16253386e81af1",
+      "remove": [],
+      "restore": {
+        "version": 1,
+        "live_stages": [
+          "calm"
+        ],
+        "content_hash": "e7037644bde03db68098743b16978960f30ac2f9e5f8c27eda938af1899b7713"
+      }
+    },
+    "neck_tightness": {
+      "after_sha256": "8be29088072bb0dc861bf9e57dc6028b42ff9981ab1ef59ed8bdfb00dca47a75",
+      "remove": [],
+      "restore": {
+        "version": 1,
+        "live_stages": [
+          "calm"
+        ],
+        "content_hash": "8cd904bffef5d1e8b1561d7e63ba453e96a60482148802b742f48b717d1b6e3b"
+      }
+    },
+    "shoulder_tightness": {
+      "after_sha256": "03e9b483eb104cfde7466d7c52239e40c98e8e9f929bf96799f203f100fd7ee7",
+      "remove": [],
+      "restore": {
+        "version": 1,
+        "live_stages": [
+          "calm"
+        ],
+        "content_hash": "f8a052df44de9293561161afcb3009a4cf3a5f129a996071f77064775c6b626f"
+      }
+    },
+    "neck_soreness": {
+      "after_sha256": "708a46769a2153b8b6953c19d959297fde2199a1a674fc705b173d3f00eda2ff",
+      "remove": [],
+      "restore": {
+        "version": 1,
+        "live_stages": [
+          "calm"
+        ],
+        "content_hash": "c291c0e628959410761b9ac7ea4b942efd596768fdf497a0c0b893f9b0c44910"
+      }
+    },
+    "shoulder_soreness": {
+      "after_sha256": "b69e62f3c19e85f36428b125f03733e66d0f9c8efd8c71bcfc5ba08f76a42342",
+      "remove": [],
+      "restore": {
+        "version": 1,
+        "live_stages": [
+          "calm"
+        ],
+        "content_hash": "76728114b78764c5b477a36e7e9fef3bacfe6df6bf97186e994a1ff8af82262c"
+      }
+    }
+  }
+}

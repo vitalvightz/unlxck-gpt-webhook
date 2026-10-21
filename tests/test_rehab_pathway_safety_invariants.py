@@ -47,8 +47,8 @@ def test_shipped_policies_match_the_pre_migration_file_exactly():
 def test_shipped_profiles_cannot_enter_a_higher_stage(policy_id):
     shipped = next(p for p in load_clinical_policies() if p.policy_id == policy_id)
     calm_only = (policy_id == "wrist_impingement" or shipped.injury_type == "hyperextension"
-                 or policy_id in {f"{r}_contusion" for r in ["heel", "shin", "quads", "biceps", "triceps", "forearm"]}
-                     or policy_id in {'lower_back_stiffness', 'shoulder_pain', 'shoulder_tightness', 'neck_tightness', 'elbow_pain', 'wrist_pain', 'neck_soreness', 'hip_pain', 'shoulder_soreness', 'elbow_stiffness', 'knee_pain', 'hand_pain', 'fingers_pain'})
+                 or policy_id in {f"{r}_contusion" for r in ["heel", "shin"]}
+                     or policy_id in {'lower_back_stiffness', 'hand_pain', 'fingers_pain'})
     expected_stage = "calm" if calm_only else "restore"
     assert shipped.live_stages == (["calm","restore","load"] if policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain", "shoulder_tendonitis"} else
         ["calm"] if expected_stage == "calm" else ["calm","restore"])

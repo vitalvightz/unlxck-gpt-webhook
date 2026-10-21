@@ -4,10 +4,11 @@ import path from "node:path";
 import fixtures from "./fixtures/rehab-today.json";
 import bankFixtures from "./fixtures/rehab-bank-publication.json";
 import progressionFixtures from "./fixtures/rehab-progression.json";
+import expansionFixtures from "./fixtures/rehab-restore-expansion.json";
 import { isolateFromNetwork } from "./support";
 
 // Synthetic payloads exported from GET /api/today, not hand-authored eligibility.
-const cases = { chest: fixtures.chest, achilles: fixtures.achilles, ...bankFixtures, ...progressionFixtures };
+const cases = { chest: fixtures.chest, achilles: fixtures.achilles, ...bankFixtures, ...progressionFixtures, ...expansionFixtures };
 async function setup(page: Page, baseURL: string, name: keyof typeof cases, videoId?: string, readinessHold = false) {
   await isolateFromNetwork(page, baseURL);
   const { view, profile: sourceProfile } = structuredClone(cases[name]);
@@ -213,6 +214,32 @@ test("an invalid demo leaves the actual Today exercise usable", async ({ page, b
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+// Source-dosed RESTORE options exported from GET /api/today: dose shown, not self-paced.
+for (const name of Object.keys(expansionFixtures) as (keyof typeof expansionFixtures)[]) {
+  test(`${name}: dosed RESTORE option shows its approved amount and completes once at 320px`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width: 320, height: 844 });
+    const { block, view, writes, errors } = await setup(page, baseURL!, name);
+    await page.getByRole("button", { name: block.display_name, exact: false }).first().click();
+    const detail = page.getByRole("dialog");
+    await expect(detail).toContainText(block.display_name);
+    await expect(detail.getByRole("region", { name: "How to perform" }).locator("ol li").first()).toBeVisible();
+    await expect(detail).not.toContainText("Self-paced");
+    const dose = block.dose as { reps?: number; duration_seconds?: number };
+    if (dose.reps) await expect(detail).toContainText(String(dose.reps));
+    if (dose.duration_seconds) await expect(detail).toContainText(`${dose.duration_seconds}s`);
+    await expect(detail).toContainText(/Stop if|Seek/);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await detail.evaluate(element => { element.scrollTop = 0; });
+    await shot(page, `expansion-${name}-320.png`);
+    await page.keyboard.press("Escape");
+    await page.getByRole("group", { name: "Did you complete your rehab?" }).getByRole("button", { name: "Completed", exact: true }).click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0]).toMatchObject({ status: "done", rehab_tracking: "injury_checkin", rehab_performance: "done_as_shown",
+      prescription_revision: view.live_prescription.revision, session_id: view.live_prescription.session.session_id });
+    expect(errors).toEqual([]);
+  });
+}
 
 for (const name of Object.keys(bankFixtures) as (keyof typeof bankFixtures)[]) {
   test(`${name}: bank option uses existing exercise UI and one completion at 320px`, async ({ page, baseURL }) => {

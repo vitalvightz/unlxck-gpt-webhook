@@ -18,7 +18,9 @@ from tools.seed_contusion_family import PROFILES, REPAIRED
 
 ROOT = Path(__file__).resolve().parents[1]
 REGIONS = ["heel", "shin", "quads", "biceps", "triceps", "forearm", "shoulder", "elbow", "wrist", "hand", "fingers"]
-CALM_ONLY = {"heel", "shin", "quads", "biceps", "triceps", "forearm"}
+# Quads, biceps, triceps and forearm RESTORE opened with source-dosed movement;
+# heel and shin keep their documented injury-depth/impact boundary.
+CALM_ONLY = {"heel", "shin"}
 PAIRS = [(r, s) for r in REGIONS for s in (["calm"] if r in CALM_ONLY else ["calm", "restore"])]
 
 
@@ -42,7 +44,8 @@ def test_exact_identity_reviewed_baseline_and_real_completion(region, stage):
     ledger = {r["drill_id"]: r for r in read("data/rehab_metadata_review.json")}
     assert ledger[prescription["drill_id"]]["review_state"] == "reviewed"
     assert prescription["bank_hash"] == content_hash(prescription["drill"])
-    assert prescription["dose"] == {} and not prescription["is_loading"]
+    # Original baselines are self-paced; expansion movements carry their leaflet dose.
+    assert prescription["dose"] == (prescription["drill"]["dose"] or {}) and not prescription["is_loading"]
     assert schedule_rehab(row, decision, training_day=DAY, readiness_decision="pull_back")["state"] == "due"
     frozen = reconcile_session_prescription(None, decisions=[decision], plan_id=PLAN, training_day=DAY)
     items = session_rehab_items({"id": PLAN}, training_day=DAY, session_id=frozen["session"]["session_id"], prescription=frozen)
@@ -166,7 +169,7 @@ def test_tolerated_exposures_and_complete_history_do_not_open_missing_transition
     assert resolve(row, exposures=negative)["stage"] == "calm"
 
 
-def test_original_audit_hashes_ids_and_review_history_preserved():
+def test_original_audit_hashes_ids_and_review_history_preserved(tmp_path):
     audit = read("docs/contusion-family-bank-audit.json")
     assert len(audit) == 60 and len({r["region"] for r in audit}) == 22
     for row in audit:
@@ -182,7 +185,9 @@ def test_original_audit_hashes_ids_and_review_history_preserved():
     assert current_family - hashes.keys() == ({f"{r}_contusion_recovery_support" for r in REGIONS}
         | {"hand_contusion_reviewed_restore", "fingers_contusion_reviewed_restore"})
     ledger = {r["drill_id"]: r for r in historical_ledger}
-    active = {p.drill_id for policy in load_clinical_policies() if policy.injury_type == "contusion" for p in policy.prescriptions}
+    from tests.rehab_inventory_history import historical_policies
+    active = {p.drill_id for policy in historical_policies(tmp_path, historical_bank)
+              if policy.injury_type == "contusion" for p in policy.prescriptions}
     assert len(active) == 16
     for row in audit:
         current = ledger[row["drill_id"]]
@@ -228,7 +233,9 @@ def test_seed_bank_review_and_profiles_are_byte_idempotent(tmp_path, monkeypatch
     folder = tmp_path / "data"
     folder.mkdir()
     names = ["rehab_bank.json", "rehab_metadata_review.json", "rehab_pathways.json"]
-    expected = {name: (ROOT / "data" / name).read_bytes() for name in names}
+    from tests.rehab_inventory_history import pre_restore_expansion_bytes
+    # Dated seed: later RESTORE publication is reconstructed from its exact history fixture.
+    expected = {name: pre_restore_expansion_bytes(name) for name in names}
     for name, data in expected.items():
         (folder / name).write_bytes(data)
     monkeypatch.setattr(seed_contusion_family, "ROOT", tmp_path)

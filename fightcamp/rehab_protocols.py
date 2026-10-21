@@ -1667,7 +1667,10 @@ def build_coach_review_entries(
 def reviewed_rehab_drill_id_for_line(line: str, injury_type: str, location: str) -> str | None:
     """Identity only: never create an alternate without episode evidence."""
     from .rehab_clinical import load_clinical_policies, validate_clinical_bank
-    locations = normalize_rehab_location(location)
+    from .injury_location_registry import canonicalize_location_from_registry
+    # Bank spelling (bicep) and canonical policy region (biceps) name one location.
+    names = normalize_rehab_location(location)
+    locations = {*names, *map(canonicalize_location_from_registry, names)}
     policy = next((p for p in load_clinical_policies() if (p.activation == "live" or p.status == "retired") and p.region in locations and p.injury_type == injury_type), None)
     if policy is None:
         return None
