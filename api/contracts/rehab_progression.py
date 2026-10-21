@@ -43,6 +43,12 @@ CAPTURED_FUNCTIONAL_CHECKPOINTS: frozenset[str] = frozenset(
 
 PASS, FAIL, UNKNOWN, MISSING_INPUT = "pass", "fail", "unknown", "missing_input"
 
+# Re-entry is reviewed only for these existing bounded prescription versions.
+# A future profile revision must deliberately review whether this rule applies.
+SETBACK_REENTRY_POLICY_VERSIONS = {
+    "achilles_tendonitis": 2, "elbow_tendonitis": 3, "ankle_sprain": 5, "shoulder_tendonitis": 2,
+}
+
 
 def _instant(value):
     try:
@@ -88,7 +94,7 @@ def _resolved_pilot_setback(policy, transition, injury, exposures, latest, perfo
     This never clears clinical restrictions or supplies permission. Other
     profiles/transitions retain their unresolved-negative hold.
     """
-    if (policy.policy_id not in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain", "shoulder_tendonitis"}
+    if (SETBACK_REENTRY_POLICY_VERSIONS.get(policy.policy_id) != policy.version
             or (transition.from_stage, transition.to_stage) != ("restore", "load")
             or not latest or not latest.response_consistent or latest.negative_reasons):
         return False

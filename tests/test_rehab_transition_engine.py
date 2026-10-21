@@ -169,6 +169,15 @@ def test_resolved_setback_restores_baseline_but_never_counts_as_progression_evid
     assert requirement(result, "no_unresolved_setback")["reason_code"] == "unresolved_historical_negative_response"
 
 
+@pytest.mark.parametrize("field,value", [("side", "right"), ("body_region", "shoulder")])
+def test_negative_response_for_another_tissue_cannot_rewind_owned_progression(field, value):
+    other = event(1, next_day="worse")
+    other["event_json"][field] = value
+    result = progress([other, event(2)])
+    assert result["stage"] == "load"
+    assert other["event_json"]["response"]["next_day_response"] == "worse"
+
+
 def test_truncated_history_cannot_promote():
     result = progress([event()], history_truncated=True)
     assert result["stage"] == "restore"
