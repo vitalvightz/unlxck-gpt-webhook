@@ -11,6 +11,10 @@ _SCOPES = (("rehab",), ("rehab", "training"), ("rehab", "training", "contact"))
 _LEVELS = ("rehab_only", "train_no_contact", "train_contact")
 
 LOAD_PERMISSION_CHECKPOINT = "achilles_midportion_reported_load_permission_v1"
+STAGE_REHABILITATION_PERMISSION = {
+    "calm": "gentle_recovery", "restore": "gentle_recovery", "load": "loading",
+    "dynamic": "sport_specific", "return": "sport_specific",
+}
 
 
 class RehabilitationPermission(BaseModel):
@@ -20,6 +24,10 @@ class RehabilitationPermission(BaseModel):
 
 
 def permits_rehabilitation_loading(injury: Mapping) -> bool:
+    return permits_rehabilitation_stage(injury, "load")
+
+
+def permits_rehabilitation_stage(injury: Mapping, stage: str) -> bool:
     report = injury.get("clinician_clearance")
     if not isinstance(report, Mapping) or str(report.get("episode_id")) != str(injury.get("episode_id")):
         return False
@@ -27,8 +35,10 @@ def permits_rehabilitation_loading(injury: Mapping) -> bool:
         permission = RehabilitationPermission.model_validate(report.get("rehabilitation_permission"))
     except (ValueError, TypeError):
         return False
+    levels = {"gentle_recovery": 0, "loading": 1, "sport_specific": 2}
+    required = STAGE_REHABILITATION_PERMISSION.get(stage)
     return (bool(injury.get("episode_id")) and injury.get("status") in {"open", "monitoring"}
-            and permission.level in {"loading", "sport_specific"})
+            and required in levels and levels.get(permission.level, -1) >= levels[required])
 
 
 def achilles_load_permission_reason(injury: Mapping) -> str | None:

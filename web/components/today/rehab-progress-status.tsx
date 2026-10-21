@@ -33,6 +33,7 @@ const REASONS: Record<string, string> = {
   unresolved_historical_negative_response: "A previous worsening response is still holding progression.",
   unresolved_injury_checkin_setback: "A recent injury worsening report is still holding loading. Continue your current rehab and follow clinician advice.",
   incomplete_prior_rehab_evidence: "Your previous rehab record is incomplete. Loading stays on hold while its evidence is unresolved.",
+  prior_stage_work_not_required_for_reported_permission: "Prior rehab logs are not required when reported clinician permission supports this stage.",
   prior_restore_not_required_for_reported_permission: "Prior RESTORE logs are not required for this starter when you report clinician loading permission.",
   no_prior_rehab_response_to_resolve: "You have no previous rehab response to resolve. No favourable response has been assumed.",
   history_truncated: "Your full rehab history is unavailable. Progression stays on hold.",
@@ -82,7 +83,7 @@ export function RehabProgressStatus({ decision, statusLine }: {
     <span className="injury-progress-main">
       {title ? <span className="injury-progress-title">{title}</span> : null}
       {decision.progression?.entry_basis === "reported_clinician_permission"
-        ? <span className="injury-progress-status">Loading permitted based on clinician advice you reported.</span> : null}
+        ? <span className="injury-progress-status">Permitted rehab based on clinician advice you reported.</span> : null}
       {statusLine ? <span className="injury-progress-status">{statusLine}</span> : null}
     </span>
     {next ? <InjuryChevron /> : null}

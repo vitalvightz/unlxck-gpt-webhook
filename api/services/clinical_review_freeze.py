@@ -9,6 +9,7 @@ from api.services.clinical_review_capture_service import hydrate_review_input
 from api.contracts.clinical_progression_review import CLINICAL_REVIEW_REGISTRY
 from fightcamp.rehab_clinical import content_hash, load_clinical_policies
 from fightcamp.exercise_identity import normalize_exercise_key
+from api.contracts.clinician_clearance import STAGE_REHABILITATION_PERMISSION
 
 logger = logging.getLogger(__name__)
 
@@ -57,20 +58,19 @@ def frozen_review_hold(store, athlete_id, snapshot, *, work_state, as_of=None, r
     current_registry = registry or CLINICAL_REVIEW_REGISTRY
     gated_drills = {o.drill_id for definition in current_registry._definitions.values() for o in definition.options}
     for block in snapshot.get("session", {}).get("blocks", []):
-        if block.get("required_rehabilitation_level") == "loading":
+        if block.get("required_rehabilitation_level") in {"loading", "sport_specific"}:
             # A self-report has no verified-clinician pin. Withdraw incompatible
             # future work, while leaving started/completed snapshots intact.
             try:
                 from api.services.injury_episode_service import apply_episode_observations, episode_observations, exposure_rows_with_observations
-                from api.contracts.injury_policy import reported_load_hold, reported_load_option
                 injury = store.get_injury_flag_for_athlete(block["injury_id"], athlete_id)
                 if not injury or str(injury.get("episode_id")) != block.get("injury_episode_id"):
                     return True
                 observations = episode_observations(store, athlete_id, injury)
                 current = apply_episode_observations(injury, observations, as_of=now)
-                option = reported_load_option(block.get("policy_id"))
-                if option is None:
-                    return True
+                policy = next(p for p in (policies if policies is not None else load_clinical_policies())
+                              if p.policy_id == block.get("policy_id"))
+                prescription = next(p for p in policy.prescriptions if p.drill_id == block.get("rehab_drill_id"))
                 if work_state == "unstarted":
                     # Advice for an episode must not be rebound to a different
                     # side when saved work is revalidated. Legacy unstarted
@@ -86,9 +86,6 @@ def frozen_review_hold(store, athlete_id, snapshot, *, work_state, as_of=None, r
                             return True
                     window = store.list_rehab_exposures(athlete_id, injury_id=injury["id"],
                                                        injury_episode_id=injury["episode_id"])
-                    if reported_load_hold(block.get("policy_id"), current, as_of=now,
-                            exposures=window.rows, history_truncated=window.history_truncated):
-                        return True
                 if work_state == "unstarted":
                     plan = store.get_plan_for_athlete(snapshot.get("plan_id"), athlete_id) or {}
                     intake = (store.get_intake(plan["intake_id"]) if plan.get("intake_id")
@@ -106,28 +103,24 @@ def frozen_review_hold(store, athlete_id, snapshot, *, work_state, as_of=None, r
                         equipment=intake.get("equipment_access") or [],
                         exposures=exposure_rows_with_observations(window.rows, observations),
                         history_truncated=window.history_truncated, as_of=now)
-                    if (decision.get("stage") != "load" or
-                            (decision.get("prescription") or {}).get("drill_id") != option.drill_id):
+                    if (decision.get("stage") != prescription.stage or
+                            (decision.get("prescription") or {}).get("drill_id") != prescription.drill_id):
                         return True
-                policy = next(p for p in (policies if policies is not None else load_clinical_policies())
-                              if p.policy_id == block.get("policy_id"))
-                prescription = next(p for p in policy.prescriptions if p.drill_id == block.get("rehab_drill_id"))
-                if (prescription.required_rehabilitation_level != "loading"
-                        or prescription.drill_id != option.drill_id
-                        or prescription.bank_hash != option.bank_hash
+                if (not prescription.range_choice or not prescription.resistance
+                        or block.get("required_rehabilitation_level") != STAGE_REHABILITATION_PERMISSION[prescription.stage]
                         or block.get("policy_review_hash") != policy.content_hash
                         or block.get("bank_hash") != prescription.bank_hash
                         or normalize_exercise_key(block.get("exercise_key", prescription.drill_id)) != normalize_exercise_key(prescription.drill_id)
                         or block.get("dose") != prescription.dose.model_dump(exclude_none=True)
                         or block.get("instructions") != prescription.instructions
                         or block.get("coaching_cues") != [prescription.instructions]
-                        or block.get("mandatory_restrictions") != list(option.mandatory_restrictions)
+                        or block.get("mandatory_restrictions") != list(prescription.mandatory_restrictions)
                         or block.get("title") != block.get("drill_snapshot", {}).get("name")
                         or block.get("display_name") != block.get("drill_snapshot", {}).get("name")
                         or block.get("stop_rules") != prescription.stop_when
-                        or block.get("range_choice") != option.range_choices[0]
-                        or block.get("resistance") != {"mode": "bodyweight", "kg": None}
-                        or block.get("frequency") != "daily" or block.get("minimum_gap_days") != 1
+                        or block.get("range_choice") != prescription.range_choice
+                        or block.get("resistance") != prescription.resistance
+                        or block.get("frequency") != prescription.frequency or block.get("minimum_gap_days") != prescription.minimum_gap_days
                         or content_hash(block.get("drill_snapshot")) != prescription.bank_hash
                         or any(block.get(name) != getattr(prescription.dose, name) for name in ("sets", "reps", "duration_seconds"))
                         or any(block.get(name) for name in ("load", "weight", "prescription", "alternates", "exercises", "tempo", "rpe", "intensity", "duration_minutes", "rest", "rest_seconds", "duration"))):

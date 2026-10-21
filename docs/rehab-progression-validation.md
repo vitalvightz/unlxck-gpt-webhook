@@ -1,6 +1,6 @@
 # Rehab progression validation
 
-Baseline: Main `7161c7f53a7186a69b21419cadc24d0dacceba24`, fetched at task start. Bank and ledger content, clinical stage activations, database schema, RLS and historical events are preserved. The later authorised permission-entry revision changes four policy versions/hashes and entry configuration; prescribed exercises and clinical limits stay unchanged.
+Baseline: Main `7161c7f53a7186a69b21419cadc24d0dacceba24`, fetched at task start. Bank and ledger content, clinical stage activations, database schema, RLS and historical events are preserved. The later authorised permission-entry revision changes four policy versions/hashes and entry behaviour and normal prescription execution metadata; prescribed exercises and clinical limits stay unchanged.
 
 ## Checks
 
@@ -62,6 +62,6 @@ Final production source commit: `ec0e8b67e89fc10b1d994802d1102f73ee745653`; the 
 
 The user subsequently authorised reported clinician advice to open an existing approved starter without prior RESTORE logs. This intentionally replaces earlier tests that treated no exercise history as an automatic hold. Known pending/uncertain responses and any unresolved setback still hold loading. Foreign episode/side exposures are excluded; they do not certify tolerance, and their absence does not invalidate independent, current clinician permission.
 
-The four policy versions are now Achilles 3, elbow 4, ankle 6 and shoulder 3. An exact historical-policy reconstruction keeps dated audits/manifests inspectable without changing their clinical judgments. No new stage, exercise, dose, resistance or clinical subtype is activated.
+The four policy versions are now Achilles 3, elbow 4, ankle 6 and shoulder 3. An exact historical-policy reconstruction keeps dated audits/manifests inspectable without changing their clinical judgments. No new stage, exercise, dose, resistance or clinical subtype is activated. Entry/recovery flags and the per-exercise Python option registry are removed; ordinary publication supplies the stage and prescription limits.
 
 Current revision validation results are recorded after the final affected run. Earlier counts above refer to their explicitly named source commits and are retained for comparison.
