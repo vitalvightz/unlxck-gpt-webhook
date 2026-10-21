@@ -29,6 +29,7 @@ def row(*, stage="Replied", sent="0", synced=None, copied="old DM", formula="nex
             "Synced Follow-Ups Sent": {"number": synced},
             "Follow-Up DM": {"formula": {"type": "string", "string": formula}},
             "Warm Next DM": {"formula": {"type": "string", "string": "WAIT: due 23 Oct 2026"}},
+            "Next DM to Copy": {"formula": {"type": "string", "string": ""}},
             "Copy Follow-Up": {"rich_text": [{"plain_text": copied}]},
             "Date Contacted": event(contacted),
             "Last Follow-Up Sent": event(last_sent),
@@ -236,16 +237,45 @@ def test_missing_contact_date_blocks_copy():
     assert get_copy(changed) == sync.MISSING_CONTACT_DATE
 
 
-def test_replied_stage_copies_only_due_warm_messages():
+def test_replied_stage_copies_early_preview_before_due():
     page = row(stage="Replied", sent="1", synced=1)
     p = page["properties"]
+    p["Next DM to Copy"]["formula"]["string"] = "Hey mate, just checking you got the beta link."
     changes = sync.get_changes(page, date(2026, 10, 19))
     assert changes["Copy Follow-Up"] == {"rich_text": []}
+
     p["Details Sent"]["checkbox"] = True
-    p["Details Sent At"] = sync.date_patch("2026-10-14T12:00:00+01:00")
-    p["Warm Next DM"]["formula"]["string"] = "Hey mate, just checking you got the beta link."
+    p["Details Sent At"] = sync.date_patch("2026-10-18T12:00:00+01:00")
+    p["Warm Next DM"]["formula"]["string"] = "WAIT: due 21 Oct 2026"
     changes = sync.get_changes(page, date(2026, 10, 19))
     assert get_copy(changes) == "Hey mate, just checking you got the beta link."
+
+
+def test_accepted_and_activated_preview_appears_before_due():
+    accepted = row(stage="Accepted", copied="")
+    p = accepted["properties"]
+    p["Details Sent"]["checkbox"] = True
+    p["Details Sent At"] = sync.date_patch("2026-10-19T12:00:00+01:00")
+    p["Next DM to Copy"]["formula"]["string"] = "Hey mate, were you able to get into Unlxck?"
+    assert get_copy(sync.get_changes(accepted, date(2026, 10, 20))).startswith("Hey mate,")
+
+    activated = row(stage="Activated", copied="")
+    activated["properties"]["Next DM to Copy"]["formula"]["string"] = (
+        "How have your first few days on Unlxck been?"
+    )
+    assert get_copy(sync.get_changes(activated, date(2026, 10, 14))).startswith("How have your")
+
+    activated["properties"]["Next DM to Copy"]["formula"]["string"] = "WAIT: due 17 Oct 2026"
+    assert sync.get_changes(activated, date(2026, 10, 14))["Copy Follow-Up"] == {"rich_text": []}
+
+
+def test_undated_accepted_does_not_copy_early_preview():
+    page = row(stage="Accepted", copied="")
+    p = page["properties"]
+    p["Details Sent"]["checkbox"] = True
+    p["Next DM to Copy"]["formula"]["string"] = "Hey mate, were you able to get into Unlxck?"
+    changes = sync.get_changes(page, date(2026, 10, 20))
+    assert "Copy Follow-Up" not in changes
 
 
 def test_idempotent_no_change_when_fields_synced():
