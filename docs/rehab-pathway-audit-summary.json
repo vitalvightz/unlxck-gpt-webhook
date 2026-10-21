@@ -1,0 +1,195 @@
+{
+  "video_curation": {
+    "published_physical_ids": 47,
+    "manifest_rows": 46,
+    "filled_manifest_urls": 0,
+    "missing_manifest_ids": [
+      "shoulder_tendonitis_wall_push_up"
+    ],
+    "live_media_database_not_inspected": true
+  },
+  "base_commit": "7f4ef5d8fa577e36791ad67b5723d6baffa22eb4",
+  "input_sha256": {
+    "data/rehab_bank.json": "20bda40e55b6d7e4c599947da78e692238477e0e5eed917e4fe0b9056dbb96a8",
+    "data/rehab_pathways.json": "2adfb61a4fd55befa7f7c8b705065c3932f3c598f983a8a8418f2d2d2024d119",
+    "data/rehab_metadata_review.json": "610671ea0eef1cfa622f3e5dc59c8a535fb58bf72bb7534704d15996d26a4c34",
+    "docs/rehab-advanced-candidate-review.json": "cfd575d558de8a062d080e5404822a131dddba06491fa4ec07769dde7b585618"
+  },
+  "profile_stage_rows": 320,
+  "bank_rows": 1604,
+  "families": [
+    {
+      "family": "muscle_strain",
+      "profiles": 8,
+      "calm": 8,
+      "restore": 8,
+      "load": 0,
+      "dynamic": 0,
+      "return": 0,
+      "shared_clinical_requirements": 0
+    },
+    {
+      "family": "ligament_sprain_or_instability",
+      "profiles": 10,
+      "calm": 10,
+      "restore": 10,
+      "load": 1,
+      "dynamic": 0,
+      "return": 0,
+      "shared_clinical_requirements": 0
+    },
+    {
+      "family": "tendon_rehab",
+      "profiles": 8,
+      "calm": 8,
+      "restore": 8,
+      "load": 3,
+      "dynamic": 0,
+      "return": 0,
+      "shared_clinical_requirements": 0
+    },
+    {
+      "family": "joint_irritation_or_impingement",
+      "profiles": 5,
+      "calm": 5,
+      "restore": 4,
+      "load": 0,
+      "dynamic": 0,
+      "return": 0,
+      "shared_clinical_requirements": 0
+    },
+    {
+      "family": "hyperextension_or_joint_trauma",
+      "profiles": 6,
+      "calm": 6,
+      "restore": 0,
+      "load": 0,
+      "dynamic": 0,
+      "return": 0,
+      "shared_clinical_requirements": 0
+    },
+    {
+      "family": "contusion",
+      "profiles": 11,
+      "calm": 11,
+      "restore": 5,
+      "load": 0,
+      "dynamic": 0,
+      "return": 0,
+      "shared_clinical_requirements": 0
+    },
+    {
+      "family": "nonspecific_msk_symptoms",
+      "profiles": 16,
+      "calm": 16,
+      "restore": 3,
+      "load": 0,
+      "dynamic": 0,
+      "return": 0,
+      "shared_clinical_requirements": 0
+    }
+  ],
+  "published_profile_counts": {
+    "calm": 64,
+    "restore": 38,
+    "load": 4,
+    "dynamic": 0,
+    "return": 0
+  },
+  "published_prescription_references": 112,
+  "published_unique_ids": 111,
+  "current_mechanics_reviewed": 169,
+  "reviewed_unpublished_ids": [
+    "ankle_instability_foam_pad_jump_stick",
+    "ankle_instability_lateral_hop_stick_drill",
+    "ankle_sprain_banded_ankle_circles",
+    "ankle_sprain_single_leg_balance_on_foam_pad",
+    "bicep_strain_band_resisted_eccentric_curl",
+    "bicep_strain_cable_curl_with_fat_grip",
+    "bicep_strain_isometric_bicep_curl_hold_mid_range",
+    "bicep_strain_supinated_isometric_elbow_hold",
+    "bicep_tendonitis_incline_db_curl_eccentric_focus",
+    "calf_strain_active_band_calf_pumps",
+    "calf_strain_isometric_tip_toe_wall_press",
+    "calf_strain_isometric_wall_push_hold",
+    "chest_strain_isometric_wall_push_chest_height",
+    "chest_strain_resistance_band_chest_fly",
+    "elbow_sprain_overhead_band_triceps_extension",
+    "elbow_sprain_wrist_wall_slides_elbow_straight",
+    "elbow_tendonitis_eccentric_reverse_wrist_curls",
+    "fingers_sprain_finger_band_expansions",
+    "fingers_sprain_finger_taps_on_hard_surface",
+    "fingers_sprain_mini_band_finger_spread_hold",
+    "fingers_sprain_tape_assisted_plyo_taps",
+    "forearm_tendonitis_eccentric_wrist_extensions",
+    "groin_strain_standing_cable_adduction",
+    "hamstrings_strain_massage_gun_biceps_femoris_sweep",
+    "hand_sprain_band_resisted_finger_abduction",
+    "hand_sprain_finger_band_extensions",
+    "hand_sprain_hook_grip_plate_pinches",
+    "hand_sprain_palm_squeeze_with_soft_ball",
+    "knee_instability_mini_band_lateral_walks",
+    "knee_instability_reactive_knee_bounces_foam_pad",
+    "quads_strain_foam_roller_quad_sweep",
+    "quads_strain_isometric_wall_sit_mid_range",
+    "shoulder_instability_banded_overhead_carries",
+    "shoulder_instability_kb_bottom_up_carry",
+    "shoulder_instability_quadruped_weight_shifts_arm_reaches",
+    "shoulder_instability_wall_walks_isometric",
+    "shoulder_sprain_90_90_external_rotation_holds",
+    "shoulder_sprain_isometric_banded_row",
+    "shoulder_sprain_overhead_scapular_pull_aparts",
+    "shoulder_sprain_wall_supported_external_rotation",
+    "shoulder_strain_banded_y_raise",
+    "shoulder_strain_isometric_wall_press_90_abduction",
+    "shoulder_strain_landmine_shoulder_press",
+    "shoulder_strain_wall_slides_with_foam_roller",
+    "shoulder_tendonitis_banded_scaption_holds",
+    "toe_sprain_double_leg_pogo_jumps",
+    "toe_sprain_toe_off_isometric_presses",
+    "triceps_strain_isometric_wall_triceps_press",
+    "triceps_strain_kettlebell_crush_press_light",
+    "triceps_strain_overhead_band_triceps_extensions",
+    "triceps_strain_push_up_to_tabletop_flow",
+    "wrist_sprain_band_assisted_wrist_flexion_hold",
+    "wrist_sprain_band_stabilization_circles",
+    "wrist_sprain_isometric_wall_wrist_press",
+    "wrist_sprain_isometric_wrist_holds_various_angles",
+    "wrist_sprain_plank_to_palm_rockbacks",
+    "wrist_sprain_wrist_stability_drill_with_dynamometer",
+    "wrist_tendonitis_eccentric_wrist_flexion_with_dumbbell"
+  ],
+  "bank_classification_counts": {
+    "load": 58,
+    "calm": 64,
+    "restore": 44,
+    "unclassified": 1433,
+    "dynamic": 5
+  },
+  "registered_assessment_inputs": [
+    "achilles_heel_rise_assessed",
+    "achilles_loading_response_assessed",
+    "achilles_range_load_assessed",
+    "achilles_site_assessed",
+    "lateral_elbow_function_assessed_v1"
+  ],
+  "evaluable_functional_checkpoints": [
+    "achilles_midportion_reported_load_permission_v1",
+    "achilles_restore_load_clinical_review_v1",
+    "ankle_lateral_reported_seated_load_v1",
+    "lateral_elbow_reported_load_permission_v2",
+    "lateral_elbow_restore_load_v1",
+    "shoulder_cuff_reported_wall_load_v1"
+  ],
+  "compiled_clinical_review_criteria": [
+    "achilles_restore_load_clinical_review_v1@1"
+  ],
+  "integrity": {
+    "duplicate_drill_ids": 0,
+    "duplicate_review_ids": 0,
+    "orphan_review_ids": 0,
+    "reachability_hashes_match": true,
+    "clinical_bank_validation_errors": 0
+  },
+  "limits": "Published means conditionally selectable content, not athlete clearance. Historical review decisions are provenance, not current approval. No stage activated or clinical threshold proposed."
+}
