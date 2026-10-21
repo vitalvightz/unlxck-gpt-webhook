@@ -48,6 +48,32 @@ test("progression is one compact row, only when the engine supplies a stage", ()
   assert.doesNotMatch(html, /aria-current="step"|data-complete|Rehab stage<|\d+%/);
 });
 
+test("permission entry explains its authority without claiming observed recovery", () => {
+  const html = renderToStaticMarkup(<RehabProgressStatus decision={{ ...decision, stage: "load",
+    progression: { ...decision.progression, entry_basis: "reported_clinician_permission" } }} />);
+  assert.match(html, /Loading permitted based on clinician advice you reported/);
+  assert.doesNotMatch(html, /clinically verified|recovery proven|three days/i);
+});
+
+test("unneeded entry evidence is explained as not required, never completed", async () => {
+  const container = document.createElement("div"); document.body.appendChild(container);
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<RehabProgressStatus decision={{ ...decision, progression: {
+      next_transition: { ...decision.progression!.next_transition!, reason_codes: [], requirements: [{
+        requirement_id: "prior_work", kind: "completed_reviewed_exposure", status: "not_applicable",
+        reason_code: "prior_restore_not_required_for_reported_permission",
+      }] },
+    } }} />));
+    await act(async () => container.querySelector("button")!.click());
+    const dialog = document.querySelector('[role="dialog"]')!;
+    assert.match(dialog.textContent ?? "", /Not required for this entry/);
+    assert.match(dialog.textContent ?? "", /Prior RESTORE logs are not required/);
+    assert.doesNotMatch(dialog.textContent ?? "", /Completed current-stage rehabComplete/);
+    assert.equal(dialog.querySelectorAll("form, input, select, textarea").length, 0);
+  } finally { act(() => root.unmount()); container.remove(); }
+});
+
 test("a closed next stage says so, and a stage with no next stage and no status renders nothing", () => {
   const closed = renderToStaticMarkup(<RehabProgressStatus decision={{ ...decision, progression: { next_transition: {
     ...decision.progression!.next_transition!, status: "closed", target_stage_live: false } } }} />);

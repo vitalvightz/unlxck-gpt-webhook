@@ -132,6 +132,7 @@ def apply_episode_observations(injury: dict, observations: list[dict], *, as_of:
         return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     last_setback = max((timestamp(value) for value in setbacks if value), default=None)
     clearances = [e for e in observations if e.get("event_type") == "clinician_clearance_report"
+                  and instant(e.get("created_at")) and instant(e["created_at"]) <= context.as_of
                   and (last_setback is None or timestamp(e["created_at"]) > last_setback)]
     if clearances:
         latest = max(clearances, key=lambda e: (timestamp(e["created_at"]), str(e.get("id") or "")))
@@ -140,6 +141,7 @@ def apply_episode_observations(injury: dict, observations: list[dict], *, as_of:
         # normalize a noncanonical report into a more permissive valid one.
         scopes = list(scopes) if isinstance(scopes, list) and all(isinstance(s, str) for s in scopes) else []
         row["clinician_clearance"] = {"episode_id": row["episode_id"], "scopes": scopes,
+                                      "report_id": latest.get("id"), "reported_at": latest["created_at"],
                                       "source": "athlete_reported", "externally_verified": False,
                                       "scope_reported_at": {scope: latest["created_at"] for scope in scopes}}
         if "rehabilitation_permission" in latest.get("payload", {}):

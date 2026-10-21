@@ -30,7 +30,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator, model_serializer
 
 from .rehab_schema import REHAB_STAGES
 
@@ -97,6 +97,16 @@ class PathwayTransition(BaseModel):
     to_stage: Literal["load", "dynamic", "return"]
     requirements: list[TransitionRequirement] = Field(default_factory=list)
     closed_reason: str | None = None
+    entry_mode: Literal["observed_rehab", "reported_clinician_starter"] = "observed_rehab"
+    setback_resolution: Literal["hold", "improvement_then_reviewed_restore"] = "hold"
+
+    @model_serializer(mode="wrap")
+    def preserve_historical_shape(self, handler):
+        raw = handler(self)
+        for key, default in (("entry_mode", "observed_rehab"), ("setback_resolution", "hold")):
+            if raw.get(key) == default:
+                raw.pop(key)
+        return raw
 
     @model_validator(mode="after")
     def consecutive(self):
@@ -107,6 +117,9 @@ class PathwayTransition(BaseModel):
             raise ValueError("duplicate transition requirement")
         if self.closed_reason is not None and not self.closed_reason.strip():
             raise ValueError("a closed transition needs a reason")
+        if (self.entry_mode != "observed_rehab" or self.setback_resolution != "hold") and (
+                (self.from_stage, self.to_stage) != ("restore", "load") or not self.promotable):
+            raise ValueError("starter entry and recovery rules require an open sourced RESTORE to LOAD transition")
         return self
 
     @property
@@ -141,6 +154,8 @@ class TransitionOverride(BaseModel):
     add_requirements: list[TransitionRequirement] = Field(default_factory=list)
     remove_requirement_ids: list[str] = Field(default_factory=list)
     closed_reason: str | None = None
+    entry_mode: Literal["observed_rehab", "reported_clinician_starter"] = "observed_rehab"
+    setback_resolution: Literal["hold", "improvement_then_reviewed_restore"] = "hold"
 
 
 class FunctionalCheckpoint(BaseModel):
@@ -231,5 +246,7 @@ def compose_transitions(catalog: PathwayCatalog, family: PathwayFamily,
             if requirement.checkpoint and bases[requirement.checkpoint] != requirement.basis:
                 raise ValueError("checkpoint declaration and requirement basis must match")
         composed.append(PathwayTransition(from_stage=from_stage, to_stage=to_stage,
-                                          requirements=requirements, closed_reason=closed))
+                                          requirements=requirements, closed_reason=closed,
+            entry_mode=override.entry_mode if override else "observed_rehab",
+            setback_resolution=override.setback_resolution if override else "hold"))
     return composed

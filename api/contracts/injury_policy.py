@@ -564,6 +564,10 @@ def reconcile_session_prescription(
         if decision["prescription"].get("drills"):
             identity = f"{identity}:{prescription['drill_id']}"
         block = {
+            **({"injury_side": next((i.get("side") for i in injuries
+                if str(i.get("id")) == str(decision["injury_id"])
+                and str(i.get("episode_id")) == str(decision["injury_episode_id"])), None)}
+                if prescription.get("required_rehabilitation_level") else {}),
             **({"rehab_allocation_id": f"rehab:{decision['injury_id']}:{decision['injury_episode_id']}"}
                if decision["prescription"].get("drills") else {}),
             "block_id": identity, "block_type": "rehab", "title": prescription["drill"]["name"],

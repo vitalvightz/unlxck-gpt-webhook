@@ -91,6 +91,8 @@ def build_report():
                 gate_reasons=([incoming.closed_reason] if incoming and incoming.closed_reason else
                     ["target_stage_not_activated"] if stage not in policy.live_stages else []),
                 declared_requirements=[r.model_dump(exclude_none=True) for r in incoming.requirements] if incoming else [],
+                entry_mode=incoming.entry_mode if incoming else "baseline_report",
+                setback_resolution=incoming.setback_resolution if incoming else None,
                 approved_exact_ids=exact_ids, eligible_exact_ids=sorted(set(exact_ids) & eligible.keys()),
                 eligible_including_protective_fallback_ids=sorted(eligible),
                 eligible_by_severity=eligible_by_severity, surfaced_by_severity=selected_by_severity,
@@ -156,7 +158,7 @@ def markdown(report):
         f"{s['total_drills']} bank drills; {s['reviewed']} current reviewed identities; {s['active_profiles']} active profiles; "
         f"{s['live_unique_identities']} live prescribed identities; {s['reviewed_dormant']} reviewed but dormant. "
         f"{s['surfaced_unique_identities']} identities surface under the supported-severity/full-apparatus content probes.", "",
-        "A probe tests the actual compatibility filter and selector, including priority and atomic bundles. It does not override or certify clinical stage eligibility. LOAD remains conditional on the complete episode journey; DYNAMIC/RETURN and groin LOAD remain closed. Exact IDs below are current prescription IDs, not the wider bank. JSON contains per-stage fallbacks, severity/equipment/side results, requirements, rejection codes and every exact-type dormant candidate's missing information. Empty dose on existing approved self-paced baselines is intentional.", "",
+        "A probe tests the actual compatibility filter and selector, including priority and atomic bundles. It does not override or certify clinical stage eligibility. The four LOAD starters support declared reported-clinician entry without mandatory RESTORE logs; known unresolved responses and setbacks still hold loading. DYNAMIC/RETURN and groin LOAD remain closed. Exact IDs below are current prescription IDs, not the wider bank. JSON includes entry/recovery modes, fallbacks, severity/equipment/side results, requirements, rejection codes and each dormant candidate's missing information. Empty dose on approved self-paced baselines is intentional.", "",
         "The historical advanced review supplies planning reasons only. Current source hashes and the live catalog determine present inventory. Unspecified regional drills are listed separately in JSON and never assigned to a diagnosis.", "",
         "| Profile | Reviewed / exact bank | Live / dormant | CALM IDs | RESTORE IDs | LOAD IDs | Alternatives C/R/L | Presentation |",
         "| --- | ---: | ---: | --- | --- | --- | --- | --- |"]

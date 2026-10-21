@@ -2,7 +2,7 @@
   "input_sha256": {
     "data/rehab_bank.json": "5a84e46d9e00cf0b97b6af910ef9903bd4e02c11a0f313b6a3db4e823bb4f981",
     "data/rehab_metadata_review.json": "3546346f4993223aa5126e4c20b63a5eb4d0a4124a6e5b59aa94836b9e2d8f43",
-    "data/rehab_pathways.json": "4d459616044b4ba826f95822f602042eacf4c4509cad2680c395472986eeec31",
+    "data/rehab_pathways.json": "649160401f220ccf6a6db2f90973b318ed54198315b15ce3776b3c32b33b7536",
     "docs/rehab-advanced-candidate-review.json": "cfd575d558de8a062d080e5404822a131dddba06491fa4ec07769dde7b585618"
   },
   "outside_active_profile_ids": {
@@ -1422,6 +1422,7 @@
           "empty_equipment_ids": [
             "achilles_tendonitis_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -1437,6 +1438,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "achilles_tendonitis_recovery_support"
@@ -1516,6 +1518,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -1539,6 +1542,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -1645,8 +1649,10 @@
             "achilles_tendonitis_recovery_support",
             "achilles_tendonitis_reviewed_restore"
           ],
+          "entry_mode": "reported_clinician_starter",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": "improvement_then_reviewed_restore",
           "surfaced_by_severity": {
             "low": [
               "achilles_tendonitis_eccentric_calf_drops_on_step"
@@ -1690,6 +1696,7 @@
             "achilles_tendonitis_recovery_support",
             "achilles_tendonitis_reviewed_restore"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -1699,6 +1706,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "achilles_tendonitis_reviewed_restore"
@@ -1778,6 +1786,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -1801,6 +1810,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -1921,6 +1931,7 @@
           "empty_equipment_ids": [
             "ankle_impingement_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -1930,6 +1941,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "ankle_impingement_recovery_support"
@@ -2009,6 +2021,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -2026,6 +2039,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -2099,6 +2113,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -2116,6 +2131,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -2153,8 +2169,10 @@
             "ankle_impingement_recovery_support",
             "ankle_impingement_reviewed_restore"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "ankle_impingement_reviewed_restore"
@@ -2234,6 +2252,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -2251,6 +2270,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -2367,6 +2387,7 @@
           "empty_equipment_ids": [
             "ankle_instability_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -2376,6 +2397,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "ankle_instability_recovery_support"
@@ -2455,6 +2477,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -2472,6 +2495,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -2545,6 +2569,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -2562,6 +2587,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -2598,8 +2624,10 @@
           "empty_equipment_ids": [
             "ankle_instability_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "ankle_instability_reviewed_restore"
@@ -2679,6 +2707,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -2696,6 +2725,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -2812,6 +2842,7 @@
           "empty_equipment_ids": [
             "ankle_sprain_gentle_movement"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -2833,6 +2864,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "ankle_sprain_gentle_movement"
@@ -2912,6 +2944,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -2941,6 +2974,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -3051,8 +3085,10 @@
             "ankle_sprain_heel_lowering",
             "ankle_sprain_supported_balance"
           ],
+          "entry_mode": "reported_clinician_starter",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": "improvement_then_reviewed_restore",
           "surfaced_by_severity": {
             "low": [
               "ankle_sprain_seated_bilateral_heel_raise"
@@ -3105,6 +3141,7 @@
             "ankle_sprain_heel_lowering",
             "ankle_sprain_supported_balance"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -3114,6 +3151,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "ankle_sprain_supported_balance",
@@ -3195,6 +3233,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -3224,6 +3263,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -3354,8 +3394,10 @@
           "empty_equipment_ids": [
             "biceps_contusion_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "biceps_contusion_recovery_support"
@@ -3435,6 +3477,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -3446,6 +3489,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -3519,6 +3563,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -3530,6 +3575,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -3551,6 +3597,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -3562,6 +3609,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -3635,6 +3683,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -3646,6 +3695,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -3796,6 +3846,7 @@
           "empty_equipment_ids": [
             "biceps_strain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -3805,6 +3856,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "biceps_strain_recovery_support"
@@ -3884,6 +3936,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -3901,6 +3954,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -3974,6 +4028,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -3991,6 +4046,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -4028,8 +4084,10 @@
             "biceps_strain_recovery_support",
             "biceps_strain_reviewed_restore"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "biceps_strain_reviewed_restore"
@@ -4109,6 +4167,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -4126,6 +4185,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -4252,6 +4312,7 @@
           "empty_equipment_ids": [
             "biceps_tendonitis_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -4261,6 +4322,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "biceps_tendonitis_recovery_support"
@@ -4340,6 +4402,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -4357,6 +4420,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -4430,6 +4494,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -4447,6 +4512,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -4484,8 +4550,10 @@
             "biceps_tendonitis_recovery_support",
             "biceps_tendonitis_reviewed_restore"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "biceps_tendonitis_reviewed_restore"
@@ -4565,6 +4633,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -4582,6 +4651,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -4717,6 +4787,7 @@
           "empty_equipment_ids": [
             "calf_strain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -4726,6 +4797,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "calf_strain_recovery_support"
@@ -4805,6 +4877,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -4822,6 +4895,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -4895,6 +4969,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -4912,6 +4987,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -4948,8 +5024,10 @@
           "empty_equipment_ids": [
             "calf_strain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "calf_strain_double_leg_calf_raises"
@@ -5030,6 +5108,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -5047,6 +5126,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -5163,6 +5243,7 @@
           "empty_equipment_ids": [
             "chest_strain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -5172,6 +5253,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "chest_strain_recovery_support"
@@ -5251,6 +5333,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -5268,6 +5351,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -5341,6 +5425,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -5358,6 +5443,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -5395,8 +5481,10 @@
             "chest_strain_comfortable_movement",
             "chest_strain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "chest_strain_comfortable_movement"
@@ -5477,6 +5565,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -5494,6 +5583,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -5572,6 +5662,7 @@
           "empty_equipment_ids": [
             "elbow_contusion_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -5581,6 +5672,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "elbow_contusion_recovery_support"
@@ -5660,6 +5752,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -5677,6 +5770,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -5750,6 +5844,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -5767,6 +5862,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -5804,8 +5900,10 @@
             "elbow_contusion_gentle_elbow_slides_on_wall",
             "elbow_contusion_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "elbow_contusion_gentle_elbow_slides_on_wall"
@@ -5885,6 +5983,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -5902,6 +6001,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -6023,8 +6123,10 @@
           "empty_equipment_ids": [
             "elbow_hyperextension_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "elbow_hyperextension_recovery_support"
@@ -6104,6 +6206,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -6115,6 +6218,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -6188,6 +6292,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -6199,6 +6304,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -6220,6 +6326,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -6231,6 +6338,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -6304,6 +6412,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -6315,6 +6424,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -6413,6 +6523,7 @@
           "empty_equipment_ids": [
             "elbow_impingement_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -6422,6 +6533,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "elbow_impingement_recovery_support"
@@ -6501,6 +6613,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -6518,6 +6631,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -6591,6 +6705,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -6608,6 +6723,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -6645,8 +6761,10 @@
             "elbow_impingement_elbow_cars",
             "elbow_impingement_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "elbow_impingement_elbow_cars"
@@ -6726,6 +6844,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -6743,6 +6862,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -6865,8 +6985,10 @@
           "empty_equipment_ids": [
             "elbow_pain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "elbow_pain_recovery_support"
@@ -6946,6 +7068,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -6957,6 +7080,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -7030,6 +7154,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -7041,6 +7166,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -7062,6 +7188,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -7073,6 +7200,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -7146,6 +7274,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -7157,6 +7286,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -7265,6 +7395,7 @@
           "empty_equipment_ids": [
             "elbow_sprain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -7274,6 +7405,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "elbow_sprain_recovery_support"
@@ -7353,6 +7485,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -7370,6 +7503,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -7443,6 +7577,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -7460,6 +7595,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -7497,8 +7633,10 @@
             "elbow_sprain_recovery_support",
             "elbow_sprain_reviewed_restore"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "elbow_sprain_reviewed_restore"
@@ -7578,6 +7716,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -7595,6 +7734,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -7717,8 +7857,10 @@
           "empty_equipment_ids": [
             "elbow_stiffness_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "elbow_stiffness_recovery_support"
@@ -7798,6 +7940,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -7809,6 +7952,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -7882,6 +8026,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -7893,6 +8038,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -7914,6 +8060,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -7925,6 +8072,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -7998,6 +8146,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -8009,6 +8158,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -8126,6 +8276,7 @@
           "empty_equipment_ids": [
             "elbow_tendonitis_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -8141,6 +8292,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "elbow_tendonitis_recovery_support"
@@ -8220,6 +8372,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -8243,6 +8396,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -8349,8 +8503,10 @@
             "elbow_tendonitis_recovery_support",
             "elbow_tendonitis_reviewed_restore"
           ],
+          "entry_mode": "reported_clinician_starter",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": "improvement_then_reviewed_restore",
           "surfaced_by_severity": {
             "low": [
               "elbow_tendonitis_supported_hand_weight_wrist_extension"
@@ -8394,6 +8550,7 @@
             "elbow_tendonitis_recovery_support",
             "elbow_tendonitis_reviewed_restore"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -8403,6 +8560,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "elbow_tendonitis_reviewed_restore"
@@ -8482,6 +8640,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -8505,6 +8664,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -8628,6 +8788,7 @@
           "empty_equipment_ids": [
             "fingers_contusion_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -8637,6 +8798,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "fingers_contusion_recovery_support"
@@ -8716,6 +8878,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -8733,6 +8896,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -8806,6 +8970,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -8823,6 +8988,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -8860,8 +9026,10 @@
             "fingers_contusion_recovery_support",
             "fingers_contusion_reviewed_restore"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "fingers_contusion_reviewed_restore"
@@ -8941,6 +9109,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -8958,6 +9127,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -9059,8 +9229,10 @@
           "empty_equipment_ids": [
             "fingers_hyperextension_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "fingers_hyperextension_recovery_support"
@@ -9140,6 +9312,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -9151,6 +9324,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -9224,6 +9398,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -9235,6 +9410,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -9256,6 +9432,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -9267,6 +9444,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -9340,6 +9518,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -9351,6 +9530,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -9452,8 +9632,10 @@
           "empty_equipment_ids": [
             "fingers_pain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "fingers_pain_recovery_support"
@@ -9533,6 +9715,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -9544,6 +9727,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -9617,6 +9801,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -9628,6 +9813,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -9649,6 +9835,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -9660,6 +9847,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -9733,6 +9921,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -9744,6 +9933,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -9869,6 +10059,7 @@
           "empty_equipment_ids": [
             "fingers_sprain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -9878,6 +10069,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "fingers_sprain_recovery_support"
@@ -9957,6 +10149,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -9974,6 +10167,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -10047,6 +10241,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -10064,6 +10259,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -10101,8 +10297,10 @@
             "fingers_sprain_recovery_support",
             "fingers_sprain_reviewed_restore"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "fingers_sprain_reviewed_restore"
@@ -10182,6 +10380,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -10199,6 +10398,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -10301,6 +10501,7 @@
           "empty_equipment_ids": [
             "fingers_tendonitis_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -10310,6 +10511,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "fingers_tendonitis_recovery_support"
@@ -10389,6 +10591,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -10406,6 +10609,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -10479,6 +10683,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -10496,6 +10701,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -10533,8 +10739,10 @@
             "fingers_tendonitis_recovery_support",
             "fingers_tendonitis_reviewed_restore"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "fingers_tendonitis_reviewed_restore"
@@ -10614,6 +10822,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -10631,6 +10840,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -10732,8 +10942,10 @@
           "empty_equipment_ids": [
             "forearm_contusion_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "forearm_contusion_recovery_support"
@@ -10813,6 +11025,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -10824,6 +11037,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -10897,6 +11111,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -10908,6 +11123,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -10929,6 +11145,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -10940,6 +11157,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -11013,6 +11231,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -11024,6 +11243,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -11142,6 +11362,7 @@
           "empty_equipment_ids": [
             "forearm_tendonitis_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -11151,6 +11372,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "forearm_tendonitis_recovery_support"
@@ -11230,6 +11452,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -11247,6 +11470,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -11320,6 +11544,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -11337,6 +11562,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -11373,8 +11599,10 @@
           "empty_equipment_ids": [
             "forearm_tendonitis_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "forearm_tendonitis_reviewed_restore"
@@ -11454,6 +11682,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -11471,6 +11700,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -11562,6 +11792,7 @@
           "empty_equipment_ids": [
             "groin_strain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -11571,6 +11802,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "groin_strain_recovery_support"
@@ -11650,6 +11882,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -11667,6 +11900,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -11740,6 +11974,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -11757,6 +11992,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -11794,8 +12030,10 @@
             "groin_strain_recovery_support",
             "groin_strain_side_lying_hip_adduction"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "groin_strain_side_lying_hip_adduction"
@@ -11875,6 +12113,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -11892,6 +12131,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -11979,6 +12219,7 @@
           "empty_equipment_ids": [
             "hamstring_strain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -11988,6 +12229,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "hamstring_strain_recovery_support"
@@ -12067,6 +12309,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -12084,6 +12327,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -12157,6 +12401,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -12174,6 +12419,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -12211,8 +12457,10 @@
             "hamstring_strain_recovery_support",
             "hamstrings_strain_isometric_hamstring_bridge"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "hamstrings_strain_isometric_hamstring_bridge"
@@ -12293,6 +12541,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -12310,6 +12559,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -12432,6 +12682,7 @@
           "empty_equipment_ids": [
             "hand_contusion_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -12441,6 +12692,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "hand_contusion_recovery_support"
@@ -12520,6 +12772,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -12537,6 +12790,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -12610,6 +12864,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -12627,6 +12882,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -12664,8 +12920,10 @@
             "hand_contusion_recovery_support",
             "hand_contusion_reviewed_restore"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "hand_contusion_reviewed_restore"
@@ -12745,6 +13003,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -12762,6 +13021,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -12890,8 +13150,10 @@
           "empty_equipment_ids": [
             "hand_hyperextension_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "hand_hyperextension_recovery_support"
@@ -12971,6 +13233,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -12982,6 +13245,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -13055,6 +13319,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -13066,6 +13331,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -13087,6 +13353,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -13098,6 +13365,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -13171,6 +13439,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -13182,6 +13451,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -13359,8 +13629,10 @@
           "empty_equipment_ids": [
             "hand_pain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "hand_pain_recovery_support"
@@ -13440,6 +13712,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -13451,6 +13724,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -13524,6 +13798,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -13535,6 +13810,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -13556,6 +13832,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -13567,6 +13844,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -13640,6 +13918,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -13651,6 +13930,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -13800,6 +14080,7 @@
           "empty_equipment_ids": [
             "hand_sprain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -13809,6 +14090,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "hand_sprain_recovery_support"
@@ -13888,6 +14170,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -13905,6 +14188,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -13978,6 +14262,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -13995,6 +14280,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -14032,8 +14318,10 @@
             "hand_sprain_recovery_support",
             "hand_sprain_reviewed_restore"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "hand_sprain_reviewed_restore"
@@ -14113,6 +14401,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -14130,6 +14419,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -14307,6 +14597,7 @@
           "empty_equipment_ids": [
             "hand_tendonitis_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -14316,6 +14607,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "hand_tendonitis_recovery_support"
@@ -14395,6 +14687,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -14412,6 +14705,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -14485,6 +14779,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -14502,6 +14797,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -14539,8 +14835,10 @@
             "hand_tendonitis_recovery_support",
             "hand_tendonitis_reviewed_restore"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "hand_tendonitis_reviewed_restore"
@@ -14620,6 +14918,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -14637,6 +14936,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -14766,8 +15066,10 @@
           "empty_equipment_ids": [
             "heel_contusion_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "heel_contusion_recovery_support"
@@ -14847,6 +15149,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -14858,6 +15161,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -14931,6 +15235,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -14942,6 +15247,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -14963,6 +15269,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -14974,6 +15281,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -15047,6 +15355,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -15058,6 +15367,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -15144,6 +15454,7 @@
           "empty_equipment_ids": [
             "hip_impingement_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -15153,6 +15464,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "hip_impingement_recovery_support"
@@ -15232,6 +15544,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -15249,6 +15562,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -15322,6 +15636,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -15339,6 +15654,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -15376,8 +15692,10 @@
             "hip_impingement_90_90_hip_switches",
             "hip_impingement_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "hip_impingement_90_90_hip_switches"
@@ -15457,6 +15775,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -15474,6 +15793,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -15594,8 +15914,10 @@
           "empty_equipment_ids": [
             "hip_pain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "hip_pain_recovery_support"
@@ -15675,6 +15997,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -15686,6 +16009,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -15759,6 +16083,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -15770,6 +16095,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -15791,6 +16117,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -15802,6 +16129,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -15875,6 +16203,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -15886,6 +16215,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -15993,6 +16323,7 @@
           "empty_equipment_ids": [
             "knee_instability_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -16002,6 +16333,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "knee_instability_recovery_support"
@@ -16081,6 +16413,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -16098,6 +16431,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -16171,6 +16505,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -16188,6 +16523,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -16225,8 +16561,10 @@
             "knee_instability_recovery_support",
             "knee_instability_reviewed_restore"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "knee_instability_reviewed_restore"
@@ -16306,6 +16644,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -16323,6 +16662,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -16444,8 +16784,10 @@
           "empty_equipment_ids": [
             "knee_pain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "knee_pain_recovery_support"
@@ -16525,6 +16867,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -16536,6 +16879,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -16609,6 +16953,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -16620,6 +16965,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -16641,6 +16987,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -16652,6 +16999,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -16725,6 +17073,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -16736,6 +17085,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -16928,6 +17278,7 @@
           "empty_equipment_ids": [
             "lower_back_pain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -16937,6 +17288,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "lower_back_pain_recovery_support"
@@ -17016,6 +17368,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -17033,6 +17386,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -17106,6 +17460,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -17123,6 +17478,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -17159,8 +17515,10 @@
           "empty_equipment_ids": [
             "lower_back_pain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "lower_back_pain_supine_pelvic_tilts"
@@ -17240,6 +17598,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -17257,6 +17616,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -17427,8 +17787,10 @@
           "empty_equipment_ids": [
             "lower_back_stiffness_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "lower_back_stiffness_recovery_support"
@@ -17508,6 +17870,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -17519,6 +17882,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -17592,6 +17956,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -17603,6 +17968,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -17624,6 +17990,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -17635,6 +18002,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -17708,6 +18076,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -17719,6 +18088,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -17888,8 +18258,10 @@
           "empty_equipment_ids": [
             "neck_soreness_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "neck_soreness_recovery_support"
@@ -17969,6 +18341,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -17980,6 +18353,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -18053,6 +18427,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -18064,6 +18439,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -18085,6 +18461,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -18096,6 +18473,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -18169,6 +18547,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -18180,6 +18559,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -18327,6 +18707,7 @@
           "empty_equipment_ids": [
             "neck_stiffness_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -18336,6 +18717,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "neck_stiffness_recovery_support"
@@ -18415,6 +18797,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -18432,6 +18815,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -18505,6 +18889,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -18522,6 +18907,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -18559,8 +18945,10 @@
             "neck_stiffness_neck_cars_controlled_articular_rotations",
             "neck_stiffness_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "neck_stiffness_neck_cars_controlled_articular_rotations"
@@ -18640,6 +19028,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -18657,6 +19046,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -18779,8 +19169,10 @@
           "empty_equipment_ids": [
             "neck_tightness_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "neck_tightness_recovery_support"
@@ -18860,6 +19252,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -18871,6 +19264,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -18944,6 +19338,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -18955,6 +19350,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -18976,6 +19372,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -18987,6 +19384,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -19060,6 +19458,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -19071,6 +19470,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -19192,8 +19592,10 @@
           "empty_equipment_ids": [
             "quads_contusion_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "quads_contusion_recovery_support"
@@ -19273,6 +19675,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -19284,6 +19687,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -19357,6 +19761,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -19368,6 +19773,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -19389,6 +19795,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -19400,6 +19807,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -19473,6 +19881,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -19484,6 +19893,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -19590,6 +20000,7 @@
           "empty_equipment_ids": [
             "quads_strain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -19599,6 +20010,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "quads_strain_recovery_support"
@@ -19678,6 +20090,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -19695,6 +20108,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -19768,6 +20182,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -19785,6 +20200,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -19821,8 +20237,10 @@
           "empty_equipment_ids": [
             "quads_strain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "quads_strain_reviewed_restore"
@@ -19902,6 +20320,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -19919,6 +20338,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -20088,8 +20508,10 @@
           "empty_equipment_ids": [
             "shin_contusion_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "shin_contusion_recovery_support"
@@ -20169,6 +20591,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -20180,6 +20603,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -20253,6 +20677,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -20264,6 +20689,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -20285,6 +20711,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -20296,6 +20723,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -20369,6 +20797,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -20380,6 +20809,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -20524,6 +20954,7 @@
           "empty_equipment_ids": [
             "shoulder_contusion_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -20533,6 +20964,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "shoulder_contusion_recovery_support"
@@ -20612,6 +21044,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -20629,6 +21062,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -20702,6 +21136,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -20719,6 +21154,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -20755,8 +21191,10 @@
           "empty_equipment_ids": [
             "shoulder_contusion_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "shoulder_contusion_passive_arm_hang_trap_bar_support"
@@ -20836,6 +21274,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -20853,6 +21292,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -21038,8 +21478,10 @@
           "empty_equipment_ids": [
             "shoulder_hyperextension_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "shoulder_hyperextension_recovery_support"
@@ -21119,6 +21561,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -21130,6 +21573,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -21203,6 +21647,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -21214,6 +21659,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -21235,6 +21681,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -21246,6 +21693,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -21319,6 +21767,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -21330,6 +21779,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -21492,6 +21942,7 @@
           "empty_equipment_ids": [
             "shoulder_impingement_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -21501,6 +21952,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "shoulder_impingement_recovery_support"
@@ -21580,6 +22032,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -21597,6 +22050,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -21670,6 +22124,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -21687,6 +22142,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -21723,8 +22179,10 @@
           "empty_equipment_ids": [
             "shoulder_impingement_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "shoulder_impingement_scapular_wall_slides_with_chin_tuck"
@@ -21804,6 +22262,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -21821,6 +22280,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -21978,6 +22438,7 @@
           "empty_equipment_ids": [
             "shoulder_instability_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -21987,6 +22448,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "shoulder_instability_recovery_support"
@@ -22066,6 +22528,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -22083,6 +22546,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -22156,6 +22620,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -22173,6 +22638,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -22210,8 +22676,10 @@
             "shoulder_instability_recovery_support",
             "shoulder_instability_reviewed_restore"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "shoulder_instability_reviewed_restore"
@@ -22291,6 +22759,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -22308,6 +22777,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -22492,8 +22962,10 @@
           "empty_equipment_ids": [
             "shoulder_pain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "shoulder_pain_recovery_support"
@@ -22573,6 +23045,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -22584,6 +23057,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -22657,6 +23131,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -22668,6 +23143,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -22689,6 +23165,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -22700,6 +23177,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -22773,6 +23251,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -22784,6 +23263,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -22970,8 +23450,10 @@
           "empty_equipment_ids": [
             "shoulder_soreness_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "shoulder_soreness_recovery_support"
@@ -23051,6 +23533,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -23062,6 +23545,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -23135,6 +23619,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -23146,6 +23631,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -23167,6 +23653,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -23178,6 +23665,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -23251,6 +23739,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -23262,6 +23751,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -23418,6 +23908,7 @@
           "empty_equipment_ids": [
             "shoulder_sprain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -23427,6 +23918,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "shoulder_sprain_recovery_support"
@@ -23506,6 +23998,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -23523,6 +24016,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -23596,6 +24090,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -23613,6 +24108,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -23649,8 +24145,10 @@
           "empty_equipment_ids": [
             "shoulder_sprain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "shoulder_sprain_reviewed_restore"
@@ -23730,6 +24228,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -23747,6 +24246,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -23907,6 +24407,7 @@
           "empty_equipment_ids": [
             "shoulder_strain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -23916,6 +24417,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "shoulder_strain_recovery_support"
@@ -23995,6 +24497,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -24012,6 +24515,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -24085,6 +24589,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -24102,6 +24607,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -24139,8 +24645,10 @@
             "shoulder_strain_recovery_support",
             "shoulder_strain_reviewed_restore"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "shoulder_strain_reviewed_restore"
@@ -24220,6 +24728,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -24237,6 +24746,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -24417,6 +24927,7 @@
           "empty_equipment_ids": [
             "shoulder_tendonitis_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -24432,6 +24943,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "shoulder_tendonitis_recovery_support"
@@ -24511,6 +25023,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -24534,6 +25047,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -24639,8 +25153,10 @@
             "shoulder_tendonitis_recovery_support",
             "shoulder_tendonitis_reviewed_restore"
           ],
+          "entry_mode": "reported_clinician_starter",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": "improvement_then_reviewed_restore",
           "surfaced_by_severity": {
             "low": [
               "shoulder_tendonitis_wall_push_up"
@@ -24684,6 +25200,7 @@
             "shoulder_tendonitis_recovery_support",
             "shoulder_tendonitis_reviewed_restore"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -24693,6 +25210,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "shoulder_tendonitis_reviewed_restore"
@@ -24772,6 +25290,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -24795,6 +25314,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -24980,8 +25500,10 @@
           "empty_equipment_ids": [
             "shoulder_tightness_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "shoulder_tightness_recovery_support"
@@ -25061,6 +25583,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -25072,6 +25595,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -25145,6 +25669,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -25156,6 +25681,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -25177,6 +25703,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -25188,6 +25715,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -25261,6 +25789,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -25272,6 +25801,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -25408,8 +25938,10 @@
           "empty_equipment_ids": [
             "toe_hyperextension_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "toe_hyperextension_recovery_support"
@@ -25489,6 +26021,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -25500,6 +26033,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -25573,6 +26107,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -25584,6 +26119,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -25605,6 +26141,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -25616,6 +26153,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -25689,6 +26227,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -25700,6 +26239,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -25803,6 +26343,7 @@
           "empty_equipment_ids": [
             "toe_sprain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -25812,6 +26353,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "toe_sprain_recovery_support"
@@ -25891,6 +26433,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -25908,6 +26451,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -25981,6 +26525,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -25998,6 +26543,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -26035,8 +26581,10 @@
             "toe_sprain_recovery_support",
             "toe_sprain_reviewed_restore"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "toe_sprain_reviewed_restore"
@@ -26116,6 +26664,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -26133,6 +26682,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -26253,8 +26803,10 @@
           "empty_equipment_ids": [
             "triceps_contusion_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "triceps_contusion_recovery_support"
@@ -26334,6 +26886,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -26345,6 +26898,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -26418,6 +26972,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -26429,6 +26984,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -26450,6 +27006,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -26461,6 +27018,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -26534,6 +27092,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -26545,6 +27104,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -26688,6 +27248,7 @@
           "empty_equipment_ids": [
             "triceps_strain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -26697,6 +27258,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "triceps_strain_recovery_support"
@@ -26776,6 +27338,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -26793,6 +27356,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -26866,6 +27430,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -26883,6 +27448,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -26920,8 +27486,10 @@
             "triceps_strain_recovery_support",
             "triceps_strain_reviewed_restore"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "triceps_strain_reviewed_restore"
@@ -27001,6 +27569,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -27018,6 +27587,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -27166,6 +27736,7 @@
           "empty_equipment_ids": [
             "wrist_contusion_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -27175,6 +27746,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "wrist_contusion_recovery_support"
@@ -27254,6 +27826,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -27271,6 +27844,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -27344,6 +27918,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -27361,6 +27936,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -27397,8 +27973,10 @@
           "empty_equipment_ids": [
             "wrist_contusion_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "wrist_contusion_wrist_flexion_extension_passes"
@@ -27478,6 +28056,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -27495,6 +28074,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -27707,8 +28287,10 @@
           "empty_equipment_ids": [
             "wrist_hyperextension_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "wrist_hyperextension_recovery_support"
@@ -27788,6 +28370,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -27799,6 +28382,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -27872,6 +28456,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -27883,6 +28468,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -27904,6 +28490,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -27915,6 +28502,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -27988,6 +28576,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -27999,6 +28588,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -28209,8 +28799,10 @@
           "empty_equipment_ids": [
             "wrist_impingement_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "wrist_impingement_recovery_support"
@@ -28290,6 +28882,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -28301,6 +28894,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -28374,6 +28968,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -28385,6 +28980,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -28406,6 +29002,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -28417,6 +29014,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -28490,6 +29088,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -28501,6 +29100,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -28712,8 +29312,10 @@
           "empty_equipment_ids": [
             "wrist_pain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "wrist_pain_recovery_support"
@@ -28793,6 +29395,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -28804,6 +29407,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -28877,6 +29481,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -28888,6 +29493,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -28909,6 +29515,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "baseline_report",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -28920,6 +29527,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -28993,6 +29601,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -29004,6 +29613,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -29218,6 +29828,7 @@
           "empty_equipment_ids": [
             "wrist_sprain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -29227,6 +29838,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "wrist_sprain_recovery_support"
@@ -29306,6 +29918,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -29323,6 +29936,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -29396,6 +30010,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -29413,6 +30028,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -29449,8 +30065,10 @@
           "empty_equipment_ids": [
             "wrist_sprain_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "wrist_sprain_reviewed_restore"
@@ -29530,6 +30148,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -29547,6 +30166,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -29784,6 +30404,7 @@
           "empty_equipment_ids": [
             "wrist_stiffness_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -29793,6 +30414,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "wrist_stiffness_recovery_support"
@@ -29872,6 +30494,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -29889,6 +30512,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -29962,6 +30586,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -29979,6 +30604,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -30015,8 +30641,10 @@
           "empty_equipment_ids": [
             "wrist_stiffness_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "wrist_stiffness_stick_roll_wrist_flex_ext"
@@ -30096,6 +30724,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -30113,6 +30742,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -30344,6 +30974,7 @@
           "empty_equipment_ids": [
             "wrist_tendonitis_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [
             {
@@ -30353,6 +30984,7 @@
               ]
             }
           ],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "wrist_tendonitis_recovery_support"
@@ -30432,6 +31064,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -30449,6 +31082,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -30522,6 +31156,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -30539,6 +31174,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []
@@ -30576,8 +31212,10 @@
             "wrist_tendonitis_pronation_supination_twists",
             "wrist_tendonitis_recovery_support"
           ],
+          "entry_mode": "baseline_report",
           "gate_reasons": [],
           "rejections": [],
+          "setback_resolution": null,
           "surfaced_by_severity": {
             "low": [
               "wrist_tendonitis_pronation_supination_twists"
@@ -30657,6 +31295,7 @@
           "eligible_exact_ids": [],
           "eligible_including_protective_fallback_ids": [],
           "empty_equipment_ids": [],
+          "entry_mode": "observed_rehab",
           "gate_reasons": [
             "target_stage_not_activated"
           ],
@@ -30674,6 +31313,7 @@
               ]
             }
           ],
+          "setback_resolution": "hold",
           "surfaced_by_severity": {
             "low": [],
             "moderate": []

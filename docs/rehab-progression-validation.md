@@ -1,6 +1,6 @@
 # Rehab progression validation
 
-Baseline: Main `7161c7f53a7186a69b21419cadc24d0dacceba24`, fetched at task start. This branch changes no bank/pathway/ledger content, clinical activation, database schema, RLS or historical event shape.
+Baseline: Main `7161c7f53a7186a69b21419cadc24d0dacceba24`, fetched at task start. Bank and ledger content, clinical stage activations, database schema, RLS and historical events are preserved. The later authorised permission-entry revision changes four policy versions/hashes and entry configuration; prescribed exercises and clinical limits stay unchanged.
 
 ## Checks
 
@@ -42,7 +42,7 @@ The affected suite includes all four pilot activation suites, the groin closure 
 
 The current 1,604 bank identities and all clinical hashes are unchanged. The report probes verify conditional content compatibility with known side, supported severity and exact source apparatus. They are not patient-specific medical clearance or a claim that dormant exercises are usable. Production deployment, real athlete data and authenticated production browser interaction were not verified, and this PR must not merge automatically.
 
-## Final aggregate
+## Aggregate before permission-entry revision
 
 The complete final-source affected run returned **2,700 passed, 17 skipped, two failed**. One failure is the unchanged Main bundle case named above. The other was the groin freeze assertion for the explicitly refreshed completion-service fingerprint; that test-only compatibility correction is verified by the combined metadata-contract/groin run: **112 passed** (the same cohort has two failures on Main). The 17 skipped real PostgreSQL cases pass in the separate 49-test PostgreSQL run. No unresolved new production failure was found in the affected selection.
 
@@ -57,3 +57,11 @@ python tools/review_rehab_advanced_candidates.py --check
 ```
 
 Final production source commit: `ec0e8b67e89fc10b1d994802d1102f73ee745653`; the subsequent handoff changes only test compatibility and these validation documents. Hosted [Backend Checks](https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/39531240915) and [Validate JSON Banks](https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/39531240899) pass on that source commit. Its frontend typecheck, lint, unit tests and production build also pass. The broader six-shard Python and browser workflow reruns are still running at handoff; their completed earlier full-run comparison is retained above. This is a draft for review, with inherited red release checks, not an approval to merge.
+
+## Permission-entry revision
+
+The user subsequently authorised reported clinician advice to open an existing approved starter without prior RESTORE logs. This intentionally replaces earlier tests that treated no exercise history as an automatic hold. Known pending/uncertain responses and any unresolved setback still hold loading. Foreign episode/side exposures are excluded; they do not certify tolerance, and their absence does not invalidate independent, current clinician permission.
+
+The four policy versions are now Achilles 3, elbow 4, ankle 6 and shoulder 3. An exact historical-policy reconstruction keeps dated audits/manifests inspectable without changing their clinical judgments. No new stage, exercise, dose, resistance or clinical subtype is activated.
+
+Current revision validation results are recorded after the final affected run. Earlier counts above refer to their explicitly named source commits and are retained for comparison.

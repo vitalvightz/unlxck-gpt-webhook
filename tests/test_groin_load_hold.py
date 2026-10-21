@@ -288,6 +288,9 @@ def test_all_profiles_inventory_provenance_and_athlete_interactions_remain_uncha
     assert manifest["outcome"] == "load_closed" and manifest["selected_load_exercise"] is None
     for path, expected in manifest["unchanged_files_sha256"].items():
         source = (ROOT / path).read_bytes()
+        if path == "data/rehab_pathways.json":
+            from tools.rehab_metadata_review_lib import before_reported_permission_entry
+            source = (json.dumps(before_reported_permission_entry(json.loads(source)), indent=2, ensure_ascii=False) + "\n").encode()
         if path == "tools/rehab_advanced_candidate_decisions.json":
             # Only the completion service's explicitly reviewed runtime
             # fingerprint changed; preserve all dated clinical judgments.
@@ -306,7 +309,8 @@ def test_all_profiles_inventory_provenance_and_athlete_interactions_remain_uncha
             assert source.count(current) == 1
             source = source.replace(current, original)
         assert hashlib.sha256(source).hexdigest() == expected, path
-    profiles = json.loads((ROOT / "data/rehab_pathways.json").read_text())["profiles"]
+    from tools.rehab_metadata_review_lib import before_reported_permission_entry
+    profiles = before_reported_permission_entry(json.loads((ROOT / "data/rehab_pathways.json").read_text()))["profiles"]
     assert len(profiles) == 64
     assert {p["policy_id"]: content_hash(p) for p in profiles} == manifest["unchanged_profiles_sha256"]
     bank = json.loads((ROOT / "data/rehab_bank.json").read_text())

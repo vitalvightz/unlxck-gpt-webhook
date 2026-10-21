@@ -78,7 +78,7 @@ export function InjuryClearance({ injury, token, onRefresh }: {
       <form onSubmit={event => { event.preventDefault(); void report(); }}>
         <div className="injury-sheet-body">
           <p className="injury-sheet-caption">Clinical Clearance · Self-reported</p>
-          <p className="muted">Record what your clinician advised. Your rehab engine still checks progression.</p>
+          <p className="muted">Record what your clinician advised. Strengthening permission can open an approved loading starter; injury restrictions and response holds still apply. Sport-specific permission does not open stages that are not available yet.</p>
           <fieldset className="injury-permission-options" disabled={busy || !injury.episode_id || surface}>
             <legend>Rehabilitation level</legend>
             {(["not_cleared", "gentle_recovery", "loading", "sport_specific"] as const).map(value => <label key={value} data-selected={rehabLevel === value}>
