@@ -459,7 +459,7 @@ def test_legacy_option_shape_is_unchanged_when_live_stage_context_is_absent(
 @pytest.mark.parametrize("live_stage", ["calm", "restore"])
 def test_real_bank_yields_an_eligible_canonical_drill_for_each_live_stage(live_stage):
     """A realistic CALM and RESTORE injury each select a real, resolvable drill."""
-    real_injury = injury(body_region="ankle", injury_type="sprain", side="left")
+    real_injury = injury(body_region="ankle", injury_type="sprain", side="left", available_equipment=["stable_support"])
 
     options = rehab_protocols.rehab_drill_options_for_phase(
         "sprain",
@@ -491,7 +491,7 @@ def test_real_bank_severity_gate_uses_the_contract_vocabulary():
             "sprain",
             "ankle",
             "GPP",
-            injury=injury(body_region="ankle", injury_type="sprain", severity=raw),
+            injury=injury(body_region="ankle", injury_type="sprain", severity=raw, available_equipment=["stable_support"]),
             rehab_stage="restore",
         )
         if raw == "severe":
@@ -502,7 +502,7 @@ def test_real_bank_severity_gate_uses_the_contract_vocabulary():
 
 def test_real_bank_selection_is_deterministic_across_candidate_order():
     """Same athlete, same bank, same answer — no ordering or randomness effects."""
-    real_injury = injury(body_region="ankle", injury_type="sprain", side="left")
+    real_injury = injury(body_region="ankle", injury_type="sprain", side="left", available_equipment=["stable_support"])
     runs = {
         rehab_protocols.rehab_drill_options_for_phase(
             "sprain",

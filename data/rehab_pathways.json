@@ -257,7 +257,7 @@
     },
     {
       "policy_id": "ankle_sprain",
-      "version": 6,
+      "version": 7,
       "pathway_family": "ligament_sprain_or_instability",
       "region": "ankle",
       "injury_type": "sprain",
@@ -272,7 +272,7 @@
         "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain",
         "https://pmc.ncbi.nlm.nih.gov/articles/PMC8824326/"
       ],
-      "content_hash": "d8c21e9670bd83a9f5d93a546417d1c8d4f24f44b91714e8a8f4c9b2160f1aec",
+      "content_hash": "b55912df50371707007e3e43db614a20caa8d52d982fdeec609d413df8eb583b",
       "prescriptions": [
         {
           "drill_id": "ankle_sprain_gentle_movement",
@@ -300,7 +300,7 @@
         },
         {
           "drill_id": "ankle_sprain_supported_balance",
-          "bank_hash": "f00f718eb8220c4f7ff0539627368fe22f7218b81b8ee82d3fad9d567276eae3",
+          "bank_hash": "78a62ef5d6e20499df8a382586439fb14996d91b694a1f53cb1aa413a8e87de8",
           "stage": "restore",
           "instructions": "When standing and weight bearing are comfortable, practise balancing on the affected leg on firm ground, close to a stable counter for support. Start with a short comfortable attempt and build gradually. Keep support available; do not use a cushion or close your eyes.",
           "dose": null,
@@ -323,7 +323,7 @@
         },
         {
           "drill_id": "ankle_sprain_heel_lowering",
-          "bank_hash": "c932d4b2b5a7bbfe4fbc77249ed2056cea2416add6982a3a5c84bc38cb5445ea",
+          "bank_hash": "2d7138e08675a617e230b8412b27ae3d47095af8c157fd03701660d18563ae22",
           "stage": "restore",
           "instructions": "When weight bearing and gentle calf movement are comfortable, use a stable support and practise controlled heel lowering as shown in the linked ankle rehabilitation guidance. Work at your own pace, up to 2 sets on alternate days. The source gives no repetition target; stop before symptoms worsen.",
           "dose": null,
@@ -2404,7 +2404,7 @@
     },
     {
       "policy_id": "shoulder_impingement",
-      "version": 1,
+      "version": 2,
       "region": "shoulder",
       "injury_type": "impingement",
       "pathway_family": "joint_irritation_or_impingement",
@@ -2436,7 +2436,7 @@
         },
         {
           "drill_id": "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
-          "bank_hash": "36a77231d4f1420a35d12cf9aede8aa14ab303dac656d80b19d3b36bec4c6614",
+          "bank_hash": "b2e0ec1e2aa486e21c948ec6e3f6a2284b5b28bd61ef56b1f5c1c4b191a52852",
           "stage": "restore",
           "instructions": "Stand facing a smooth wall with a cloth under the affected hand. Gently slide the hand upwards only through a comfortable range no higher than shoulder level, then return. Do not lean body weight heavily into the arm, force a painful arc, add resistance or lift overhead. Keep the neck comfortable; no forced chin tuck or posture correction is required. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
           "dose": null,
@@ -2469,7 +2469,7 @@
       "transition_overrides": {},
       "status": "active",
       "activation": "live",
-      "content_hash": "a6b2e29243aafd400be33dade62033e88ada2d8af28e1fa029e72ec7247b8f08"
+      "content_hash": "8967a1eba4388da2c5ca6764b3b78e00ca000742d596bbc7b47486ae5bfb7f08"
     },
     {
       "policy_id": "hip_impingement",
@@ -4500,5 +4500,12 @@
       "activation": "live",
       "content_hash": "76728114b78764c5b477a36e7e9fef3bacfe6df6bf97186e994a1ff8af82262c"
     }
+  ],
+  "bank_publication_profiles": [
+    "achilles_tendonitis",
+    "elbow_tendonitis",
+    "ankle_sprain",
+    "shoulder_tendonitis",
+    "groin_strain"
   ]
 }

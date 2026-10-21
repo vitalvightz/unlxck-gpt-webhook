@@ -767,5 +767,19 @@ html .today-page .today-decision-banner[data-tone] {
 .ex-detail-section > summary:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 2px; }
 .ex-detail-section[open] { display: grid; gap: 10px; padding-bottom: 14px; }
 
+/* Approved text is the exercise when no demonstration is available. */
+/* Banked rehab guide: the plan exercise card's demo, stat tiles, cue panel
+   and closing asides (shared sp-block-embedded rules), on the sheet's spacing. */
+.rehab-guide { gap: 18px; padding-bottom: 24px; }
+.rehab-guide-demo:empty { display: none; }
+.rehab-guide-pace { margin: 0; font-size: 13px; }
+.rehab-guide-how { padding: 10px 14px 12px; border-left: 3px solid var(--brand-red); background: var(--bg-support); }
+.rehab-guide-how ol { counter-reset: rehab-step; list-style: none; display: grid; gap: 10px; margin: 8px 0 0; padding: 0; }
+.rehab-guide-how li { counter-increment: rehab-step; display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; color: var(--text-primary); font-size: 0.92rem; line-height: 1.5; overflow-wrap: anywhere; }
+.rehab-guide-how li::before { content: counter(rehab-step) "."; color: var(--text-muted); font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.85; }
+.rehab-guide-requirements:empty { display: none; }
+.rehab-guide-safety .sp-stat-label { display: block; margin-bottom: 6px; }
+.rehab-guide-safety .sp-cues li { padding-left: 14px; color: var(--text-primary); }
+
 /* The light theme's gold is too pale for small text on its own tint. */
 html[data-theme="light"] .today-pending-pill { color: #6f5120; }

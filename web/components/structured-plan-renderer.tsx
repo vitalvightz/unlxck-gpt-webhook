@@ -92,7 +92,7 @@ import { GlossaryTooltip } from "@/components/glossary-tooltip";
 import { glossaryEntry } from "@/lib/glossary";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { ExerciseDemo, ExerciseMediaProvider, useExerciseMedia } from "@/components/exercise-demo";
-import { RehabExerciseLimits, RehabPrescription } from "@/components/rehab-prescription";
+import { RehabExerciseGuide, RehabExerciseLimits, RehabPrescription } from "@/components/rehab-prescription";
 import { PrivateExerciseMediaProvider, PrescribedPrivateVideo, PrescribedPrivateVideoThumbnail } from "@/components/private-exercise-video";
 import { ExerciseLogBadge, ExerciseLogPanel, ExerciseLogTick, useExerciseLoggingActive } from "@/components/exercise-log";
 import { ExerciseActions, ExerciseSessionScope, SessionChangesFoot } from "@/components/exercise-customisation";
@@ -822,6 +822,11 @@ export function ExerciseRow({
         </InjuryDetailSheet>
       ) : open ? (
         <div id={bodyId} className="ex-row-body">
+          {block.block_type === "rehab" && block.drill_snapshot ? (
+            <RehabExerciseGuide block={block} demo={<RehabDemo block={block} media={media} title={title} />}>
+              <ExerciseLogPanel block={block} />
+            </RehabExerciseGuide>
+          ) : <>
           {block.private_media_id || block.community_revision_id ? <PrescribedPrivateVideo
             id={block.private_media_id || block.community_revision_id!} community={!block.private_media_id} name={title} /> : null}
           {media ? (
@@ -831,8 +836,6 @@ export function ExerciseRow({
               leadCue={leadCue}
               onLeadCuePinnedChange={setLeadCuePinned}
             />
-          ) : block.block_type === "rehab" && block.drill_snapshot?.rehab_stage !== "calm" ? (
-            <p className="muted">Demo not assigned. Follow the prescribed instructions below.</p>
           ) : null}
           {builds || whyToday ? (
             <div className="ex-row-why">
@@ -859,10 +862,19 @@ export function ExerciseRow({
           />
           {/* Renders only where a started session provides logging (Today). */}
           <ExerciseLogPanel block={block} />
+          </>}
         </div>
       ) : null}
     </div>
   );
+}
+
+/** The same curated or prescribed private demo the plan's exercise rows use. */
+function RehabDemo({ block, media, title }: { block: StructuredBlock; media: ReturnType<typeof useExerciseMedia>; title: string }) {
+  if (block.private_media_id || block.community_revision_id) {
+    return <PrescribedPrivateVideo id={block.private_media_id || block.community_revision_id!} community={!block.private_media_id} name={title} />;
+  }
+  return media ? <ExerciseDemo media={media} exerciseName={title} /> : null;
 }
 
 /** Exercise detail for Today. Safety remains visible outside disclosures. */
@@ -898,6 +910,14 @@ function ExerciseDetail({
   const easier = execution.regressions.map(compactCoachLine);
   const swap = execution.substitutions[0] ?? null;
   const sessionRunning = useExerciseLoggingActive();
+  // Banked injury rehab has an authoritative prescription to guide, led by the
+  // plan's shared demo when one exists. Legacy prehab/training blocks retain
+  // their ordinary exercise adjustments/logging.
+  if (block.block_type === "rehab" && block.drill_snapshot) {
+    return <RehabExerciseGuide block={block} demo={<RehabDemo block={block} media={media} title={title} />}>
+      <ExerciseLogPanel block={block} />
+    </RehabExerciseGuide>;
+  }
   // Safety instructions are never behind a tap, logging included: one plain line.
   const stopLine = compactStopRule ? (
     <p className="ex-detail-stop">
@@ -945,8 +965,6 @@ function ExerciseDetail({
           <summary>Demo video</summary>
           <ExerciseDemo media={media} exerciseName={title} />
         </details>
-      ) : block.block_type === "rehab" && block.drill_snapshot?.rehab_stage !== "calm" ? (
-        <p className="muted">Demo not assigned. Follow the prescribed instructions below.</p>
       ) : null}
       {block.private_media_id || block.community_revision_id ? (
         <details className="ex-detail-section" open={!sessionRunning}>

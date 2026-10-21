@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from fightcamp.rehab_clinical import content_hash, load_clinical_policies, policy_review_hash
+from fightcamp.rehab_clinical import compose_policy, content_hash, load_clinical_policies, policy_review_hash
 from tools.audit_rehab_bank_rationalisation import (
     CLASSIFICATIONS, ROOT, affirmative_progression, build_audit, input_digest, json_text, main,
 )
@@ -48,7 +48,7 @@ def test_every_live_identity_has_fresh_review_and_exact_active_reference(inputs,
     report, _ = audit
     bank_index = {d["id"]: (g, d) for g in bank for d in g["drills"]}
     reviews = {r["drill_id"]: r for r in ledger}
-    policies = {p["policy_id"]: p for p in pathways["profiles"]}
+    policies = {p.policy_id: p.model_dump() for p in load_clinical_policies(bank=bank)}
     for row in report["drills"]:
         group, drill = bank_index[row["drill_id"]]
         assert row["current_content_hash"] == content_hash(drill)
@@ -72,13 +72,14 @@ def test_every_live_identity_has_fresh_review_and_exact_active_reference(inputs,
 def test_every_active_prescription_resolves_and_stage_counts_are_unique(inputs, audit):
     rows = {r["drill_id"]: r for r in audit[0]["drills"]}
     actual = {stage: set() for stage in ("calm", "restore", "load", "dynamic", "return")}
-    for policy in inputs[2]["profiles"]:
+    for model in load_clinical_policies(bank=inputs[0]):
+        policy = model.model_dump()
         for rx in policy["prescriptions"]:
             row = rows[rx["drill_id"]]
             assert row["classification"] == "LIVE" and policy["policy_id"] in row["profile_ids"]
             actual[rx["stage"]].add(rx["drill_id"])
     assert audit[0]["summary"]["live_unique_identities_by_stage"] == {s: len(ids) for s, ids in actual.items()}
-    assert actual["load"] == {"achilles_tendonitis_eccentric_calf_drops_on_step", "elbow_tendonitis_supported_hand_weight_wrist_extension", "ankle_sprain_seated_bilateral_heel_raise", "shoulder_tendonitis_wall_push_up"}
+    assert actual["load"] == {"achilles_tendonitis_eccentric_calf_drops_on_step", "elbow_tendonitis_supported_hand_weight_wrist_extension", "ankle_sprain_seated_bilateral_heel_raise", "shoulder_tendonitis_wall_push_up", "achilles_unspecified_isometric_toe_presses_against_wall"}
     assert all(not actual[s] for s in ("dynamic", "return"))
 
 
@@ -100,11 +101,11 @@ def test_production_bank_source_history_and_all_64_profiles_unchanged():
     historical = before_achilles_load_activation(raw)
     assert {p["policy_id"]: p["content_hash"] for p in historical["profiles"]} == baseline["profile_hashes"]
     assert {p["policy_id"]: hashlib.sha256(json.dumps(p, sort_keys=True, separators=(",", ":")).encode()).hexdigest() for p in historical["profiles"]} == baseline["profile_raw_sha256"]
-    for policy in load_clinical_policies():
-        if policy.policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain", "shoulder_tendonitis"}:
-            assert policy.live_stages == ["calm","restore","load"]
-            assert not any(t.promotable for t in policy.transitions[1:])
-            continue
+    from fightcamp.rehab_pathways import PathwayCatalog
+    catalog = PathwayCatalog.model_validate(historical)
+    for policy in (compose_policy(catalog, p, bank=original_bank) for p in catalog.profiles):
+        # This assertion replays the archived pre-activation snapshot. Current
+        # live stage/content coverage is checked above and in publication tests.
         assert policy_review_hash(policy) == baseline["profile_hashes"][policy.policy_id]
         assert set(policy.live_stages) <= {"calm", "restore"}
         assert not any(t.promotable for t in policy.transitions)

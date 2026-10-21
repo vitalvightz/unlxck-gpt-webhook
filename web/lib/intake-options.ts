@@ -157,6 +157,9 @@ export const EQUIPMENT_ACCESS_GROUPS: EquipmentAccessGroup[] = [
       { label: "Table for supported rehab", value: "table" },
       { label: "Stable chair for seated rehab", value: "chair" },
       { label: "Stable wall for rehab", value: "wall" },
+      { label: "Lightweight dowel for rehab", value: "dowel" },
+      { label: "Sliding cloth for rehab", value: "cloth" },
+      { label: "Soft ball for rehab", value: "soft_ball" },
     ],
   },
 ];

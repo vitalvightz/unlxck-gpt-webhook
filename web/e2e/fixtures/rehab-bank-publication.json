@@ -1,0 +1,3252 @@
+{
+  "achilles_tendonitis": {
+    "view": {
+      "active_plan": {
+        "status": "ready",
+        "phase": "GPP",
+        "id": "80b4c377-c916-4b12-b0ce-c56d65c51b42"
+      },
+      "today": {
+        "training_day": "2026-10-05",
+        "recommendation_state": "modify",
+        "recommendation_reason": "Reviewed rehab today\nYour planned training conflicts with the current injury restrictions.\nFollow only the reviewed rehab shown today.",
+        "decision_tier": "modify",
+        "injury_hold_exempt": false,
+        "recommendation_trigger_labels": [
+          "Current injury restrictions"
+        ],
+        "recommendation_context_labels": [],
+        "recommendation_safety_checks": [],
+        "recommendation_sources": [
+          "today's check-in",
+          "today's planned session",
+          "your tracked injuries"
+        ],
+        "recommendation_confidence": "moderate",
+        "recommendation_confidence_note": "Less to go on today: this is based on today's check-in alone, with no recent days to compare.",
+        "primary_safety_notice": null,
+        "warnings": [],
+        "next_session": {
+          "calendar_date": "2026-10-05",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday",
+          "day_label": "",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-80c58cecaf6ea8b5eb07dee7",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "effective_load": "reduced",
+          "contact_level": "none",
+          "blocks": [
+            {
+              "injury_side": "left",
+              "block_id": "rehab:dc9065b2-09a0-41ed-81b0-f0898d8a3bb3:6092c249-979e-4bac-8efd-e604b5c4ca16",
+              "block_type": "rehab",
+              "title": "Seated Achilles toe press against wall",
+              "display_name": "Seated Achilles toe press against wall",
+              "coaching_cues": [
+                "Sit on the floor with your legs comfortably extended and your feet against a wall, supporting yourself with your arms. Gently press your toes into the wall without moving your ankle. Hold for 10 seconds, relax, and repeat 10 times, once daily. Use comfortable low effort; no pushing through pain, step, deep heel drop, added weight or forceful stretching. Stop if symptoms worsen during or after the work. Follow clinician restrictions."
+              ],
+              "duration": {
+                "value": 10.0,
+                "unit": "seconds"
+              },
+              "rehab_drill_id": "achilles_unspecified_isometric_toe_presses_against_wall",
+              "exercise_key": "achilles-unspecified-isometric-toe-presses-against-wall",
+              "injury_id": "dc9065b2-09a0-41ed-81b0-f0898d8a3bb3",
+              "injury_episode_id": "6092c249-979e-4bac-8efd-e604b5c4ca16",
+              "target_regions": [
+                "achilles"
+              ],
+              "dose": {
+                "reps": 10,
+                "duration_seconds": 10.0
+              },
+              "instructions": "Sit on the floor with your legs comfortably extended and your feet against a wall, supporting yourself with your arms. Gently press your toes into the wall without moving your ankle. Hold for 10 seconds, relax, and repeat 10 times, once daily. Use comfortable low effort; no pushing through pain, step, deep heel drop, added weight or forceful stretching. Stop if symptoms worsen during or after the work. Follow clinician restrictions.",
+              "reps": 10,
+              "duration_seconds": 10.0,
+              "stop_rules": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+              ],
+              "drill_snapshot": {
+                "id": "achilles_unspecified_isometric_toe_presses_against_wall",
+                "name": "Seated Achilles toe press against wall",
+                "notes": "Sit on the floor with your legs comfortably extended and your feet against a wall, supporting yourself with your arms. Gently press your toes into the wall without moving your ankle. Hold for 10 seconds, relax, and repeat 10 times, once daily. Use comfortable low effort; no pushing through pain, step, deep heel drop, added weight or forceful stretching. Stop if symptoms worsen during or after the work. Follow clinician restrictions.",
+                "rehab_stage": "load",
+                "function": "tendon_loading",
+                "equipment": [
+                  "wall"
+                ],
+                "dose": {
+                  "reps": 10,
+                  "duration_seconds": 10
+                },
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+                ],
+                "target_regions": [
+                  "achilles"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "Achilles tendon and calf muscle-tendon unit"
+                ],
+                "contraction_type": "isometric",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/. Fixed conservative movement only. No change to stage-entry criteria or permission, and no inference of sport readiness. Numeric guidance is source-backed where present; otherwise explicitly self-paced. No automatic resistance, range or speed progression.",
+                "compatible_injury_types": [
+                  "tendonitis"
+                ],
+                "prescription": {
+                  "sources": [
+                    "https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/"
+                  ],
+                  "frequency": "daily",
+                  "minimum_gap_days": 1,
+                  "priority": 0,
+                  "required_rehabilitation_level": "loading",
+                  "range_choice": "comfortable_long_sitting_wall_press",
+                  "resistance": {
+                    "mode": "bodyweight",
+                    "kg": null
+                  },
+                  "mandatory_restrictions": [
+                    "Remain seated with feet against the wall; use gentle comfortable effort only.",
+                    "No added resistance, step, heel drop, forced stretch or automatic increase.",
+                    "Midportion Achilles presentation only; existing clinician restrictions and symptom holds remain authoritative."
+                  ]
+                }
+              },
+              "policy_id": "achilles_tendonitis",
+              "policy_version": 3,
+              "bank_hash": "e4677102184da8079a7adb6be27c80f847279b33aac90875e8cc8b7a9608a5e6",
+              "policy_review_hash": "fb10153611fc19d4bb16a85dabdd6951332dbf36f70e00f8c02d4ba532ee1bf3",
+              "minimum_gap_days": 1,
+              "is_loading": true,
+              "source_references": [
+                "https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/"
+              ],
+              "required_rehabilitation_level": "loading",
+              "range_choice": "comfortable_long_sitting_wall_press",
+              "resistance": {
+                "mode": "bodyweight",
+                "kg": null
+              },
+              "mandatory_restrictions": [
+                "Remain seated with feet against the wall; use gentle comfortable effort only.",
+                "No added resistance, step, heel drop, forced stretch or automatic increase.",
+                "Midportion Achilles presentation only; existing clinician restrictions and symptom holds remain authoritative."
+              ],
+              "frequency": "daily"
+            }
+          ],
+          "session_relation": "today"
+        },
+        "session_scope": "today",
+        "session_label": "Today's session",
+        "completion_status": "not_started"
+      },
+      "risk_watch": [
+        {
+          "category": "reminder",
+          "priority": 7,
+          "icon": "info",
+          "label": "Reminder",
+          "text": "Tracking 1 open injury: Left achilles tendonitis. Train around it.",
+          "tone": "info",
+          "timeframe": "active"
+        }
+      ],
+      "open_injuries": [
+        {
+          "id": "dc9065b2-09a0-41ed-81b0-f0898d8a3bb3",
+          "athlete_id": "fb791bff-37ed-4514-847f-0650d03927cc",
+          "plan_id": "80b4c377-c916-4b12-b0ce-c56d65c51b42",
+          "source": "checkin",
+          "body_area": "Left Achilles",
+          "severity": "mild",
+          "status": "monitoring",
+          "resolved_at": null,
+          "episode_id": "6092c249-979e-4bac-8efd-e604b5c4ca16",
+          "body_region": "achilles",
+          "side": "left",
+          "description": "tendonitis [achilles_site:midportion]",
+          "latest_reported_status": "improving",
+          "created_at": "2026-10-05T12:01:00+00:00",
+          "updated_at": "2026-10-05T12:02:00+00:00",
+          "surface_class": "non_surface",
+          "canonical_location": "achilles",
+          "region_group": "lower_leg_foot",
+          "load_region": "lower_limb",
+          "consequence": "load_sensitive",
+          "rehab_stage": "load",
+          "rehab_stage_reasons": [
+            "symptoms_not_worsening",
+            "insufficient_injury_specific_progression_evidence"
+          ],
+          "rehab_care_pathway": "musculoskeletal",
+          "rehab_medical_gate": false,
+          "label": "Left achilles tendonitis",
+          "assessment_history_complete": true,
+          "progression_assessments": [],
+          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
+          "latest_reported_at": "2026-10-05T12:02:00+00:00",
+          "rehab_improvement_reports": [
+            {
+              "id": "7820d44e-729b-4aeb-936f-586ded27ee1e",
+              "reported_at": "2026-10-05T12:01:00+00:00"
+            },
+            {
+              "id": "369f5514-f58d-4a26-a0c9-54f8a642c448",
+              "reported_at": "2026-10-05T12:02:00+00:00"
+            }
+          ],
+          "rehab_improvement_at": "2026-10-05T12:02:00Z",
+          "assessment_setback_at": null,
+          "clinician_clearance": {
+            "episode_id": "6092c249-979e-4bac-8efd-e604b5c4ca16",
+            "scopes": [
+              "rehab"
+            ],
+            "report_id": "ad882a0f-6e4d-5a92-ab59-12d439ff37ae",
+            "reported_at": "2026-10-05T12:04:00+00:00",
+            "source": "athlete_reported",
+            "externally_verified": false,
+            "scope_reported_at": {
+              "rehab": "2026-10-05T12:04:00+00:00"
+            },
+            "rehabilitation_permission": {
+              "schema_version": 1,
+              "level": "loading"
+            }
+          },
+          "rehab_decision": {
+            "injury_id": "dc9065b2-09a0-41ed-81b0-f0898d8a3bb3",
+            "injury_episode_id": "6092c249-979e-4bac-8efd-e604b5c4ca16",
+            "region": "achilles",
+            "injury_type": "tendonitis",
+            "stage": "load",
+            "outcome": "prescribed_rehab",
+            "summary": "Your rehab is matched to this injury's current recovery stage.",
+            "reason_codes": [
+              "SELECT_DETERMINISTIC_BEST"
+            ],
+            "activation": "live",
+            "prescription": {
+              "drill_id": "achilles_unspecified_isometric_toe_presses_against_wall",
+              "drill": {
+                "id": "achilles_unspecified_isometric_toe_presses_against_wall",
+                "name": "Seated Achilles toe press against wall",
+                "notes": "Sit on the floor with your legs comfortably extended and your feet against a wall, supporting yourself with your arms. Gently press your toes into the wall without moving your ankle. Hold for 10 seconds, relax, and repeat 10 times, once daily. Use comfortable low effort; no pushing through pain, step, deep heel drop, added weight or forceful stretching. Stop if symptoms worsen during or after the work. Follow clinician restrictions.",
+                "rehab_stage": "load",
+                "function": "tendon_loading",
+                "equipment": [
+                  "wall"
+                ],
+                "dose": {
+                  "reps": 10,
+                  "duration_seconds": 10
+                },
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+                ],
+                "target_regions": [
+                  "achilles"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "Achilles tendon and calf muscle-tendon unit"
+                ],
+                "contraction_type": "isometric",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/. Fixed conservative movement only. No change to stage-entry criteria or permission, and no inference of sport readiness. Numeric guidance is source-backed where present; otherwise explicitly self-paced. No automatic resistance, range or speed progression.",
+                "compatible_injury_types": [
+                  "tendonitis"
+                ],
+                "prescription": {
+                  "sources": [
+                    "https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/"
+                  ],
+                  "frequency": "daily",
+                  "minimum_gap_days": 1,
+                  "priority": 0,
+                  "required_rehabilitation_level": "loading",
+                  "range_choice": "comfortable_long_sitting_wall_press",
+                  "resistance": {
+                    "mode": "bodyweight",
+                    "kg": null
+                  },
+                  "mandatory_restrictions": [
+                    "Remain seated with feet against the wall; use gentle comfortable effort only.",
+                    "No added resistance, step, heel drop, forced stretch or automatic increase.",
+                    "Midportion Achilles presentation only; existing clinician restrictions and symptom holds remain authoritative."
+                  ]
+                }
+              },
+              "instructions": "Sit on the floor with your legs comfortably extended and your feet against a wall, supporting yourself with your arms. Gently press your toes into the wall without moving your ankle. Hold for 10 seconds, relax, and repeat 10 times, once daily. Use comfortable low effort; no pushing through pain, step, deep heel drop, added weight or forceful stretching. Stop if symptoms worsen during or after the work. Follow clinician restrictions.",
+              "dose": {
+                "reps": 10,
+                "duration_seconds": 10.0
+              },
+              "stop_when": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+              ],
+              "frequency": "daily",
+              "sources": [
+                "https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/"
+              ],
+              "bank_hash": "e4677102184da8079a7adb6be27c80f847279b33aac90875e8cc8b7a9608a5e6",
+              "policy_id": "achilles_tendonitis",
+              "policy_version": 3,
+              "policy_review_hash": "fb10153611fc19d4bb16a85dabdd6951332dbf36f70e00f8c02d4ba532ee1bf3",
+              "minimum_gap_days": 1,
+              "is_loading": true,
+              "required_rehabilitation_level": "loading",
+              "range_choice": "comfortable_long_sitting_wall_press",
+              "resistance": {
+                "mode": "bodyweight",
+                "kg": null
+              },
+              "mandatory_restrictions": [
+                "Remain seated with feet against the wall; use gentle comfortable effort only.",
+                "No added resistance, step, heel drop, forced stretch or automatic increase.",
+                "Midportion Achilles presentation only; existing clinician restrictions and symptom holds remain authoritative."
+              ]
+            },
+            "restrictions": {
+              "blocked_regions": [
+                "achilles"
+              ],
+              "blocked_tags": [],
+              "contact_limit": "none"
+            },
+            "loading_hold": false,
+            "achilles_load_review": {
+              "criterion_id": "achilles_restore_load_review_v1",
+              "criterion_version": 1,
+              "status": "unknown",
+              "reason_codes": [
+                "assessment_observation_missing"
+              ],
+              "subtype": "unknown",
+              "required_input_ids": [
+                "achilles_site_assessed",
+                "achilles_heel_rise_assessed",
+                "achilles_loading_response_assessed",
+                "achilles_range_load_assessed"
+              ],
+              "observation_id": null,
+              "externally_verified": false,
+              "promotion_allowed": false,
+              "sources": [
+                "https://bjsm.bmj.com/content/55/20/1125",
+                "https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf",
+                "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+              ]
+            },
+            "policy_id": "achilles_tendonitis",
+            "policy_version": 3,
+            "progression": {
+              "stage": "load",
+              "reason_codes": [
+                "reported_clinician_permission_entry:load"
+              ],
+              "evidence_ids": [],
+              "engine_version": "2",
+              "entry_basis": "reported_clinician_permission",
+              "authority_event_id": "ad882a0f-6e4d-5a92-ab59-12d439ff37ae",
+              "entry_decision": {
+                "entry_basis": "reported_clinician_permission",
+                "authority_event_id": "ad882a0f-6e4d-5a92-ab59-12d439ff37ae",
+                "from_stage": "restore",
+                "to_stage": "load",
+                "status": "met",
+                "reason_codes": [],
+                "target_stage_live": true,
+                "closed_reason": null,
+                "missing_inputs": [],
+                "requirements": [
+                  {
+                    "requirement_id": "no_unresolved_setback",
+                    "kind": "no_unresolved_setback",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "no_negative_response",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "complete_episode_history",
+                    "kind": "complete_history",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "history_complete",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "reviewed_stage_exposure",
+                    "kind": "completed_reviewed_exposure",
+                    "basis": "data_sufficiency",
+                    "status": "not_applicable",
+                    "reason_code": "prior_stage_work_not_required_for_reported_permission",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "during_response_not_worse",
+                    "kind": "during_session_response",
+                    "basis": "product_safety",
+                    "status": "not_applicable",
+                    "reason_code": "no_prior_rehab_response_to_resolve",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "next_day_response_not_worse",
+                    "kind": "next_day_response",
+                    "basis": "product_safety",
+                    "status": "not_applicable",
+                    "reason_code": "no_prior_rehab_response_to_resolve",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "achilles_midportion_reported_load_permission_v1",
+                    "kind": "functional_checkpoint",
+                    "basis": "clinical",
+                    "status": "pass",
+                    "reason_code": "reported_permission_and_option_applicable",
+                    "evidence_ids": []
+                  }
+                ],
+                "ignored_evidence": {}
+              },
+              "next_transition": {
+                "from_stage": "load",
+                "to_stage": "dynamic",
+                "status": "blocked",
+                "reason_codes": [
+                  "no_reviewed_stage_exposure",
+                  "no_reviewed_response_group",
+                  "no_reviewed_response_group"
+                ],
+                "target_stage_live": false,
+                "closed_reason": null,
+                "missing_inputs": [],
+                "requirements": [
+                  {
+                    "requirement_id": "no_unresolved_setback",
+                    "kind": "no_unresolved_setback",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "no_negative_response",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "complete_episode_history",
+                    "kind": "complete_history",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "history_complete",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "reviewed_stage_exposure",
+                    "kind": "completed_reviewed_exposure",
+                    "basis": "data_sufficiency",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_stage_exposure",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "during_response_not_worse",
+                    "kind": "during_session_response",
+                    "basis": "product_safety",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_response_group",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "next_day_response_not_worse",
+                    "kind": "next_day_response",
+                    "basis": "product_safety",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_response_group",
+                    "evidence_ids": []
+                  }
+                ],
+                "ignored_evidence": {}
+              }
+            },
+            "schedule": {
+              "state": "due",
+              "reason": "Your baseline rehab is due today; missed work adds no extra volume.",
+              "next_due_day": "2026-10-05"
+            }
+          }
+        }
+      ],
+      "live_prescription": {
+        "plan_id": "80b4c377-c916-4b12-b0ce-c56d65c51b42",
+        "training_day": "2026-10-05",
+        "session": {
+          "calendar_date": "2026-10-05",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday",
+          "day_label": "",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-80c58cecaf6ea8b5eb07dee7",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "effective_load": "reduced",
+          "contact_level": "none",
+          "blocks": [
+            {
+              "injury_side": "left",
+              "block_id": "rehab:dc9065b2-09a0-41ed-81b0-f0898d8a3bb3:6092c249-979e-4bac-8efd-e604b5c4ca16",
+              "block_type": "rehab",
+              "title": "Seated Achilles toe press against wall",
+              "display_name": "Seated Achilles toe press against wall",
+              "coaching_cues": [
+                "Sit on the floor with your legs comfortably extended and your feet against a wall, supporting yourself with your arms. Gently press your toes into the wall without moving your ankle. Hold for 10 seconds, relax, and repeat 10 times, once daily. Use comfortable low effort; no pushing through pain, step, deep heel drop, added weight or forceful stretching. Stop if symptoms worsen during or after the work. Follow clinician restrictions."
+              ],
+              "duration": {
+                "value": 10.0,
+                "unit": "seconds"
+              },
+              "rehab_drill_id": "achilles_unspecified_isometric_toe_presses_against_wall",
+              "exercise_key": "achilles-unspecified-isometric-toe-presses-against-wall",
+              "injury_id": "dc9065b2-09a0-41ed-81b0-f0898d8a3bb3",
+              "injury_episode_id": "6092c249-979e-4bac-8efd-e604b5c4ca16",
+              "target_regions": [
+                "achilles"
+              ],
+              "dose": {
+                "reps": 10,
+                "duration_seconds": 10.0
+              },
+              "instructions": "Sit on the floor with your legs comfortably extended and your feet against a wall, supporting yourself with your arms. Gently press your toes into the wall without moving your ankle. Hold for 10 seconds, relax, and repeat 10 times, once daily. Use comfortable low effort; no pushing through pain, step, deep heel drop, added weight or forceful stretching. Stop if symptoms worsen during or after the work. Follow clinician restrictions.",
+              "reps": 10,
+              "duration_seconds": 10.0,
+              "stop_rules": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+              ],
+              "drill_snapshot": {
+                "id": "achilles_unspecified_isometric_toe_presses_against_wall",
+                "name": "Seated Achilles toe press against wall",
+                "notes": "Sit on the floor with your legs comfortably extended and your feet against a wall, supporting yourself with your arms. Gently press your toes into the wall without moving your ankle. Hold for 10 seconds, relax, and repeat 10 times, once daily. Use comfortable low effort; no pushing through pain, step, deep heel drop, added weight or forceful stretching. Stop if symptoms worsen during or after the work. Follow clinician restrictions.",
+                "rehab_stage": "load",
+                "function": "tendon_loading",
+                "equipment": [
+                  "wall"
+                ],
+                "dose": {
+                  "reps": 10,
+                  "duration_seconds": 10
+                },
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+                ],
+                "target_regions": [
+                  "achilles"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "Achilles tendon and calf muscle-tendon unit"
+                ],
+                "contraction_type": "isometric",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/. Fixed conservative movement only. No change to stage-entry criteria or permission, and no inference of sport readiness. Numeric guidance is source-backed where present; otherwise explicitly self-paced. No automatic resistance, range or speed progression.",
+                "compatible_injury_types": [
+                  "tendonitis"
+                ],
+                "prescription": {
+                  "sources": [
+                    "https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/"
+                  ],
+                  "frequency": "daily",
+                  "minimum_gap_days": 1,
+                  "priority": 0,
+                  "required_rehabilitation_level": "loading",
+                  "range_choice": "comfortable_long_sitting_wall_press",
+                  "resistance": {
+                    "mode": "bodyweight",
+                    "kg": null
+                  },
+                  "mandatory_restrictions": [
+                    "Remain seated with feet against the wall; use gentle comfortable effort only.",
+                    "No added resistance, step, heel drop, forced stretch or automatic increase.",
+                    "Midportion Achilles presentation only; existing clinician restrictions and symptom holds remain authoritative."
+                  ]
+                }
+              },
+              "policy_id": "achilles_tendonitis",
+              "policy_version": 3,
+              "bank_hash": "e4677102184da8079a7adb6be27c80f847279b33aac90875e8cc8b7a9608a5e6",
+              "policy_review_hash": "fb10153611fc19d4bb16a85dabdd6951332dbf36f70e00f8c02d4ba532ee1bf3",
+              "minimum_gap_days": 1,
+              "is_loading": true,
+              "source_references": [
+                "https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/"
+              ],
+              "required_rehabilitation_level": "loading",
+              "range_choice": "comfortable_long_sitting_wall_press",
+              "resistance": {
+                "mode": "bodyweight",
+                "kg": null
+              },
+              "mandatory_restrictions": [
+                "Remain seated with feet against the wall; use gentle comfortable effort only.",
+                "No added resistance, step, heel drop, forced stretch or automatic increase.",
+                "Midportion Achilles presentation only; existing clinician restrictions and symptom holds remain authoritative."
+              ],
+              "frequency": "daily"
+            }
+          ]
+        },
+        "changes": [
+          {
+            "action": "held",
+            "reason": "clinician_clearance_ceiling"
+          },
+          {
+            "block_id": "training",
+            "action": "held",
+            "reason": "no_reviewed_safe_substitution",
+            "restriction_reasons": [
+              "injury_loading_restriction"
+            ]
+          }
+        ],
+        "safety_hold": false,
+        "frozen": false,
+        "engine_version": "2",
+        "rehab_only": true,
+        "held_session_id": "training",
+        "injury_ids": [
+          "dc9065b2-09a0-41ed-81b0-f0898d8a3bb3"
+        ],
+        "allocation_limit": 2,
+        "training_hold_reason": "Your planned training conflicts with the current injury restrictions.",
+        "revision": "b50e6a55ff37e59de7cc65a96481e5acbcb2d844c54f1d56aede5a0a86182230",
+        "injury_context": [
+          {
+            "id": "dc9065b2-09a0-41ed-81b0-f0898d8a3bb3",
+            "episode_id": "6092c249-979e-4bac-8efd-e604b5c4ca16",
+            "updated_at": "2026-10-05T12:02:00+00:00"
+          }
+        ],
+        "evidence_context": {
+          "exposure_id": null,
+          "event_id": "ad882a0f-6e4d-5a92-ab59-12d439ff37ae"
+        },
+        "readiness_context": {
+          "id": "d23c90ac-c6bf-421e-b078-ea1161e81a3f",
+          "updated_at": "2026-10-05T12:02:00+00:00"
+        }
+      },
+      "exercise_media": {},
+      "effective_clinician_clearance": {
+        "level": "rehab_only",
+        "scopes": [
+          "rehab"
+        ],
+        "requires_update": false,
+        "limited_by": [
+          {
+            "injury_id": "dc9065b2-09a0-41ed-81b0-f0898d8a3bb3",
+            "injury_episode_id": "6092c249-979e-4bac-8efd-e604b5c4ca16",
+            "label": "Left achilles tendonitis"
+          }
+        ]
+      },
+      "delayed_rehab_prompts": [],
+      "week_summary": {},
+      "quick_actions": [
+        {
+          "id": "open_today",
+          "label": "Open Today",
+          "route": "/today"
+        },
+        {
+          "id": "view_plan",
+          "label": "View Plan",
+          "route": "/plans/80b4c377-c916-4b12-b0ce-c56d65c51b42"
+        }
+      ]
+    },
+    "profile": {
+      "profile": {
+        "starting_path": "plan_first",
+        "training_habits": {
+          "enabled": true,
+          "decisions": []
+        },
+        "training_habits_revision": 0,
+        "athlete_id": "fb791bff-37ed-4514-847f-0650d03927cc",
+        "email": "fixture@example.com",
+        "username": null,
+        "username_change_history": [],
+        "role": "athlete",
+        "access_status": "approved",
+        "full_name": "Test athlete",
+        "technical_style": [],
+        "tactical_style": [],
+        "stance": "",
+        "professional_status": "",
+        "record": "",
+        "athlete_timezone": "UTC",
+        "athlete_locale": "",
+        "appearance_mode": "dark",
+        "onboarding_draft": null,
+        "avatar_url": null,
+        "nutrition_profile": {
+          "sex": null,
+          "age": null,
+          "height_cm": null,
+          "daily_activity_level": null,
+          "dietary_restrictions": [],
+          "food_preferences": [],
+          "meals_per_day_preference": null,
+          "foods_avoided_pre_session": [],
+          "foods_avoided_fight_week": [],
+          "supplement_use": [],
+          "caffeine_use": null
+        },
+        "private_trial_ack_at": null,
+        "date_of_birth": "1996-05-04",
+        "age_band": "adult",
+        "is_minor": false,
+        "meets_minimum_age": true,
+        "terms_version": "0.1-pre-launch",
+        "terms_accepted_at": "2026-10-05T12:03:00+00:00",
+        "terms_accepted": true,
+        "health_consent_version": "1.0",
+        "health_data_consent": true,
+        "health_consent_at": "2026-10-05T12:03:00+00:00",
+        "health_consent_withdrawn_at": null,
+        "health_consent_granted": true,
+        "created_at": "2026-10-05T12:03:00+00:00",
+        "updated_at": "2026-10-05T12:04:00+00:00"
+      },
+      "effective_admin": false,
+      "latest_intake": null,
+      "latest_plan": {
+        "custom_plan_id": null,
+        "plan_id": "80b4c377-c916-4b12-b0ce-c56d65c51b42",
+        "plan_name": null,
+        "athlete_id": "fb791bff-37ed-4514-847f-0650d03927cc",
+        "full_name": "",
+        "fight_date": "",
+        "technical_style": [],
+        "created_at": "2026-10-05T12:00:00+00:00",
+        "status": "ready",
+        "activation_state": "eligible",
+        "pdf_url": null,
+        "review_reason": null
+      },
+      "plan_count": 1,
+      "username_rate_limit": {
+        "max_changes_per_window": 4,
+        "window_days": 30,
+        "remaining": 4,
+        "next_available_at": null
+      }
+    }
+  },
+  "elbow_tendonitis": {
+    "view": {
+      "active_plan": {
+        "status": "ready",
+        "phase": "GPP",
+        "id": "0cb8d43b-689f-4ba7-9d2a-e080d4968d36"
+      },
+      "today": {
+        "training_day": "2026-10-05",
+        "recommendation_state": "modify",
+        "recommendation_reason": "Reviewed rehab today\nYour planned training conflicts with the current injury restrictions.\nFollow only the reviewed rehab shown today.",
+        "decision_tier": "modify",
+        "injury_hold_exempt": false,
+        "recommendation_trigger_labels": [
+          "Left elbow tendonitis \u2014 restricts today's training",
+          "Current injury restrictions"
+        ],
+        "recommendation_context_labels": [],
+        "recommendation_safety_checks": [],
+        "recommendation_sources": [
+          "today's check-in",
+          "your tracked injuries",
+          "today's planned session"
+        ],
+        "recommendation_confidence": "moderate",
+        "recommendation_confidence_note": "Less to go on today: this is based on today's check-in alone, with no recent days to compare.",
+        "primary_safety_notice": null,
+        "warnings": [],
+        "next_session": {
+          "calendar_date": "2026-10-05",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday",
+          "day_label": "",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-1840565167f1ada369ea5916",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "effective_load": "reduced",
+          "contact_level": "none",
+          "blocks": [
+            {
+              "block_id": "rehab:cc20b10d-89cc-47c3-9df4-bb978ea1109b:f2b87b10-4bbf-4023-887d-6a58f0663f06",
+              "block_type": "rehab",
+              "title": "Gentle forearm rotation with supported dowel",
+              "display_name": "Gentle forearm rotation with supported dowel",
+              "coaching_cues": [
+                "Sit with your elbow bent at a right angle beside your body. Hold a lightweight dowel at its centre with a relaxed grip and support its weight with your other hand. Slowly turn the affected palm upwards and downwards through a small comfortable range. Work pain-free at your own pace; no set count or hold is required. Do not use the dowel as a lever, add a band or weights, force the range, grip hard or twist quickly. Stop for increasing pain, swelling, tingling or loss of function; follow clinician restrictions."
+              ],
+              "rehab_drill_id": "elbow_unspecified_pronation_supination_with_dowel",
+              "exercise_key": "elbow-unspecified-pronation-supination-with-dowel",
+              "injury_id": "cc20b10d-89cc-47c3-9df4-bb978ea1109b",
+              "injury_episode_id": "f2b87b10-4bbf-4023-887d-6a58f0663f06",
+              "target_regions": [
+                "elbow"
+              ],
+              "dose": {},
+              "instructions": "Sit with your elbow bent at a right angle beside your body. Hold a lightweight dowel at its centre with a relaxed grip and support its weight with your other hand. Slowly turn the affected palm upwards and downwards through a small comfortable range. Work pain-free at your own pace; no set count or hold is required. Do not use the dowel as a lever, add a band or weights, force the range, grip hard or twist quickly. Stop for increasing pain, swelling, tingling or loss of function; follow clinician restrictions.",
+              "stop_rules": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+              ],
+              "drill_snapshot": {
+                "id": "elbow_unspecified_pronation_supination_with_dowel",
+                "name": "Gentle forearm rotation with supported dowel",
+                "notes": "Sit with your elbow bent at a right angle beside your body. Hold a lightweight dowel at its centre with a relaxed grip and support its weight with your other hand. Slowly turn the affected palm upwards and downwards through a small comfortable range. Work pain-free at your own pace; no set count or hold is required. Do not use the dowel as a lever, add a band or weights, force the range, grip hard or twist quickly. Stop for increasing pain, swelling, tingling or loss of function; follow clinician restrictions.",
+                "rehab_stage": "restore",
+                "function": "mobility",
+                "equipment": [
+                  "dowel"
+                ],
+                "dose": {},
+                "impact": "none",
+                "load": "minimal",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+                ],
+                "target_regions": [
+                  "elbow"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "elbow joint and forearm rotation muscles"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.newcastle-hospitals.nhs.uk/services/newcastle-occupational-health-service/information-for-staff/physiotherapy/self-help-leaflets/tennis-elbow/, https://www.cuh.nhs.uk/patient-information/elbow-range-of-movement-exercises/. Fixed conservative movement only. No change to stage-entry criteria or permission, and no inference of sport readiness. Numeric guidance is source-backed where present; otherwise explicitly self-paced. No automatic resistance, range or speed progression.",
+                "compatible_injury_types": [
+                  "tendonitis"
+                ],
+                "prescription": {
+                  "sources": [
+                    "https://www.newcastle-hospitals.nhs.uk/services/newcastle-occupational-health-service/information-for-staff/physiotherapy/self-help-leaflets/tennis-elbow/",
+                    "https://www.cuh.nhs.uk/patient-information/elbow-range-of-movement-exercises/"
+                  ],
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 5
+                }
+              },
+              "policy_id": "elbow_tendonitis",
+              "policy_version": 4,
+              "bank_hash": "08386d31b709c4386a632b4efa520e9683677f7233b41799bd6edf9d5c381945",
+              "policy_review_hash": "3de4aaca7ce03f896bccd306f8a757f9836164ca3af6367de8b10200001ab46b",
+              "minimum_gap_days": 1,
+              "is_loading": false,
+              "source_references": [
+                "https://www.newcastle-hospitals.nhs.uk/services/newcastle-occupational-health-service/information-for-staff/physiotherapy/self-help-leaflets/tennis-elbow/",
+                "https://www.cuh.nhs.uk/patient-information/elbow-range-of-movement-exercises/"
+              ]
+            }
+          ],
+          "session_relation": "today"
+        },
+        "session_scope": "today",
+        "session_label": "Today's session",
+        "completion_status": "not_started"
+      },
+      "risk_watch": [
+        {
+          "category": "reminder",
+          "priority": 7,
+          "icon": "info",
+          "label": "Reminder",
+          "text": "Tracking 1 open injury: Left elbow tendonitis. Train around it.",
+          "tone": "info",
+          "timeframe": "active"
+        }
+      ],
+      "open_injuries": [
+        {
+          "id": "cc20b10d-89cc-47c3-9df4-bb978ea1109b",
+          "athlete_id": "75221a47-a2ab-462f-9898-dd4c8c6d20c6",
+          "plan_id": "0cb8d43b-689f-4ba7-9d2a-e080d4968d36",
+          "source": "checkin",
+          "body_area": "Left elbow",
+          "severity": "moderate",
+          "status": "monitoring",
+          "resolved_at": null,
+          "episode_id": "f2b87b10-4bbf-4023-887d-6a58f0663f06",
+          "body_region": "elbow",
+          "side": "left",
+          "description": "tendonitis [elbow_site:lateral]",
+          "latest_reported_status": "improving",
+          "created_at": "2026-10-05T12:01:00+00:00",
+          "updated_at": "2026-10-05T12:02:00+00:00",
+          "surface_class": "non_surface",
+          "canonical_location": "elbow",
+          "region_group": "upper_limb",
+          "load_region": "upper_limb",
+          "consequence": "load_sensitive",
+          "rehab_stage": "restore",
+          "rehab_stage_reasons": [
+            "symptoms_not_worsening",
+            "insufficient_injury_specific_progression_evidence"
+          ],
+          "rehab_care_pathway": "musculoskeletal",
+          "rehab_medical_gate": false,
+          "label": "Left elbow tendonitis",
+          "assessment_history_complete": true,
+          "progression_assessments": [],
+          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
+          "latest_reported_at": "2026-10-05T12:02:00+00:00",
+          "rehab_improvement_reports": [
+            {
+              "id": "6a4e02f0-a322-4ada-9c02-66f1ca7e124d",
+              "reported_at": "2026-10-05T12:01:00+00:00"
+            },
+            {
+              "id": "e6b14106-f36e-4801-b325-78abe8898c9f",
+              "reported_at": "2026-10-05T12:02:00+00:00"
+            }
+          ],
+          "rehab_improvement_at": "2026-10-05T12:02:00Z",
+          "assessment_setback_at": null,
+          "clinician_clearance": {
+            "episode_id": "f2b87b10-4bbf-4023-887d-6a58f0663f06",
+            "scopes": [
+              "rehab"
+            ],
+            "report_id": "64a15eed-6828-5961-812c-3e55f5c36eeb",
+            "reported_at": "2026-10-05T12:04:00+00:00",
+            "source": "athlete_reported",
+            "externally_verified": false,
+            "scope_reported_at": {
+              "rehab": "2026-10-05T12:04:00+00:00"
+            },
+            "rehabilitation_permission": {
+              "schema_version": 1,
+              "level": "gentle_recovery"
+            }
+          },
+          "rehab_decision": {
+            "injury_id": "cc20b10d-89cc-47c3-9df4-bb978ea1109b",
+            "injury_episode_id": "f2b87b10-4bbf-4023-887d-6a58f0663f06",
+            "region": "elbow",
+            "injury_type": "tendonitis",
+            "stage": "restore",
+            "outcome": "prescribed_rehab",
+            "summary": "Your rehab is matched to this injury's current recovery stage.",
+            "reason_codes": [
+              "SELECT_DETERMINISTIC_BEST"
+            ],
+            "activation": "live",
+            "prescription": {
+              "drill_id": "elbow_unspecified_pronation_supination_with_dowel",
+              "drill": {
+                "id": "elbow_unspecified_pronation_supination_with_dowel",
+                "name": "Gentle forearm rotation with supported dowel",
+                "notes": "Sit with your elbow bent at a right angle beside your body. Hold a lightweight dowel at its centre with a relaxed grip and support its weight with your other hand. Slowly turn the affected palm upwards and downwards through a small comfortable range. Work pain-free at your own pace; no set count or hold is required. Do not use the dowel as a lever, add a band or weights, force the range, grip hard or twist quickly. Stop for increasing pain, swelling, tingling or loss of function; follow clinician restrictions.",
+                "rehab_stage": "restore",
+                "function": "mobility",
+                "equipment": [
+                  "dowel"
+                ],
+                "dose": {},
+                "impact": "none",
+                "load": "minimal",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+                ],
+                "target_regions": [
+                  "elbow"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "elbow joint and forearm rotation muscles"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.newcastle-hospitals.nhs.uk/services/newcastle-occupational-health-service/information-for-staff/physiotherapy/self-help-leaflets/tennis-elbow/, https://www.cuh.nhs.uk/patient-information/elbow-range-of-movement-exercises/. Fixed conservative movement only. No change to stage-entry criteria or permission, and no inference of sport readiness. Numeric guidance is source-backed where present; otherwise explicitly self-paced. No automatic resistance, range or speed progression.",
+                "compatible_injury_types": [
+                  "tendonitis"
+                ],
+                "prescription": {
+                  "sources": [
+                    "https://www.newcastle-hospitals.nhs.uk/services/newcastle-occupational-health-service/information-for-staff/physiotherapy/self-help-leaflets/tennis-elbow/",
+                    "https://www.cuh.nhs.uk/patient-information/elbow-range-of-movement-exercises/"
+                  ],
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 5
+                }
+              },
+              "instructions": "Sit with your elbow bent at a right angle beside your body. Hold a lightweight dowel at its centre with a relaxed grip and support its weight with your other hand. Slowly turn the affected palm upwards and downwards through a small comfortable range. Work pain-free at your own pace; no set count or hold is required. Do not use the dowel as a lever, add a band or weights, force the range, grip hard or twist quickly. Stop for increasing pain, swelling, tingling or loss of function; follow clinician restrictions.",
+              "dose": {},
+              "stop_when": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+              ],
+              "frequency": "scheduled_sessions",
+              "sources": [
+                "https://www.newcastle-hospitals.nhs.uk/services/newcastle-occupational-health-service/information-for-staff/physiotherapy/self-help-leaflets/tennis-elbow/",
+                "https://www.cuh.nhs.uk/patient-information/elbow-range-of-movement-exercises/"
+              ],
+              "bank_hash": "08386d31b709c4386a632b4efa520e9683677f7233b41799bd6edf9d5c381945",
+              "policy_id": "elbow_tendonitis",
+              "policy_version": 4,
+              "policy_review_hash": "3de4aaca7ce03f896bccd306f8a757f9836164ca3af6367de8b10200001ab46b",
+              "minimum_gap_days": 1,
+              "is_loading": false
+            },
+            "restrictions": {
+              "blocked_regions": [
+                "elbow"
+              ],
+              "blocked_tags": [],
+              "contact_limit": "none"
+            },
+            "loading_hold": false,
+            "policy_id": "elbow_tendonitis",
+            "policy_version": 4,
+            "progression": {
+              "stage": "restore",
+              "reason_codes": [
+                "baseline_only_v1"
+              ],
+              "evidence_ids": [],
+              "engine_version": "2",
+              "next_transition": {
+                "from_stage": "restore",
+                "to_stage": "load",
+                "status": "blocked",
+                "reason_codes": [
+                  "no_reviewed_stage_exposure",
+                  "no_reviewed_response_group",
+                  "no_reviewed_response_group",
+                  "rehabilitation_loading_not_reported"
+                ],
+                "target_stage_live": true,
+                "closed_reason": null,
+                "missing_inputs": [],
+                "requirements": [
+                  {
+                    "requirement_id": "no_unresolved_setback",
+                    "kind": "no_unresolved_setback",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "no_negative_response",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "complete_episode_history",
+                    "kind": "complete_history",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "history_complete",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "reviewed_stage_exposure",
+                    "kind": "completed_reviewed_exposure",
+                    "basis": "data_sufficiency",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_stage_exposure",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "during_response_not_worse",
+                    "kind": "during_session_response",
+                    "basis": "product_safety",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_response_group",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "next_day_response_not_worse",
+                    "kind": "next_day_response",
+                    "basis": "product_safety",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_response_group",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "lateral_elbow_reported_load_permission_v2",
+                    "kind": "functional_checkpoint",
+                    "basis": "clinical",
+                    "status": "unknown",
+                    "reason_code": "rehabilitation_loading_not_reported",
+                    "evidence_ids": []
+                  }
+                ],
+                "ignored_evidence": {}
+              }
+            },
+            "schedule": {
+              "state": "due",
+              "reason": "Your baseline rehab is due today; missed work adds no extra volume.",
+              "next_due_day": "2026-10-05"
+            }
+          }
+        }
+      ],
+      "live_prescription": {
+        "plan_id": "0cb8d43b-689f-4ba7-9d2a-e080d4968d36",
+        "training_day": "2026-10-05",
+        "session": {
+          "calendar_date": "2026-10-05",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday",
+          "day_label": "",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-1840565167f1ada369ea5916",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "effective_load": "reduced",
+          "contact_level": "none",
+          "blocks": [
+            {
+              "block_id": "rehab:cc20b10d-89cc-47c3-9df4-bb978ea1109b:f2b87b10-4bbf-4023-887d-6a58f0663f06",
+              "block_type": "rehab",
+              "title": "Gentle forearm rotation with supported dowel",
+              "display_name": "Gentle forearm rotation with supported dowel",
+              "coaching_cues": [
+                "Sit with your elbow bent at a right angle beside your body. Hold a lightweight dowel at its centre with a relaxed grip and support its weight with your other hand. Slowly turn the affected palm upwards and downwards through a small comfortable range. Work pain-free at your own pace; no set count or hold is required. Do not use the dowel as a lever, add a band or weights, force the range, grip hard or twist quickly. Stop for increasing pain, swelling, tingling or loss of function; follow clinician restrictions."
+              ],
+              "rehab_drill_id": "elbow_unspecified_pronation_supination_with_dowel",
+              "exercise_key": "elbow-unspecified-pronation-supination-with-dowel",
+              "injury_id": "cc20b10d-89cc-47c3-9df4-bb978ea1109b",
+              "injury_episode_id": "f2b87b10-4bbf-4023-887d-6a58f0663f06",
+              "target_regions": [
+                "elbow"
+              ],
+              "dose": {},
+              "instructions": "Sit with your elbow bent at a right angle beside your body. Hold a lightweight dowel at its centre with a relaxed grip and support its weight with your other hand. Slowly turn the affected palm upwards and downwards through a small comfortable range. Work pain-free at your own pace; no set count or hold is required. Do not use the dowel as a lever, add a band or weights, force the range, grip hard or twist quickly. Stop for increasing pain, swelling, tingling or loss of function; follow clinician restrictions.",
+              "stop_rules": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+              ],
+              "drill_snapshot": {
+                "id": "elbow_unspecified_pronation_supination_with_dowel",
+                "name": "Gentle forearm rotation with supported dowel",
+                "notes": "Sit with your elbow bent at a right angle beside your body. Hold a lightweight dowel at its centre with a relaxed grip and support its weight with your other hand. Slowly turn the affected palm upwards and downwards through a small comfortable range. Work pain-free at your own pace; no set count or hold is required. Do not use the dowel as a lever, add a band or weights, force the range, grip hard or twist quickly. Stop for increasing pain, swelling, tingling or loss of function; follow clinician restrictions.",
+                "rehab_stage": "restore",
+                "function": "mobility",
+                "equipment": [
+                  "dowel"
+                ],
+                "dose": {},
+                "impact": "none",
+                "load": "minimal",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+                ],
+                "target_regions": [
+                  "elbow"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "elbow joint and forearm rotation muscles"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.newcastle-hospitals.nhs.uk/services/newcastle-occupational-health-service/information-for-staff/physiotherapy/self-help-leaflets/tennis-elbow/, https://www.cuh.nhs.uk/patient-information/elbow-range-of-movement-exercises/. Fixed conservative movement only. No change to stage-entry criteria or permission, and no inference of sport readiness. Numeric guidance is source-backed where present; otherwise explicitly self-paced. No automatic resistance, range or speed progression.",
+                "compatible_injury_types": [
+                  "tendonitis"
+                ],
+                "prescription": {
+                  "sources": [
+                    "https://www.newcastle-hospitals.nhs.uk/services/newcastle-occupational-health-service/information-for-staff/physiotherapy/self-help-leaflets/tennis-elbow/",
+                    "https://www.cuh.nhs.uk/patient-information/elbow-range-of-movement-exercises/"
+                  ],
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 5
+                }
+              },
+              "policy_id": "elbow_tendonitis",
+              "policy_version": 4,
+              "bank_hash": "08386d31b709c4386a632b4efa520e9683677f7233b41799bd6edf9d5c381945",
+              "policy_review_hash": "3de4aaca7ce03f896bccd306f8a757f9836164ca3af6367de8b10200001ab46b",
+              "minimum_gap_days": 1,
+              "is_loading": false,
+              "source_references": [
+                "https://www.newcastle-hospitals.nhs.uk/services/newcastle-occupational-health-service/information-for-staff/physiotherapy/self-help-leaflets/tennis-elbow/",
+                "https://www.cuh.nhs.uk/patient-information/elbow-range-of-movement-exercises/"
+              ]
+            }
+          ]
+        },
+        "changes": [
+          {
+            "action": "held",
+            "reason": "clinician_clearance_ceiling"
+          },
+          {
+            "block_id": "training",
+            "action": "held",
+            "reason": "no_reviewed_safe_substitution",
+            "restriction_reasons": [
+              "injury_loading_restriction"
+            ]
+          }
+        ],
+        "safety_hold": false,
+        "frozen": false,
+        "engine_version": "2",
+        "rehab_only": true,
+        "held_session_id": "training",
+        "injury_ids": [
+          "cc20b10d-89cc-47c3-9df4-bb978ea1109b"
+        ],
+        "allocation_limit": 2,
+        "training_hold_reason": "Your planned training conflicts with the current injury restrictions.",
+        "revision": "85a0da8a63f9ecc1ff6d9ad8635e0250eca349c1771b04527a47cfb83932b88c",
+        "injury_context": [
+          {
+            "id": "cc20b10d-89cc-47c3-9df4-bb978ea1109b",
+            "episode_id": "f2b87b10-4bbf-4023-887d-6a58f0663f06",
+            "updated_at": "2026-10-05T12:02:00+00:00"
+          }
+        ],
+        "evidence_context": {
+          "exposure_id": null,
+          "event_id": "64a15eed-6828-5961-812c-3e55f5c36eeb"
+        },
+        "readiness_context": {
+          "id": "325bf132-5bea-4480-a54b-8f2c071fade1",
+          "updated_at": "2026-10-05T12:02:00+00:00"
+        }
+      },
+      "exercise_media": {},
+      "effective_clinician_clearance": {
+        "level": "rehab_only",
+        "scopes": [
+          "rehab"
+        ],
+        "requires_update": false,
+        "limited_by": [
+          {
+            "injury_id": "cc20b10d-89cc-47c3-9df4-bb978ea1109b",
+            "injury_episode_id": "f2b87b10-4bbf-4023-887d-6a58f0663f06",
+            "label": "Left elbow tendonitis"
+          }
+        ]
+      },
+      "delayed_rehab_prompts": [],
+      "week_summary": {},
+      "quick_actions": [
+        {
+          "id": "open_today",
+          "label": "Open Today",
+          "route": "/today"
+        },
+        {
+          "id": "view_plan",
+          "label": "View Plan",
+          "route": "/plans/0cb8d43b-689f-4ba7-9d2a-e080d4968d36"
+        }
+      ]
+    },
+    "profile": {
+      "profile": {
+        "starting_path": "plan_first",
+        "training_habits": {
+          "enabled": true,
+          "decisions": []
+        },
+        "training_habits_revision": 0,
+        "athlete_id": "75221a47-a2ab-462f-9898-dd4c8c6d20c6",
+        "email": "fixture@example.com",
+        "username": null,
+        "username_change_history": [],
+        "role": "athlete",
+        "access_status": "approved",
+        "full_name": "Test athlete",
+        "technical_style": [],
+        "tactical_style": [],
+        "stance": "",
+        "professional_status": "",
+        "record": "",
+        "athlete_timezone": "UTC",
+        "athlete_locale": "",
+        "appearance_mode": "dark",
+        "onboarding_draft": null,
+        "avatar_url": null,
+        "nutrition_profile": {
+          "sex": null,
+          "age": null,
+          "height_cm": null,
+          "daily_activity_level": null,
+          "dietary_restrictions": [],
+          "food_preferences": [],
+          "meals_per_day_preference": null,
+          "foods_avoided_pre_session": [],
+          "foods_avoided_fight_week": [],
+          "supplement_use": [],
+          "caffeine_use": null
+        },
+        "private_trial_ack_at": null,
+        "date_of_birth": "1996-05-04",
+        "age_band": "adult",
+        "is_minor": false,
+        "meets_minimum_age": true,
+        "terms_version": "0.1-pre-launch",
+        "terms_accepted_at": "2026-10-05T12:03:00+00:00",
+        "terms_accepted": true,
+        "health_consent_version": "1.0",
+        "health_data_consent": true,
+        "health_consent_at": "2026-10-05T12:03:00+00:00",
+        "health_consent_withdrawn_at": null,
+        "health_consent_granted": true,
+        "created_at": "2026-10-05T12:03:00+00:00",
+        "updated_at": "2026-10-05T12:04:00+00:00"
+      },
+      "effective_admin": false,
+      "latest_intake": null,
+      "latest_plan": {
+        "custom_plan_id": null,
+        "plan_id": "0cb8d43b-689f-4ba7-9d2a-e080d4968d36",
+        "plan_name": null,
+        "athlete_id": "75221a47-a2ab-462f-9898-dd4c8c6d20c6",
+        "full_name": "",
+        "fight_date": "",
+        "technical_style": [],
+        "created_at": "2026-10-05T12:00:00+00:00",
+        "status": "ready",
+        "activation_state": "eligible",
+        "pdf_url": null,
+        "review_reason": null
+      },
+      "plan_count": 1,
+      "username_rate_limit": {
+        "max_changes_per_window": 4,
+        "window_days": 30,
+        "remaining": 4,
+        "next_available_at": null
+      }
+    }
+  },
+  "ankle_sprain": {
+    "view": {
+      "active_plan": {
+        "status": "ready",
+        "phase": "GPP",
+        "id": "82595760-c016-4230-b437-febb2dea11f5"
+      },
+      "today": {
+        "training_day": "2026-10-05",
+        "recommendation_state": "modify",
+        "recommendation_reason": "Reviewed rehab today\nYour planned training conflicts with the current injury restrictions.\nFollow only the reviewed rehab shown today.",
+        "decision_tier": "modify",
+        "injury_hold_exempt": false,
+        "recommendation_trigger_labels": [
+          "Current injury restrictions"
+        ],
+        "recommendation_context_labels": [],
+        "recommendation_safety_checks": [],
+        "recommendation_sources": [
+          "today's check-in",
+          "today's planned session",
+          "your tracked injuries"
+        ],
+        "recommendation_confidence": "moderate",
+        "recommendation_confidence_note": "Less to go on today: this is based on today's check-in alone, with no recent days to compare.",
+        "primary_safety_notice": null,
+        "warnings": [],
+        "next_session": {
+          "calendar_date": "2026-10-05",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday",
+          "day_label": "",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-66d188e454388402af02e300",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "effective_load": "reduced",
+          "contact_level": "none",
+          "blocks": [
+            {
+              "block_id": "rehab:c482b2e5-70d9-40d9-9d6f-5b30a1355c8c:da5c2200-8766-4302-bf2f-8964491fa143",
+              "block_type": "rehab",
+              "title": "Seated comfortable ankle circles",
+              "display_name": "Seated comfortable ankle circles",
+              "coaching_cues": [
+                "Sit with your leg supported and foot free to move. Slowly draw a small comfortable circle with your foot in each direction, keeping the knee still. Use a pain-free range at your own pace; no fixed repetition count or duration is required. No band, standing balance, forced full range, added load or faster movement. Stop if symptoms worsen during or after the movement; follow clinician restrictions."
+              ],
+              "rehab_drill_id": "ankle_unspecified_ankle_cars_controlled_articular_rotations",
+              "exercise_key": "ankle-unspecified-ankle-cars-controlled-articular-rotations",
+              "injury_id": "c482b2e5-70d9-40d9-9d6f-5b30a1355c8c",
+              "injury_episode_id": "da5c2200-8766-4302-bf2f-8964491fa143",
+              "target_regions": [
+                "ankle"
+              ],
+              "dose": {},
+              "instructions": "Sit with your leg supported and foot free to move. Slowly draw a small comfortable circle with your foot in each direction, keeping the knee still. Use a pain-free range at your own pace; no fixed repetition count or duration is required. No band, standing balance, forced full range, added load or faster movement. Stop if symptoms worsen during or after the movement; follow clinician restrictions.",
+              "stop_rules": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+              ],
+              "drill_snapshot": {
+                "id": "ankle_unspecified_ankle_cars_controlled_articular_rotations",
+                "name": "Seated comfortable ankle circles",
+                "notes": "Sit with your leg supported and foot free to move. Slowly draw a small comfortable circle with your foot in each direction, keeping the knee still. Use a pain-free range at your own pace; no fixed repetition count or duration is required. No band, standing balance, forced full range, added load or faster movement. Stop if symptoms worsen during or after the movement; follow clinician restrictions.",
+                "rehab_stage": "restore",
+                "function": "mobility",
+                "equipment": [
+                  "chair"
+                ],
+                "dose": {},
+                "impact": "none",
+                "load": "minimal",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+                ],
+                "target_regions": [
+                  "ankle"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "ankle joint and surrounding muscles"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain. Fixed conservative movement only. No change to stage-entry criteria or permission, and no inference of sport readiness. Numeric guidance is source-backed where present; otherwise explicitly self-paced. No automatic resistance, range or speed progression.",
+                "compatible_injury_types": [
+                  "sprain"
+                ],
+                "prescription": {
+                  "sources": [
+                    "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain"
+                  ],
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 5
+                }
+              },
+              "policy_id": "ankle_sprain",
+              "policy_version": 7,
+              "bank_hash": "52a114b151ea13c63ef0323088948c2bda224cc53d7c821c1dbc9310c5053316",
+              "policy_review_hash": "bc462a20781fa88526ca4fb90711c42e2ce75cb0d986435cb52f7193364b1162",
+              "minimum_gap_days": 1,
+              "is_loading": false,
+              "source_references": [
+                "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain"
+              ]
+            }
+          ],
+          "session_relation": "today"
+        },
+        "session_scope": "today",
+        "session_label": "Today's session",
+        "completion_status": "not_started"
+      },
+      "risk_watch": [
+        {
+          "category": "reminder",
+          "priority": 7,
+          "icon": "info",
+          "label": "Reminder",
+          "text": "Tracking 1 open injury: Left ankle sprain. Train around it.",
+          "tone": "info",
+          "timeframe": "active"
+        }
+      ],
+      "open_injuries": [
+        {
+          "id": "c482b2e5-70d9-40d9-9d6f-5b30a1355c8c",
+          "athlete_id": "9864efcf-5025-4f82-9f65-2d1063d9a1fd",
+          "plan_id": "82595760-c016-4230-b437-febb2dea11f5",
+          "source": "checkin",
+          "body_area": "Left ankle",
+          "severity": "mild",
+          "status": "monitoring",
+          "resolved_at": null,
+          "episode_id": "da5c2200-8766-4302-bf2f-8964491fa143",
+          "body_region": "ankle",
+          "side": "left",
+          "description": "sprain [ankle_scope:uncomplicated_lateral]",
+          "latest_reported_status": "improving",
+          "created_at": "2026-10-05T12:01:00+00:00",
+          "updated_at": "2026-10-05T12:02:00+00:00",
+          "surface_class": "non_surface",
+          "canonical_location": "ankle",
+          "region_group": "lower_leg_foot",
+          "load_region": "lower_limb",
+          "consequence": null,
+          "rehab_stage": "restore",
+          "rehab_stage_reasons": [
+            "symptoms_not_worsening",
+            "insufficient_injury_specific_progression_evidence"
+          ],
+          "rehab_care_pathway": "musculoskeletal",
+          "rehab_medical_gate": false,
+          "label": "Left ankle sprain",
+          "assessment_history_complete": true,
+          "progression_assessments": [],
+          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
+          "latest_reported_at": "2026-10-05T12:02:00+00:00",
+          "rehab_improvement_reports": [
+            {
+              "id": "f3b5caab-c35f-45bd-87c4-1dea82373c81",
+              "reported_at": "2026-10-05T12:01:00+00:00"
+            },
+            {
+              "id": "030392e6-b7ad-412e-9182-9bce2cdc3d30",
+              "reported_at": "2026-10-05T12:02:00+00:00"
+            }
+          ],
+          "rehab_improvement_at": "2026-10-05T12:02:00Z",
+          "assessment_setback_at": null,
+          "clinician_clearance": {
+            "episode_id": "da5c2200-8766-4302-bf2f-8964491fa143",
+            "scopes": [
+              "rehab"
+            ],
+            "report_id": "67108c21-2e63-5227-8e09-e5648608c540",
+            "reported_at": "2026-10-05T12:04:00+00:00",
+            "source": "athlete_reported",
+            "externally_verified": false,
+            "scope_reported_at": {
+              "rehab": "2026-10-05T12:04:00+00:00"
+            },
+            "rehabilitation_permission": {
+              "schema_version": 1,
+              "level": "gentle_recovery"
+            }
+          },
+          "rehab_decision": {
+            "injury_id": "c482b2e5-70d9-40d9-9d6f-5b30a1355c8c",
+            "injury_episode_id": "da5c2200-8766-4302-bf2f-8964491fa143",
+            "region": "ankle",
+            "injury_type": "sprain",
+            "stage": "restore",
+            "outcome": "prescribed_rehab",
+            "summary": "Your rehab is matched to this injury's current recovery stage.",
+            "reason_codes": [
+              "SELECT_DETERMINISTIC_BEST"
+            ],
+            "activation": "live",
+            "prescription": {
+              "drill_id": "ankle_unspecified_ankle_cars_controlled_articular_rotations",
+              "drill": {
+                "id": "ankle_unspecified_ankle_cars_controlled_articular_rotations",
+                "name": "Seated comfortable ankle circles",
+                "notes": "Sit with your leg supported and foot free to move. Slowly draw a small comfortable circle with your foot in each direction, keeping the knee still. Use a pain-free range at your own pace; no fixed repetition count or duration is required. No band, standing balance, forced full range, added load or faster movement. Stop if symptoms worsen during or after the movement; follow clinician restrictions.",
+                "rehab_stage": "restore",
+                "function": "mobility",
+                "equipment": [
+                  "chair"
+                ],
+                "dose": {},
+                "impact": "none",
+                "load": "minimal",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+                ],
+                "target_regions": [
+                  "ankle"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "ankle joint and surrounding muscles"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain. Fixed conservative movement only. No change to stage-entry criteria or permission, and no inference of sport readiness. Numeric guidance is source-backed where present; otherwise explicitly self-paced. No automatic resistance, range or speed progression.",
+                "compatible_injury_types": [
+                  "sprain"
+                ],
+                "prescription": {
+                  "sources": [
+                    "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain"
+                  ],
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 5
+                }
+              },
+              "instructions": "Sit with your leg supported and foot free to move. Slowly draw a small comfortable circle with your foot in each direction, keeping the knee still. Use a pain-free range at your own pace; no fixed repetition count or duration is required. No band, standing balance, forced full range, added load or faster movement. Stop if symptoms worsen during or after the movement; follow clinician restrictions.",
+              "dose": {},
+              "stop_when": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+              ],
+              "frequency": "scheduled_sessions",
+              "sources": [
+                "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain"
+              ],
+              "bank_hash": "52a114b151ea13c63ef0323088948c2bda224cc53d7c821c1dbc9310c5053316",
+              "policy_id": "ankle_sprain",
+              "policy_version": 7,
+              "policy_review_hash": "bc462a20781fa88526ca4fb90711c42e2ce75cb0d986435cb52f7193364b1162",
+              "minimum_gap_days": 1,
+              "is_loading": false
+            },
+            "restrictions": {
+              "blocked_regions": [
+                "ankle"
+              ],
+              "blocked_tags": [],
+              "contact_limit": "none"
+            },
+            "loading_hold": false,
+            "policy_id": "ankle_sprain",
+            "policy_version": 7,
+            "progression": {
+              "stage": "restore",
+              "reason_codes": [
+                "baseline_only_v1"
+              ],
+              "evidence_ids": [],
+              "engine_version": "2",
+              "next_transition": {
+                "from_stage": "restore",
+                "to_stage": "load",
+                "status": "blocked",
+                "reason_codes": [
+                  "no_reviewed_stage_exposure",
+                  "no_reviewed_response_group",
+                  "no_reviewed_response_group",
+                  "rehabilitation_loading_not_reported"
+                ],
+                "target_stage_live": true,
+                "closed_reason": null,
+                "missing_inputs": [],
+                "requirements": [
+                  {
+                    "requirement_id": "no_unresolved_setback",
+                    "kind": "no_unresolved_setback",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "no_negative_response",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "complete_episode_history",
+                    "kind": "complete_history",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "history_complete",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "reviewed_stage_exposure",
+                    "kind": "completed_reviewed_exposure",
+                    "basis": "data_sufficiency",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_stage_exposure",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "during_response_not_worse",
+                    "kind": "during_session_response",
+                    "basis": "product_safety",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_response_group",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "next_day_response_not_worse",
+                    "kind": "next_day_response",
+                    "basis": "product_safety",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_response_group",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "ankle_lateral_reported_seated_load_v1",
+                    "kind": "functional_checkpoint",
+                    "basis": "clinical",
+                    "status": "unknown",
+                    "reason_code": "rehabilitation_loading_not_reported",
+                    "evidence_ids": []
+                  }
+                ],
+                "ignored_evidence": {}
+              }
+            },
+            "schedule": {
+              "state": "due",
+              "reason": "Your baseline rehab is due today; missed work adds no extra volume.",
+              "next_due_day": "2026-10-05"
+            }
+          }
+        }
+      ],
+      "live_prescription": {
+        "plan_id": "82595760-c016-4230-b437-febb2dea11f5",
+        "training_day": "2026-10-05",
+        "session": {
+          "calendar_date": "2026-10-05",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday",
+          "day_label": "",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-66d188e454388402af02e300",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "effective_load": "reduced",
+          "contact_level": "none",
+          "blocks": [
+            {
+              "block_id": "rehab:c482b2e5-70d9-40d9-9d6f-5b30a1355c8c:da5c2200-8766-4302-bf2f-8964491fa143",
+              "block_type": "rehab",
+              "title": "Seated comfortable ankle circles",
+              "display_name": "Seated comfortable ankle circles",
+              "coaching_cues": [
+                "Sit with your leg supported and foot free to move. Slowly draw a small comfortable circle with your foot in each direction, keeping the knee still. Use a pain-free range at your own pace; no fixed repetition count or duration is required. No band, standing balance, forced full range, added load or faster movement. Stop if symptoms worsen during or after the movement; follow clinician restrictions."
+              ],
+              "rehab_drill_id": "ankle_unspecified_ankle_cars_controlled_articular_rotations",
+              "exercise_key": "ankle-unspecified-ankle-cars-controlled-articular-rotations",
+              "injury_id": "c482b2e5-70d9-40d9-9d6f-5b30a1355c8c",
+              "injury_episode_id": "da5c2200-8766-4302-bf2f-8964491fa143",
+              "target_regions": [
+                "ankle"
+              ],
+              "dose": {},
+              "instructions": "Sit with your leg supported and foot free to move. Slowly draw a small comfortable circle with your foot in each direction, keeping the knee still. Use a pain-free range at your own pace; no fixed repetition count or duration is required. No band, standing balance, forced full range, added load or faster movement. Stop if symptoms worsen during or after the movement; follow clinician restrictions.",
+              "stop_rules": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+              ],
+              "drill_snapshot": {
+                "id": "ankle_unspecified_ankle_cars_controlled_articular_rotations",
+                "name": "Seated comfortable ankle circles",
+                "notes": "Sit with your leg supported and foot free to move. Slowly draw a small comfortable circle with your foot in each direction, keeping the knee still. Use a pain-free range at your own pace; no fixed repetition count or duration is required. No band, standing balance, forced full range, added load or faster movement. Stop if symptoms worsen during or after the movement; follow clinician restrictions.",
+                "rehab_stage": "restore",
+                "function": "mobility",
+                "equipment": [
+                  "chair"
+                ],
+                "dose": {},
+                "impact": "none",
+                "load": "minimal",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+                ],
+                "target_regions": [
+                  "ankle"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "ankle joint and surrounding muscles"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain. Fixed conservative movement only. No change to stage-entry criteria or permission, and no inference of sport readiness. Numeric guidance is source-backed where present; otherwise explicitly self-paced. No automatic resistance, range or speed progression.",
+                "compatible_injury_types": [
+                  "sprain"
+                ],
+                "prescription": {
+                  "sources": [
+                    "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain"
+                  ],
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 5
+                }
+              },
+              "policy_id": "ankle_sprain",
+              "policy_version": 7,
+              "bank_hash": "52a114b151ea13c63ef0323088948c2bda224cc53d7c821c1dbc9310c5053316",
+              "policy_review_hash": "bc462a20781fa88526ca4fb90711c42e2ce75cb0d986435cb52f7193364b1162",
+              "minimum_gap_days": 1,
+              "is_loading": false,
+              "source_references": [
+                "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain"
+              ]
+            }
+          ]
+        },
+        "changes": [
+          {
+            "action": "held",
+            "reason": "clinician_clearance_ceiling"
+          },
+          {
+            "block_id": "training",
+            "action": "held",
+            "reason": "no_reviewed_safe_substitution",
+            "restriction_reasons": [
+              "injury_loading_restriction"
+            ]
+          }
+        ],
+        "safety_hold": false,
+        "frozen": false,
+        "engine_version": "2",
+        "rehab_only": true,
+        "held_session_id": "training",
+        "injury_ids": [
+          "c482b2e5-70d9-40d9-9d6f-5b30a1355c8c"
+        ],
+        "allocation_limit": 2,
+        "training_hold_reason": "Your planned training conflicts with the current injury restrictions.",
+        "revision": "e7ae638e8577ab7f7e00545366ce54a4a88dcb7baf460d7b3cc390508327d3c8",
+        "injury_context": [
+          {
+            "id": "c482b2e5-70d9-40d9-9d6f-5b30a1355c8c",
+            "episode_id": "da5c2200-8766-4302-bf2f-8964491fa143",
+            "updated_at": "2026-10-05T12:02:00+00:00"
+          }
+        ],
+        "evidence_context": {
+          "exposure_id": null,
+          "event_id": "67108c21-2e63-5227-8e09-e5648608c540"
+        },
+        "readiness_context": {
+          "id": "c5550ab7-dc78-4247-8b4f-81bd7e1db43b",
+          "updated_at": "2026-10-05T12:02:00+00:00"
+        }
+      },
+      "exercise_media": {},
+      "effective_clinician_clearance": {
+        "level": "rehab_only",
+        "scopes": [
+          "rehab"
+        ],
+        "requires_update": false,
+        "limited_by": [
+          {
+            "injury_id": "c482b2e5-70d9-40d9-9d6f-5b30a1355c8c",
+            "injury_episode_id": "da5c2200-8766-4302-bf2f-8964491fa143",
+            "label": "Left ankle sprain"
+          }
+        ]
+      },
+      "delayed_rehab_prompts": [],
+      "week_summary": {},
+      "quick_actions": [
+        {
+          "id": "open_today",
+          "label": "Open Today",
+          "route": "/today"
+        },
+        {
+          "id": "view_plan",
+          "label": "View Plan",
+          "route": "/plans/82595760-c016-4230-b437-febb2dea11f5"
+        }
+      ]
+    },
+    "profile": {
+      "profile": {
+        "starting_path": "plan_first",
+        "training_habits": {
+          "enabled": true,
+          "decisions": []
+        },
+        "training_habits_revision": 0,
+        "athlete_id": "9864efcf-5025-4f82-9f65-2d1063d9a1fd",
+        "email": "fixture@example.com",
+        "username": null,
+        "username_change_history": [],
+        "role": "athlete",
+        "access_status": "approved",
+        "full_name": "Test athlete",
+        "technical_style": [],
+        "tactical_style": [],
+        "stance": "",
+        "professional_status": "",
+        "record": "",
+        "athlete_timezone": "UTC",
+        "athlete_locale": "",
+        "appearance_mode": "dark",
+        "onboarding_draft": null,
+        "avatar_url": null,
+        "nutrition_profile": {
+          "sex": null,
+          "age": null,
+          "height_cm": null,
+          "daily_activity_level": null,
+          "dietary_restrictions": [],
+          "food_preferences": [],
+          "meals_per_day_preference": null,
+          "foods_avoided_pre_session": [],
+          "foods_avoided_fight_week": [],
+          "supplement_use": [],
+          "caffeine_use": null
+        },
+        "private_trial_ack_at": null,
+        "date_of_birth": "1996-05-04",
+        "age_band": "adult",
+        "is_minor": false,
+        "meets_minimum_age": true,
+        "terms_version": "0.1-pre-launch",
+        "terms_accepted_at": "2026-10-05T12:03:00+00:00",
+        "terms_accepted": true,
+        "health_consent_version": "1.0",
+        "health_data_consent": true,
+        "health_consent_at": "2026-10-05T12:03:00+00:00",
+        "health_consent_withdrawn_at": null,
+        "health_consent_granted": true,
+        "created_at": "2026-10-05T12:03:00+00:00",
+        "updated_at": "2026-10-05T12:04:00+00:00"
+      },
+      "effective_admin": false,
+      "latest_intake": null,
+      "latest_plan": {
+        "custom_plan_id": null,
+        "plan_id": "82595760-c016-4230-b437-febb2dea11f5",
+        "plan_name": null,
+        "athlete_id": "9864efcf-5025-4f82-9f65-2d1063d9a1fd",
+        "full_name": "",
+        "fight_date": "",
+        "technical_style": [],
+        "created_at": "2026-10-05T12:00:00+00:00",
+        "status": "ready",
+        "activation_state": "eligible",
+        "pdf_url": null,
+        "review_reason": null
+      },
+      "plan_count": 1,
+      "username_rate_limit": {
+        "max_changes_per_window": 4,
+        "window_days": 30,
+        "remaining": 4,
+        "next_available_at": null
+      }
+    }
+  },
+  "shoulder_tendonitis": {
+    "view": {
+      "active_plan": {
+        "status": "ready",
+        "phase": "GPP",
+        "id": "d360a559-5ee3-402e-baf0-731d01e17180"
+      },
+      "today": {
+        "training_day": "2026-10-05",
+        "recommendation_state": "modify",
+        "recommendation_reason": "Reviewed rehab today\nYour planned training conflicts with the current injury restrictions.\nFollow only the reviewed rehab shown today.",
+        "decision_tier": "modify",
+        "injury_hold_exempt": false,
+        "recommendation_trigger_labels": [
+          "Left shoulder tendonitis \u2014 restricts today's training",
+          "Current injury restrictions"
+        ],
+        "recommendation_context_labels": [],
+        "recommendation_safety_checks": [],
+        "recommendation_sources": [
+          "today's check-in",
+          "your tracked injuries",
+          "today's planned session"
+        ],
+        "recommendation_confidence": "moderate",
+        "recommendation_confidence_note": "Less to go on today: this is based on today's check-in alone, with no recent days to compare.",
+        "primary_safety_notice": null,
+        "warnings": [],
+        "next_session": {
+          "calendar_date": "2026-10-05",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday",
+          "day_label": "",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-b74537dcaa2a3b139a536822",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "effective_load": "reduced",
+          "contact_level": "none",
+          "blocks": [
+            {
+              "block_id": "rehab:d041f023-dab6-476b-b35d-198041f2f1bb:e1bdd422-8942-4de2-b425-78c0dcc9045b",
+              "block_type": "rehab",
+              "title": "Supported comfortable shoulder wall slide",
+              "display_name": "Supported comfortable shoulder wall slide",
+              "coaching_cues": [
+                "Stand facing a smooth wall with a cloth under the affected hand. Gently slide the hand upwards only through a comfortable range no higher than shoulder level, then return. Do not lean body weight heavily into the arm, force a painful arc, add resistance or lift overhead. Keep the neck comfortable; no forced chin tuck or posture correction is required. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever."
+              ],
+              "rehab_drill_id": "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
+              "exercise_key": "shoulder-impingement-scapular-wall-slides-with-chin-tuck",
+              "injury_id": "d041f023-dab6-476b-b35d-198041f2f1bb",
+              "injury_episode_id": "e1bdd422-8942-4de2-b425-78c0dcc9045b",
+              "target_regions": [
+                "shoulder"
+              ],
+              "dose": {},
+              "instructions": "Stand facing a smooth wall with a cloth under the affected hand. Gently slide the hand upwards only through a comfortable range no higher than shoulder level, then return. Do not lean body weight heavily into the arm, force a painful arc, add resistance or lift overhead. Keep the neck comfortable; no forced chin tuck or posture correction is required. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+              "stop_rules": [
+                "Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever."
+              ],
+              "drill_snapshot": {
+                "id": "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
+                "name": "Supported comfortable shoulder wall slide",
+                "notes": "Stand facing a smooth wall with a cloth under the affected hand. Gently slide the hand upwards only through a comfortable range no higher than shoulder level, then return. Do not lean body weight heavily into the arm, force a painful arc, add resistance or lift overhead. Keep the neck comfortable; no forced chin tuck or posture correction is required. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+                "rehab_stage": "restore",
+                "function": "mobility",
+                "equipment": [
+                  "wall",
+                  "cloth"
+                ],
+                "dose": {},
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": [
+                  "Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever."
+                ],
+                "target_regions": [
+                  "shoulder"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "shoulder joint and rotator cuff region"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/. Protected regional baseline only; not a diagnosis or return-to-sport protocol. No numeric dose, clinical severity rule or universal pain threshold inferred. Comfortable/non-provoking movement is a conservative baseline constraint. Existing low/moderate eligibility and cadence are product rules. Individual restrictions remain authoritative.",
+                "compatible_injury_types": [
+                  "tendonitis"
+                ],
+                "prescription": {
+                  "sources": [
+                    "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+                  ],
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 5
+                }
+              },
+              "policy_id": "shoulder_tendonitis",
+              "policy_version": 3,
+              "bank_hash": "b2e0ec1e2aa486e21c948ec6e3f6a2284b5b28bd61ef56b1f5c1c4b191a52852",
+              "policy_review_hash": "2bf9abc4903e427cbebf7caff88c1862ee356f8340a1f34e50aa195c188b1907",
+              "minimum_gap_days": 1,
+              "is_loading": false,
+              "source_references": [
+                "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+              ]
+            }
+          ],
+          "session_relation": "today"
+        },
+        "session_scope": "today",
+        "session_label": "Today's session",
+        "completion_status": "not_started"
+      },
+      "risk_watch": [
+        {
+          "category": "reminder",
+          "priority": 7,
+          "icon": "info",
+          "label": "Reminder",
+          "text": "Tracking 1 open injury: Left shoulder tendonitis. Train around it.",
+          "tone": "info",
+          "timeframe": "active"
+        }
+      ],
+      "open_injuries": [
+        {
+          "id": "d041f023-dab6-476b-b35d-198041f2f1bb",
+          "athlete_id": "8211f2ae-4428-4784-9add-60caa5526428",
+          "plan_id": "d360a559-5ee3-402e-baf0-731d01e17180",
+          "source": "checkin",
+          "body_area": "Left shoulder",
+          "severity": "moderate",
+          "status": "monitoring",
+          "resolved_at": null,
+          "episode_id": "e1bdd422-8942-4de2-b425-78c0dcc9045b",
+          "body_region": "shoulder",
+          "side": "left",
+          "description": "tendonitis [shoulder_scope:nontraumatic_cuff]",
+          "latest_reported_status": "improving",
+          "created_at": "2026-10-05T12:01:00+00:00",
+          "updated_at": "2026-10-05T12:02:00+00:00",
+          "surface_class": "non_surface",
+          "canonical_location": "shoulder",
+          "region_group": "upper_limb",
+          "load_region": "upper_limb",
+          "consequence": "load_sensitive",
+          "rehab_stage": "restore",
+          "rehab_stage_reasons": [
+            "symptoms_not_worsening",
+            "insufficient_injury_specific_progression_evidence"
+          ],
+          "rehab_care_pathway": "musculoskeletal",
+          "rehab_medical_gate": false,
+          "label": "Left shoulder tendonitis",
+          "assessment_history_complete": true,
+          "progression_assessments": [],
+          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
+          "latest_reported_at": "2026-10-05T12:02:00+00:00",
+          "rehab_improvement_reports": [
+            {
+              "id": "c719c134-1ac1-4608-9b0f-fc007887bf35",
+              "reported_at": "2026-10-05T12:01:00+00:00"
+            },
+            {
+              "id": "66dcccea-5520-4e34-aba0-22dc2b6c75dc",
+              "reported_at": "2026-10-05T12:02:00+00:00"
+            }
+          ],
+          "rehab_improvement_at": "2026-10-05T12:02:00Z",
+          "assessment_setback_at": null,
+          "clinician_clearance": {
+            "episode_id": "e1bdd422-8942-4de2-b425-78c0dcc9045b",
+            "scopes": [
+              "rehab"
+            ],
+            "report_id": "494146e2-7128-529d-9bca-fe43d94e60f9",
+            "reported_at": "2026-10-05T12:04:00+00:00",
+            "source": "athlete_reported",
+            "externally_verified": false,
+            "scope_reported_at": {
+              "rehab": "2026-10-05T12:04:00+00:00"
+            },
+            "rehabilitation_permission": {
+              "schema_version": 1,
+              "level": "gentle_recovery"
+            }
+          },
+          "rehab_decision": {
+            "injury_id": "d041f023-dab6-476b-b35d-198041f2f1bb",
+            "injury_episode_id": "e1bdd422-8942-4de2-b425-78c0dcc9045b",
+            "region": "shoulder",
+            "injury_type": "tendonitis",
+            "stage": "restore",
+            "outcome": "prescribed_rehab",
+            "summary": "Your rehab is matched to this injury's current recovery stage.",
+            "reason_codes": [
+              "SELECT_DETERMINISTIC_BEST"
+            ],
+            "activation": "live",
+            "prescription": {
+              "drill_id": "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
+              "drill": {
+                "id": "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
+                "name": "Supported comfortable shoulder wall slide",
+                "notes": "Stand facing a smooth wall with a cloth under the affected hand. Gently slide the hand upwards only through a comfortable range no higher than shoulder level, then return. Do not lean body weight heavily into the arm, force a painful arc, add resistance or lift overhead. Keep the neck comfortable; no forced chin tuck or posture correction is required. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+                "rehab_stage": "restore",
+                "function": "mobility",
+                "equipment": [
+                  "wall",
+                  "cloth"
+                ],
+                "dose": {},
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": [
+                  "Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever."
+                ],
+                "target_regions": [
+                  "shoulder"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "shoulder joint and rotator cuff region"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/. Protected regional baseline only; not a diagnosis or return-to-sport protocol. No numeric dose, clinical severity rule or universal pain threshold inferred. Comfortable/non-provoking movement is a conservative baseline constraint. Existing low/moderate eligibility and cadence are product rules. Individual restrictions remain authoritative.",
+                "compatible_injury_types": [
+                  "tendonitis"
+                ],
+                "prescription": {
+                  "sources": [
+                    "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+                  ],
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 5
+                }
+              },
+              "instructions": "Stand facing a smooth wall with a cloth under the affected hand. Gently slide the hand upwards only through a comfortable range no higher than shoulder level, then return. Do not lean body weight heavily into the arm, force a painful arc, add resistance or lift overhead. Keep the neck comfortable; no forced chin tuck or posture correction is required. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+              "dose": {},
+              "stop_when": [
+                "Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever."
+              ],
+              "frequency": "scheduled_sessions",
+              "sources": [
+                "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+              ],
+              "bank_hash": "b2e0ec1e2aa486e21c948ec6e3f6a2284b5b28bd61ef56b1f5c1c4b191a52852",
+              "policy_id": "shoulder_tendonitis",
+              "policy_version": 3,
+              "policy_review_hash": "2bf9abc4903e427cbebf7caff88c1862ee356f8340a1f34e50aa195c188b1907",
+              "minimum_gap_days": 1,
+              "is_loading": false
+            },
+            "restrictions": {
+              "blocked_regions": [
+                "shoulder"
+              ],
+              "blocked_tags": [],
+              "contact_limit": "none"
+            },
+            "loading_hold": false,
+            "policy_id": "shoulder_tendonitis",
+            "policy_version": 3,
+            "progression": {
+              "stage": "restore",
+              "reason_codes": [
+                "baseline_only_v1"
+              ],
+              "evidence_ids": [],
+              "engine_version": "2",
+              "next_transition": {
+                "from_stage": "restore",
+                "to_stage": "load",
+                "status": "blocked",
+                "reason_codes": [
+                  "no_reviewed_stage_exposure",
+                  "no_reviewed_response_group",
+                  "no_reviewed_response_group",
+                  "rehabilitation_loading_not_reported"
+                ],
+                "target_stage_live": true,
+                "closed_reason": null,
+                "missing_inputs": [],
+                "requirements": [
+                  {
+                    "requirement_id": "no_unresolved_setback",
+                    "kind": "no_unresolved_setback",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "no_negative_response",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "complete_episode_history",
+                    "kind": "complete_history",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "history_complete",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "reviewed_stage_exposure",
+                    "kind": "completed_reviewed_exposure",
+                    "basis": "data_sufficiency",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_stage_exposure",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "during_response_not_worse",
+                    "kind": "during_session_response",
+                    "basis": "product_safety",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_response_group",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "next_day_response_not_worse",
+                    "kind": "next_day_response",
+                    "basis": "product_safety",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_response_group",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "shoulder_cuff_reported_wall_load_v1",
+                    "kind": "functional_checkpoint",
+                    "basis": "clinical",
+                    "status": "unknown",
+                    "reason_code": "rehabilitation_loading_not_reported",
+                    "evidence_ids": []
+                  }
+                ],
+                "ignored_evidence": {}
+              }
+            },
+            "schedule": {
+              "state": "due",
+              "reason": "Your baseline rehab is due today; missed work adds no extra volume.",
+              "next_due_day": "2026-10-05"
+            }
+          }
+        }
+      ],
+      "live_prescription": {
+        "plan_id": "d360a559-5ee3-402e-baf0-731d01e17180",
+        "training_day": "2026-10-05",
+        "session": {
+          "calendar_date": "2026-10-05",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday",
+          "day_label": "",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-b74537dcaa2a3b139a536822",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "effective_load": "reduced",
+          "contact_level": "none",
+          "blocks": [
+            {
+              "block_id": "rehab:d041f023-dab6-476b-b35d-198041f2f1bb:e1bdd422-8942-4de2-b425-78c0dcc9045b",
+              "block_type": "rehab",
+              "title": "Supported comfortable shoulder wall slide",
+              "display_name": "Supported comfortable shoulder wall slide",
+              "coaching_cues": [
+                "Stand facing a smooth wall with a cloth under the affected hand. Gently slide the hand upwards only through a comfortable range no higher than shoulder level, then return. Do not lean body weight heavily into the arm, force a painful arc, add resistance or lift overhead. Keep the neck comfortable; no forced chin tuck or posture correction is required. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever."
+              ],
+              "rehab_drill_id": "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
+              "exercise_key": "shoulder-impingement-scapular-wall-slides-with-chin-tuck",
+              "injury_id": "d041f023-dab6-476b-b35d-198041f2f1bb",
+              "injury_episode_id": "e1bdd422-8942-4de2-b425-78c0dcc9045b",
+              "target_regions": [
+                "shoulder"
+              ],
+              "dose": {},
+              "instructions": "Stand facing a smooth wall with a cloth under the affected hand. Gently slide the hand upwards only through a comfortable range no higher than shoulder level, then return. Do not lean body weight heavily into the arm, force a painful arc, add resistance or lift overhead. Keep the neck comfortable; no forced chin tuck or posture correction is required. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+              "stop_rules": [
+                "Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever."
+              ],
+              "drill_snapshot": {
+                "id": "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
+                "name": "Supported comfortable shoulder wall slide",
+                "notes": "Stand facing a smooth wall with a cloth under the affected hand. Gently slide the hand upwards only through a comfortable range no higher than shoulder level, then return. Do not lean body weight heavily into the arm, force a painful arc, add resistance or lift overhead. Keep the neck comfortable; no forced chin tuck or posture correction is required. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+                "rehab_stage": "restore",
+                "function": "mobility",
+                "equipment": [
+                  "wall",
+                  "cloth"
+                ],
+                "dose": {},
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": [
+                  "Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever."
+                ],
+                "target_regions": [
+                  "shoulder"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "shoulder joint and rotator cuff region"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/. Protected regional baseline only; not a diagnosis or return-to-sport protocol. No numeric dose, clinical severity rule or universal pain threshold inferred. Comfortable/non-provoking movement is a conservative baseline constraint. Existing low/moderate eligibility and cadence are product rules. Individual restrictions remain authoritative.",
+                "compatible_injury_types": [
+                  "tendonitis"
+                ],
+                "prescription": {
+                  "sources": [
+                    "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+                  ],
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 5
+                }
+              },
+              "policy_id": "shoulder_tendonitis",
+              "policy_version": 3,
+              "bank_hash": "b2e0ec1e2aa486e21c948ec6e3f6a2284b5b28bd61ef56b1f5c1c4b191a52852",
+              "policy_review_hash": "2bf9abc4903e427cbebf7caff88c1862ee356f8340a1f34e50aa195c188b1907",
+              "minimum_gap_days": 1,
+              "is_loading": false,
+              "source_references": [
+                "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+              ]
+            }
+          ]
+        },
+        "changes": [
+          {
+            "action": "held",
+            "reason": "clinician_clearance_ceiling"
+          },
+          {
+            "block_id": "training",
+            "action": "held",
+            "reason": "no_reviewed_safe_substitution",
+            "restriction_reasons": [
+              "injury_loading_restriction"
+            ]
+          }
+        ],
+        "safety_hold": false,
+        "frozen": false,
+        "engine_version": "2",
+        "rehab_only": true,
+        "held_session_id": "training",
+        "injury_ids": [
+          "d041f023-dab6-476b-b35d-198041f2f1bb"
+        ],
+        "allocation_limit": 2,
+        "training_hold_reason": "Your planned training conflicts with the current injury restrictions.",
+        "revision": "035b71183c5562199f2c38e67e7468c28c610c2c08db161e553205437049777d",
+        "injury_context": [
+          {
+            "id": "d041f023-dab6-476b-b35d-198041f2f1bb",
+            "episode_id": "e1bdd422-8942-4de2-b425-78c0dcc9045b",
+            "updated_at": "2026-10-05T12:02:00+00:00"
+          }
+        ],
+        "evidence_context": {
+          "exposure_id": null,
+          "event_id": "494146e2-7128-529d-9bca-fe43d94e60f9"
+        },
+        "readiness_context": {
+          "id": "97229c91-52d1-449f-92fc-f0f83a02774a",
+          "updated_at": "2026-10-05T12:02:00+00:00"
+        }
+      },
+      "exercise_media": {},
+      "effective_clinician_clearance": {
+        "level": "rehab_only",
+        "scopes": [
+          "rehab"
+        ],
+        "requires_update": false,
+        "limited_by": [
+          {
+            "injury_id": "d041f023-dab6-476b-b35d-198041f2f1bb",
+            "injury_episode_id": "e1bdd422-8942-4de2-b425-78c0dcc9045b",
+            "label": "Left shoulder tendonitis"
+          }
+        ]
+      },
+      "delayed_rehab_prompts": [],
+      "week_summary": {},
+      "quick_actions": [
+        {
+          "id": "open_today",
+          "label": "Open Today",
+          "route": "/today"
+        },
+        {
+          "id": "view_plan",
+          "label": "View Plan",
+          "route": "/plans/d360a559-5ee3-402e-baf0-731d01e17180"
+        }
+      ]
+    },
+    "profile": {
+      "profile": {
+        "starting_path": "plan_first",
+        "training_habits": {
+          "enabled": true,
+          "decisions": []
+        },
+        "training_habits_revision": 0,
+        "athlete_id": "8211f2ae-4428-4784-9add-60caa5526428",
+        "email": "fixture@example.com",
+        "username": null,
+        "username_change_history": [],
+        "role": "athlete",
+        "access_status": "approved",
+        "full_name": "Test athlete",
+        "technical_style": [],
+        "tactical_style": [],
+        "stance": "",
+        "professional_status": "",
+        "record": "",
+        "athlete_timezone": "UTC",
+        "athlete_locale": "",
+        "appearance_mode": "dark",
+        "onboarding_draft": null,
+        "avatar_url": null,
+        "nutrition_profile": {
+          "sex": null,
+          "age": null,
+          "height_cm": null,
+          "daily_activity_level": null,
+          "dietary_restrictions": [],
+          "food_preferences": [],
+          "meals_per_day_preference": null,
+          "foods_avoided_pre_session": [],
+          "foods_avoided_fight_week": [],
+          "supplement_use": [],
+          "caffeine_use": null
+        },
+        "private_trial_ack_at": null,
+        "date_of_birth": "1996-05-04",
+        "age_band": "adult",
+        "is_minor": false,
+        "meets_minimum_age": true,
+        "terms_version": "0.1-pre-launch",
+        "terms_accepted_at": "2026-10-05T12:03:00+00:00",
+        "terms_accepted": true,
+        "health_consent_version": "1.0",
+        "health_data_consent": true,
+        "health_consent_at": "2026-10-05T12:03:00+00:00",
+        "health_consent_withdrawn_at": null,
+        "health_consent_granted": true,
+        "created_at": "2026-10-05T12:03:00+00:00",
+        "updated_at": "2026-10-05T12:04:00+00:00"
+      },
+      "effective_admin": false,
+      "latest_intake": null,
+      "latest_plan": {
+        "custom_plan_id": null,
+        "plan_id": "d360a559-5ee3-402e-baf0-731d01e17180",
+        "plan_name": null,
+        "athlete_id": "8211f2ae-4428-4784-9add-60caa5526428",
+        "full_name": "",
+        "fight_date": "",
+        "technical_style": [],
+        "created_at": "2026-10-05T12:00:00+00:00",
+        "status": "ready",
+        "activation_state": "eligible",
+        "pdf_url": null,
+        "review_reason": null
+      },
+      "plan_count": 1,
+      "username_rate_limit": {
+        "max_changes_per_window": 4,
+        "window_days": 30,
+        "remaining": 4,
+        "next_available_at": null
+      }
+    }
+  },
+  "groin_strain": {
+    "view": {
+      "active_plan": {
+        "status": "ready",
+        "phase": "GPP",
+        "id": "e1d03967-86cb-4694-9c4c-9a1d8133b7d6"
+      },
+      "today": {
+        "training_day": "2026-10-05",
+        "recommendation_state": "modify",
+        "recommendation_reason": "Reviewed rehab today\nYour planned training conflicts with the current injury restrictions.\nFollow only the reviewed rehab shown today.",
+        "decision_tier": "modify",
+        "injury_hold_exempt": false,
+        "recommendation_trigger_labels": [
+          "Current injury restrictions"
+        ],
+        "recommendation_context_labels": [],
+        "recommendation_safety_checks": [],
+        "recommendation_sources": [
+          "today's check-in",
+          "today's planned session",
+          "your tracked injuries"
+        ],
+        "recommendation_confidence": "moderate",
+        "recommendation_confidence_note": "Less to go on today: this is based on today's check-in alone, with no recent days to compare.",
+        "primary_safety_notice": null,
+        "warnings": [],
+        "next_session": {
+          "calendar_date": "2026-10-05",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday",
+          "day_label": "",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-1402a255551db8ea8f5555dc",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "effective_load": "reduced",
+          "contact_level": "none",
+          "blocks": [
+            {
+              "block_id": "rehab:068163ec-6f8c-40ad-9e9f-18154c25af24:02a1496a-e5b5-4696-8fdb-8f8cad66315b",
+              "block_type": "rehab",
+              "title": "Gentle supine adductor ball squeeze",
+              "display_name": "Gentle supine adductor ball squeeze",
+              "coaching_cues": [
+                "Lie on your back with knees bent and feet in line with your knees. Place a soft ball between your knees. Gently squeeze it, hold for up to 5 seconds, then fully relax. Keep the exercise pain-free and self-paced, little and often; stop before fatigue rather than forcing a repetition target. Do not bridge, pulse, use an unstable surface or squeeze maximally. Stop if groin pain increases during or after the exercise. Follow clinician restrictions."
+              ],
+              "rehab_drill_id": "groin_unspecified_isometric_adductor_squeeze_ball_between_knees",
+              "exercise_key": "groin-unspecified-isometric-adductor-squeeze-ball-between-knees",
+              "injury_id": "068163ec-6f8c-40ad-9e9f-18154c25af24",
+              "injury_episode_id": "02a1496a-e5b5-4696-8fdb-8f8cad66315b",
+              "target_regions": [
+                "groin"
+              ],
+              "dose": {},
+              "instructions": "Lie on your back with knees bent and feet in line with your knees. Place a soft ball between your knees. Gently squeeze it, hold for up to 5 seconds, then fully relax. Keep the exercise pain-free and self-paced, little and often; stop before fatigue rather than forcing a repetition target. Do not bridge, pulse, use an unstable surface or squeeze maximally. Stop if groin pain increases during or after the exercise. Follow clinician restrictions.",
+              "stop_rules": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+              ],
+              "drill_snapshot": {
+                "id": "groin_unspecified_isometric_adductor_squeeze_ball_between_knees",
+                "name": "Gentle supine adductor ball squeeze",
+                "notes": "Lie on your back with knees bent and feet in line with your knees. Place a soft ball between your knees. Gently squeeze it, hold for up to 5 seconds, then fully relax. Keep the exercise pain-free and self-paced, little and often; stop before fatigue rather than forcing a repetition target. Do not bridge, pulse, use an unstable surface or squeeze maximally. Stop if groin pain increases during or after the exercise. Follow clinician restrictions.",
+                "rehab_stage": "restore",
+                "function": "activation",
+                "equipment": [
+                  "soft_ball"
+                ],
+                "dose": {},
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+                ],
+                "target_regions": [
+                  "groin"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "hip adductor muscles"
+                ],
+                "contraction_type": "isometric",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.berkshirehealthcare.nhs.uk/advice/groin-strain, https://pmc.ncbi.nlm.nih.gov/articles/PMC10569248/. Fixed conservative movement only. No change to stage-entry criteria or permission, and no inference of sport readiness. Numeric guidance is source-backed where present; otherwise explicitly self-paced. No automatic resistance, range or speed progression.",
+                "compatible_injury_types": [
+                  "strain"
+                ],
+                "prescription": {
+                  "sources": [
+                    "https://www.berkshirehealthcare.nhs.uk/advice/groin-strain",
+                    "https://pmc.ncbi.nlm.nih.gov/articles/PMC10569248/"
+                  ],
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 5
+                }
+              },
+              "policy_id": "groin_strain",
+              "policy_version": 1,
+              "bank_hash": "4e94041be9744bdc1cb15571531439cb3e7ee76c6ee5dcce249b759c71f524f7",
+              "policy_review_hash": "70a8ed0e9d9248dd7aa25f85a03782ddf20b0a5403218e44a3178628d2713cb0",
+              "minimum_gap_days": 1,
+              "is_loading": true,
+              "source_references": [
+                "https://www.berkshirehealthcare.nhs.uk/advice/groin-strain",
+                "https://pmc.ncbi.nlm.nih.gov/articles/PMC10569248/"
+              ]
+            }
+          ],
+          "session_relation": "today"
+        },
+        "session_scope": "today",
+        "session_label": "Today's session",
+        "completion_status": "not_started"
+      },
+      "risk_watch": [
+        {
+          "category": "reminder",
+          "priority": 7,
+          "icon": "info",
+          "label": "Reminder",
+          "text": "Tracking 1 open injury: Left groin strain. Train around it.",
+          "tone": "info",
+          "timeframe": "active"
+        }
+      ],
+      "open_injuries": [
+        {
+          "id": "068163ec-6f8c-40ad-9e9f-18154c25af24",
+          "athlete_id": "e97020ef-81fb-4fe2-99bb-52c955750ef0",
+          "plan_id": "e1d03967-86cb-4694-9c4c-9a1d8133b7d6",
+          "source": "checkin",
+          "body_area": "Left groin",
+          "severity": "mild",
+          "status": "monitoring",
+          "resolved_at": null,
+          "episode_id": "02a1496a-e5b5-4696-8fdb-8f8cad66315b",
+          "body_region": "groin",
+          "side": "left",
+          "description": "strain []",
+          "latest_reported_status": "improving",
+          "created_at": "2026-10-05T12:01:00+00:00",
+          "updated_at": "2026-10-05T12:02:00+00:00",
+          "surface_class": "non_surface",
+          "canonical_location": "groin",
+          "region_group": "hip_groin",
+          "load_region": "lower_limb",
+          "consequence": null,
+          "rehab_stage": "restore",
+          "rehab_stage_reasons": [
+            "symptoms_not_worsening",
+            "insufficient_injury_specific_progression_evidence"
+          ],
+          "rehab_care_pathway": "musculoskeletal",
+          "rehab_medical_gate": false,
+          "label": "Left groin strain",
+          "assessment_history_complete": true,
+          "progression_assessments": [],
+          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
+          "latest_reported_at": "2026-10-05T12:02:00+00:00",
+          "rehab_improvement_reports": [
+            {
+              "id": "41be52ae-ebe1-4a53-9c49-491a29d8d2a2",
+              "reported_at": "2026-10-05T12:01:00+00:00"
+            },
+            {
+              "id": "7e17b850-320e-4180-a2aa-cffec797667f",
+              "reported_at": "2026-10-05T12:02:00+00:00"
+            }
+          ],
+          "rehab_improvement_at": "2026-10-05T12:02:00Z",
+          "assessment_setback_at": null,
+          "clinician_clearance": {
+            "episode_id": "02a1496a-e5b5-4696-8fdb-8f8cad66315b",
+            "scopes": [
+              "rehab"
+            ],
+            "report_id": "3533b1a6-44ee-5c3c-a0e1-5656306465c1",
+            "reported_at": "2026-10-05T12:04:00+00:00",
+            "source": "athlete_reported",
+            "externally_verified": false,
+            "scope_reported_at": {
+              "rehab": "2026-10-05T12:04:00+00:00"
+            },
+            "rehabilitation_permission": {
+              "schema_version": 1,
+              "level": "gentle_recovery"
+            }
+          },
+          "rehab_decision": {
+            "injury_id": "068163ec-6f8c-40ad-9e9f-18154c25af24",
+            "injury_episode_id": "02a1496a-e5b5-4696-8fdb-8f8cad66315b",
+            "region": "groin",
+            "injury_type": "strain",
+            "stage": "restore",
+            "outcome": "prescribed_rehab",
+            "summary": "Your rehab is matched to this injury's current recovery stage.",
+            "reason_codes": [
+              "SELECT_DETERMINISTIC_BEST"
+            ],
+            "activation": "live",
+            "prescription": {
+              "drill_id": "groin_unspecified_isometric_adductor_squeeze_ball_between_knees",
+              "drill": {
+                "id": "groin_unspecified_isometric_adductor_squeeze_ball_between_knees",
+                "name": "Gentle supine adductor ball squeeze",
+                "notes": "Lie on your back with knees bent and feet in line with your knees. Place a soft ball between your knees. Gently squeeze it, hold for up to 5 seconds, then fully relax. Keep the exercise pain-free and self-paced, little and often; stop before fatigue rather than forcing a repetition target. Do not bridge, pulse, use an unstable surface or squeeze maximally. Stop if groin pain increases during or after the exercise. Follow clinician restrictions.",
+                "rehab_stage": "restore",
+                "function": "activation",
+                "equipment": [
+                  "soft_ball"
+                ],
+                "dose": {},
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+                ],
+                "target_regions": [
+                  "groin"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "hip adductor muscles"
+                ],
+                "contraction_type": "isometric",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.berkshirehealthcare.nhs.uk/advice/groin-strain, https://pmc.ncbi.nlm.nih.gov/articles/PMC10569248/. Fixed conservative movement only. No change to stage-entry criteria or permission, and no inference of sport readiness. Numeric guidance is source-backed where present; otherwise explicitly self-paced. No automatic resistance, range or speed progression.",
+                "compatible_injury_types": [
+                  "strain"
+                ],
+                "prescription": {
+                  "sources": [
+                    "https://www.berkshirehealthcare.nhs.uk/advice/groin-strain",
+                    "https://pmc.ncbi.nlm.nih.gov/articles/PMC10569248/"
+                  ],
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 5
+                }
+              },
+              "instructions": "Lie on your back with knees bent and feet in line with your knees. Place a soft ball between your knees. Gently squeeze it, hold for up to 5 seconds, then fully relax. Keep the exercise pain-free and self-paced, little and often; stop before fatigue rather than forcing a repetition target. Do not bridge, pulse, use an unstable surface or squeeze maximally. Stop if groin pain increases during or after the exercise. Follow clinician restrictions.",
+              "dose": {},
+              "stop_when": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+              ],
+              "frequency": "scheduled_sessions",
+              "sources": [
+                "https://www.berkshirehealthcare.nhs.uk/advice/groin-strain",
+                "https://pmc.ncbi.nlm.nih.gov/articles/PMC10569248/"
+              ],
+              "bank_hash": "4e94041be9744bdc1cb15571531439cb3e7ee76c6ee5dcce249b759c71f524f7",
+              "policy_id": "groin_strain",
+              "policy_version": 1,
+              "policy_review_hash": "70a8ed0e9d9248dd7aa25f85a03782ddf20b0a5403218e44a3178628d2713cb0",
+              "minimum_gap_days": 1,
+              "is_loading": true
+            },
+            "restrictions": {
+              "blocked_regions": [
+                "groin"
+              ],
+              "blocked_tags": [],
+              "contact_limit": "none"
+            },
+            "loading_hold": false,
+            "policy_id": "groin_strain",
+            "policy_version": 1,
+            "progression": {
+              "stage": "restore",
+              "reason_codes": [
+                "baseline_only_v1"
+              ],
+              "evidence_ids": [],
+              "engine_version": "2",
+              "next_transition": {
+                "from_stage": "restore",
+                "to_stage": "load",
+                "status": "blocked",
+                "reason_codes": [
+                  "no_reviewed_stage_exposure",
+                  "no_reviewed_response_group",
+                  "no_reviewed_response_group"
+                ],
+                "target_stage_live": false,
+                "closed_reason": null,
+                "missing_inputs": [],
+                "requirements": [
+                  {
+                    "requirement_id": "no_unresolved_setback",
+                    "kind": "no_unresolved_setback",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "no_negative_response",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "complete_episode_history",
+                    "kind": "complete_history",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "history_complete",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "reviewed_stage_exposure",
+                    "kind": "completed_reviewed_exposure",
+                    "basis": "data_sufficiency",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_stage_exposure",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "during_response_not_worse",
+                    "kind": "during_session_response",
+                    "basis": "product_safety",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_response_group",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "next_day_response_not_worse",
+                    "kind": "next_day_response",
+                    "basis": "product_safety",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_response_group",
+                    "evidence_ids": []
+                  }
+                ],
+                "ignored_evidence": {}
+              }
+            },
+            "schedule": {
+              "state": "due",
+              "reason": "Your baseline rehab is due today; missed work adds no extra volume.",
+              "next_due_day": "2026-10-05"
+            }
+          }
+        }
+      ],
+      "live_prescription": {
+        "plan_id": "e1d03967-86cb-4694-9c4c-9a1d8133b7d6",
+        "training_day": "2026-10-05",
+        "session": {
+          "calendar_date": "2026-10-05",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday",
+          "day_label": "",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-1402a255551db8ea8f5555dc",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "effective_load": "reduced",
+          "contact_level": "none",
+          "blocks": [
+            {
+              "block_id": "rehab:068163ec-6f8c-40ad-9e9f-18154c25af24:02a1496a-e5b5-4696-8fdb-8f8cad66315b",
+              "block_type": "rehab",
+              "title": "Gentle supine adductor ball squeeze",
+              "display_name": "Gentle supine adductor ball squeeze",
+              "coaching_cues": [
+                "Lie on your back with knees bent and feet in line with your knees. Place a soft ball between your knees. Gently squeeze it, hold for up to 5 seconds, then fully relax. Keep the exercise pain-free and self-paced, little and often; stop before fatigue rather than forcing a repetition target. Do not bridge, pulse, use an unstable surface or squeeze maximally. Stop if groin pain increases during or after the exercise. Follow clinician restrictions."
+              ],
+              "rehab_drill_id": "groin_unspecified_isometric_adductor_squeeze_ball_between_knees",
+              "exercise_key": "groin-unspecified-isometric-adductor-squeeze-ball-between-knees",
+              "injury_id": "068163ec-6f8c-40ad-9e9f-18154c25af24",
+              "injury_episode_id": "02a1496a-e5b5-4696-8fdb-8f8cad66315b",
+              "target_regions": [
+                "groin"
+              ],
+              "dose": {},
+              "instructions": "Lie on your back with knees bent and feet in line with your knees. Place a soft ball between your knees. Gently squeeze it, hold for up to 5 seconds, then fully relax. Keep the exercise pain-free and self-paced, little and often; stop before fatigue rather than forcing a repetition target. Do not bridge, pulse, use an unstable surface or squeeze maximally. Stop if groin pain increases during or after the exercise. Follow clinician restrictions.",
+              "stop_rules": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+              ],
+              "drill_snapshot": {
+                "id": "groin_unspecified_isometric_adductor_squeeze_ball_between_knees",
+                "name": "Gentle supine adductor ball squeeze",
+                "notes": "Lie on your back with knees bent and feet in line with your knees. Place a soft ball between your knees. Gently squeeze it, hold for up to 5 seconds, then fully relax. Keep the exercise pain-free and self-paced, little and often; stop before fatigue rather than forcing a repetition target. Do not bridge, pulse, use an unstable surface or squeeze maximally. Stop if groin pain increases during or after the exercise. Follow clinician restrictions.",
+                "rehab_stage": "restore",
+                "function": "activation",
+                "equipment": [
+                  "soft_ball"
+                ],
+                "dose": {},
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions."
+                ],
+                "target_regions": [
+                  "groin"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "hip adductor muscles"
+                ],
+                "contraction_type": "isometric",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.berkshirehealthcare.nhs.uk/advice/groin-strain, https://pmc.ncbi.nlm.nih.gov/articles/PMC10569248/. Fixed conservative movement only. No change to stage-entry criteria or permission, and no inference of sport readiness. Numeric guidance is source-backed where present; otherwise explicitly self-paced. No automatic resistance, range or speed progression.",
+                "compatible_injury_types": [
+                  "strain"
+                ],
+                "prescription": {
+                  "sources": [
+                    "https://www.berkshirehealthcare.nhs.uk/advice/groin-strain",
+                    "https://pmc.ncbi.nlm.nih.gov/articles/PMC10569248/"
+                  ],
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 5
+                }
+              },
+              "policy_id": "groin_strain",
+              "policy_version": 1,
+              "bank_hash": "4e94041be9744bdc1cb15571531439cb3e7ee76c6ee5dcce249b759c71f524f7",
+              "policy_review_hash": "70a8ed0e9d9248dd7aa25f85a03782ddf20b0a5403218e44a3178628d2713cb0",
+              "minimum_gap_days": 1,
+              "is_loading": true,
+              "source_references": [
+                "https://www.berkshirehealthcare.nhs.uk/advice/groin-strain",
+                "https://pmc.ncbi.nlm.nih.gov/articles/PMC10569248/"
+              ]
+            }
+          ]
+        },
+        "changes": [
+          {
+            "action": "held",
+            "reason": "clinician_clearance_ceiling"
+          },
+          {
+            "block_id": "training",
+            "action": "held",
+            "reason": "no_reviewed_safe_substitution",
+            "restriction_reasons": [
+              "injury_loading_restriction"
+            ]
+          }
+        ],
+        "safety_hold": false,
+        "frozen": false,
+        "engine_version": "2",
+        "rehab_only": true,
+        "held_session_id": "training",
+        "injury_ids": [
+          "068163ec-6f8c-40ad-9e9f-18154c25af24"
+        ],
+        "allocation_limit": 2,
+        "training_hold_reason": "Your planned training conflicts with the current injury restrictions.",
+        "revision": "ff23ee5048426448ecf8e76a30db670dadba2954a33fba7408eb58b50cc27a04",
+        "injury_context": [
+          {
+            "id": "068163ec-6f8c-40ad-9e9f-18154c25af24",
+            "episode_id": "02a1496a-e5b5-4696-8fdb-8f8cad66315b",
+            "updated_at": "2026-10-05T12:02:00+00:00"
+          }
+        ],
+        "evidence_context": {
+          "exposure_id": null,
+          "event_id": "3533b1a6-44ee-5c3c-a0e1-5656306465c1"
+        },
+        "readiness_context": {
+          "id": "112a4659-f2a5-4fac-be02-6f308b76a110",
+          "updated_at": "2026-10-05T12:02:00+00:00"
+        }
+      },
+      "exercise_media": {},
+      "effective_clinician_clearance": {
+        "level": "rehab_only",
+        "scopes": [
+          "rehab"
+        ],
+        "requires_update": false,
+        "limited_by": [
+          {
+            "injury_id": "068163ec-6f8c-40ad-9e9f-18154c25af24",
+            "injury_episode_id": "02a1496a-e5b5-4696-8fdb-8f8cad66315b",
+            "label": "Left groin strain"
+          }
+        ]
+      },
+      "delayed_rehab_prompts": [],
+      "week_summary": {},
+      "quick_actions": [
+        {
+          "id": "open_today",
+          "label": "Open Today",
+          "route": "/today"
+        },
+        {
+          "id": "view_plan",
+          "label": "View Plan",
+          "route": "/plans/e1d03967-86cb-4694-9c4c-9a1d8133b7d6"
+        }
+      ]
+    },
+    "profile": {
+      "profile": {
+        "starting_path": "plan_first",
+        "training_habits": {
+          "enabled": true,
+          "decisions": []
+        },
+        "training_habits_revision": 0,
+        "athlete_id": "e97020ef-81fb-4fe2-99bb-52c955750ef0",
+        "email": "fixture@example.com",
+        "username": null,
+        "username_change_history": [],
+        "role": "athlete",
+        "access_status": "approved",
+        "full_name": "Test athlete",
+        "technical_style": [],
+        "tactical_style": [],
+        "stance": "",
+        "professional_status": "",
+        "record": "",
+        "athlete_timezone": "UTC",
+        "athlete_locale": "",
+        "appearance_mode": "dark",
+        "onboarding_draft": null,
+        "avatar_url": null,
+        "nutrition_profile": {
+          "sex": null,
+          "age": null,
+          "height_cm": null,
+          "daily_activity_level": null,
+          "dietary_restrictions": [],
+          "food_preferences": [],
+          "meals_per_day_preference": null,
+          "foods_avoided_pre_session": [],
+          "foods_avoided_fight_week": [],
+          "supplement_use": [],
+          "caffeine_use": null
+        },
+        "private_trial_ack_at": null,
+        "date_of_birth": "1996-05-04",
+        "age_band": "adult",
+        "is_minor": false,
+        "meets_minimum_age": true,
+        "terms_version": "0.1-pre-launch",
+        "terms_accepted_at": "2026-10-05T12:03:00+00:00",
+        "terms_accepted": true,
+        "health_consent_version": "1.0",
+        "health_data_consent": true,
+        "health_consent_at": "2026-10-05T12:03:00+00:00",
+        "health_consent_withdrawn_at": null,
+        "health_consent_granted": true,
+        "created_at": "2026-10-05T12:03:00+00:00",
+        "updated_at": "2026-10-05T12:04:00+00:00"
+      },
+      "effective_admin": false,
+      "latest_intake": null,
+      "latest_plan": {
+        "custom_plan_id": null,
+        "plan_id": "e1d03967-86cb-4694-9c4c-9a1d8133b7d6",
+        "plan_name": null,
+        "athlete_id": "e97020ef-81fb-4fe2-99bb-52c955750ef0",
+        "full_name": "",
+        "fight_date": "",
+        "technical_style": [],
+        "created_at": "2026-10-05T12:00:00+00:00",
+        "status": "ready",
+        "activation_state": "eligible",
+        "pdf_url": null,
+        "review_reason": null
+      },
+      "plan_count": 1,
+      "username_rate_limit": {
+        "max_changes_per_window": 4,
+        "window_days": 30,
+        "remaining": 4,
+        "next_available_at": null
+      }
+    }
+  }
+}

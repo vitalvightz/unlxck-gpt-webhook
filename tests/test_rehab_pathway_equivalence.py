@@ -19,7 +19,7 @@ import pytest
 from api.contracts.injury_policy import reconcile_session_prescription, resolve_injury_policy
 from api.contracts.rehab_schedule import schedule_rehab
 from fightcamp.rehab_clinical import load_clinical_policies, policy_review_hash, compose_policy
-from fightcamp.rehab_protocols import get_rehab_bank
+from fightcamp.rehab_protocols import get_rehab_bank as current_rehab_bank
 from tests.support import FakeStore
 
 LEGACY_PATH = Path(__file__).parent / "fixtures" / "rehab_clinical_policies_v2_legacy.json"
@@ -27,6 +27,19 @@ DAY = "2026-10-02"
 PLAN = str(uuid4())
 ATHLETE = str(uuid4())
 REGIONS = {"chest_strain": ("chest", "strain", "Chest"), "ankle_sprain": ("ankle", "sprain", "Ankle")}
+
+
+def get_rehab_bank():
+    # This suite replays the dated migration against its bank, not later
+    # source-backed equipment corrections/publications covered by current tests.
+    from tools.rehab_metadata_review_lib import before_bank_publication
+    return before_bank_publication(current_rehab_bank(), "drills")
+
+
+@pytest.fixture(autouse=True)
+def dated_bank(monkeypatch):
+    monkeypatch.setattr("api.services.today_service.get_rehab_bank", get_rehab_bank)
+    monkeypatch.setattr("fightcamp.rehab_protocols.get_rehab_bank", get_rehab_bank)
 
 
 def legacy():

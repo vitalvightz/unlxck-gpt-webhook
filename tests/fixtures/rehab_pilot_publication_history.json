@@ -1,0 +1,497 @@
+{
+  "purpose": "Exact pre-publication data for dated inventory/migration tests only. Never read by runtime eligibility.",
+  "source_commit": "42ba894ea254ac5b5547669adadca5961a84c416",
+  "drills": {
+    "ankle_sprain_supported_balance": {
+      "after_sha256": "78a62ef5d6e20499df8a382586439fb14996d91b694a1f53cb1aa413a8e87de8",
+      "restore": {
+        "equipment": []
+      },
+      "remove": []
+    },
+    "ankle_sprain_heel_lowering": {
+      "after_sha256": "2d7138e08675a617e230b8412b27ae3d47095af8c157fd03701660d18563ae22",
+      "restore": {
+        "equipment": []
+      },
+      "remove": []
+    },
+    "shoulder_impingement_scapular_wall_slides_with_chin_tuck": {
+      "after_sha256": "b2e0ec1e2aa486e21c948ec6e3f6a2284b5b28bd61ef56b1f5c1c4b191a52852",
+      "restore": {
+        "dose": null,
+        "allowed_severities": null,
+        "stop_when": null
+      },
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ]
+    },
+    "achilles_unspecified_isometric_toe_presses_against_wall": {
+      "after_sha256": "e4677102184da8079a7adb6be27c80f847279b33aac90875e8cc8b7a9608a5e6",
+      "restore": {
+        "name": "Isometric Toe Presses Against Wall",
+        "notes": "TAPER: 5s holds to prime neural drive pre-competition",
+        "rehab_stage": null,
+        "function": "isometric_analgesia",
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ]
+    },
+    "ankle_unspecified_ankle_cars_controlled_articular_rotations": {
+      "after_sha256": "52a114b151ea13c63ef0323088948c2bda224cc53d7c821c1dbc9310c5053316",
+      "restore": {
+        "name": "Ankle CARs (Controlled Articular Rotations)",
+        "notes": "GPP: Maintain full ROM → TAPER: Daily mobility primer",
+        "rehab_stage": null,
+        "function": "activation",
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ]
+    },
+    "elbow_unspecified_pronation_supination_with_dowel": {
+      "after_sha256": "08386d31b709c4386a632b4efa520e9683677f7233b41799bd6edf9d5c381945",
+      "restore": {
+        "name": "Pronation/Supination with Dowel",
+        "notes": "GPP: Restore rotational ROM → SPP: Add resistance band",
+        "rehab_stage": null,
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ]
+    },
+    "groin_unspecified_isometric_adductor_squeeze_ball_between_knees": {
+      "after_sha256": "4e94041be9744bdc1cb15571531439cb3e7ee76c6ee5dcce249b759c71f524f7",
+      "restore": {
+        "name": "Isometric Adductor Squeeze (Ball Between Knees)",
+        "notes": "GPP: 30s holds → SPP: Add pulses or unstable surface",
+        "rehab_stage": null,
+        "function": "isometric_analgesia",
+        "equipment": null,
+        "dose": null,
+        "impact": null,
+        "load": null,
+        "velocity": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "laterality_applicability": "unknown",
+        "target_tissues": null,
+        "contraction_type": "unknown",
+        "sport_specificity": "unknown",
+        "contact_level": "unknown",
+        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      "remove": [
+        "compatible_injury_types",
+        "prescription"
+      ]
+    }
+  },
+  "reviews": {
+    "ankle_sprain_supported_balance": {
+      "after_sha256": "8917564c207691f66ccb0e5aacc1bfa9919525c07109c2fa4f5e4bba072a9bc1",
+      "restore": {
+        "proposed": {
+          "rehab_stage": "restore",
+          "function": "control",
+          "equipment": [],
+          "impact": "none",
+          "load": "low",
+          "velocity": "low",
+          "target_regions": [
+            "ankle"
+          ],
+          "laterality_applicability": "side_specific",
+          "target_tissues": [
+            "ankle region soft tissues"
+          ],
+          "contraction_type": "mixed",
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": "Sources: https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1. Self-paced; no starting numerical dose is prescribed."
+        }
+      },
+      "remove": []
+    },
+    "ankle_sprain_heel_lowering": {
+      "after_sha256": "c621cc786bc6029eab66b2169d3bd99fd02f98303724ef03646601ffeece6ae7",
+      "restore": {
+        "proposed": {
+          "rehab_stage": "restore",
+          "function": "tendon_loading",
+          "equipment": [],
+          "impact": "none",
+          "load": "low",
+          "velocity": "low",
+          "target_regions": [
+            "ankle"
+          ],
+          "laterality_applicability": "side_specific",
+          "target_tissues": [
+            "ankle region soft tissues"
+          ],
+          "contraction_type": "mixed",
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": "Sources: https://services.eastcheshire.nhs.uk/physiotherapy-service/self-help/ankle-and-foot-pain-physiotherapy-self-help. Self-paced; no starting numerical dose is prescribed."
+        }
+      },
+      "remove": []
+    },
+    "achilles_unspecified_isometric_toe_presses_against_wall": {
+      "after_sha256": "95209c23fb1d1ad90b3cf58e73f4eb089856df0b31fe775e81714da5fac2e138",
+      "restore": {
+        "source_hash": "0c5e6895245d3a5b6c149644757491fabcff1eb731c0c313863e400586626f53",
+        "name": "Isometric Toe Presses Against Wall",
+        "notes": "TAPER: 5s holds to prime neural drive pre-competition",
+        "proposed": {
+          "rehab_stage": null,
+          "function": "isometric_analgesia",
+          "equipment": null,
+          "impact": "none",
+          "load": null,
+          "velocity": "low",
+          "target_regions": [
+            "achilles"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": "isometric",
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      },
+      "remove": [
+        "source_history"
+      ]
+    },
+    "ankle_unspecified_ankle_cars_controlled_articular_rotations": {
+      "after_sha256": "563ae84946d145125077b666e8bfac2e8efcbac0d42a4f67dba840b99bdeebc6",
+      "restore": {
+        "source_hash": "3cfa0e1d15f186af67ecf9be218b676aea5ebccf5156887a0d31d5822fb609b8",
+        "name": "Ankle CARs (Controlled Articular Rotations)",
+        "notes": "GPP: Maintain full ROM → TAPER: Daily mobility primer",
+        "movement_archetype": "balance_control",
+        "proposed": {
+          "rehab_stage": null,
+          "function": "activation",
+          "equipment": null,
+          "impact": "none",
+          "load": null,
+          "velocity": "low",
+          "target_regions": [
+            "ankle"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": null,
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      },
+      "remove": [
+        "source_history"
+      ]
+    },
+    "elbow_unspecified_pronation_supination_with_dowel": {
+      "after_sha256": "22e3c0d4989e9127de2aa4e36876fa328cc7cdd38e0076cd257aa27663947075",
+      "restore": {
+        "source_hash": "10f2766da2b36738a0500b00e8f6a0fe71d72875bd594cc11c8ed059d2ae0749",
+        "name": "Pronation/Supination with Dowel",
+        "notes": "GPP: Restore rotational ROM → SPP: Add resistance band",
+        "movement_archetype": "banded_resistance",
+        "proposed": {
+          "rehab_stage": null,
+          "function": "mobility",
+          "equipment": null,
+          "impact": null,
+          "load": null,
+          "velocity": null,
+          "target_regions": [
+            "elbow"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": null,
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      },
+      "remove": [
+        "source_history"
+      ]
+    },
+    "groin_unspecified_isometric_adductor_squeeze_ball_between_knees": {
+      "after_sha256": "538dc33926413e22594dd68ab963546f1dfd1ab71a12d6c782f22dd23d991aab",
+      "restore": {
+        "source_hash": "8db056dc288f6531fb78d4731b422afa2d4bec82b20faff37a01e575e91ae301",
+        "name": "Isometric Adductor Squeeze (Ball Between Knees)",
+        "notes": "GPP: 30s holds → SPP: Add pulses or unstable surface",
+        "proposed": {
+          "rehab_stage": null,
+          "function": "isometric_analgesia",
+          "equipment": null,
+          "impact": "none",
+          "load": null,
+          "velocity": "low",
+          "target_regions": [
+            "groin"
+          ],
+          "laterality_applicability": null,
+          "target_tissues": null,
+          "contraction_type": "isometric",
+          "sport_specificity": "general_rehab",
+          "contact_level": "none",
+          "evidence_notes": null
+        },
+        "review_state": "needs_review"
+      },
+      "remove": [
+        "source_history"
+      ]
+    }
+  },
+  "profiles": {
+    "ankle_sprain": {
+      "after_sha256": "2a84e72f2830dc8a5791519c94e3b9feb55932b82306842a7611ad145b585327",
+      "restore": {
+        "version": 6,
+        "content_hash": "d8c21e9670bd83a9f5d93a546417d1c8d4f24f44b91714e8a8f4c9b2160f1aec",
+        "prescriptions": [
+          {
+            "drill_id": "ankle_sprain_gentle_movement",
+            "bank_hash": "9ad8cc97eb7320cecee9148ad339c1d5580b0923417f6a048ecaf68929e4c440",
+            "stage": "calm",
+            "instructions": "Once the ankle is less painful, sit with the foot supported and gently move it up and down or trace the alphabet. Start with a small comfortable amount and build gradually. Keep within a comfortable range; do not force movement.",
+            "dose": null,
+            "camp_doses": {},
+            "readiness_doses": {},
+            "allowed_severities": [
+              "low",
+              "moderate"
+            ],
+            "stop_when": [
+              "Stop if pain prevents comfortable movement or symptoms worsen.",
+              "Seek help for severe or worsening pain, swelling or inability to use the area."
+            ],
+            "frequency": "daily",
+            "minimum_gap_days": 1,
+            "priority": 0,
+            "sources": [
+              "https://www.nhs.uk/conditions/sprains-and-strains/",
+              "https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1"
+            ]
+          },
+          {
+            "drill_id": "ankle_sprain_supported_balance",
+            "bank_hash": "f00f718eb8220c4f7ff0539627368fe22f7218b81b8ee82d3fad9d567276eae3",
+            "stage": "restore",
+            "instructions": "When standing and weight bearing are comfortable, practise balancing on the affected leg on firm ground, close to a stable counter for support. Start with a short comfortable attempt and build gradually. Keep support available; do not use a cushion or close your eyes.",
+            "dose": null,
+            "camp_doses": {},
+            "readiness_doses": {},
+            "allowed_severities": [
+              "low",
+              "moderate"
+            ],
+            "stop_when": [
+              "Stop if pain prevents comfortable movement or symptoms worsen.",
+              "Seek help for severe or worsening pain, swelling or inability to use the area."
+            ],
+            "frequency": "daily",
+            "minimum_gap_days": 1,
+            "priority": 5,
+            "sources": [
+              "https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1"
+            ]
+          },
+          {
+            "drill_id": "ankle_sprain_heel_lowering",
+            "bank_hash": "c932d4b2b5a7bbfe4fbc77249ed2056cea2416add6982a3a5c84bc38cb5445ea",
+            "stage": "restore",
+            "instructions": "When weight bearing and gentle calf movement are comfortable, use a stable support and practise controlled heel lowering as shown in the linked ankle rehabilitation guidance. Work at your own pace, up to 2 sets on alternate days. The source gives no repetition target; stop before symptoms worsen.",
+            "dose": null,
+            "camp_doses": {},
+            "readiness_doses": {},
+            "allowed_severities": [
+              "low",
+              "moderate"
+            ],
+            "stop_when": [
+              "Stop if pain prevents comfortable movement or symptoms worsen.",
+              "Seek help for severe or worsening pain, swelling or inability to use the area."
+            ],
+            "frequency": "daily",
+            "minimum_gap_days": 2,
+            "priority": 10,
+            "sources": [
+              "https://services.eastcheshire.nhs.uk/physiotherapy-service/self-help/ankle-and-foot-pain-physiotherapy-self-help"
+            ]
+          },
+          {
+            "drill_id": "ankle_sprain_seated_bilateral_heel_raise",
+            "priority": 20,
+            "bank_hash": "358d6b8544800e9a90abc940cce456e30ade19200d824bccd8b78f5653a42d34",
+            "stage": "load",
+            "instructions": "Sit on a stable chair with both feet flat on the floor. Keeping the front of both feet on the floor, slowly raise both heels within a comfortable range and slowly lower them to the floor. Stay seated; no weights, band, pressure on the knees, step, forced range or automatic increase. Follow clinician restrictions. Stop if pain or symptoms worsen during or after the work.",
+            "dose": {
+              "sets": 1,
+              "reps": 10
+            },
+            "allowed_severities": [
+              "low"
+            ],
+            "stop_when": [
+              "Maximum 1 set of 10 once daily, seated with no added resistance or automatic increase.",
+              "Use only a comfortable range within clinician restrictions; stop for pain or worsening during or delayed symptoms.",
+              "Seek assessment for loss of function, inability to bear weight, bony tenderness, deformity, altered sensation, severe swelling or instability.",
+              "This grants no running, jumping, cutting, sparring or contact clearance."
+            ],
+            "frequency": "daily",
+            "minimum_gap_days": 1,
+            "sources": [
+              "https://www.jospt.org/doi/10.2519/jospt.2021.0302",
+              "https://www.ouh.nhs.uk/media/i0ldiecy/116454sprain.pdf",
+              "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain",
+              "https://pmc.ncbi.nlm.nih.gov/articles/PMC8824326/"
+            ],
+            "required_rehabilitation_level": "loading",
+            "range_choice": "comfortable_within_clinician_restrictions",
+            "resistance": {
+              "mode": "bodyweight",
+              "kg": null
+            },
+            "mandatory_restrictions": [
+              "seated_bilateral_floor_level_no_added_resistance",
+              "comfortable_range_within_clinician_restrictions",
+              "no_standing_step_forced_range_or_automatic_increase",
+              "stop_for_worsening_during_or_delayed_symptoms",
+              "no_sport_or_contact_clearance"
+            ]
+          }
+        ]
+      },
+      "remove": []
+    },
+    "shoulder_impingement": {
+      "after_sha256": "66623f025b0b0fb3b2de1bf9c64bd589fdf933025624f8e5cb6114524f503257",
+      "restore": {
+        "version": 1,
+        "prescriptions": [
+          {
+            "drill_id": "shoulder_impingement_recovery_support",
+            "bank_hash": "8ad8bdd1fe643199a2ebc70e615f9362fbc6d12ff37656dcab4347d59f2fc0ff",
+            "stage": "calm",
+            "instructions": "Reduce provoking overhead reaching, heavy pressing and movement behind the body. Keep ordinary comfortable activity rather than immobilizing the shoulder routinely. Support the arm comfortably when resting. Follow individual movement restrictions. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+            "dose": null,
+            "camp_doses": {},
+            "readiness_doses": {},
+            "allowed_severities": [
+              "low",
+              "moderate"
+            ],
+            "stop_when": [
+              "Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever."
+            ],
+            "frequency": "scheduled_sessions",
+            "minimum_gap_days": 1,
+            "priority": 0,
+            "sources": [
+              "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+            ]
+          },
+          {
+            "drill_id": "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
+            "bank_hash": "36a77231d4f1420a35d12cf9aede8aa14ab303dac656d80b19d3b36bec4c6614",
+            "stage": "restore",
+            "instructions": "Stand facing a smooth wall with a cloth under the affected hand. Gently slide the hand upwards only through a comfortable range no higher than shoulder level, then return. Do not lean body weight heavily into the arm, force a painful arc, add resistance or lift overhead. Keep the neck comfortable; no forced chin tuck or posture correction is required. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+            "dose": null,
+            "camp_doses": {},
+            "readiness_doses": {},
+            "allowed_severities": [
+              "low",
+              "moderate"
+            ],
+            "stop_when": [
+              "Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever."
+            ],
+            "frequency": "scheduled_sessions",
+            "minimum_gap_days": 1,
+            "priority": 0,
+            "sources": [
+              "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+            ]
+          }
+        ],
+        "content_hash": "a6b2e29243aafd400be33dade62033e88ada2d8af28e1fa029e72ec7247b8f08"
+      },
+      "remove": []
+    }
+  },
+  "bank_publication_profiles": [
+    "achilles_tendonitis",
+    "elbow_tendonitis",
+    "ankle_sprain",
+    "shoulder_tendonitis",
+    "groin_strain"
+  ]
+}

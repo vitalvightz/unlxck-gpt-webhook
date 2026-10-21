@@ -439,6 +439,8 @@ export type StructuredBlock = {
   coaching_cues?: string[] | null;
   /** Drill setup and sequence; separate from the single short coach cue. */
   execution_instructions?: string | null;
+  /** Exact approved rehab instructions from the live/frozen prescription. */
+  instructions?: string | null;
   regression_options?: string[] | null;
   substitutions?: string[] | null;
   progression_rule?: string | null;
@@ -447,7 +449,10 @@ export type StructuredBlock = {
   stop_rules?: string[] | null;
   /** Rehab blocks only: server-frozen drill metadata. */
   is_loading?: boolean | null;
-  drill_snapshot?: { rehab_stage?: string | null; function?: string | null; dose?: Record<string, unknown> | null; equipment?: string[] | null } | null;
+  dose?: { sets?: number | null; reps?: number | null; duration_seconds?: number | null } | null;
+  drill_snapshot?: { rehab_stage?: string | null; function?: string | null; contraction_type?: string | null;
+    dose?: Record<string, unknown> | null; equipment?: string[] | null;
+    prescription?: { frequency?: string | null } | null } | null;
   /** Approved rehab requirements from the live/frozen prescription. */
   range_choice?: string | null;
   resistance?: { mode?: string | null; kg?: number | null } | null;

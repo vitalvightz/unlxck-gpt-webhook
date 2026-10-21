@@ -112,6 +112,10 @@ SEVERITY_ALIASES: dict[str, str] = {
 #: Structured dose slots. All three are optional *within* a migrated dose.
 DOSE_FIELDS: tuple[str, ...] = ("sets", "reps", "duration_seconds")
 
+# Optional bank-owned publication metadata. Existing unmigrated records do not
+# acquire default values or eligibility when the schema migration is rerun.
+BANK_PRESCRIPTION_FIELDS: tuple[str, ...] = ("compatible_injury_types", "prescription")
+
 #: ``pain_ceiling`` value meaning "deliberately no ceiling", as opposed to
 #: ``None`` which means "not migrated yet".
 PAIN_CEILING_UNRESTRICTED = "unrestricted"

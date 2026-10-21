@@ -11,7 +11,7 @@ def test_report_is_current_and_baseline_ids_agree_with_actual_policy_decisions()
     report = build_report()
     assert report == json.loads(Path("docs/rehab-bank-reachability.json").read_text())
     assert report["summary"]["active_profiles"] == 64
-    assert report["summary"]["live_unique_identities"] == 107
+    assert report["summary"]["live_unique_identities"] == 111
     assert report["summary"]["approved_never_surfaced_ids"] == []
     policies, bank = load_clinical_policies(), get_rehab_bank()
     equipment = sorted({e for group in bank for d in group["drills"] for e in (d.get("equipment") or [])})
