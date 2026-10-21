@@ -64,6 +64,16 @@ def before_bank_publication(rows, kind, names=HISTORY_FIXTURES):
                 for field in revision['remove']:
                     row.pop(field)
                 row.update(deepcopy(revision['restore']))
+        # Rows a dated change added are dropped only while their content is exact.
+        added = history.get('added', {}).get(kind, {})
+        if added:
+            def kept(row):
+                return content_hash(row) != added.get(row[key])
+            if kind == 'drills':
+                for group in snapshot:
+                    group['drills'] = [d for d in group['drills'] if kept(d)]
+            elif kind == 'reviews':
+                snapshot = [r for r in snapshot if kept(r)]
         if (kind == 'profiles' and 'bank_publication_profiles' in history
                 and snapshot.get('bank_publication_profiles') == history['bank_publication_profiles']):
             snapshot.pop('bank_publication_profiles')

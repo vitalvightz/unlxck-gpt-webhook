@@ -35,32 +35,45 @@ is selected for athletes who report that prop.
 
 | Profile(s) | Identity → reviewed name | Props | Dose | Source |
 | --- | --- | --- | --- | --- |
-| knee_pain | `knee_unspecified_sliding_hamstring_curls_sliders_towel` → Heel slide knee bend | – | 10 reps | [UHCW knee & leg injury](https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf), [HEY knee](https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-knee/) |
-| knee_pain | `knee_unspecified_seated_knee_extension_hold_at_60` → Seated knee straightening hold | chair | 10 reps (3 s hold) | UHCW |
-| knee_pain | `knee_unspecified_vmo_activation_off_bench_leg_extension_hold` → Heel lift over a rolled towel | towel | 10 reps (3 s hold) | UHCW, HEY knee |
+| knee_pain | `knee_pain_heel_slide_knee_bend` → Heel slide knee bend | – | 10 reps | [UHCW knee & leg injury](https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf), [HEY knee](https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-knee/) |
+| knee_pain | `knee_pain_seated_knee_straightening_hold` → Seated knee straightening hold | chair | 10 reps (3 s hold) | UHCW |
+| knee_pain | `knee_pain_heel_lift_over_rolled_towel` → Heel lift over a rolled towel | towel | 10 reps (3 s hold) | UHCW, HEY knee |
 | quads_contusion | `quads_pain_isometric_quad_flex_straight_leg` → Static quads for a bruised thigh | – | 10 × 3 s | UHCW, [AAOS contusion](https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/) |
 | quads_contusion | `quads_unspecified_sliding_leg_extensions_towel_under_foot` → Heel slide knee bend on a towel | towel | 10 reps | UHCW, AAOS |
-| neck_tightness, neck_soreness | `neck_soreness_gentle_neck_tilts_assisted` → Seated forward neck bend | – | up to 10 (5 s hold) | [NHS Fife neck pain](https://www.nhsfife.org/media/33106/neck_pain_v7.pdf) |
-| neck_tightness, neck_soreness | `neck_stiffness_gentle_neck_side_tilts_passive_stretch` → Seated neck side tilt | chair | up to 10 each side (5 s hold) | NHS Fife |
-| shoulder_pain, _tightness, _soreness | `shoulder_unspecified_supine_shoulder_figure_8s_with_dowel` → Lying assisted arm raise | – | 5 reps | [Leeds shoulder](https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/), [Royal Berkshire](https://royalberkshire.nhs.uk/media/5scpbnrh/shoulder-active-and-assisted-exercises_oct22.pdf) |
+| neck_tightness, neck_soreness | `neck_soreness_seated_forward_neck_bend` → Seated forward neck bend | – | up to 10 (5 s hold) | [NHS Fife neck pain](https://www.nhsfife.org/media/2sfgwql9/neck_pain_v7.pdf) |
+| neck_tightness, neck_soreness | `neck_tightness_seated_neck_side_tilt` → Seated neck side tilt | chair | up to 10 each side (5 s hold) | NHS Fife |
+| shoulder_pain, _tightness, _soreness | `shoulder_unspecified_lying_assisted_arm_raise` → Lying assisted arm raise | – | 5 reps | [Leeds shoulder](https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/), [Royal Berkshire](https://royalberkshire.nhs.uk/media/5scpbnrh/shoulder-active-and-assisted-exercises_oct22.pdf) |
 | shoulder_pain, _tightness, _soreness | `shoulder_swelling_pendulum_circles` → Supported shoulder pendulum swing | stable_support | 60 s | Leeds, Royal Berkshire |
-| elbow_pain, elbow_stiffness | `elbow_stiffness_active_elbow_flexion_extension_with_dowel` → Elbow bend and straighten | – | 10 reps | [ESHT elbow soft tissue (Nov 2025)](https://www.esht.nhs.uk/wp-content/uploads/2026/01/2029.pdf) |
-| biceps_contusion | `bicep_soreness_active_supination_elbow_flexion` → Comfortable elbow bend for a bruised front of the arm | – | 10 reps | ESHT, AAOS |
-| triceps_contusion | `triceps_contusion_wall_assisted_arm_circles` → Comfortable elbow bend for a bruised back of the arm | – | 10 reps | ESHT, AAOS |
-| forearm_contusion | `forearm_unspecified_stick_rotations_forearm_twist` → Elbow-at-side forearm turn | – | 5 reps (5 s holds) | [CUH active wrist](https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/), ESHT, AAOS |
-| forearm_contusion | `forearm_soreness_passive_wrist_circles_tabletop_support` → Supported wrist bend forward and back | table | 5 reps (5 s holds) | CUH, AAOS |
+| elbow_pain, elbow_stiffness | `elbow_stiffness_elbow_bend_and_straighten` → Elbow bend and straighten | – | 10 reps | [ESHT elbow soft tissue (Nov 2025)](https://www.esht.nhs.uk/wp-content/uploads/2026/01/2029.pdf) |
+| biceps_contusion | `biceps_contusion_comfortable_elbow_bend` → Comfortable elbow bend for a bruised front of the arm | – | 10 reps | ESHT, AAOS |
+| triceps_contusion | `triceps_contusion_comfortable_elbow_bend` → Comfortable elbow bend for a bruised back of the arm | – | 10 reps | ESHT, AAOS |
+| forearm_contusion | `forearm_contusion_elbow_at_side_forearm_turn` → Elbow-at-side forearm turn | – | 5 reps (5 s holds) | [CUH active wrist](https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/), ESHT, AAOS |
+| forearm_contusion | `forearm_contusion_supported_wrist_bend` → Supported wrist bend forward and back | table | 5 reps (5 s holds) | CUH, AAOS |
 | wrist_pain | `wrist_pain_forearm_supination_pronation_paused` → Elbow-at-side forearm turn with pause | – | 5 reps (5 s holds) | CUH |
-| wrist_pain | `wrist_stiffness_theraband_wrist_abduction_adduction` → Side-to-side wrist bend on a table | table | 5 reps (5 s holds) | CUH |
+| wrist_pain | `wrist_pain_side_to_side_wrist_bend` → Side-to-side wrist bend on a table | table | 5 reps (5 s holds) | CUH |
 | wrist_stiffness, wrist_sprain | `wrist_unspecified_finger_extension_with_wrist_flexion` → Active wrist tenodesis | – | 5 reps (5 s holds) | CUH |
-| hip_pain | `hip_unspecified_isometric_glute_bridge_hold_30_hip_extension` → Double-leg bridge with 5-second hold | – | 5 reps | [WMAS hip pain (Feb 2026)](https://wellbeing.wmas.nhs.uk/wp-content/uploads/2026/02/ADV121-Hip-Pain.pdf) |
-| hip_pain | `hip_soreness_mini_band_standing_hip_abduction` → Supported standing hip abduction | stable_support | 5 reps (5 s hold) | WMAS |
+| hip_pain | `hip_pain_double_leg_bridge_hold` → Double-leg bridge with 5-second hold | – | 5 reps | [WMAS hip pain (Feb 2026)](https://wellbeing.wmas.nhs.uk/wp-content/uploads/2026/02/ADV121-Hip-Pain.pdf) |
+| hip_pain | `hip_pain_supported_standing_hip_abduction` → Supported standing hip abduction | stable_support | 5 reps (5 s hold) | WMAS |
+
+### Exercise identity
+
+An exercise ID also identifies demonstration media (`exercise_key` is derived
+from it) and recorded work. Where the reviewed movement differs from what the
+original ID names (a different movement, position or equipment), it is published
+under a **new ID**, and the original bank entry and ledger record stay exactly as
+on Main, unpublished. 14 movements use new IDs. Five IDs that still name the
+exact movement were reviewed in place, with the previous name and notes in
+`source_history`: `quads_pain_isometric_quad_flex_straight_leg`,
+`quads_unspecified_sliding_leg_extensions_towel_under_foot`,
+`shoulder_swelling_pendulum_circles`, `wrist_pain_forearm_supination_pronation_paused`
+and `wrist_unspecified_finger_extension_with_wrist_flexion`. None of the 19
+original IDs had a seeded media row or alias. None was ever a published
+prescription, so no rehab exposure references them.
 
 RESTORE was added to `live_stages` for the 14 profiles above that were CALM only
 (profile version +1, content hash recomputed). CALM→RESTORE remains the existing
-report ladder: a follow-up that is not worse. Each rewritten identity keeps its ID,
-and the ledger keeps its previous name/notes in `source_history`. Banded, weighted
-and circling variants are removed from the instructions instead of being
-published. Stop rules add region-specific red flags (for example, a tense thigh
+report ladder: a follow-up that is not worse. Banded, weighted
+and circling variants are not published. Stop rules add region-specific red flags (for example, a tense thigh
 or arm after a bruise).
 
 Wrist sprain/stiffness already had a table-based default. The tenodesis is only

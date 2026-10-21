@@ -2,7 +2,7 @@
 
 ## Executive summary
 
-Current inputs contain **755 groups / 1604 drills**, **64 active profiles**, and **130 unique live MSK identities** (8.1% of the whole bank).
+Current inputs contain **755 groups / 1618 drills**, **64 active profiles**, and **130 unique live MSK identities** (8.03% of the whole bank).
 
 This report is generated read-only: the audit itself never rewrites bank content, review history, profile hashes or stage activation. It describes current selectable inventory; retired exact identities and their complete provenance are preserved separately in data/rehab_archive/exact_duplicates.json when consolidation has been applied. Each retained drill has exactly one primary bucket. Secondary flags overlap; duplicate clusters overlap and must not be summed as distinct drills.
 
@@ -13,12 +13,12 @@ Classification is evidence-backed inventory triage, not a clinical approval of d
 | LIVE | 130 |
 | ADVANCED_CANDIDATE | 56 |
 | KEEP_DORMANT | 208 |
-| REPAIR | 1126 |
+| REPAIR | 1140 |
 | DUPLICATE_OR_MERGE | 0 |
 | MISPLACED | 17 |
 | DEPRECATE | 67 |
 
-Reviewed: **188 / 1604 (11.72%)**; MSK-only reviewed percentage: **12.53%**. Dormant potentially useful: **86.66%** (ADVANCED_CANDIDATE + KEEP_DORMANT + REPAIR). Likely eventually removable: **4.18%** (DEPRECATE + exact duplicate surplus); MISPLACED means relocation review, not removal.
+Reviewed: **188 / 1618 (11.62%)**; MSK-only reviewed percentage: **12.42%**. Dormant potentially useful: **86.77%** (ADVANCED_CANDIDATE + KEEP_DORMANT + REPAIR). Likely eventually removable: **4.14%** (DEPRECATE + exact duplicate surplus); MISPLACED means relocation review, not removal.
 
 ## Production footprint
 
@@ -48,22 +48,22 @@ Reachability means the profile/baseline can select a stage in principle; it is n
 | --- | ---: |
 | abrasion | 24 |
 | blister | 16 |
-| contusion | 69 |
+| contusion | 73 |
 | cut | 24 |
 | graze | 20 |
 | hyperextension | 48 |
 | impingement | 54 |
 | instability | 72 |
 | laceration | 20 |
-| pain | 88 |
-| soreness | 78 |
+| pain | 94 |
+| soreness | 79 |
 | sprain | 62 |
-| stiffness | 72 |
+| stiffness | 73 |
 | strain | 95 |
 | swelling | 44 |
 | tendonitis | 74 |
-| tightness | 80 |
-| unspecified | 664 |
+| tightness | 81 |
+| unspecified | 665 |
 
 ### Canonical region
 
@@ -71,55 +71,55 @@ Reachability means the profile/baseline can select a stage in principle; it is n
 | --- | ---: |
 | achilles | 27 |
 | ankle | 50 |
-| biceps | 65 |
+| biceps | 66 |
 | calf | 37 |
 | chest | 30 |
 | core | 46 |
-| elbow | 64 |
+| elbow | 65 |
 | eye | 44 |
 | face | 52 |
 | fingers | 44 |
 | foot | 38 |
-| forearm | 61 |
+| forearm | 63 |
 | glute | 46 |
 | groin | 49 |
 | hamstring | 31 |
 | hand | 84 |
 | heel | 19 |
-| hip | 36 |
+| hip | 38 |
 | jaw | 44 |
-| knee | 41 |
+| knee | 44 |
 | lower back | 70 |
-| neck | 65 |
+| neck | 67 |
 | obliques | 54 |
 | quads | 33 |
 | shin | 41 |
-| shoulder | 102 |
+| shoulder | 103 |
 | toe | 37 |
-| triceps | 53 |
+| triceps | 54 |
 | unspecified | 58 |
 | upper back | 54 |
-| wrist | 129 |
+| wrist | 130 |
 
 ### Pathway family
 
 | Pathway family | Drills |
 | --- | ---: |
-| contusion | 69 |
+| contusion | 73 |
 | hyperextension_or_joint_trauma | 48 |
 | joint_irritation_or_impingement | 54 |
 | ligament_sprain_or_instability | 134 |
 | muscle_strain | 95 |
-| nonspecific_msk_symptoms | 362 |
+| nonspecific_msk_symptoms | 371 |
 | surface_wound_care | 104 |
 | tendon_rehab | 74 |
-| unspecified_fallback | 664 |
+| unspecified_fallback | 665 |
 
 ### Review state
 
 | Review state | Drills |
 | --- | ---: |
-| needs_review | 1312 |
+| needs_review | 1326 |
 | outside_msk_review_ledger | 104 |
 | reviewed | 188 |
 
@@ -131,15 +131,15 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 
 | Identity | LIVE | ADVANCED_CANDIDATE | KEEP_DORMANT | REPAIR | DUPLICATE_OR_MERGE | MISPLACED | DEPRECATE |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| contusion | 17 | 0 | 5 | 32 | 0 | 0 | 15 |
+| contusion | 20 | 0 | 5 | 33 | 0 | 0 | 15 |
 | hyperextension_or_joint_trauma | 6 | 0 | 2 | 40 | 0 | 0 | 0 |
 | joint_irritation_or_impingement | 9 | 0 | 3 | 41 | 0 | 0 | 1 |
 | ligament_sprain_or_instability | 22 | 32 | 5 | 70 | 0 | 0 | 5 |
 | muscle_strain | 16 | 19 | 4 | 52 | 0 | 0 | 4 |
-| nonspecific_msk_symptoms | 29 | 0 | 31 | 289 | 0 | 1 | 12 |
+| nonspecific_msk_symptoms | 31 | 0 | 31 | 296 | 0 | 1 | 12 |
 | surface_wound_care | 0 | 0 | 103 | 0 | 0 | 0 | 1 |
 | tendon_rehab | 19 | 5 | 2 | 47 | 0 | 0 | 1 |
-| unspecified_fallback | 12 | 0 | 53 | 555 | 0 | 16 | 28 |
+| unspecified_fallback | 7 | 0 | 53 | 561 | 0 | 16 | 28 |
 
 ### Region classification
 
@@ -147,35 +147,35 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | achilles | 4 | 0 | 0 | 23 | 0 | 0 | 0 |
 | ankle | 9 | 4 | 3 | 34 | 0 | 0 | 0 |
-| biceps | 6 | 5 | 1 | 52 | 0 | 0 | 1 |
+| biceps | 6 | 5 | 1 | 53 | 0 | 0 | 1 |
 | calf | 2 | 3 | 1 | 31 | 0 | 0 | 0 |
 | chest | 2 | 2 | 2 | 23 | 0 | 0 | 1 |
 | core | 0 | 0 | 0 | 41 | 0 | 4 | 1 |
-| elbow | 14 | 3 | 11 | 35 | 0 | 0 | 1 |
+| elbow | 14 | 3 | 11 | 36 | 0 | 0 | 1 |
 | eye | 0 | 0 | 4 | 0 | 0 | 0 | 40 |
 | face | 0 | 0 | 48 | 0 | 0 | 0 | 4 |
 | fingers | 8 | 4 | 4 | 28 | 0 | 0 | 0 |
 | foot | 0 | 0 | 6 | 32 | 0 | 0 | 0 |
-| forearm | 5 | 1 | 11 | 43 | 0 | 0 | 1 |
+| forearm | 5 | 1 | 11 | 45 | 0 | 0 | 1 |
 | glute | 0 | 0 | 0 | 43 | 0 | 3 | 0 |
 | groin | 3 | 1 | 2 | 43 | 0 | 0 | 0 |
 | hamstring | 2 | 0 | 1 | 27 | 0 | 1 | 0 |
 | hand | 8 | 4 | 12 | 56 | 0 | 2 | 2 |
 | heel | 1 | 0 | 1 | 16 | 0 | 0 | 1 |
-| hip | 5 | 0 | 4 | 27 | 0 | 0 | 0 |
+| hip | 5 | 0 | 4 | 29 | 0 | 0 | 0 |
 | jaw | 0 | 0 | 42 | 0 | 0 | 0 | 2 |
-| knee | 6 | 2 | 9 | 24 | 0 | 0 | 0 |
+| knee | 6 | 2 | 9 | 27 | 0 | 0 | 0 |
 | lower back | 3 | 0 | 0 | 63 | 0 | 2 | 2 |
-| neck | 6 | 0 | 9 | 49 | 0 | 0 | 1 |
+| neck | 6 | 0 | 9 | 51 | 0 | 0 | 1 |
 | obliques | 0 | 0 | 0 | 53 | 0 | 1 | 0 |
 | quads | 5 | 1 | 2 | 24 | 0 | 0 | 1 |
 | shin | 1 | 0 | 12 | 26 | 0 | 0 | 2 |
-| shoulder | 19 | 13 | 2 | 66 | 0 | 1 | 1 |
+| shoulder | 19 | 13 | 2 | 67 | 0 | 1 | 1 |
 | toe | 3 | 2 | 2 | 30 | 0 | 0 | 0 |
-| triceps | 4 | 4 | 5 | 40 | 0 | 0 | 0 |
+| triceps | 4 | 4 | 5 | 41 | 0 | 0 | 0 |
 | unspecified | 0 | 0 | 10 | 45 | 0 | 1 | 2 |
 | upper back | 0 | 0 | 2 | 51 | 0 | 0 | 1 |
-| wrist | 14 | 7 | 2 | 101 | 0 | 2 | 3 |
+| wrist | 14 | 7 | 2 | 102 | 0 | 2 | 3 |
 
 ### rehab_stage
 
@@ -184,20 +184,20 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | calm | 64 |
 | dynamic | 5 |
 | load | 58 |
-| missing | 1414 |
+| missing | 1428 |
 | restore | 63 |
 
 ### function
 
 | Value | Drills |
 | --- | ---: |
-| activation | 158 |
+| activation | 160 |
 | control | 185 |
-| isometric_analgesia | 177 |
-| missing | 518 |
-| mobility | 245 |
-| recovery_downregulation | 190 |
-| tendon_loading | 131 |
+| isometric_analgesia | 179 |
+| missing | 522 |
+| mobility | 249 |
+| recovery_downregulation | 191 |
+| tendon_loading | 132 |
 
 ### equipment
 
@@ -221,7 +221,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | massage_gun | 1 |
 | mat | 1 |
 | mini_band | 2 |
-| missing | 1414 |
+| missing | 1428 |
 | none_required | 111 |
 | plate | 1 |
 | resistance_band | 16 |
@@ -239,7 +239,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | --- | ---: |
 | low | 45 |
 | minimal | 113 |
-| missing | 1414 |
+| missing | 1428 |
 | moderate | 16 |
 | unknown | 16 |
 
@@ -247,7 +247,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 
 | Value | Drills |
 | --- | ---: |
-| missing | 1414 |
+| missing | 1428 |
 | none | 185 |
 | unknown | 5 |
 
@@ -257,7 +257,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | --- | ---: |
 | high | 2 |
 | low | 185 |
-| missing | 1414 |
+| missing | 1428 |
 | moderate | 3 |
 
 ### laterality_applicability
@@ -268,7 +268,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | missing | 104 |
 | not_applicable | 74 |
 | side_specific | 115 |
-| unknown | 1310 |
+| unknown | 1324 |
 
 ### contraction_type
 
@@ -278,7 +278,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | isometric | 29 |
 | missing | 104 |
 | mixed | 90 |
-| unknown | 1376 |
+| unknown | 1390 |
 
 ### sport_specificity
 
@@ -287,7 +287,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | combat_sport | 2 |
 | general_rehab | 188 |
 | missing | 104 |
-| unknown | 1310 |
+| unknown | 1324 |
 
 ### contact_level
 
@@ -295,7 +295,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | --- | ---: |
 | missing | 104 |
 | none | 190 |
-| unknown | 1310 |
+| unknown | 1324 |
 
 ### target_regions
 
@@ -303,19 +303,19 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | --- | ---: |
 | achilles | 27 |
 | ankle | 48 |
-| bicep | 63 |
+| bicep | 64 |
 | bicep+biceps | 2 |
 | calf | 37 |
 | chest | 28 |
 | core | 46 |
-| elbow | 56 |
+| elbow | 57 |
 | elbow+shoulder+wrist | 1 |
 | eye | 40 |
 | face | 44 |
 | fingers | 40 |
 | fingers+wrist | 1 |
 | foot | 32 |
-| forearm | 53 |
+| forearm | 55 |
 | glutes | 46 |
 | groin | 49 |
 | hamstring | 20 |
@@ -323,22 +323,22 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | hamstrings | 9 |
 | hand | 74 |
 | heel | 17 |
-| hip | 32 |
+| hip | 34 |
 | jaw | 40 |
-| knee | 33 |
+| knee | 36 |
 | lower_back | 70 |
 | missing | 104 |
-| neck | 57 |
+| neck | 59 |
 | obliques | 54 |
 | quads | 33 |
 | shin | 31 |
-| shoulder | 99 |
+| shoulder | 100 |
 | toe | 35 |
-| triceps | 53 |
+| triceps | 54 |
 | unspecified | 48 |
 | upper back | 32 |
 | upper_back | 20 |
-| wrist | 128 |
+| wrist | 129 |
 
 ### target_tissues
 
@@ -391,7 +391,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | knee joint supporting soft tissues | 4 |
 | knee region; symptom cause unspecified | 1 |
 | lower back region; symptom cause unspecified | 3 |
-| missing | 1414 |
+| missing | 1428 |
 | neck muscles and joints | 2 |
 | neck region; symptom cause unspecified | 4 |
 | pectoral muscles | 2 |
@@ -430,8 +430,8 @@ Surface loading fields are intentionally absent. Empty equipment lists mean no e
 ## Biggest debt areas
 
 - **93 duplicate/near-duplicate/uncertain clusters**, involving **227 unique drills**; kinds: `{"intentionally_distinct": 43, "near_duplicate": 23, "uncertain": 27}`.
-- **1387** drills contain camp-phase instructions; **1155** contain arrows or hidden progression signals.
-- **118** have mechanism-language or naming flags; kinds: `{"clinically_unsafe_implication": 23, "harmless_naming_debt": 15, "none": 1486, "unsupported_mechanism_language": 80}`.
+- **1401** drills contain camp-phase instructions; **1165** contain arrows or hidden progression signals.
+- **118** have mechanism-language or naming flags; kinds: `{"clinically_unsafe_implication": 23, "harmless_naming_debt": 15, "none": 1500, "unsupported_mechanism_language": 80}`.
 - **64** have general-training/performance signals. Only explicit indication-free tasks receive primary MISPLACED; a compound lift or mobility exercise is not automatically non-rehab.
 
 ### Hidden progression breakdowns
@@ -440,7 +440,7 @@ Surface loading fields are intentionally absent. Empty equipment lists mean no e
 | --- | ---: |
 | abrasion | 24 |
 | blister | 16 |
-| contusion | 39 |
+| contusion | 40 |
 | cut | 24 |
 | graze | 20 |
 | hyperextension | 36 |
@@ -448,14 +448,14 @@ Surface loading fields are intentionally absent. Empty equipment lists mean no e
 | instability | 56 |
 | laceration | 20 |
 | pain | 72 |
-| soreness | 15 |
+| soreness | 16 |
 | sprain | 20 |
-| stiffness | 56 |
+| stiffness | 58 |
 | strain | 56 |
 | swelling | 16 |
 | tendonitis | 45 |
 | tightness | 74 |
-| unspecified | 525 |
+| unspecified | 531 |
 
 | canonical_region | Flagged drills |
 | --- | ---: |
@@ -465,35 +465,35 @@ Surface loading fields are intentionally absent. Empty equipment lists mean no e
 | calf | 26 |
 | chest | 22 |
 | core | 35 |
-| elbow | 39 |
+| elbow | 40 |
 | eye | 40 |
 | face | 46 |
 | fingers | 28 |
 | foot | 36 |
-| forearm | 43 |
+| forearm | 45 |
 | glute | 34 |
 | groin | 34 |
 | hamstring | 24 |
 | hand | 62 |
 | heel | 16 |
-| hip | 28 |
+| hip | 29 |
 | jaw | 37 |
-| knee | 29 |
+| knee | 32 |
 | lower back | 54 |
 | neck | 53 |
 | obliques | 46 |
 | quads | 20 |
 | shin | 38 |
-| shoulder | 44 |
+| shoulder | 45 |
 | toe | 30 |
-| triceps | 39 |
+| triceps | 40 |
 | unspecified | 28 |
 | upper back | 48 |
-| wrist | 82 |
+| wrist | 83 |
 
 | review_state | Flagged drills |
 | --- | ---: |
-| needs_review | 1051 |
+| needs_review | 1061 |
 | outside_msk_review_ledger | 104 |
 
 | classification | Flagged drills |
@@ -501,7 +501,7 @@ Surface loading fields are intentionally absent. Empty equipment lists mean no e
 | DEPRECATE | 55 |
 | KEEP_DORMANT | 190 |
 | MISPLACED | 14 |
-| REPAIR | 896 |
+| REPAIR | 906 |
 
 ### Live instruction findings
 
@@ -512,7 +512,7 @@ Surface loading fields are intentionally absent. Empty equipment lists mean no e
 
 | Candidate stage | All dormant screening candidates | Fixed reviewed candidates |
 | --- | ---: | ---: |
-| LOAD | 493 | 51 |
+| LOAD | 497 | 51 |
 | DYNAMIC | 36 | 5 |
 | RETURN | 3 | 0 |
 
@@ -553,10 +553,10 @@ Fixed reviewed candidates are mechanically defined movements; their exact region
 | hand_sprain | calm, restore | hand_sprain_band_resisted_finger_abduction, hand_sprain_finger_band_extensions, hand_sprain_hook_grip_plate_pinches, hand_sprain_palm_squeeze_with_soft_ball | 0 | 6 |
 | hand_tendonitis | calm, restore | none | 4 | 6 |
 | heel_contusion | calm | none | 0 | 2 |
-| hip_impingement | calm, restore | none | 0 | 4 |
-| hip_pain | calm, restore | none | 0 | 4 |
-| knee_instability | calm, restore | knee_instability_mini_band_lateral_walks, knee_instability_reactive_knee_bounces_foam_pad | 0 | 15 |
-| knee_pain | calm, restore | none | 0 | 15 |
+| hip_impingement | calm, restore | none | 0 | 5 |
+| hip_pain | calm, restore | none | 0 | 5 |
+| knee_instability | calm, restore | knee_instability_mini_band_lateral_walks, knee_instability_reactive_knee_bounces_foam_pad | 0 | 16 |
+| knee_pain | calm, restore | none | 0 | 16 |
 | lower_back_pain | calm, restore | none | 2 | 8 |
 | lower_back_stiffness | calm | none | 3 | 8 |
 | neck_soreness | calm, restore | none | 1 | 5 |
@@ -584,12 +584,12 @@ Fixed reviewed candidates are mechanically defined movements; their exact region
 | wrist_impingement | calm | none | 1 | 17 |
 | wrist_pain | calm, restore | none | 2 | 17 |
 | wrist_sprain | calm, restore | wrist_sprain_band_assisted_wrist_flexion_hold, wrist_sprain_band_stabilization_circles, wrist_sprain_isometric_wall_wrist_press, wrist_sprain_isometric_wrist_holds_various_angles, wrist_sprain_plank_to_palm_rockbacks, wrist_sprain_wrist_stability_drill_with_dynamometer | 0 | 17 |
-| wrist_stiffness | calm, restore | none | 0 | 17 |
+| wrist_stiffness | calm, restore | none | 1 | 17 |
 | wrist_tendonitis | calm, restore | wrist_tendonitis_eccentric_wrist_flexion_with_dumbbell | 2 | 17 |
 
 Profiles with no screened viable advanced inventory: `fingers_contusion`.
 
-Profiles with no exact-type candidate (regional unassigned inventory may exist): `ankle_impingement`, `biceps_contusion`, `elbow_contusion`, `elbow_impingement`, `elbow_stiffness`, `fingers_contusion`, `hamstring_strain`, `hand_contusion`, `heel_contusion`, `hip_impingement`, `hip_pain`, `knee_pain`, `neck_stiffness`, `neck_tightness`, `quads_contusion`, `shin_contusion`, `shoulder_impingement`, `shoulder_tightness`, `triceps_contusion`, `wrist_contusion`, `wrist_stiffness`.
+Profiles with no exact-type candidate (regional unassigned inventory may exist): `ankle_impingement`, `biceps_contusion`, `elbow_contusion`, `elbow_impingement`, `elbow_stiffness`, `fingers_contusion`, `hamstring_strain`, `hand_contusion`, `heel_contusion`, `hip_impingement`, `hip_pain`, `knee_pain`, `neck_stiffness`, `neck_tightness`, `quads_contusion`, `shin_contusion`, `shoulder_impingement`, `shoulder_tightness`, `triceps_contusion`, `wrist_contusion`.
 
 Profiles with no fixed reviewed advanced inventory: `achilles_tendonitis`, `ankle_impingement`, `biceps_contusion`, `elbow_contusion`, `elbow_hyperextension`, `elbow_impingement`, `elbow_pain`, `elbow_stiffness`, `fingers_contusion`, `fingers_hyperextension`, `fingers_pain`, `fingers_tendonitis`, `forearm_contusion`, `hamstring_strain`, `hand_contusion`, `hand_hyperextension`, `hand_pain`, `hand_tendonitis`, `heel_contusion`, `hip_impingement`, `hip_pain`, `knee_pain`, `lower_back_pain`, `lower_back_stiffness`, `neck_soreness`, `neck_stiffness`, `neck_tightness`, `quads_contusion`, `shin_contusion`, `shoulder_contusion`, `shoulder_hyperextension`, `shoulder_impingement`, `shoulder_pain`, `shoulder_soreness`, `shoulder_tightness`, `toe_hyperextension`, `triceps_contusion`, `wrist_contusion`, `wrist_hyperextension`, `wrist_impingement`, `wrist_pain`, `wrist_stiffness`.
 

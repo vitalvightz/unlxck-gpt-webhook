@@ -14,7 +14,8 @@ from tests.test_rehab_experience import HEADERS, consumer, decision, view
 
 ROOT = Path(__file__).resolve().parents[1]
 HISTORY = json.loads((ROOT / "tests/fixtures/rehab_restore_expansion_history.json").read_text(encoding="utf-8"))
-NEW_IDS = set(HISTORY["drills"])
+# Published identities: in-place reviews whose ID still names the movement, plus new IDs.
+NEW_IDS = set(HISTORY["drills"]) | set(HISTORY["added"]["drills"])
 OPENED = set(HISTORY["profiles"])
 
 KNEE = ("knee_pain", "Left knee", "pain", "", "mild")
@@ -36,28 +37,28 @@ HIP = ("hip_pain", "Left hip", "pain", "", "mild")
 
 # Each new identity with the reported props under which the real selector picks it.
 OPTIONS = [
-    (KNEE, "knee_unspecified_sliding_hamstring_curls_sliders_towel", []),
-    (KNEE, "knee_unspecified_seated_knee_extension_hold_at_60", ["chair", "towel"]),
-    (KNEE, "knee_unspecified_vmo_activation_off_bench_leg_extension_hold", ["towel"]),
+    (KNEE, "knee_pain_heel_slide_knee_bend", []),
+    (KNEE, "knee_pain_seated_knee_straightening_hold", ["chair"]),
+    (KNEE, "knee_pain_heel_lift_over_rolled_towel", ["chair", "towel"]),
     (QUADS, "quads_pain_isometric_quad_flex_straight_leg", []),
     (QUADS, "quads_unspecified_sliding_leg_extensions_towel_under_foot", ["towel"]),
-    (NECK_TIGHT, "neck_soreness_gentle_neck_tilts_assisted", []),
-    (NECK_SORE, "neck_stiffness_gentle_neck_side_tilts_passive_stretch", ["chair"]),
-    (SHOULDER_PAIN, "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel", []),
+    (NECK_TIGHT, "neck_soreness_seated_forward_neck_bend", []),
+    (NECK_SORE, "neck_tightness_seated_neck_side_tilt", ["chair"]),
+    (SHOULDER_PAIN, "shoulder_unspecified_lying_assisted_arm_raise", []),
     (SHOULDER_TIGHT, "shoulder_swelling_pendulum_circles", ["stable_support"]),
-    (SHOULDER_SORE, "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel", ["chair"]),
-    (ELBOW_PAIN, "elbow_stiffness_active_elbow_flexion_extension_with_dowel", []),
-    (ELBOW_STIFF, "elbow_stiffness_active_elbow_flexion_extension_with_dowel", ["table"]),
-    (BICEPS, "bicep_soreness_active_supination_elbow_flexion", []),
-    (TRICEPS, "triceps_contusion_wall_assisted_arm_circles", []),
-    (FOREARM, "forearm_unspecified_stick_rotations_forearm_twist", []),
-    (FOREARM, "forearm_soreness_passive_wrist_circles_tabletop_support", ["table"]),
+    (SHOULDER_SORE, "shoulder_unspecified_lying_assisted_arm_raise", ["chair"]),
+    (ELBOW_PAIN, "elbow_stiffness_elbow_bend_and_straighten", []),
+    (ELBOW_STIFF, "elbow_stiffness_elbow_bend_and_straighten", ["table"]),
+    (BICEPS, "biceps_contusion_comfortable_elbow_bend", []),
+    (TRICEPS, "triceps_contusion_comfortable_elbow_bend", []),
+    (FOREARM, "forearm_contusion_elbow_at_side_forearm_turn", []),
+    (FOREARM, "forearm_contusion_supported_wrist_bend", ["table"]),
     (WRIST_PAIN, "wrist_pain_forearm_supination_pronation_paused", []),
-    (WRIST_PAIN, "wrist_stiffness_theraband_wrist_abduction_adduction", ["table"]),
+    (WRIST_PAIN, "wrist_pain_side_to_side_wrist_bend", ["table"]),
     (WRIST_STIFF, "wrist_unspecified_finger_extension_with_wrist_flexion", []),
     (WRIST_SPRAIN, "wrist_unspecified_finger_extension_with_wrist_flexion", ["chair"]),
-    (HIP, "hip_unspecified_isometric_glute_bridge_hold_30_hip_extension", []),
-    (HIP, "hip_soreness_mini_band_standing_hip_abduction", ["stable_support"]),
+    (HIP, "hip_pain_double_leg_bridge_hold", []),
+    (HIP, "hip_pain_supported_standing_hip_abduction", ["stable_support"]),
 ]
 
 
@@ -137,7 +138,7 @@ def test_camp_phase_cannot_change_stage_selection_or_approved_dose(monkeypatch, 
     body = view(client)
     block = body["live_prescription"]["session"]["blocks"][0]
     assert decision(body)["stage"] == "restore"
-    assert block["rehab_drill_id"] == "knee_unspecified_seated_knee_extension_hold_at_60"
+    assert block["rehab_drill_id"] == "knee_pain_seated_knee_straightening_hold"
     assert block["dose"] == {"reps": 10}
     for camp in ("GPP", "SPP", "TAPER"):
         assert resolve_injury_policy(probe("knee_pain"), policies=load_clinical_policies(), bank=get_rehab_bank(),
@@ -161,7 +162,7 @@ def test_opened_profiles_keep_higher_stages_closed_and_severity_gates(policy_id)
 
 def test_unresolved_adverse_response_rejects_the_new_option():
     from fightcamp.rehab_selector import filter_rehab_candidates
-    drill = {**bank_drill("hip_unspecified_isometric_glute_bridge_hold_30_hip_extension"), "injury_type": "pain"}
+    drill = {**bank_drill("hip_pain_double_leg_bridge_hold"), "injury_type": "pain"}
     injury = probe("hip_pain")
     exposure = dict(athlete_id="athlete", injury_id="probe", injury_episode_id="episode", drill_id=drill["id"],
         body_region="hip", side="left", response=dict(during_response="worse"))
@@ -181,7 +182,7 @@ def test_two_new_injuries_keep_their_own_region_restrictions_and_prescriptions()
     knee = resolve_injury_policy(probe("knee_pain"), policies=policies, bank=bank, equipment=["chair", "towel"])
     wrist = resolve_injury_policy({**probe("wrist_pain"), "id": "probe-2", "episode_id": "episode-2"},
         policies=policies, bank=bank, equipment=["chair", "towel"])
-    assert knee["prescription"]["drill_id"] == "knee_unspecified_seated_knee_extension_hold_at_60"
+    assert knee["prescription"]["drill_id"] == "knee_pain_heel_lift_over_rolled_towel"
     assert wrist["prescription"]["drill_id"] == "wrist_pain_forearm_supination_pronation_paused"
     assert knee["restrictions"] != wrist["restrictions"]
     assert "knee" in json.dumps(knee["restrictions"]) and "wrist" in json.dumps(wrist["restrictions"])
@@ -239,3 +240,21 @@ def test_generation_identity_uses_canonical_biceps_region_for_existing_content()
     line = "Supported elbow bend and straighten for biceps strain – Self-paced movement within comfort."
     assert reviewed_rehab_drill_id_for_line(line, "strain", "biceps") == "biceps_strain_reviewed_restore"
     assert reviewed_rehab_drill_id_for_line(line, "strain", "bicep") == "biceps_strain_reviewed_restore"
+
+
+def test_movements_the_original_identity_does_not_describe_use_new_identities():
+    """Original IDs keep their meaning for demos and recorded work; new movements get new IDs."""
+    added = set(HISTORY["added"]["drills"])
+    assert len(added) == 14 and not added & set(HISTORY["drills"])
+    ledger = {r["drill_id"]: r for r in json.loads((ROOT / "data/rehab_metadata_review.json").read_text(encoding="utf-8"))}
+    live = {p.drill_id for policy in load_clinical_policies() for p in policy.prescriptions}
+    bank = {d["id"]: d for g in get_rehab_bank() for d in g["drills"]}
+    for identity in added:
+        assert ledger[identity]["review_state"] == "reviewed" and "source_history" not in ledger[identity]
+        assert identity in live
+    originals = ["knee_unspecified_sliding_hamstring_curls_sliders_towel", "triceps_contusion_wall_assisted_arm_circles",
+                 "neck_soreness_gentle_neck_tilts_assisted", "shoulder_unspecified_supine_shoulder_figure_8s_with_dowel",
+                 "forearm_soreness_passive_wrist_circles_tabletop_support", "hip_soreness_mini_band_standing_hip_abduction"]
+    for identity in originals:
+        assert identity not in live and ledger[identity]["review_state"] == "needs_review"
+        assert "prescription" not in bank[identity] and bank[identity]["rehab_stage"] is None
