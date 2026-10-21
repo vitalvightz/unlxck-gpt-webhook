@@ -82,6 +82,8 @@ unsupported stages and the unpublished-content boundary. Existing tests cover
 permissions, equipment, multi-injury restrictions, setbacks, cadence, completion
 and next-day responses. Episode allocation unit tests stub published decisions;
 the Today API tests use the real policy resolver.
+The old family-migration comparison explicitly composes policies with its dated
+bank, so later publication metadata cannot leak into the historical replay.
 
 Production athlete testing was not performed. Authenticated API tests use the
 existing authorised test fixtures, not a production account. Browser checks use
