@@ -18767,6 +18767,45 @@ html[data-theme="light"] .loading-operational-item {
   color: var(--brand-red);
 }
 
+/* Cluster (contrast pair): one row per movement, run in order each round. */
+.sp-cluster {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-stat);
+  overflow: hidden;
+}
+.sp-cluster-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  row-gap: 2px;
+  align-items: baseline;
+  padding: 9px 12px;
+}
+.sp-cluster-row + .sp-cluster-row {
+  border-top: 1px solid var(--border-subtle);
+}
+.sp-cluster-label {
+  grid-row: span 2;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--brand-red);
+}
+.sp-cluster-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.sp-cluster-detail {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
 /* -- Exercise rows ----------------------------------------------------------
    Each block is a compact row (name, headline stat, demo thumbnail) that
    expands, one at a time, to the demo, what it builds, why it is in today's

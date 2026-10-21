@@ -196,6 +196,14 @@ def project_source_adjustments(plan: dict[str, Any], source: str) -> dict[str, A
                         block["progression_rule"] = expected["progression_rule"]
                     else:
                         block.pop("progression_rule", None)
+                    # Cluster rows and qualitative rest are structure the
+                    # conversion has no field for; the exact source line owns
+                    # them, so they are projected here rather than authored.
+                    if expected.get("components"):
+                        block["components"] = copy.deepcopy(expected["components"])
+                        block["rounds"] = expected["rounds"]
+                    if expected.get("rest_note") and not block.get("rest"):
+                        block["rest_note"] = expected["rest_note"]
     return plan
 
 

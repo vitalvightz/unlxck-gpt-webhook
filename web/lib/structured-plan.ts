@@ -101,6 +101,24 @@ export function formatBlockLoad(load: LoadPrescription | null | undefined): stri
   if (display && !MEANINGLESS_LOAD.has(display.toLowerCase()) && !isNonFiniteNumericToken(display)) {
     return display;
   }
+  if (display) {
+    return null; // An explicit but meaningless display hides the load.
+  }
+  // Cards written before the server stamped `display` still carry the exact
+  // machine-readable load; spell only the unambiguous methods.
+  const value = load.value;
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+  const method = cleanText(load.method)?.toLowerCase();
+  if (method === "percentage") {
+    const ref = cleanText(load.ref);
+    return ref ? `${value}% ${ref}` : `${value}%`;
+  }
+  if (method === "absolute") {
+    const unit = cleanText(load.unit);
+    return unit ? `${value} ${unit}` : null;
+  }
   return null;
 }
 
@@ -303,6 +321,49 @@ export function selectBlockMetric(block: StructuredBlock | null | undefined): Bl
   }
 
   return metrics;
+}
+
+export type BlockComponentLine = { label: string; name: string; detail: string | null };
+
+/**
+ * The movements of a cluster block (a contrast pair), in execution order:
+ * "A1 Heavy RDL — 2 reps · 85% 1RM", "A2 Broad Jump — 2 reps · Max intent".
+ * Empty unless the server stamped at least two named components, so a single
+ * movement never renders as a one-row cluster.
+ */
+export function getBlockComponents(block: StructuredBlock | null | undefined): BlockComponentLine[] {
+  const components = Array.isArray(block?.components) ? block.components : [];
+  const lines = components.flatMap((component, index) => {
+    if (!isObject(component)) return [];
+    const name = cleanText(component.name);
+    if (!name) return [];
+    const reps = typeof component.reps === "number"
+      ? finitePositiveNumber(component.reps) ? `${component.reps} rep${component.reps === 1 ? "" : "s"}` : null
+      : cleanText(component.reps);
+    const load = formatBlockLoad(component.load);
+    const effort = formatEffort({ effort: component.effort } as StructuredBlock);
+    const detail = [reps, load, effort].filter(Boolean).join(" · ") || null;
+    return [{ label: `A${index + 1}`, name, detail }];
+  });
+  return lines.length >= 2 ? lines : [];
+}
+
+/** Qualitative rest for the Rest stat: "Full rest between holds" -> "Full". */
+export function formatRestNote(block: StructuredBlock | null | undefined): string | null {
+  const note = cleanText(block?.rest_note);
+  if (!note) return null;
+  return /^full\s+rest\b/i.test(note) ? "Full" : note;
+}
+
+/** Collapsed-row line for a cluster: "3 rounds · rest 4 min", else null. */
+export function formatClusterSummary(block: StructuredBlock | null | undefined): string | null {
+  if (getBlockComponents(block).length === 0 || !finitePositiveNumber(block?.rounds)) {
+    return null;
+  }
+  const rounds = `${block.rounds} round${block.rounds === 1 ? "" : "s"}`;
+  const rest = shouldShowRest(block.rest) ? formatMeasured(block.rest) : null;
+  const restText = rest ? `rest ${compactTimeUnits(rest)}` : formatRestNote(block)?.toLowerCase().replace(/^full$/, "full rest");
+  return [rounds, restText].filter(Boolean).join(" · ");
 }
 
 // Athlete-facing names for an effort method printed without a value.

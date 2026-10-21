@@ -277,6 +277,20 @@ export type AthleteProfileInput = {
   athlete_locale?: string;
 };
 
+/**
+ * One movement inside a cluster block, e.g. each half of a contrast pair.
+ *
+ * A heavy lift -> jump pair is one block with one round count and one rest,
+ * but each movement has its own reps and loading. Server-owned: lifted from
+ * the planner dose or the exact source line, never authored by the model.
+ */
+export type BlockComponent = {
+  name: string;
+  reps: number | string | null;
+  load: LoadPrescription | null;
+  effort: EffortPrescription | null;
+};
+
 export type Body_create_global_feedback_api_feedback_global_post = {
   category: string;
   description?: string;
@@ -2232,9 +2246,11 @@ export type SessionBlock = {
   effort: EffortPrescription | null;
   tempo: TempoPrescription | null;
   rest: MeasuredValue | null;
+  rest_note: string | null;
   work: MeasuredValue | null;
   distance: MeasuredValue | null;
   rounds: number | null;
+  components: BlockComponent[] | null;
   intensity: string | null;
   energy_system: string | null;
   impact_level: string | null;

@@ -338,7 +338,69 @@ def _measured(match: re.Match[str]) -> dict[str, Any]:
     }
 
 
-def _lift_dose_fields(dose: str) -> tuple[dict[str, Any], str]:
+# A cluster block names its movements in order ("Heavy RDL → Broad Jump").
+_CLUSTER_NAME_SEPARATOR_RE = re.compile(r"\s*(?:→|->)\s*")
+_ROUNDS_RE = re.compile(r"\b(\d+)\s*rounds?\b", re.IGNORECASE)
+_COMPONENT_REPS_RE = re.compile(r"\b(\d+)\s*reps?\b", re.IGNORECASE)
+_COMPONENT_PERCENT_RE = re.compile(r"(\d+(?:\.\d+)?)\s*%\s*1rm\b", re.IGNORECASE)
+_COMPONENT_ABSOLUTE_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(kg|lbs?)\b", re.IGNORECASE)
+_COMPONENT_INTENT_RE = re.compile(r"\bmax(?:imal)?\s+(intent|speed|height|velocity|effort)\b", re.IGNORECASE)
+_FULL_REST_RE = re.compile(r"\bfull\s+rest\b(?:\s+between\s+[a-z ]+?)?(?=\s*(?:[;,.]|$))", re.IGNORECASE)
+_EFFORT_OUT_OF_TEN_RE = re.compile(r"(\d+(?:\.\d+)?)\s*/\s*10\s*effort\b", re.IGNORECASE)
+
+
+def _percent_load(match: re.Match[str]) -> dict[str, Any]:
+    value = _number(match[1])
+    return {"method": "percentage", "value": value, "unit": "percent", "ref": "1RM",
+            "display": f"{value}% 1RM"}
+
+
+def _absolute_load(match: re.Match[str]) -> dict[str, Any]:
+    value = _number(match[1])
+    unit = "lb" if match[2].lower().startswith("lb") else "kg"
+    return {"method": "absolute", "value": value, "unit": unit, "display": f"{value} {unit}"}
+
+
+def _cluster_fields(name: str | None, dose: str) -> dict[str, Any]:
+    """Rounds and per-movement components for a two-movement cluster block.
+
+    Reads both grammars that carry a contrast pair: the planner's
+    "3 rounds: heavy movement 2 reps @ 85% 1RM → explosive movement 2 reps at
+    max intent; rest 4 min per round." and the plan text's "3 rounds; RDL 2 reps
+    @ 85% 1RM, then Broad Jump 2 reps; rest 4 min between rounds.". Each
+    component takes the reps, load and intent written in its own span of the
+    dose. Anything ambiguous (not exactly two named movements, not exactly two
+    rep counts, no round count) lifts nothing, so a card never guesses.
+    """
+    parts = [part.strip() for part in _CLUSTER_NAME_SEPARATOR_RE.split(str(name or "")) if part.strip()]
+    if len(parts) != 2:
+        return {}
+    rounds = _ROUNDS_RE.search(dose)
+    reps = list(_COMPONENT_REPS_RE.finditer(dose))
+    if rounds is None or len(reps) != 2:
+        return {}
+    clause_end = dose.find(";", reps[1].end())
+    spans = (dose[reps[0].start():reps[1].start()],
+             dose[reps[1].start():clause_end if clause_end >= 0 else len(dose)])
+    components: list[dict[str, Any]] = []
+    for component_name, rep, span in zip(parts, reps, spans, strict=True):
+        component: dict[str, Any] = {"name": component_name, "reps": int(rep[1])}
+        if percent := _COMPONENT_PERCENT_RE.search(span):
+            component["load"] = _percent_load(percent)
+        elif absolute := _COMPONENT_ABSOLUTE_RE.search(span):
+            component["load"] = _absolute_load(absolute)
+        if rpe := _EFFORT_CLAUSE_RE.search(span):
+            component["effort"] = {"method": rpe.group("method").upper(),
+                                   "value": _number(rpe.group("value")) if re.fullmatch(r"[\d.]+", rpe.group("value")) else rpe.group("value"),
+                                   "scale": "1-10" if rpe.group("method").upper() == "RPE" else None}
+        elif intent := _COMPONENT_INTENT_RE.search(span):
+            quality = intent[1].lower()
+            component["effort"] = {"method": "intent", "value": "max" if quality == "intent" else f"max {quality}"}
+        components.append(component)
+    return {"rounds": int(rounds[1]), "components": components}
+
+
+def _lift_dose_fields(dose: str, name: str | None = None) -> tuple[dict[str, Any], str]:
     """Structured fields for the whole clauses the card renders as stats.
 
     Only a clause that is *entirely* one quantity is lifted ("duration 20 min",
@@ -416,12 +478,18 @@ def _lift_dose_fields(dose: str) -> tuple[dict[str, Any], str]:
     carry = re.match(r"\s*(\d+)\s+carries\s+over\s+(\d+(?:\.\d+)?)\s*m\b", dose, re.I)
     if carry:
         fields.update(sets=int(carry[1]), distance={"value": _number(carry[2]), "unit": "meters"})
-    percent = re.search(r"(\d+(?:\.\d+)?)\s*%\s*1rm\b", dose, re.I)
-    if percent:
-        fields["load"] = {"method": "percentage", "value": _number(percent[1]), "unit": "percent", "ref": "1RM"}
-    if absolute := re.search(r"(\d+(?:\.\d+)?)\s*(kg|lbs?)\b", dose, re.I):
-        fields["load"] = {"method": "absolute", "value": _number(absolute[1]),
-                          "unit": "lb" if absolute[2].lower().startswith("lb") else "kg"}
+    if "effort" not in fields and (out_of_ten := _EFFORT_OUT_OF_TEN_RE.search(dose)):
+        # "@ 7/10 effort" is the planner's spelling of RPE 7.
+        fields["effort"] = {"method": "RPE", "value": _number(out_of_ten[1]), "scale": "1-10"}
+    if "rest" not in fields and (full_rest := _FULL_REST_RE.search(dose)):
+        # Qualitative rest stays words; it is never turned into a number.
+        note = re.sub(r"\s+", " ", full_rest.group(0)).strip()
+        fields["rest_note"] = note[:1].upper() + note[1:]
+    if percent := _COMPONENT_PERCENT_RE.search(dose):
+        fields["load"] = _percent_load(percent)
+    if absolute := _COMPONENT_ABSOLUTE_RE.search(dose):
+        fields["load"] = _absolute_load(absolute)
+    fields.update(_cluster_fields(name, dose))
     return fields, "; ".join(kept)
 
 
@@ -487,11 +555,11 @@ def _source_block(
         return None
     dose = first[title.end() :].strip()
     parsed = _parse_display_text(f"- {name}: {dose}\n{details}")
-    fields, _ = _lift_dose_fields(parsed.activity_dose)
+    fields, _ = _lift_dose_fields(parsed.activity_dose, name)
     return {
         **fields,
         "purpose": parsed.purpose or None,
-        "execution_instructions": _preserve_unrepresented_dose(parsed.activity_dose, parsed.execution_instructions),
+        "execution_instructions": _preserve_unrepresented_dose(parsed.activity_dose, parsed.execution_instructions, name),
         "coaching_cues": list(parsed.cues),
         "regression_options": list(parsed.regressions),
         "progression_rule": parsed.progression or None,
@@ -527,14 +595,18 @@ def _dose_qualifiers(text: str) -> str:
     return ", ".join(kept)
 
 
-def _preserve_unrepresented_dose(dose: str, instructions: str | None) -> str | None:
+def _preserve_unrepresented_dose(dose: str, instructions: str | None, name: str | None = None) -> str | None:
     """Keep compound working quantities outside disposable coaching cues.
 
     A heavy lift -> jump pair is not one repetition statistic. The original
     sequence, loading and rest must survive cue compaction without inventing
     a single set/rep interpretation for its different components.
     """
-    lifted, remainder = _lift_dose_fields(dose)
+    lifted, remainder = _lift_dose_fields(dose, name)
+    if lifted.get("components"):
+        # The cluster is shown as rounds + one row per movement; repeating the
+        # whole compound sentence under "How" would only duplicate it.
+        return instructions or None
     compound = "→" in dose or re.search(r"\brounds?\s*:", dose, re.I)
     # A dose the card already shows as Sets/Duration/Rest/Effort is not an
     # execution instruction; repeating it under "How" only duplicates the stats.
@@ -658,7 +730,7 @@ def _blocks(
             if prescription:
                 # The same exact numbers as stats, so timers and logging run
                 # on the planner's dose; the verbatim cue stays alongside.
-                fields, _ = _lift_dose_fields(prescription)
+                fields, _ = _lift_dose_fields(prescription, name)
                 block.update(fields)
             from fightcamp.exercise_coaching import exercise_coaching
             from fightcamp.exercise_progression import occurrence_key
@@ -670,11 +742,12 @@ def _blocks(
             coaching.pop("progression_rule", None)
             coaching["regression_options"] = []
             block["coaching_cues"].extend(coaching.pop("coaching_cues"))
-            if prescription:
+            if prescription and not block.get("components"):
+                # A cluster's dose is fully shown as rounds + component rows.
                 block["coaching_cues"].append(prescription)
             block.update(coaching)
             block["execution_instructions"] = _preserve_unrepresented_dose(
-                prescription, block.get("execution_instructions"))
+                prescription, block.get("execution_instructions"), name)
         blocks.append(block)
     # Only ever attached to a host that already renders. A role with no selected
     # exercise renders no session at all here, and a microdose must not be the
@@ -1083,7 +1156,8 @@ def reconcile_open_development_sessions(
         for week in weeks for day in week["days"] for session in day.get("sessions") or []
         if any(block.get("display_name") in watch_names for block in session.get("blocks") or [])
     ]
-    dose_fields = ("sets", "reps", "rounds", "work", "rest", "duration", "distance", "load", "tempo", "effort", "intensity")
+    dose_fields = ("sets", "reps", "rounds", "work", "rest", "rest_note", "duration", "distance", "load",
+                   "tempo", "effort", "intensity", "components")
     for position, (week, decision) in enumerate(zip(weeks, decisions, strict=True), start=1):
         if not isinstance(decision, dict) or not isinstance(decision.get("sessions"), list):
             return plan
@@ -1139,7 +1213,12 @@ def reconcile_open_development_sessions(
                     block.update(dose)
                     prescription = next((exercise.get("prescription") for exercise in exercises
                                          if exercise.get("name") == block["display_name"]), "")
-                    if prescription and prescription not in (block.get("coaching_cues") or []):
+                    if block.get("components"):
+                        # A cluster's dose is its rounds + component rows; the
+                        # sentence form is not repeated as a coaching cue.
+                        block["coaching_cues"] = [cue for cue in block.get("coaching_cues") or []
+                                                  if cue != prescription]
+                    elif prescription and prescription not in (block.get("coaching_cues") or []):
                         block["coaching_cues"] = [*(block.get("coaching_cues") or []), prescription]
             by_day[weekday]["sessions"].append(session)
         for entry in rotation:

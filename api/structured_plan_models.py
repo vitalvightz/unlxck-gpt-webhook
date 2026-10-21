@@ -194,6 +194,20 @@ class TempoPrescription(BaseModel):
     pause_top: int | str | None = None
 
 
+class BlockComponent(BaseModel):
+    """One movement inside a cluster block, e.g. each half of a contrast pair.
+
+    A heavy lift -> jump pair is one block with one round count and one rest,
+    but each movement has its own reps and loading. Server-owned: lifted from
+    the planner dose or the exact source line, never authored by the model.
+    """
+
+    name: str
+    reps: int | str | None = None
+    load: LoadPrescription | None = None
+    effort: EffortPrescription | None = None
+
+
 # ---------------------------------------------------------------------------
 # Shared anchors / rules
 # ---------------------------------------------------------------------------
@@ -296,9 +310,15 @@ class SessionBlock(BaseModel):
     effort: EffortPrescription | None = None
     tempo: TempoPrescription | None = None
     rest: MeasuredValue | None = None
+    # Qualitative rest the dose states without a number ("Full rest between
+    # holds"). Only set when ``rest`` is absent; a value is never invented.
+    rest_note: str | None = None
     work: MeasuredValue | None = None
     distance: MeasuredValue | None = None
     rounds: int | None = None
+    # Cluster structure (contrast pairs): each movement's own reps and load,
+    # sharing the block's ``rounds`` and ``rest``. Absent for single movements.
+    components: list[BlockComponent] | None = None
     intensity: str | None = None
     energy_system: str | None = None
     impact_level: str | None = None
@@ -347,7 +367,10 @@ class SessionBlock(BaseModel):
 
     @model_serializer(mode="wrap")
     def _omit_absent_athlete_change(self, handler):
-        return _omit_none(handler(self), "athlete_change")
+        data = handler(self)
+        for field in ("athlete_change", "rest_note", "components"):
+            data = _omit_none(data, field)
+        return data
 
 
 class Completion(BaseModel):

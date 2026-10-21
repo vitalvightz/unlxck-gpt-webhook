@@ -38,10 +38,15 @@ def _current_card_dose(block: dict) -> dict:
 
 
 def _dose_matches(block: dict, role: dict, assignment: dict) -> bool:
-    from .structured_plan_deterministic_fallback import _lift_dose_fields
+    from .structured_plan_deterministic_fallback import _EFFORT_CLAUSE_RE, _lift_dose_fields
     from .structured_plan_faithfulness import _prescription_value
     prescription = effective_exercise_prescription(role, assignment)
     fields, _ = _lift_dose_fields(prescription)
+    # Presentation-only lifts (qualitative rest, cluster rows, "7/10 effort"
+    # read as RPE) are not part of this quantitative authority comparison.
+    fields = {key: value for key, value in fields.items() if key not in ("rest_note", "components")}
+    if "effort" in fields and not _EFFORT_CLAUSE_RE.search(prescription):
+        fields.pop("effort")
     for key in ("sets", "reps", "rounds", "duration", "work", "distance", "load", "rest", "effort"):
         if block.get(key) not in (None, "", {}) and key not in fields:
             return False  # Extra current quantities are not covered by programme authority.
