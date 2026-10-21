@@ -395,7 +395,7 @@ def test_result_contract_is_auditable_and_identity_is_per_injury():
     assert result.selector_version == "2"
 
 
-def test_authoritative_bank_option_path_returns_ranked_live_stage_drill(monkeypatch):
+def test_classified_bank_content_without_a_published_policy_cannot_be_prescribed(monkeypatch):
     monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
     bank = [
         {
@@ -418,11 +418,10 @@ def test_authoritative_bank_option_path_returns_ranked_live_stage_drill(monkeypa
         injury=injury(),
         rehab_stage="restore",
     )
-    assert [option["drill"]["id"] for option in options] == ["restore"]
-    assert set(options[0]) == {"line", "drill", "location", "type"}
+    assert options == []
 
 
-def test_legacy_option_shape_is_unchanged_when_live_stage_context_is_absent(
+def test_unresolved_legacy_content_cannot_bypass_publication(
     monkeypatch,
 ):
     monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
@@ -437,13 +436,7 @@ def test_legacy_option_shape_is_unchanged_when_live_stage_context_is_absent(
     monkeypatch.setattr(rehab_protocols, "get_rehab_bank", lambda: bank)
     monkeypatch.setattr(rehab_protocols, "get_rehab_locations", lambda: {"ankle"})
 
-    option = rehab_protocols.rehab_drill_options_for_phase(
-        "sprain",
-        "ankle",
-        "GPP",
-    )[0]
-    assert set(option) == {"line", "drill", "location", "type"}
-    assert option["drill"]["id"] == "one"
+    assert rehab_protocols.rehab_drill_options_for_phase("sprain", "ankle", "GPP") == []
 
 
 # ---------------------------------------------------------------------------

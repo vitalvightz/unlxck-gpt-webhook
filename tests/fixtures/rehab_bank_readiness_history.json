@@ -1,0 +1,31 @@
+{
+  "purpose": "Exact label-only repair history for dated audit tests. Not a runtime publication or clinical approval list.",
+  "source_commit": "7f4ef5d8fa577e36791ad67b5723d6baffa22eb4",
+  "drills": {
+    "wrist_sprain_wrist_stability_drill_with_dynamometer": {
+      "after_sha256": "89a5e9340d1586990bd83003758df013bb381dec65fc71fb1059919b1bf14f47",
+      "restore": {
+        "name": "Wrist Stability Drill with Dynamometer"
+      },
+      "remove": []
+    }
+  },
+  "reviews": {
+    "wrist_sprain_wrist_stability_drill_with_dynamometer": {
+      "after_sha256": "0487e01b6c1f6a016f269153927e2c696c63cd35674db974ed8392906d2d4d00",
+      "restore": {
+        "name": "Wrist Stability Drill with Dynamometer",
+        "source_hash": "00991efec71abd819a2d6556c756b853ffd3e4810898ea64e6660d8a25d30709",
+        "source_history": [
+          {
+            "source_hash": "90797a4c97a62fe4801361788957b66bf770b92ce15971b8e94eca558a58eb4b",
+            "name": "Wrist Stability Drill with Dynamometer",
+            "notes": "SPP: Test joint under load → TAPER: Maintain refined control"
+          }
+        ]
+      },
+      "remove": []
+    }
+  },
+  "profiles": {}
+}

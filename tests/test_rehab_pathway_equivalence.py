@@ -55,7 +55,8 @@ def composed():
     from tools.rehab_metadata_review_lib import before_achilles_load_activation
     raw = json.loads((LEGACY_PATH.parents[2] / "data/rehab_pathways.json").read_text(encoding="utf-8"))
     catalog = PathwayCatalog.model_validate(before_achilles_load_activation(raw))
-    return tuple(compose_policy(catalog, p) for p in catalog.profiles if p["policy_id"] in REGIONS)
+    return tuple(compose_policy(catalog, p, bank=get_rehab_bank())
+                 for p in catalog.profiles if p["policy_id"] in REGIONS)
 
 
 def strip(decision):

@@ -291,7 +291,8 @@ def resolve_injury_policy(
                 result["reason_codes"] = ["reviewed_selection_policy_mismatch"]
                 return result
             reviewed_work = (evaluation, option, selection)
-        selected_dose = prescription.camp_doses.get(phase.upper(), prescription.dose)
+        # Fight-camp periodisation cannot change an injury's approved dose.
+        selected_dose = prescription.dose
         dose = (selection.dose.model_dump(exclude_none=True) if reviewed_work else
                 selected_dose.model_dump(exclude_none=True) if selected_dose else {})
         readiness_dose = prescription.readiness_doses.get(readiness_decision)

@@ -249,6 +249,22 @@ def _bank_drill(drill_id, name, stage):
     }
 
 
+def _published_test_option(episode, location, phase):
+    """Stub published decisions at this unit boundary; Today tests use real policies."""
+    if not episode.get("rehab_stage"):
+        return None
+    bank = rehab_protocols.get_rehab_bank()
+    candidates = [d for g in bank if g["type"] == episode["injury_type"]
+                  for d in g["drills"] if d.get("rehab_stage")]
+    selected = select_rehab_candidate(
+        injury={**episode, "id": episode["injury_id"], "body_region": location},
+        rehab_stage=episode["rehab_stage"], candidates=candidates,
+        exposures=episode.get("rehab_exposures") or (), available_equipment=None,
+    )
+    drill = next((d for d in candidates if d["id"] == selected.selected_drill_id), None)
+    return {"decision": {}, "line": (drill["name"], drill["notes"]) if drill else None, "drill": drill}
+
+
 def _negative_exposure(injury_id, episode_id, drill_id):
     return {
         # The storage envelope carries athlete ownership; the selector fails
@@ -300,7 +316,7 @@ def test_two_same_location_episodes_select_without_cross_contamination(monkeypat
             ],
         },
     ]
-    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
+    monkeypatch.setattr(rehab_protocols, "_reviewed_episode_option", _published_test_option)
     monkeypatch.setattr(rehab_protocols, "get_rehab_bank", lambda: bank)
 
     sprain = _ankle_entry(
@@ -327,6 +343,13 @@ def test_two_same_location_episodes_select_without_cross_contamination(monkeypat
     assert "Sprain Load Heavy" not in block
     assert "Tendon Load Heavy" not in block
 
+    sparring, _ = rehab_protocols.generate_rehab_protocols(
+        injury_string="left ankle pain", exercise_data=[], current_phase="GPP",
+        parsed_entries=[sprain, tendon], day_type="sparring",
+    )
+    assert block.count("  \u2022 ") == 2
+    assert sparring.count("  \u2022 ") == 1
+
 
 # --------------------------------------------------------------------------- #
 # Mixed staged / unresolved at one location — the unresolved must survive
@@ -348,8 +371,7 @@ def _mixed_bank():
             "location": "ankle",
             "type": "tendinopathy",
             "phase_progression": "GPP",
-            # Unmigrated (stage-less) bank content — the legacy fallback renders
-            # it regardless of stage.
+            # Unclassified content has no published prescription.
             "drills": [_bank_drill("tendon_legacy", "Tendinopathy Legacy Drill", None)],
         },
         {
@@ -361,14 +383,9 @@ def _mixed_bank():
     ]
 
 
-def test_mixed_staged_and_unresolved_keeps_both(monkeypatch):
-    """A RESTORE sprain beside an unresolved tendinopathy at the same location.
-
-    The staged injury goes through the stage-aware selector; the unresolved one
-    keeps its legacy behaviour. Neither is dropped, and the unresolved injury is
-    never coerced into the staged injury's RESTORE stage.
-    """
-    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
+def test_published_staged_episode_survives_an_unresolved_neighbour(monkeypatch):
+    """Only the published decision renders; unresolved content stays unprescribed."""
+    monkeypatch.setattr(rehab_protocols, "_reviewed_episode_option", _published_test_option)
     monkeypatch.setattr(rehab_protocols, "get_rehab_bank", _mixed_bank)
     sprain = _ankle_entry("inj-sprain", "ep-sprain", "sprain", STAGE_RESTORE)
     tendon = _ankle_entry("inj-tendon", "ep-tendon", "tendinopathy", None)
@@ -381,18 +398,13 @@ def test_mixed_staged_and_unresolved_keeps_both(monkeypatch):
     )
 
     assert "Sprain Restore Drill" in block  # sprain, stage-aware
-    assert "Tendinopathy Legacy Drill" in block  # unresolved, legacy — not dropped
+    assert "Tendinopathy Legacy Drill" not in block  # unresolved and unpublished
     assert "Sprain Load Drill" not in block  # RESTORE never gets LOAD
 
 
-def test_reverse_mixed_unresolved_and_calm_keeps_both(monkeypatch):
-    """The mirror: an unresolved sprain beside a CALM tendinopathy.
-
-    CALM is programmed stage-aware (and cannot receive LOAD); the unresolved
-    sprain falls back to legacy independently and is not forced into CALM.
-    Parsed order must not change this.
-    """
-    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
+def test_unpublished_episodes_cannot_borrow_a_neighbours_stage(monkeypatch):
+    """Neither episode can borrow stage or publication from its neighbour."""
+    monkeypatch.setattr(rehab_protocols, "_reviewed_episode_option", _published_test_option)
     monkeypatch.setattr(rehab_protocols, "get_rehab_bank", _mixed_bank)
     sprain = _ankle_entry("inj-sprain", "ep-sprain", "sprain", None)
     tendon = _ankle_entry("inj-tendon", "ep-tendon", "tendinopathy", STAGE_CALM)
@@ -404,19 +416,14 @@ def test_reverse_mixed_unresolved_and_calm_keeps_both(monkeypatch):
             current_phase="GPP",
             parsed_entries=parsed,
         )
-        assert "Sprain Restore Drill" in block  # unresolved sprain, legacy
-        assert "Tendinopathy Legacy Drill" in block  # CALM tendinopathy, stage-aware
+        assert "Sprain Restore Drill" not in block  # no published decision for unresolved sprain
+        assert "Tendinopathy Legacy Drill" not in block  # unclassified, even with a CALM label
         assert "Sprain Load Drill" not in block
 
 
-def test_many_unresolved_and_one_staged_none_starved(monkeypatch):
-    """One RESTORE sprain plus two unresolved injuries at one location.
-
-    Every episode is programmed independently and the fair round-robin keeps at
-    least one drill from each within the volume ceiling — no injury disappears
-    merely because another has a stage.
-    """
-    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
+def test_unresolved_episodes_cannot_displace_published_work(monkeypatch):
+    """Unsupported content never takes the published episode's allocation."""
+    monkeypatch.setattr(rehab_protocols, "_reviewed_episode_option", _published_test_option)
     monkeypatch.setattr(rehab_protocols, "get_rehab_bank", _mixed_bank)
     monkeypatch.setattr(rehab_protocols, "_DEFAULT_DRILL_LIMIT", 3)
     sprain = _ankle_entry("inj-sprain", "ep-sprain", "sprain", STAGE_RESTORE)
@@ -431,13 +438,13 @@ def test_many_unresolved_and_one_staged_none_starved(monkeypatch):
     )
 
     assert "Sprain Restore Drill" in block
-    assert "Tendinopathy Legacy Drill" in block
-    assert "Strain Legacy Drill" in block
+    assert "Tendinopathy Legacy Drill" not in block
+    assert "Strain Legacy Drill" not in block
     assert "Sprain Load Drill" not in block
 
 
-def test_fully_unresolved_still_renders_legacy(monkeypatch):
-    """No injury has a resolved stage: the legacy rehab still renders."""
+def test_fully_unresolved_cannot_render_unpublished_legacy(monkeypatch):
+    """Missing evidence cannot turn unclassified bank content into a prescription."""
     monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
     monkeypatch.setattr(rehab_protocols, "get_rehab_bank", _mixed_bank)
     tendon = _ankle_entry("inj-tendon", "ep-tendon", "tendinopathy", None)
@@ -448,7 +455,7 @@ def test_fully_unresolved_still_renders_legacy(monkeypatch):
         current_phase="GPP",
         parsed_entries=[tendon],
     )
-    assert "Tendinopathy Legacy Drill" in block
+    assert "Tendinopathy Legacy Drill" not in block
 
 
 # --------------------------------------------------------------------------- #

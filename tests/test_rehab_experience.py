@@ -21,8 +21,8 @@ HEADERS = {"Authorization": "Bearer athlete-token"}
 CHEST = ("chest_strain", "Chest", "strain", "", "mild")
 
 
-def consumer(monkeypatch, pilot):
-    journey = Journey(monkeypatch, pilot)
+def consumer(monkeypatch, pilot, **journey_options):
+    journey = Journey(monkeypatch, pilot, **journey_options)
     user = AuthenticatedUser(user_id=journey.athlete, email="fixture@example.com", full_name="Test athlete", metadata={})
     journey.store.ensure_profile(user)
     grant_default_compliance(journey.store, journey.athlete)

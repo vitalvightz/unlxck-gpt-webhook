@@ -171,6 +171,8 @@ class PathwayCatalog(BaseModel):
     profiles: list[dict]
     # Rollout scope, not exercise approvals. Complete bank records supply options
     # for these profiles through the same prescription contract as legacy data.
+    # Historical rollout metadata. Complete compatible prescriptions now use
+    # the same publication checks for every active profile.
     bank_publication_profiles: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
