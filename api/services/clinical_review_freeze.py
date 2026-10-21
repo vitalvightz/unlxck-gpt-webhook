@@ -72,6 +72,11 @@ def frozen_review_hold(store, athlete_id, snapshot, *, work_state, as_of=None, r
                 if option is None:
                     return True
                 if work_state == "unstarted":
+                    # Advice for an episode must not be rebound to a different
+                    # side when saved work is revalidated. Legacy unstarted
+                    # loading snapshots without this identity need a refresh.
+                    if block.get("injury_side") != current.get("side") or current.get("side") not in {"left", "right"}:
+                        return True
                     if block.get("policy_id") in {"ankle_sprain", "shoulder_tendonitis"}:
                         from api.contracts.ankle_restore_load import seated_ankle_multi_injury_hold
                         active_injuries = store.list_injury_flags(athlete_id,
@@ -93,18 +98,17 @@ def frozen_review_hold(store, athlete_id, snapshot, *, work_state, as_of=None, r
                     intake = intake.get("intake") or intake
                     if not set(block.get("drill_snapshot", {}).get("equipment") or []) <= set(intake.get("equipment_access") or []):
                         return True
-                    if block.get("policy_id") in {"elbow_tendonitis", "ankle_sprain", "shoulder_tendonitis"}:
-                        from api.contracts.injury_policy import resolve_injury_policy
-                        from fightcamp.rehab_protocols import get_rehab_bank
-                        decision = resolve_injury_policy(current,
-                            policies=policies if policies is not None else load_clinical_policies(),
-                            bank=bank if bank is not None else get_rehab_bank(),
-                            equipment=intake.get("equipment_access") or [],
-                            exposures=exposure_rows_with_observations(window.rows, observations),
-                            history_truncated=window.history_truncated, as_of=now)
-                        if (decision.get("stage") != "load" or
-                                (decision.get("prescription") or {}).get("drill_id") != option.drill_id):
-                            return True
+                    from api.contracts.injury_policy import resolve_injury_policy
+                    from fightcamp.rehab_protocols import get_rehab_bank
+                    decision = resolve_injury_policy(current,
+                        policies=policies if policies is not None else load_clinical_policies(),
+                        bank=bank if bank is not None else get_rehab_bank(),
+                        equipment=intake.get("equipment_access") or [],
+                        exposures=exposure_rows_with_observations(window.rows, observations),
+                        history_truncated=window.history_truncated, as_of=now)
+                    if (decision.get("stage") != "load" or
+                            (decision.get("prescription") or {}).get("drill_id") != option.drill_id):
+                        return True
                 policy = next(p for p in (policies if policies is not None else load_clinical_policies())
                               if p.policy_id == block.get("policy_id"))
                 prescription = next(p for p in policy.prescriptions if p.drill_id == block.get("rehab_drill_id"))

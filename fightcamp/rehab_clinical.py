@@ -145,6 +145,11 @@ class ClinicalPolicy(BaseModel):
         if higher and list(self.live_stages) != list(REHAB_STAGES[:len(self.live_stages)]):
             raise ValueError("a live higher stage needs every lower stage live, in ladder order")
         by_target = {t.to_stage: t for t in self.transitions}
+        for transition in self.transitions:
+            if transition.entry_mode == "reported_clinician_starter":
+                targets = [p for p in self.prescriptions if p.stage == transition.to_stage]
+                if not targets or any(p.required_rehabilitation_level != "loading" for p in targets):
+                    raise ValueError("reported clinician entry requires explicitly permission-bound target prescriptions")
         for stage in higher:
             # A higher stage is reachable only through reviewed, sourced criteria
             # and only when reviewed content exists for it.

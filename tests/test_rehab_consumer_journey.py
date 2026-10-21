@@ -24,7 +24,7 @@ PILOTS = [
 
 
 class Journey:
-    def __init__(self, monkeypatch, pilot):
+    def __init__(self, monkeypatch, pilot, *, initial_status="improving", edit_subtype=True):
         self.now = datetime(2026, 10, 5, 12, tzinfo=timezone.utc)
         monkeypatch.setattr("tests.support._now", lambda: self.now.isoformat())
         self.store, self.athlete, self.plan = FakeStore(), str(uuid4()), str(uuid4())
@@ -40,9 +40,11 @@ class Journey:
         self.store.set_active_plan_id(self.athlete, self.plan)
         self.ready()
         # Creation, then the existing Edit injury declaration carries subtype.
-        self.report("improving", body_area=pilot[1], description=pilot[2], severity=pilot[4])
+        self.report(initial_status, body_area=pilot[1],
+            description=pilot[2] if edit_subtype else f"{pilot[2]} [{pilot[3]}]", severity=pilot[4])
         self.injury = self.store.injury_flags[self.athlete][0]
-        self.report("improving", description=f"{pilot[2]} [{pilot[3]}]")
+        if edit_subtype:
+            self.report(initial_status, description=f"{pilot[2]} [{pilot[3]}]")
         self.permission("loading")
 
     def ready(self):
@@ -144,6 +146,7 @@ class Journey:
 @pytest.mark.parametrize("pilot", PILOTS, ids=lambda p: p[0])
 def test_complete_better_then_next_day_same_in_existing_injury_flow(monkeypatch, pilot):
     j = Journey(monkeypatch, pilot)
+    j.permission("gentle_recovery")  # observe baseline work before loading advice
     j.complete()
     late_rows = deepcopy(list(j.store.rehab_exposures.values()))
     for row in late_rows:
@@ -151,6 +154,7 @@ def test_complete_better_then_next_day_same_in_existing_injury_flow(monkeypatch,
     j.advance()
     assert j.decision()["stage"] == "restore"
     j.report("ongoing")
+    j.permission("loading")
     decision = j.decision()
     assert decision["stage"] == "load", decision["progression"]
     transition = j.transition()
@@ -196,6 +200,7 @@ def test_repeated_actual_work_then_followup_reaches_visible_load(monkeypatch, pi
 @pytest.mark.parametrize("pilot", PILOTS, ids=lambda p: p[0])
 def test_setback_requires_improvement_then_new_successful_restore(monkeypatch, pilot):
     j = Journey(monkeypatch, pilot)
+    j.permission("gentle_recovery")
     j.complete("ongoing")
     j.advance()
     j.followup("worse")
@@ -249,9 +254,6 @@ def test_new_reviewed_session_does_not_borrow_previous_delayed_answer(monkeypatc
 @pytest.mark.parametrize("pilot", PILOTS, ids=lambda p: p[0])
 def test_load_completion_has_defined_dose_and_still_needs_next_day_answer(monkeypatch, pilot):
     j = Journey(monkeypatch, pilot)
-    j.complete()
-    j.advance()
-    j.report("ongoing")
     assert j.decision()["stage"] == "load"
     events = j.complete()
     prescribed = next(p for p in j.policy.prescriptions if p.stage == "load")
@@ -261,8 +263,7 @@ def test_load_completion_has_defined_dose_and_still_needs_next_day_answer(monkey
     assert events[0].dose_completed.reps == prescribed.dose.reps
     j.advance()
     before = j.decision()
-    assert before["stage"] == "load"
-    assert before["schedule"]["state"] == "held"  # Better has not supplied the delayed answer
+    assert before["stage"] != "load"  # Better has not supplied the delayed answer
     j.report("ongoing")
     assert j.decision()["schedule"]["state"] == "due"
     assert j.view().live_prescription["session"]["blocks"][0]["rehab_drill_id"] == prescribed.drill_id

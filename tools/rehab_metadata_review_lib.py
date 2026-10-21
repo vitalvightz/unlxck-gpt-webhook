@@ -50,6 +50,18 @@ def pathway_inventory_snapshot(pathways):
     return snapshot
 
 
+def before_reported_permission_entry(pathways):
+    """Exact dated-policy reconstruction; current runtime/audits never use it."""
+    from fightcamp.rehab_clinical import content_hash
+    revision = json.loads((REPO_ROOT / 'tools/rehab_permission_entry_revision.json').read_text(encoding='utf-8'))
+    snapshot = deepcopy(pathways)
+    for index, profile in enumerate(snapshot['profiles']):
+        identity = profile['policy_id']
+        if content_hash(profile) == revision['current_profile_sha256'].get(identity):
+            snapshot['profiles'][index] = deepcopy(revision['previous_profiles'][identity])
+    return snapshot
+
+
 def before_achilles_load_activation(pathways, *, preserve_achilles=False):
     """Exact approved activation delta only; preserve dated archive/planning inputs.
 
@@ -58,7 +70,7 @@ def before_achilles_load_activation(pathways, *, preserve_achilles=False):
     """
     from fightcamp.rehab_clinical import content_hash
     manifest = json.loads((REPO_ROOT / 'tools/rehab_achilles_activation_inventory_baseline.json').read_text(encoding='utf-8'))
-    snapshot = deepcopy(pathways)
+    snapshot = before_reported_permission_entry(pathways)
     checkpoint = manifest['activated_checkpoint']
     for index, profile in enumerate(snapshot['profiles']):
         if (not preserve_achilles and profile['policy_id'] == manifest['historical_profile']['policy_id']

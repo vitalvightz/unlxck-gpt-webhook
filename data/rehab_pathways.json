@@ -257,7 +257,7 @@
     },
     {
       "policy_id": "ankle_sprain",
-      "version": 5,
+      "version": 6,
       "pathway_family": "ligament_sprain_or_instability",
       "region": "ankle",
       "injury_type": "sprain",
@@ -272,7 +272,7 @@
         "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain",
         "https://pmc.ncbi.nlm.nih.gov/articles/PMC8824326/"
       ],
-      "content_hash": "fc5631c73f0305a700e555b2e5609a696c4fac376a4ad7f34f1a2dda30f9c9b1",
+      "content_hash": "8fb109c9f1b343e98385378e56ec5e070fda72a5e7aa12e4e86f66aaa8fe2365",
       "prescriptions": [
         {
           "drill_id": "ankle_sprain_gentle_movement",
@@ -407,7 +407,9 @@
                 "https://pmc.ncbi.nlm.nih.gov/articles/PMC8824326/"
               ]
             }
-          ]
+          ],
+          "entry_mode": "reported_clinician_starter",
+          "setback_resolution": "improvement_then_reviewed_restore"
         }
       }
     },
@@ -1596,7 +1598,7 @@
     },
     {
       "policy_id": "achilles_tendonitis",
-      "version": 2,
+      "version": 3,
       "region": "achilles",
       "injury_type": "tendonitis",
       "pathway_family": "tendon_rehab",
@@ -1717,16 +1719,18 @@
                 "https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/"
               ]
             }
-          ]
+          ],
+          "entry_mode": "reported_clinician_starter",
+          "setback_resolution": "improvement_then_reviewed_restore"
         }
       },
       "status": "active",
       "activation": "live",
-      "content_hash": "5ff715a474424088cf1549c6b38cc3f1fa51b25b7da118ec1ca767f330d55a1a"
+      "content_hash": "f81e4ad0b6e3c5cce7d1f1c3f2db16c5b2e79a6d5811d593d9c2e1568489f116"
     },
     {
       "policy_id": "shoulder_tendonitis",
-      "version": 2,
+      "version": 3,
       "region": "shoulder",
       "injury_type": "tendonitis",
       "pathway_family": "tendon_rehab",
@@ -1836,12 +1840,14 @@
                 "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
               ]
             }
-          ]
+          ],
+          "entry_mode": "reported_clinician_starter",
+          "setback_resolution": "improvement_then_reviewed_restore"
         }
       },
       "status": "active",
       "activation": "live",
-      "content_hash": "b94351e90298cb93cd2f1720901603b6fdb60eb070c9e6cca42723a1c9cd7675"
+      "content_hash": "798c553ce5d9bb1b795fdb54132a940929a27c34c9498a700922c3f748fd4b10"
     },
     {
       "policy_id": "biceps_tendonitis",
@@ -1998,7 +2004,7 @@
     },
     {
       "policy_id": "elbow_tendonitis",
-      "version": 3,
+      "version": 4,
       "region": "elbow",
       "injury_type": "tendonitis",
       "pathway_family": "tendon_rehab",
@@ -2114,12 +2120,14 @@
                 "https://pmc.ncbi.nlm.nih.gov/articles/PMC8432114/"
               ]
             }
-          ]
+          ],
+          "entry_mode": "reported_clinician_starter",
+          "setback_resolution": "improvement_then_reviewed_restore"
         }
       },
       "status": "active",
       "activation": "live",
-      "content_hash": "76ddc4dcf6375467549933670e7268829a2496a34a7e7e503fece71f456b0ff5"
+      "content_hash": "1f7c5e47c4c3b45bf65aff1d05f3ea0fc52923aa5e9ed6862f1765b40d8ae017"
     },
     {
       "policy_id": "wrist_tendonitis",

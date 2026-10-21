@@ -1,6 +1,6 @@
 # RESTORE → LOAD investigation
 
-Base: latest Main at task start, `7161c7f5`. No stage or exercise activation changes.
+Base: latest Main at task start, `7161c7f5`. No stage or exercise activation changes. The permission-entry revision changes first-entry evidence prerequisites for four existing starters and versions those policies.
 
 ## Reproduction and findings
 
@@ -13,7 +13,7 @@ Base: latest Main at task start, `7161c7f5`. No stage or exercise activation cha
 | Uncomplicated lateral ankle sprain | `[ankle_scope:uncomplicated_lateral]`; rehabilitation loading permission | mild only | chair | `ankle_sprain_seated_bilateral_heel_raise`: seated, no added resistance, 1 × 10, once daily |
 | Rotator cuff-related shoulder tendonitis | `[shoulder_scope:nontraumatic_cuff]`; rehabilitation loading permission | mild/moderate | wall | `shoulder_tendonitis_wall_push_up`: comfortable wall variant, bodyweight, 1 × 8, once daily |
 
-All four also require the exact athlete, injury, episode, region and known side; complete history; no unresolved setback; completed reviewed RESTORE work with known demand and matching policy/bank provenance; coherent responses for the latest performed RESTORE response group; explicit Better/Same during and next day; a live, compatible approved target; and no medical/restriction/whole-athlete loading hold. Their existing subtype exclusions and exercise-specific second-injury vetoes remain authoritative. Training/contact clearance cannot supply rehabilitation loading permission.
+All four require the exact athlete, injury, episode, region and known side; complete history; current reported rehabilitation loading advice; no unresolved setback; a compatible approved target; and no medical/restriction/whole-athlete loading hold. With no prior work or known concern, the reported-clinician starter route does not require RESTORE logs. If prior work exists, its latest response group must have coherent Better/Same during and next day. Recovery after a setback still requires newly completed reviewed RESTORE work and its own successful responses. Their existing subtype exclusions and exercise-specific second-injury vetoes remain authoritative. Training/contact clearance cannot supply rehabilitation loading permission.
 
 The clean **Better → next-day Same** journey is reachable on Main when the current flag still says improving, all response events arrive, and equipment is correctly attached. The new replay exposed these genuine failures:
 
@@ -25,6 +25,19 @@ The clean **Better → next-day Same** journey is reachable on Main when the cur
 
 Drill, bank, policy, injury/episode and response-group identities match the normal frozen-completion pipeline. Completion timing did require correction: ingestion time could discard a real post-work response or misdate earlier work as post-setback recovery. The stored completion timestamp now supplies that chronology, with exact legacy retry compatibility described below. Numeric LOAD doses are quantified only by Completed as shown against the accepted prescription. Current RESTORE work is intentionally self-paced: it produces `performed_amount_unknown`, with no invented numeric dose. The four declared exposure requirements explicitly allow that observation. Existing defined-dose, stale-bank, unsupported-work, partial-completion and historical-shape protections remain in place.
 
+
+## Reported-clinician starter entry
+
+The user explicitly selected reported clinician advice as the authority, rather than athlete-declared readiness. Four existing source-bound permission criteria already describe applicability of bounded starters; the revised product policy removes mandatory app-recorded RESTORE history for first entry. No universal three-day/session counter is added. No clinical functional checkpoint, subtype, dose, resistance or equipment limit is removed. Policy versions/hashes change intentionally; regenerating an integrity hash is not clinician sign-off.
+
+`entry_mode` defaults to `observed_rehab`; `reported_clinician_starter` is an explicit regional override requiring an open sourced RESTORE → LOAD transition and permission-bound target prescriptions. The shared evaluator checks every clinical/safety gate. Unneeded historical completion checks and responses to nonexistent work return `not_applicable`, never a fabricated pass. Any actual prior response must be resolved; malformed owned exposure data holds conservatively. The existing permission event supplies `authority_event_id`, separate from exercise evidence IDs.
+
+Any recorded setback disables the first-entry exception, including an injury-only Worse followed by Same and renewed advice. Existing chronological recovery evidence is still mandatory. Older advice remains valid when otherwise current; advice predating a setback, future-dated advice, withdrawal, wrong episode or missing advice cannot open a starter. Training/contact scope cannot substitute. Sport-specific permission permits at most the existing LOAD starter; no DYNAMIC/RETURN content is published.
+
+Saved unstarted permission-bound loading work now carries its injury side explicitly. A side change or a legacy loading snapshot without that identity requires refresh. Started/completed snapshots stay unchanged. All four pilots use the same full engine decision for unstarted-work revalidation; Achilles is no longer omitted from that check.
+
+`tools/rehab_permission_entry_revision.json` retains the exact previous profiles and current profile hashes. Historical audit projections reverse only the exact declared revision; drift in any clinical prescription or another profile still fails validation. Current runtime selection and the reachability report use the actual new policies.
+
 ## Latest-exposure rule
 
 A new performed reviewed RESTORE response group with an unanswered next-day response **still holds advancement**. An older successful group is retained but cannot answer for the newer work. New partial/invalid/wrong-owner observations cannot certify tolerance or replace valid completed evidence; their adverse signals remain subject to exact attribution and safety checks.
@@ -35,7 +48,7 @@ Prompts remain limited to the following training day. An old missed answer is ne
 
 ## Historical setback resolution
 
-Scope: only the four existing reported-permission pilot versions (Achilles 2, elbow 3, ankle 5, shoulder 2), only RESTORE → LOAD. Future policy versions must review this rule explicitly. This is a bounded re-entry/data-safety rule, not a claim of healed tissue, measured capacity, medical clearance or sport readiness.
+Scope: only transitions explicitly declaring `setback_resolution: improvement_then_reviewed_restore`, currently the four existing RESTORE → LOAD pilots (Achilles 3, elbow 4, ankle 6, shoulder 3). The rule is part of the hashed policy configuration, not a code allowlist. Other policies default to a hold. This is a bounded re-entry/data-safety rule, not a claim of healed tissue, measured capacity, medical clearance or sport readiness.
 
 The existing source guidance already supports symptom-guided reduction/reintroduction and controlled strengthening: [Achilles CPG](https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf), [Dutch Achilles guideline](https://bjsm.bmj.com/content/55/20/1125), [lateral elbow CPG](https://www.jospt.org/doi/10.2519/jospt.2022.0302), [ankle CPG](https://www.jospt.org/doi/10.2519/jospt.2021.0302), [OUH ankle guidance](https://www.ouh.nhs.uk/media/i0ldiecy/116454sprain.pdf), and [rotator cuff CPG](https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf). These are the already-reviewed pilot sources; they do **not** define a universal categorical recovery threshold. The additional conjunction below is a conservative product rule within those existing bounded prescriptions, not a new clinical authorisation.
 
@@ -56,7 +69,7 @@ The dated advanced-candidate audit retains its inventory, clinical judgments and
 
 ## Athlete journey proof
 
-All four pilots run this flow: **RESTORE → Completed as shown → Better → next-day Same in the existing injury response → all RESTORE → LOAD requirements pass → exact reviewed LOAD exercise displayed.** Same is stored as an explicit injury event and an exposure-addressed delayed answer; it is not inferred from silence. No manual stage edit or clinical assessment event is required.
+The primary permission-entry journey is **supported injury and side → applicable clinician-described scope → report rehabilitation loading advice → no known safety concern → exact approved LOAD starter displayed**, with no invented completion or response. A fresh CALM baseline is eligible through the same declarative entry evaluation; this is permission to start, not evidence that CALM/RESTORE were completed. The observed-work journey remains tested with gentle advice during RESTORE: **Completed as shown → Better → next-day Same → reported loading advice → exact reviewed LOAD exercise displayed.** Same is stored as an explicit injury event and an exposure-addressed delayed answer; it is not inferred from silence. No manual stage edit or clinical assessment event is required.
 
 Repeated-completion tests retain gentle-recovery advice while continuing prescribed baseline work and following up through the existing flow, then report actual loading advice. This isolates evidence retention from permission and confirms that repetition neither fabricates readiness nor destroys valid evidence. Separate cases establish the single actual RESTORE completion journey, historical worsening re-entry and generation agreement.
 

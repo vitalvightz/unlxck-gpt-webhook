@@ -32,6 +32,9 @@ const REASONS: Record<string, string> = {
   current_report_worse: "Your latest injury response was worse. Follow the current conservative guidance.",
   unresolved_historical_negative_response: "A previous worsening response is still holding progression.",
   unresolved_injury_checkin_setback: "A recent injury worsening report is still holding loading. Continue your current rehab and follow clinician advice.",
+  incomplete_prior_rehab_evidence: "Your previous rehab record is incomplete. Loading stays on hold while its evidence is unresolved.",
+  prior_restore_not_required_for_reported_permission: "Prior RESTORE logs are not required for this starter when you report clinician loading permission.",
+  no_prior_rehab_response_to_resolve: "You have no previous rehab response to resolve. No favourable response has been assumed.",
   history_truncated: "Your full rehab history is unavailable. Progression stays on hold.",
   reviewed_target_content_unavailable: "No approved next-stage exercise matches your current injury and equipment.",
   target_equipment_unavailable: "The approved exercise needs equipment you have not reported. Update your equipment access if you have that setup; otherwise continue your current rehab.",
@@ -78,6 +81,8 @@ export function RehabProgressStatus({ decision, statusLine }: {
   const content = <>
     <span className="injury-progress-main">
       {title ? <span className="injury-progress-title">{title}</span> : null}
+      {decision.progression?.entry_basis === "reported_clinician_permission"
+        ? <span className="injury-progress-status">Loading permitted based on clinician advice you reported.</span> : null}
       {statusLine ? <span className="injury-progress-status">{statusLine}</span> : null}
     </span>
     {next ? <InjuryChevron /> : null}
@@ -97,7 +102,7 @@ export function RehabProgressStatus({ decision, statusLine }: {
             previous.status !== "pass" && REASONS[previous.reason_code] === REASONS[item.reason_code])
         ).map(item => <li key={item.requirement_id}>
           <div><strong>{REQUIREMENTS[item.kind] ?? "Progression check"}</strong>
-            <span>{item.status === "pass" ? "Complete" : item.status === "fail" ? "On hold" : "Not yet confirmed"}</span></div>
+            <span>{item.status === "pass" ? "Complete" : item.status === "not_applicable" ? "Not required for this entry" : item.status === "fail" ? "On hold" : "Not yet confirmed"}</span></div>
           {item.status !== "pass" ? <p>{REASONS[item.reason_code] ?? "This check is not yet satisfied. Continue the current injury guidance."}</p> : null}
         </li>)}</ul> : null}
         {(next.reason_codes ?? []).filter(code => !(next.requirements ?? []).some(item => item.reason_code === code)).map(code =>

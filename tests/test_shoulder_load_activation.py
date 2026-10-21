@@ -140,12 +140,15 @@ def test_severity_is_not_inferred_from_subtype(severity):
 
 
 @pytest.mark.parametrize("field", ["athlete_id", "injury_id", "injury_episode_id", "side"])
-def test_wrong_exposure_ownership_never_qualifies(field):
+def test_wrong_exposure_ownership_is_excluded_from_permission_entry(field):
     b = bundle()
     for row in b[0].rehab_exposures.values():
         row[field] = "right" if field == "side" else str(uuid4())
         row["event_json"][field] = row[field]
-    assert view(b).open_injuries[0]["rehab_decision"]["stage"] != "load"
+    decision = view(b).open_injuries[0]["rehab_decision"]
+    assert decision["stage"] == "load"
+    assert decision["progression"]["entry_basis"] == "reported_clinician_permission"
+    assert decision["progression"]["evidence_ids"] == []  # foreign work never certifies tolerance
 
 
 @pytest.mark.parametrize("field,value", [("during_response", "not_reported"), ("next_day_response", "not_reported"),
@@ -157,10 +160,10 @@ def test_missing_or_worsening_response_cannot_pass(field, value):
     assert view(b).open_injuries[0]["rehab_decision"]["stage"] != "load"
 
 
-def test_single_better_permission_or_elapsed_time_is_insufficient():
+def test_reported_permission_allows_starter_without_prior_work():
     b = bundle()
     b[0].rehab_exposures.clear()
-    assert view(b).open_injuries[0]["rehab_decision"]["stage"] == "restore"
+    assert view(b).open_injuries[0]["rehab_decision"]["stage"] == "load"
 
 
 @pytest.mark.parametrize("mutation", ["permission", "episode", "worse", "medical", "restriction", "equipment", "setback", "response", "history", "scope"])
@@ -199,6 +202,8 @@ def test_other_profiles_and_shoulder_baselines_unchanged():
     import json
     from fightcamp.rehab_clinical import content_hash
     current = json.loads(open("data/rehab_pathways.json", encoding="utf-8").read())
+    from tools.rehab_metadata_review_lib import before_reported_permission_entry
+    current = before_reported_permission_entry(current)
     manifest = json.loads(open("tools/rehab_shoulder_activation_inventory_baseline.json", encoding="utf-8").read())
     assert {p["policy_id"]: content_hash(p) for p in current["profiles"] if p["policy_id"] != "shoulder_tendonitis"} == manifest["unchanged_profiles_sha256"]
     bank = json.loads(open("data/rehab_bank.json", encoding="utf-8").read())
@@ -246,6 +251,7 @@ def test_real_restore_completion_and_existing_checkins_supply_consumer_progressi
     from api.services.rehab_completion_service import build_rehab_response_contexts, record_reported_permission_rehab
     b = bundle()
     b[0].rehab_exposures.clear()
+    report_permission(b, "gentle_recovery")
     current = view(b)
     assert current.open_injuries[0]["rehab_decision"]["stage"] == "restore"
     live = current.live_prescription
@@ -278,12 +284,17 @@ def test_real_restore_completion_and_existing_checkins_supply_consumer_progressi
             training_day=(NOW + timedelta(days=1)).date().isoformat())
         delayed["created_at"] = (NOW + timedelta(days=1)).isoformat()
         b[0].injury_episode_events[delayed["id"]] = delayed
+    advice = report_permission(b, "loading")
+    advice["created_at"] = (NOW + timedelta(days=1)).isoformat()
+    b[0].injury_episode_events[advice["id"]] = advice
     events = list(b[0].injury_episode_events.values())
     injury = apply_episode_observations(b[0].injury_flags[b[3]][0], events, as_of=NOW + timedelta(days=1))
     decision = resolve_injury_policy(injury, policies=load_clinical_policies(), bank=get_rehab_bank(),
         equipment=["wall"], exposures=exposure_rows_with_observations(list(b[0].rehab_exposures.values()), events),
         as_of=NOW + timedelta(days=1))
-    assert (decision["stage"] == "load") is eligible, decision
+    assert decision["stage"] == "load"
+    if not eligible:
+        assert decision["progression"]["entry_basis"] == "reported_clinician_permission", decision
     assert not any(e["event_type"] == "rehab_progression_assessment" for e in events)
     if eligible:
         from api.services import today_service
