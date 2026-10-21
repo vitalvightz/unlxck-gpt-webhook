@@ -22924,11 +22924,11 @@
   },
   {
     "drill_id": "neck_soreness_gentle_neck_tilts_assisted",
-    "source_hash": "3c39b497160c5330cecc33925be42d5a3c95084a556712323fbbbadf2ff325dd",
+    "source_hash": "509ba445c42208aa9c7ecddb77602da0525b1a7551609a5ac1238f28cf00c552",
     "location": "neck",
     "injury_type": "soreness",
     "name": "Seated forward neck bend",
-    "notes": "Sit upright with your shoulders relaxed. Slowly bend your head forward until you feel a gentle stretch at the back of your neck. Hold for about 5 seconds, then lift your head back to the middle. Repeat 5 times. Do not pull your head with your hand or roll your head round; if pain increases, use a smaller movement. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for arm pain, pins and needles, numbness or weakness, dizziness, or neck pain after a fall or blow to the head.",
+    "notes": "Sit upright with your shoulders relaxed. Slowly bend your head forward until you feel a gentle stretch at the back of your neck. Hold for about 5 seconds, then lift your head back to the middle. Repeat up to 10 times. Do not pull your head with your hand or roll your head round; if pain increases, do fewer and use smaller movements. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for arm pain, pins and needles, numbness or weakness, dizziness, or neck pain after a fall or blow to the head.",
     "movement_archetype": "mobility_rom",
     "proposed": {
       "rehab_stage": "restore",
@@ -23519,11 +23519,11 @@
   },
   {
     "drill_id": "neck_stiffness_gentle_neck_side_tilts_passive_stretch",
-    "source_hash": "ea054ba7131155f317fd3f91010f80f7c1071830c454a2b649bde1f74464cd7e",
+    "source_hash": "df164f7b5100619623d55e56d6b55dc52f6f8cae30acdf036dd37762797529b0",
     "location": "neck",
     "injury_type": "stiffness",
     "name": "Seated neck side tilt",
-    "notes": "Sit upright on a stable chair with your shoulders relaxed. Slowly tilt your head towards one shoulder until you feel a gentle stretch on the opposite side. Hold for about 5 seconds, return to the middle and repeat to the other side. Repeat 5 times each side. Do not pull your head with your hand or roll your head round; if pain increases, use a smaller movement. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for arm pain, pins and needles, numbness or weakness, dizziness, or neck pain after a fall or blow to the head.",
+    "notes": "Sit upright on a stable chair with your shoulders relaxed. Slowly tilt your head towards one shoulder until you feel a gentle stretch on the opposite side. Hold for about 5 seconds, return to the middle and repeat to the other side. Repeat up to 10 times each side. Do not pull your head with your hand or roll your head round; if pain increases, do fewer and use smaller movements. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for arm pain, pins and needles, numbness or weakness, dizziness, or neck pain after a fall or blow to the head.",
     "movement_archetype": "mobility_rom",
     "proposed": {
       "rehab_stage": "restore",

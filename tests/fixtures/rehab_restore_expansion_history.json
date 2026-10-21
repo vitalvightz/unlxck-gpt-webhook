@@ -363,7 +363,7 @@
       }
     },
     "neck_soreness_gentle_neck_tilts_assisted": {
-      "after_sha256": "91a6464214f8a695425b0c0067a5fdfe326ce2aa6363460c0e84e0d2f649467b",
+      "after_sha256": "e4d54f5581960b2a6a042aedbf8dd92b8f3addbef6091fe3185432a289792d76",
       "remove": [
         "compatible_injury_types",
         "prescription"
@@ -390,7 +390,7 @@
       }
     },
     "neck_stiffness_gentle_neck_side_tilts_passive_stretch": {
-      "after_sha256": "f0231264dc499132664395227128be41dc63ad12d75146e74ac0d31b9693ffcb",
+      "after_sha256": "b266d4c14f3b95697e3841b7b321d8a05a86d1d4688e821df917c73c9bdf3f2b",
       "remove": [
         "compatible_injury_types",
         "prescription"
@@ -915,7 +915,7 @@
       }
     },
     "neck_soreness_gentle_neck_tilts_assisted": {
-      "after_sha256": "7746f0e527aed513de52bc711b236955280f13a9e03f90841676e16cbc6484bc",
+      "after_sha256": "4d4b87e04805396285f21c3027c5c7914b93acb538fa4670529c5cb302f067f2",
       "remove": [
         "source_history"
       ],
@@ -944,7 +944,7 @@
       }
     },
     "neck_stiffness_gentle_neck_side_tilts_passive_stretch": {
-      "after_sha256": "2641fe6379fa2d8de92ec8cfbbe041fef8576e1b7e9a86cf4d48617b8ae8333c",
+      "after_sha256": "351d5e02fba6b4b9ef0c5b45d85ae191a7466eebc49721a93a98aa3be3aee3b7",
       "remove": [
         "source_history"
       ],

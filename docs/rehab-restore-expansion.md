@@ -24,7 +24,7 @@ same rule is used before and after.
 
 ## Published identities
 
-Each dose is the explicit number, or the lower bound of the range, in the cited
+Each dose is the explicit number, the lower bound of a range, or the "up to" figure in the cited
 leaflet. Holds are written in the instructions; only static holds carry a
 `duration_seconds` dose. Cadence is the existing product rule (one round per
 scheduled rehab session, minimum gap one day); leaflets that advise several
@@ -40,8 +40,8 @@ is selected for athletes who report that prop.
 | knee_pain | `knee_unspecified_vmo_activation_off_bench_leg_extension_hold` → Heel lift over a rolled towel | towel | 10 reps (3 s hold) | UHCW, HEY knee |
 | quads_contusion | `quads_pain_isometric_quad_flex_straight_leg` → Static quads for a bruised thigh | – | 10 × 3 s | UHCW, [AAOS contusion](https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/) |
 | quads_contusion | `quads_unspecified_sliding_leg_extensions_towel_under_foot` → Heel slide knee bend on a towel | towel | 10 reps | UHCW, AAOS |
-| neck_tightness, neck_soreness | `neck_soreness_gentle_neck_tilts_assisted` → Seated forward neck bend | – | 5 reps (5 s hold) | [NHS Fife neck pain](https://www.nhsfife.org/media/33106/neck_pain_v7.pdf) |
-| neck_tightness, neck_soreness | `neck_stiffness_gentle_neck_side_tilts_passive_stretch` → Seated neck side tilt | chair | 5 each side (5 s hold) | NHS Fife |
+| neck_tightness, neck_soreness | `neck_soreness_gentle_neck_tilts_assisted` → Seated forward neck bend | – | up to 10 (5 s hold) | [NHS Fife neck pain](https://www.nhsfife.org/media/33106/neck_pain_v7.pdf) |
+| neck_tightness, neck_soreness | `neck_stiffness_gentle_neck_side_tilts_passive_stretch` → Seated neck side tilt | chair | up to 10 each side (5 s hold) | NHS Fife |
 | shoulder_pain, _tightness, _soreness | `shoulder_unspecified_supine_shoulder_figure_8s_with_dowel` → Lying assisted arm raise | – | 5 reps | [Leeds shoulder](https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/), [Royal Berkshire](https://royalberkshire.nhs.uk/media/5scpbnrh/shoulder-active-and-assisted-exercises_oct22.pdf) |
 | shoulder_pain, _tightness, _soreness | `shoulder_swelling_pendulum_circles` → Supported shoulder pendulum swing | stable_support | 60 s | Leeds, Royal Berkshire |
 | elbow_pain, elbow_stiffness | `elbow_stiffness_active_elbow_flexion_extension_with_dowel` → Elbow bend and straighten | – | 10 reps | [ESHT elbow soft tissue (Nov 2025)](https://www.esht.nhs.uk/wp-content/uploads/2026/01/2029.pdf) |
