@@ -7,7 +7,7 @@ import { InjuryChevron, InjuryDetailSheet } from "./injury-detail-sheet";
 import { RehabProgressStatus, rehabStageLabel } from "./rehab-progress-status";
 
 const SCHEDULE_LABELS = { due: "Rehab due today", recovery_day: "Rest day", already_completed: "Done for today",
-  held: "Rehab on hold", deferred: "Rehab moved", unsupported: "No rehab yet" } as const;
+  held: "Today’s rehab on hold", deferred: "Rehab moved", unsupported: "No rehab yet" } as const;
 const ROUTINE_SCHEDULE_STATES = new Set<string>(["due", "recovery_day", "already_completed"]);
 const NEXT_DAY_FORMAT = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 

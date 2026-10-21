@@ -9,6 +9,8 @@ Baseline: merged #2980 on Main (`aac3c597`).
 - Say when clinician-permitted entry needs no prior RESTORE completion.
 - Use short, plain text. Do not repeat the summary in expanded injury controls.
 - Keep detailed checks in the existing sheet. Add no forms.
+- Keep a held daily schedule separate from stage eligibility. A missed check-in
+  shows “Today’s rehab on hold”; clinical setbacks still show a progression hold.
 
 The client now types existing `loading_hold` and progression `reason_codes`
 fields. No API payload, database, exercise bank, prescription or engine changes.
@@ -22,8 +24,9 @@ Family safety checks and injury-specific limits remain unchanged.
   in `test_live_clearance_relaxes_only_cleared_baseline_with_or_without_due_rehab`:
   mild/moderate severity, no completed rehab, training/contact scopes.
   The test expects `deferred`; Main returns `unsupported`. Left unchanged.
-- Frontend: **2,157 unit tests passed**, including 121 affected component tests.
-  All **17 browser cases passed** at 320/375/668/1280px. Production build,
+- Frontend: **2,157 unit tests passed** before the schedule-hold follow-up;
+  all **123 affected component tests passed** after it.
+  All **18 browser cases passed** at 320/375/668/1280px. Production build,
   typecheck, touched-file ESLint, Python import compilation and Ruff passed.
 - The first unit run found an accessible-label regression. Restoring the existing
   label fixed it. A local dependency-link build error was fixed by installing
@@ -50,7 +53,8 @@ to an external absolute directory for screenshots.
 
 Mobile evidence: [LOAD entry](../output/playwright/rehab-progression/permission-entry-375.png),
 [setback hold](../output/playwright/rehab-progression/worsening-hold-375.png),
-[pending response](../output/playwright/rehab-progression/pending-response-375.png).
+[pending response](../output/playwright/rehab-progression/pending-response-375.png),
+[today's schedule hold](../output/playwright/rehab-progression/readiness-schedule-hold-375.png).
 
 ## Limits
 

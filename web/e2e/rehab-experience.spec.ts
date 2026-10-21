@@ -8,9 +8,14 @@ import { isolateFromNetwork } from "./support";
 
 // Synthetic payloads exported from GET /api/today, not hand-authored eligibility.
 const cases = { chest: fixtures.chest, achilles: fixtures.achilles, ...bankFixtures, ...progressionFixtures };
-async function setup(page: Page, baseURL: string, name: keyof typeof cases, videoId?: string) {
+async function setup(page: Page, baseURL: string, name: keyof typeof cases, videoId?: string, readinessHold = false) {
   await isolateFromNetwork(page, baseURL);
   const { view, profile: sourceProfile } = structuredClone(cases[name]);
+  // Presentation regression: change today's schedule only, preserving the
+  // API-exported LOAD eligibility and entry decision.
+  if (readinessHold) Object.assign(view.open_injuries[0].rehab_decision.schedule, {
+    state: "held", reason: "Complete today's check-in and follow its training guidance.", next_due_day: null,
+  });
   const profile = { ...sourceProfile, profile: { ...sourceProfile.profile, private_trial_ack_at: "2026-10-05T12:00:00Z" } };
   const now = new Date(`${view.today.training_day}T12:05:00Z`);
   await page.clock.setFixedTime(now);
@@ -98,6 +103,23 @@ for (const [name, message] of [
     expect(errors).toEqual([]);
   });
 }
+
+test("a readiness schedule hold keeps LOAD eligibility at 375px", async ({ page, baseURL }) => {
+  await page.setViewportSize({ width: 375, height: 844 });
+  const { errors } = await setup(page, baseURL!, "permission_entry", undefined, true);
+  const summary = page.locator(".today-injury-summary-row");
+  await expect(summary).toContainText("Stage: Load");
+  await expect(summary).toContainText("LOAD follows your reported clinician advice");
+  await expect(summary).not.toContainText("Progression is on hold");
+  await summary.click();
+  await expect(page.locator(".today-injury-care")).toContainText("Today’s rehab on hold");
+  await expect(page.locator(".today-injury-care")).toContainText("Complete today's check-in");
+  await expect(page.locator(".injury-progress")).toContainText("Dynamic · Unavailable in UNLXCK");
+  await expect(page.locator(".today-injury-care")).not.toContainText("Progression · On hold");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await shot(page, "readiness-schedule-hold-375.png");
+  expect(errors).toEqual([]);
+});
 
 async function shot(page: Page, filename: string) {
   const dir = process.env.REHAB_QA_DIR;

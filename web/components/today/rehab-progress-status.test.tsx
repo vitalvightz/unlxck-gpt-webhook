@@ -121,11 +121,25 @@ test("a blocked permission entry cannot claim that LOAD is permitted", () => {
   } }), null);
 });
 
-test("a held schedule shows its actual restriction instead of successful entry copy", () => {
+test("a held schedule does not remove stage eligibility or create a progression hold", () => {
   const current = { ...decision, stage: "load" as const,
-    schedule: { state: "held" as const, reason: "This rehab conflicts with your other injury restrictions." },
+    schedule: { state: "held" as const, reason: "Complete today's check-in and follow its training guidance." },
     progression: { entry_basis: "reported_clinician_permission" as const } };
-  assert.match(rehabNextStep(current)!, /Progression is on hold.*other injury restrictions/);
+  assert.equal(rehabNextStep(current), null);
+  assert.match(rehabEntryExplanation(current)!, /LOAD follows your reported clinician advice/);
+  const html = renderToStaticMarkup(<RehabStageMeter decision={current} />);
+  assert.match(html, /Current rehab stage: Load/);
+  assert.doesNotMatch(html, /Progression is on hold|check-in/);
+  assert.match(rehabEntryExplanation({ ...current, progression: {
+    reason_codes: ["transition_met:restore->load"],
+  } })!, /You meet the checks for this LOAD exercise/);
+});
+
+test("a real safety hold still blocks progression when today's schedule is also held", () => {
+  const current = { ...decision, stage: "calm" as const, loading_hold: true,
+    schedule: { state: "held" as const, reason: "Complete today's check-in and follow its training guidance." },
+    progression: { reason_codes: ["episode_setback_loading_held"] } };
+  assert.match(rehabNextStep(current)!, /Progression is on hold.*injury got worse/);
   assert.equal(rehabEntryExplanation(current), null);
 });
 

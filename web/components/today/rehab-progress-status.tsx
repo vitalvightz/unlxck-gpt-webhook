@@ -73,7 +73,6 @@ function rehabSafetyHold(decision: RehabDecision): string | null {
       .filter(item => !["pass", "not_applicable"].includes(item.status)).map(item => item.reason_code)];
   const reason = codes.find(code => /worse|worsening|setback|negative|safety_hold|stopped|medical/.test(code) && REASONS[code]);
   if (reason) return REASONS[reason];
-  if (decision.schedule?.state === "held") return decision.schedule.reason;
   return decision.loading_hold ? "Your safety limits pause loading. Follow today’s guidance." : null;
 }
 
