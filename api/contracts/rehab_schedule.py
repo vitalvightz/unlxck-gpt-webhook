@@ -97,14 +97,17 @@ def schedule_rehab(injury, decision, *, training_day, completions=(), exposures=
                     ((r.get("event_json") or r).get("response_group_id") == group_id
                      if group_id else
                      (r.get("event_json") or r).get("occurred_at") == latest_raw.get("occurred_at"))]
-            from .rehab_progression import _instant
+            from .rehab_progression import _instant, episode_setback_at
             improved = _instant(injury.get("latest_reported_at"))
             for occurrence in latest_group:
                 raw = occurrence.get("event_json") or occurrence
                 response = raw.get("response") or {}
-                observed = _instant(occurrence.get("response_recorded_at") or occurrence.get("created_at") or raw.get("occurred_at"))
+                observed = (episode_setback_at(injury, [occurrence])
+                            or _instant(occurrence.get("response_recorded_at") or occurrence.get("created_at") or raw.get("occurred_at")))
                 explicit_later_improvement = injury.get("latest_reported_status") == "improving" and improved and observed and improved > observed
-                if not explicit_later_improvement and (response.get("during_response") not in {"better", "same"} or response.get("next_day_response") not in {"better", "same"}):
+                # Reported permission opens only a bounded LOAD option. A
+                # same-day Better cannot replace that work's next-day answer.
+                if (not explicit_later_improvement or prescription.get("required_rehabilitation_level")) and (response.get("during_response") not in {"better", "same"} or response.get("next_day_response") not in {"better", "same"}):
                     return result("held", "Loading rehab needs an injury-specific response to the last rehab session.")
         for block in (training_session or {}).get("blocks", []):
             if block.get("block_type") == "rehab":

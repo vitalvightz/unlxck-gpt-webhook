@@ -16,6 +16,28 @@ const decision: NonNullable<InjuryFlagRecord["rehab_decision"]> = {
     ] } },
 };
 
+for (const [reason, message] of [
+  ["next_day_response_not_yet_known", /Waiting for your next-day rehab response/],
+  ["fail_next_day_response_worse", /felt worse the next day/],
+  ["shoulder_nontraumatic_cuff_not_reported", /Edit injury/],
+  ["target_equipment_unavailable", /equipment you have not reported/],
+  ["unresolved_injury_checkin_setback", /injury worsening report is still holding loading/],
+]) {
+  test(`the actual runtime blocker ${reason} has a specific explanation`, async () => {
+    const container = document.createElement("div"); document.body.appendChild(container);
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<RehabProgressStatus decision={{ ...decision, progression: {
+        next_transition: { ...decision.progression!.next_transition!, reason_codes: [reason as string], requirements: [] },
+      } }} />));
+      await act(async () => container.querySelector("button")!.click());
+      const dialog = document.querySelector('[role="dialog"]')!;
+      assert.match(dialog.textContent ?? "", message as RegExp);
+      assert.equal(dialog.querySelectorAll("form, input, select, textarea").length, 0);
+    } finally { act(() => root.unmount()); container.remove(); }
+  });
+}
+
 test("progression is one compact row, only when the engine supplies a stage", () => {
   assert.equal(renderToStaticMarkup(<RehabProgressStatus decision={{ ...decision, stage: undefined }} />), "");
   const html = renderToStaticMarkup(<RehabProgressStatus decision={decision} statusLine="Done for today · next Sat 10 Oct" />);

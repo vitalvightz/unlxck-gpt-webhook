@@ -123,6 +123,20 @@ def resolve_open_injury_rehab_context(
     if not flags:
         return {}
 
+    from .injury_episode_service import apply_episode_observations, episode_observations
+    from api.contracts.rehab_assessment import AssessmentHistory
+    observations_by_id = {}
+    observed_flags = []
+    for flag in flags:
+        try:
+            observations = episode_observations(store, athlete_id, flag)
+        except Exception:
+            logger.exception("[generation] injury_episode_history_unavailable injury_id=%s", flag.get("id"))
+            observations = AssessmentHistory([], history_complete=False)
+        observations_by_id[str(flag["id"])] = observations
+        observed_flags.append(apply_episode_observations(flag, observations))
+    flags = observed_flags
+
     checkins, _ = _checked_recent_today_checkins(store, athlete_id, limit=_HISTORY_LIMIT)
     completions, _ = _checked_recent_session_completions(
         store, athlete_id, limit=_HISTORY_LIMIT
@@ -169,15 +183,14 @@ def resolve_open_injury_rehab_context(
         # Reported-permission profiles need the same owned evidence as Today,
         # not a stage stamp that silently drops the exercise-suitability gate.
         from api.contracts.rehab_assessment import assessment_identity
-        if assessment_identity(flag) in {("elbow", "tendonitis"), ("ankle", "sprain"), ("shoulder", "tendonitis")}:
-            from .injury_episode_service import apply_episode_observations, episode_observations, exposure_rows_with_observations
-            observations = episode_observations(store, athlete_id, flag)
-            context_by_identity[key]["policy_injury"] = apply_episode_observations(flag, observations)
-            if assessment_identity(flag) == ("shoulder", "tendonitis"):
-                # Persisted flags carry the diagnosis text, not an injury_type
-                # column. Bind the already-parsed type for generation's strict
-                # owned-context comparison; this does not establish cuff scope.
-                context_by_identity[key]["policy_injury"]["injury_type"] = "tendonitis"
+        if assessment_identity(flag) in {("achilles", "tendonitis"), ("elbow", "tendonitis"), ("ankle", "sprain"), ("shoulder", "tendonitis")}:
+            from .injury_episode_service import exposure_rows_with_observations
+            observations = observations_by_id[injury_id]
+            context_by_identity[key]["policy_injury"] = dict(flag)
+            # Persisted flags carry diagnosis text, not an injury_type column.
+            # Bind the parsed type for generation's strict owned-context check;
+            # this supplies no subtype or clinician permission.
+            context_by_identity[key]["policy_injury"]["injury_type"] = assessment_identity(flag)[1]
             from api.contracts.ankle_restore_load import seated_ankle_multi_injury_hold
             from api.contracts.shoulder_restore_load import wall_shoulder_multi_injury_hold
             if seated_ankle_multi_injury_hold(flag, flags) or wall_shoulder_multi_injury_hold(flag, flags):
