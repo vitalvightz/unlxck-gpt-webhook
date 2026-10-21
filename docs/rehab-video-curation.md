@@ -11,6 +11,39 @@ Today now resolves approved exercise media for its current rehab blocks through 
 3. With existing service credentials configured, run tools/exercise_media.py import docs/rehab-video-curation.csv --dry-run, inspect results, then import approved rows through the existing tool. It checks availability, embedding, age restrictions and loop bounds. Never commit credentials.
 4. Verify clips in Today using the existing thumbnail/YouTube nocookie player. The usual media availability sweep handles unavailable videos.
 
+### Attach a reviewed URL to an existing bank exercise
+
+Find the exercise's `rehab_drill_id` in today's live prescription or its `id`
+in `data/rehab_bank.json`. Use the corresponding **exact** `exercise_key` row in
+`docs/rehab-video-curation.csv`. For example, bank ID
+`chest_strain_comfortable_movement` uses media key
+`chest-strain-comfortable-movement`. Do not edit the bank or its clinical hashes.
+
+Fill that row's `youtube_url` with the reviewed watch URL
+(`https://www.youtube.com/watch?v=<11-character-video-id>`), short link
+(`https://youtu.be/<11-character-video-id>`) or Shorts URL
+(`https://www.youtube.com/shorts/<11-character-video-id>`). Optional `start_s`
+and `end_s` identify the demonstration segment. Keep the other identity and
+review context columns intact, and leave `aliases` empty for a rehab-specific
+movement.
+
+```powershell
+python tools/exercise_media.py import docs/rehab-video-curation.csv --dry-run
+python tools/exercise_media.py import docs/rehab-video-curation.csv
+```
+
+The existing importer validates the video and saves its parsed `video_id` and
+segment in `public.exercise_media`; no schema change or bank activation is
+required. Use the existing backend service credentials and YouTube Data API key
+in your local environment. Credentials belong outside the CSV and repository.
+The serving index caches media for up to five minutes. Refresh Today after it
+expires to see the clip on existing plans without regeneration.
+
+Missing or invalid media leaves the exercise instructions and prescription
+usable. The shared player's embedding-error state offers **Watch on YouTube**
+and retains the instructions below it. A demo never changes the exercise's
+approved range, resistance, restrictions, dose or completion/progression result.
+
 ## First LOAD clips to review
 
 - Achilles: floor-level controlled lowering, bodyweight, stable support. Despite the historical drill ID containing `on_step`, the approved prescription is floor-level only. Reject step/drop, excessive dorsiflexion and weighted demonstrations.

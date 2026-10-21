@@ -26,7 +26,7 @@ const REASONS: Record<string, string> = {
   assessment_observation_stale_or_future: "Existing suitability evidence is not current for this injury episode. Loading stays on hold; continue today's guidance.",
   assessment_history_incomplete: "Assessment history is unavailable. Loading stays on hold.",
   assessment_medical_or_setback_hold: "A worsening response or medical concern is holding progression.",
-  rehabilitation_loading_not_reported: "Report what your clinician has permitted in Clearance & restrictions.",
+  rehabilitation_loading_not_reported: "Confirm what rehabilitation loading your clinician has permitted in Clearance & restrictions.",
   achilles_midportion_not_confirmed: "Confirm the Achilles location in your injury details. This exercise is for midportion problems only.",
   injury_loading_safety_hold: "Your current injury restrictions take priority over loading permission.",
   current_report_worse: "Your latest injury response was worse. Follow the current conservative guidance.",
@@ -43,7 +43,7 @@ const REASONS: Record<string, string> = {
   target_stage_not_activated: "The next stage is not available in Unlxck yet.",
   no_clinical_criteria_declared: "This progression has not been activated in Unlxck.",
   transition_closed_by_profile: "This stage is not available for this injury profile.",
-  no_reviewed_stage_exposure: "Record completion of your current-stage rehab first.",
+  no_reviewed_stage_exposure: "Complete your current rehabilitation exercise in Today.",
   no_defined_dose_completed: "No completed current-stage prescription is recorded yet.",
   no_reviewed_response_group: "An injury response after current-stage rehab is still needed.",
   during_response_not_reported: "Log your rehab session and answer its injury-response question.",
@@ -63,13 +63,32 @@ const REASONS: Record<string, string> = {
   next_day_response_worse: "Your injury felt worse the next day. Follow the current conservative guidance.",
 };
 
-/** The rehab progression row inside an open injury. The injury's summary row
- * above already shows the stage, its five-step meter and where it goes next,
- * so this stays one compact line: "Progression to Load", with the day's rehab
- * status ("Done for today · next Sat 10 Oct") under it. With a next stage the
- * whole row opens the progression requirements. */
+type RehabDecision = NonNullable<InjuryFlagRecord["rehab_decision"]>;
+
+/** Presentation only. Availability and eligibility always come from the engine. */
+export function rehabNextStep(decision: RehabDecision): string | null {
+  const next = decision.progression?.next_transition;
+  if (!next) return null;
+  const codes = [...next.reason_codes, ...(next.requirements ?? [])
+    .filter(item => !["pass", "not_applicable"].includes(item.status)).map(item => item.reason_code)];
+  const safety = codes.find(code => /worse|worsening|setback|negative|safety_hold|stopped|medical/.test(code) && REASONS[code]);
+  // Never present logging/permission requirements as a way to publish content.
+  if (!next.target_stage_live) {
+    const unavailable = `${(LABELS[next.to_stage] ?? "Next-stage").toUpperCase()} exercises aren’t available for this injury in UNLXCK yet.`;
+    return safety ? `Progression is on hold. ${REASONS[safety]} ${unavailable}` : unavailable;
+  }
+  if (safety) return `Progression is on hold. ${REASONS[safety]}`;
+  if (next.status === "closed") return "Progression is on hold for this injury. Follow your current restrictions and today’s permitted rehab.";
+  if (next.status === "met") return "Follow the permitted exercise shown in Today.";
+  // Specific selector blockers take precedence over its general content message.
+  const reason = ["target_equipment_unavailable", "rehabilitation_loading_not_reported"]
+    .find(code => codes.includes(code)) ?? codes.find(code => REASONS[code]);
+  return reason ? REASONS[reason] : "Continue today’s permitted rehab. The next stage is on hold while its requirements remain unconfirmed.";
+}
+
+/** Availability and one next action stay visible; the row opens detailed checks. */
 export function RehabProgressStatus({ decision, statusLine }: {
-  decision: NonNullable<InjuryFlagRecord["rehab_decision"]>;
+  decision: RehabDecision;
   statusLine?: string | null;
 }) {
   const [open, setOpen] = useState(false);
@@ -77,26 +96,28 @@ export function RehabProgressStatus({ decision, statusLine }: {
   if (!stage || !STAGES.includes(stage)) return null;
   const next = decision.progression?.next_transition;
   const unavailable = next && (!next.target_stage_live || next.status === "closed");
-  const title = next ? `Progression to ${LABELS[next.to_stage] ?? "next stage"}${unavailable ? " · Closed" : ""}` : null;
+  const title = next ? `${LABELS[next.to_stage] ?? "Next stage"} · ${!next.target_stage_live ? "Unavailable in UNLXCK" : next.status === "met" ? "Available" : "On hold"}` : null;
+  const nextStep = rehabNextStep(decision);
   if (!title && !statusLine) return null;
   const content = <>
     <span className="injury-progress-main">
       {title ? <span className="injury-progress-title">{title}</span> : null}
+      {nextStep ? <span className="injury-progress-status">{nextStep}</span> : null}
       {decision.progression?.entry_basis === "reported_clinician_permission"
         ? <span className="injury-progress-status">Permitted rehab based on clinician advice you reported.</span> : null}
-      {statusLine ? <span className="injury-progress-status">{statusLine}</span> : null}
+      {statusLine ? <span className="injury-progress-status injury-progress-schedule">{statusLine}</span> : null}
     </span>
     {next ? <InjuryChevron /> : null}
   </>;
   return <>
     {next ? <button type="button" className="injury-progress" aria-haspopup="dialog"
-      aria-label={`${title}${statusLine ? `. ${statusLine}` : ""}. Progression requirements`}
+      aria-label={`${title}${nextStep ? `. ${nextStep}` : ""}${statusLine ? `. ${statusLine}` : ""}. Progression requirements`}
       onClick={() => setOpen(true)}>{content}</button>
       : <div className="injury-progress">{content}</div>}
     {open && next ? <InjuryDetailSheet title="Progression requirements" onClose={() => setOpen(false)}>
       <div className="injury-sheet-body">
         <p className="injury-sheet-lead">{LABELS[stage]} → {LABELS[next.to_stage] ?? "Next stage"}</p>
-        <p className="muted">{unavailable ? "This next stage is closed. Reported permission does not open it."
+        <p className="muted">{unavailable ? nextStep
           : "These checks keep your rehab within your reported permissions and current injury response."}</p>
         {!unavailable ? <ul className="injury-requirements">{(next.requirements ?? []).filter((item, index, items) =>
           item.status === "pass" || !REASONS[item.reason_code] || !items.slice(0, index).some(previous =>
@@ -106,8 +127,8 @@ export function RehabProgressStatus({ decision, statusLine }: {
             <span>{item.status === "pass" ? "Complete" : item.status === "not_applicable" ? "Not required for this entry" : item.status === "fail" ? "On hold" : "Not yet confirmed"}</span></div>
           {item.status !== "pass" ? <p>{REASONS[item.reason_code] ?? "This check is not yet satisfied. Continue the current injury guidance."}</p> : null}
         </li>)}</ul> : null}
-        {(next.reason_codes ?? []).filter(code => !(next.requirements ?? []).some(item => item.reason_code === code)).map(code =>
-          <p key={code}>{REASONS[code] ?? "Progression remains on hold. Continue your current permitted work."}</p>)}
+        {!unavailable ? (next.reason_codes ?? []).filter(code => !(next.requirements ?? []).some(item => item.reason_code === code)).map(code =>
+          <p key={code}>{REASONS[code] ?? "Progression remains on hold. Continue your current permitted work."}</p>) : null}
       </div>
     </InjuryDetailSheet> : null}
   </>;
@@ -117,17 +138,17 @@ export function RehabProgressStatus({ decision, statusLine }: {
  * five-step meter, and where it goes next. Null when there is no stage. */
 export function RehabStageMeter({ decision }: { decision: InjuryFlagRecord["rehab_decision"] }) {
   const stage = decision?.stage;
-  if (!stage || !STAGES.includes(stage)) return null;
+  if (!decision || !stage || !STAGES.includes(stage)) return null;
   const current = STAGES.indexOf(stage);
   const next = decision.progression?.next_transition;
-  const unavailable = next && (!next.target_stage_live || next.status === "closed");
   return <span className="injury-stage-meter">
     <span className="injury-stage-meter-steps" aria-hidden="true">
-      {STAGES.map((value, index) => <span key={value} data-complete={index <= current} />)}
+      {STAGES.map((value, index) => <span key={value} data-complete={index <= current}
+        data-current={index === current || undefined} />)}
     </span>
     <span className="injury-stage-meter-text">
-      <span className="sr-only">Rehab stage {current + 1} of {STAGES.length}. </span>
-      {next ? <>Next: {LABELS[next.to_stage] ?? "Not available"}{unavailable ? " · Closed" : ""}</> : `Stage ${current + 1} of ${STAGES.length}`}
+      <span className="sr-only">Current rehab stage: {LABELS[stage]}. CALM → RESTORE → LOAD → DYNAMIC → RETURN. Future stages depend on published exercises and eligibility. </span>
+      {next ? rehabNextStep(decision) : `Stage ${current + 1} of ${STAGES.length} · Future availability varies by injury`}
     </span>
   </span>;
 }

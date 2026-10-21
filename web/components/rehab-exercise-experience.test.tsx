@@ -1,0 +1,82 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import "./test-dom";
+import { act } from "react";
+import { createRoot } from "react-dom/client";
+import { ExerciseMediaProvider } from "./exercise-demo";
+import { ExerciseLogProvider } from "./exercise-log";
+import { ExerciseRow } from "./structured-plan-renderer";
+import type { ExerciseMedia, StructuredBlock } from "@/lib/types";
+
+// Exported by the real Today API; numeric prescriptions are never re-created here.
+const fixtures = JSON.parse(readFileSync("e2e/fixtures/rehab-today.json", "utf8"));
+const load: StructuredBlock = fixtures.achilles.view.live_prescription.session.blocks[0];
+const restore: StructuredBlock = fixtures.chest.view.live_prescription.session.blocks[0];
+const demo: ExerciseMedia = { provider: "youtube", video_id: "AAAAAAAAAAA", start_s: 0, source: "curated" };
+
+async function open(block: StructuredBlock, media: ExerciseMedia | null, running = false) {
+  const container = document.createElement("div"); document.body.append(container);
+  const root = createRoot(container);
+  await act(async () => root.render(<ExerciseMediaProvider media={media ? { [`exercise:${block.exercise_key}`]: media } : {}}>
+    <ExerciseLogProvider logging={running ? { logs: {}, save: async () => {}, painReasonAllowed: false } : null}>
+      <ExerciseRow block={block} open detail="sheet" onToggle={() => {}} />
+    </ExerciseLogProvider>
+  </ExerciseMediaProvider>));
+  return { sheet: document.querySelector('[role="dialog"]')!, cleanup() { act(() => root.unmount()); container.remove(); } };
+}
+
+for (const [pilot, block] of Object.entries(fixtures.pilot_blocks) as Array<[string, StructuredBlock & { instructions: string }]>) {
+  test(`${pilot} keeps its exact Today instructions, dose and restrictions in the shared exercise sheet`, async () => {
+    const { sheet, cleanup } = await open(block, null);
+    try {
+      // The shared renderer places the Stop sentence above the movement cues.
+      // Every approved sentence must survive that presentation split.
+      const words = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      for (const sentence of block.instructions.split(/(?<=[.!?])\s+/)) {
+        assert.ok(words(sheet.textContent!).includes(words(sentence)), `Missing approved instruction: ${sentence}`);
+      }
+      assert.ok(sheet.textContent!.includes(`${block.sets} × ${block.reps}`));
+      assert.match(sheet.textContent!, /Bodyweight only/);
+      assert.match(sheet.textContent!, /Restrictions/);
+      assert.match(sheet.textContent!, /Exercise limits/);
+      for (const rule of block.stop_rules ?? []) assert.ok(sheet.textContent!.includes(rule));
+      assert.doesNotMatch(sheet.textContent!, /Stop if Once daily/);
+      assert.doesNotMatch(sheet.textContent!, /mandatory_restrictions|automatic_increase/);
+      assert.equal(sheet.querySelectorAll("form").length, 0);
+    } finally { cleanup(); }
+  });
+}
+
+for (const running of [false, true]) {
+  test(`actual Today LOAD prescription and demo remain available with running=${running}`, async () => {
+    const { sheet, cleanup } = await open(load, demo, running);
+    try {
+      assert.match(sheet.textContent!, /1 × 10/);
+      assert.match(sheet.textContent!, /stable support/);
+      assert.match(sheet.textContent!, /Bodyweight only/);
+      assert.match(sheet.textContent!, /Floor level only/);
+      assert.match(sheet.textContent!, /No speed, bouncing, hopping or automatic progression/);
+      assert.match(sheet.textContent!, /does not provide training or contact clearance/);
+      assert.ok(sheet.querySelector('details[open] .ex-demo'));
+      assert.match(sheet.innerHTML, /AAAAAAAAAAA/);
+      assert.ok([...sheet.querySelectorAll('details[open]')].some(element => element.textContent!.includes("Full prescription")));
+      // Completion is still owned by Today, never a new clinical-clearance button.
+      assert.doesNotMatch(sheet.textContent!, /Approve|Unlock/);
+    } finally { cleanup(); }
+  });
+}
+
+for (const media of [null, { ...demo, video_id: "invalid" }]) {
+  test(`missing or invalid demo leaves approved self-paced instructions usable: ${media?.video_id ?? "missing"}`, async () => {
+    const { sheet, cleanup } = await open(restore, media);
+    try {
+      assert.match(sheet.textContent!, /Go at your own pace/);
+      assert.match(sheet.textContent!, /Avoid forced chest stretches/);
+      assert.match(sheet.textContent!, /Demo not assigned/);
+      assert.equal(sheet.querySelector("iframe, .ex-demo"), null);
+      assert.equal(sheet.querySelector(".sp-block-stats"), null);
+      assert.doesNotMatch(sheet.textContent!, /\b\d+ (sets?|reps?|seconds?|kg)\b|ResistanceBodyweight/);
+    } finally { cleanup(); }
+  });
+}

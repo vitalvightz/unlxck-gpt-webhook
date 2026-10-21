@@ -57,7 +57,8 @@ export function useExerciseMedia(
   if (!map) return null;
   const key = exerciseKey?.trim();
   const media = key ? map[`${EXERCISE_KEY_MEDIA_PREFIX}${key}`] : displayName ? map[displayName] : undefined;
-  return media && typeof media.video_id === "string" && media.video_id ? media : null;
+  return media && media.provider === "youtube" && typeof media.video_id === "string"
+    && /^[A-Za-z0-9_-]{11}$/.test(media.video_id) ? media : null;
 }
 
 // ---------------------------------------------------------------------------

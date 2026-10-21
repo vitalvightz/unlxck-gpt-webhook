@@ -89,6 +89,7 @@ import { GlossaryTooltip } from "@/components/glossary-tooltip";
 import { glossaryEntry } from "@/lib/glossary";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { ExerciseDemo, ExerciseMediaProvider, useExerciseMedia } from "@/components/exercise-demo";
+import { RehabExerciseLimits, RehabPrescription } from "@/components/rehab-prescription";
 import { PrivateExerciseMediaProvider, PrescribedPrivateVideo, PrescribedPrivateVideoThumbnail } from "@/components/private-exercise-video";
 import { ExerciseLogBadge, ExerciseLogPanel, ExerciseLogTick, useExerciseLoggingActive } from "@/components/exercise-log";
 import { ExerciseActions, ExerciseSessionScope, SessionChangesFoot } from "@/components/exercise-customisation";
@@ -500,6 +501,7 @@ export function BlockCard({
       {!hideInstructions ? <ExecutionInstructions block={block} /> : null}
       {prescriptionText && !showMetricTiles ? <p className="sp-block-purpose">{prescriptionText}</p> : null}
       {block.notes && !hasAthleteMetrics ? <p className="sp-block-purpose">{block.notes}</p> : null}
+      <RehabPrescription block={block} />
       {/* Athlete entries retain their exact text (tempo, side, free-form load)
           alongside the same metric tiles used by generated sessions. */}
       {showMetricTiles ? (
@@ -808,6 +810,8 @@ export function ExerciseRow({
               leadCue={leadCue}
               onLeadCuePinnedChange={setLeadCuePinned}
             />
+          ) : block.block_type === "rehab" && block.drill_snapshot?.rehab_stage !== "calm" ? (
+            <p className="muted">Demo not assigned. Follow the prescribed instructions below.</p>
           ) : null}
           {builds || whyToday ? (
             <div className="ex-row-why">
@@ -883,9 +887,9 @@ function ExerciseDetail({
     </p>
   ) : null;
 
-  // Mid-session the sheet is for logging: the prescription, the log and the
-  // stop line. Demo, rationale and coaching stay in the plan view.
-  if (sessionRunning) {
+  // Ordinary mid-session sheets focus on logging. Rehab keeps its demo and
+  // approved instructions available while the athlete follows the exercise.
+  if (sessionRunning && block.block_type !== "rehab") {
     return (
       <div className="injury-sheet-body ex-detail ex-detail-logging">
         {tagLabel || summary ? (
@@ -913,12 +917,15 @@ function ExerciseDetail({
         <p className="ex-detail-summary">{[tagLabel, summary].filter(Boolean).join(" · ")}</p>
       ) : null}
       {/* Safety instructions are never behind a tap: one plain line. */}
-      {stopLine}
+      {block.block_type === "rehab" && (block.stop_rules?.length || execution.stopRules.length)
+        ? <RehabExerciseLimits rules={Array.from(new Set([...getStringList(block.stop_rules), ...execution.stopRules]))} /> : stopLine}
       {media ? (
-        <details className="ex-detail-section" open={!sessionRunning}>
+        <details className="ex-detail-section" open={!sessionRunning || block.block_type === "rehab"}>
           <summary>Demo video</summary>
           <ExerciseDemo media={media} exerciseName={title} />
         </details>
+      ) : block.block_type === "rehab" && block.drill_snapshot?.rehab_stage !== "calm" ? (
+        <p className="muted">Demo not assigned. Follow the prescribed instructions below.</p>
       ) : null}
       {block.private_media_id || block.community_revision_id ? (
         <details className="ex-detail-section" open={!sessionRunning}>
@@ -955,7 +962,7 @@ function ExerciseDetail({
       {swap ? <p className="sp-block-aside"><span className="sp-stat-label">Swaps</span>{swap}</p> : null}
       {easier.map(text => <p className="sp-block-aside" key={text}><span className="sp-stat-label">Easier</span>{text}</p>)}
       {progression && openWeekIntent?.key !== "deload" ? <p className="sp-block-aside"><span className="sp-stat-label">Progress</span>{progression}</p> : null}
-      <details className="ex-detail-section">
+      <details className="ex-detail-section" open={block.block_type === "rehab" || undefined}>
         <summary>Full prescription</summary>
         <BlockCard block={block} openWeekIntent={openWeekIntent}
           sourceCountdown={sourceCountdown} embedded hideCues hideStopRule hideAdjustments hideInstructions />
