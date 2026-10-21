@@ -90,6 +90,13 @@ test("permission entry explains its authority without claiming observed recovery
   assert.doesNotMatch(html, /clinically verified|recovery proven|three days/i);
 });
 
+test("normal LOAD entry explains recorded progression without claiming clinician permission", () => {
+  const html = renderToStaticMarkup(<RehabProgressStatus decision={{ ...decision, stage: "load",
+    progression: { ...decision.progression, reason_codes: ["transition_met:restore->load"] } }} />);
+  assert.match(html, /LOAD is available because this injury’s progression checks passed/);
+  assert.doesNotMatch(html, /Permitted rehab based on clinician advice you reported|clinically verified|recovery proven/i);
+});
+
 test("unneeded entry evidence is explained as not required, never completed", async () => {
   const container = document.createElement("div"); document.body.appendChild(container);
   const root = createRoot(container);
