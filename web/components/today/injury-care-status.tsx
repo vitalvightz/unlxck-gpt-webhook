@@ -108,8 +108,8 @@ export function InjuryClearance({ injury, token, onRefresh }: {
   </div>;
 }
 
-export function InjuryCareStatus({ injury, token, onRefresh, showClearance = true }: {
-  injury: InjuryFlagRecord; token: string; onRefresh: () => Promise<void>; showClearance?: boolean;
+export function InjuryCareStatus({ injury, token, onRefresh, showClearance = true, summaryVisible = false }: {
+  injury: InjuryFlagRecord; token: string; onRefresh: () => Promise<void>; showClearance?: boolean; summaryVisible?: boolean;
 }) {
   const schedule = injury.rehab_decision?.schedule;
   const outcome = injury.rehab_decision?.outcome;
@@ -149,7 +149,7 @@ export function InjuryCareStatus({ injury, token, onRefresh, showClearance = tru
   const hasGuidance = trackingOnly || resolved || showSummary || showScheduleRow || showTrackingSchedule || showReason;
   return <div className="today-injury-care">
     {injury.rehab_decision ? <>
-      {outcome === "prescribed_rehab" ? <RehabProgressStatus decision={injury.rehab_decision} statusLine={stageStatusLine} /> : null}
+      {outcome === "prescribed_rehab" ? <RehabProgressStatus decision={injury.rehab_decision} statusLine={stageStatusLine} summaryVisible={summaryVisible} /> : null}
       {hasGuidance ? <div className="injury-rehab-status" role="note" aria-label="Guidance">
         {trackingOnly ? <><p className="injury-rehab-label"><strong>Recovery monitoring</strong></p>
           <p className="muted">{outcome === "unsupported_prescription" ? "No guided rehab programme is available for this injury yet." : summary}</p>

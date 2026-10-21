@@ -619,6 +619,10 @@ html .today-page .today-decision-banner[data-tone] {
   line-height: 1.5;
 }
 
+.injury-stage-entry {
+  display: block;
+}
+
 .today-injury-summary-chevron {
   width: 7px;
   height: 7px;

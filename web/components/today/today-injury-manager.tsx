@@ -732,7 +732,7 @@ export function TodayInjuryManager({
                     <p>{surfaceGuidance.message}</p>
                   </div>
                 ) : null}
-                {injury.rehab_decision || injury.episode_id ? <InjuryCareStatus injury={injury} token={token} onRefresh={onRefresh} showClearance={false} /> : null}
+                {injury.rehab_decision || injury.episode_id ? <InjuryCareStatus injury={injury} token={token} onRefresh={onRefresh} showClearance={false} summaryVisible /> : null}
                 <div className="today-injury-update-head">
                   <p className="today-field-label today-injury-status-label">{delayedPrompts.some(prompt =>
                     prompt.injury_id === injury.id && prompt.injury_episode_id === injury.episode_id)

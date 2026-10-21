@@ -1066,9 +1066,10 @@ export type InjuryFlagRecord = {
   episode_id?: string | null;
   side?: import("./api-schema.generated").InjuryFlagRecord["side"];
   rehab_decision?: { outcome: string; summary: string; reason_codes: string[];
+    loading_hold?: boolean;
     policy_id?: string;
     stage?: "calm" | "restore" | "load" | "dynamic" | "return";
-    progression?: { entry_basis?: "reported_clinician_permission"; authority_event_id?: string;
+    progression?: { reason_codes?: string[]; entry_basis?: "reported_clinician_permission"; authority_event_id?: string;
       next_transition?: { to_stage: string; status: string; target_stage_live: boolean;
       reason_codes: string[]; requirements?: Array<{ requirement_id: string; kind: string; status: string; reason_code: string }> } };
     achilles_load_review?: import("./api-schema.generated").AchillesRestoreLoadReview | null;

@@ -1,0 +1,2977 @@
+{
+  "permission_entry": {
+    "view": {
+      "active_plan": {
+        "status": "ready",
+        "phase": "GPP",
+        "id": "d27910f2-7f8a-45bb-b5f9-6a652ae3d29f"
+      },
+      "today": {
+        "training_day": "2026-10-05",
+        "recommendation_state": "modify",
+        "recommendation_reason": "Reviewed rehab today\nYour planned training conflicts with the current injury restrictions.\nFollow only the reviewed rehab shown today.",
+        "decision_tier": "modify",
+        "injury_hold_exempt": false,
+        "recommendation_trigger_labels": [
+          "Current injury restrictions"
+        ],
+        "recommendation_context_labels": [],
+        "recommendation_safety_checks": [],
+        "recommendation_sources": [
+          "today's check-in",
+          "today's planned session",
+          "your tracked injuries"
+        ],
+        "recommendation_confidence": "moderate",
+        "recommendation_confidence_note": "Less to go on today: this is based on today's check-in alone, with no recent days to compare.",
+        "primary_safety_notice": null,
+        "warnings": [],
+        "next_session": {
+          "calendar_date": "2026-10-05",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday",
+          "day_label": "",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-035281aea20cfa032dde0ede",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "effective_load": "reduced",
+          "contact_level": "none",
+          "blocks": [
+            {
+              "injury_side": "left",
+              "block_id": "rehab:463e972f-05aa-4a48-bc2c-068c8bc552df:0148b63c-4bd2-4898-b0f3-fc66cc9bba05",
+              "block_type": "rehab",
+              "title": "Floor-level controlled Achilles lowering",
+              "display_name": "Floor-level controlled Achilles lowering",
+              "coaching_cues": [
+                "Beside stable support on firm level ground, raise both heels, then transfer weight to the affected leg and slowly lower its heel only to the floor. Do not use a step, lower into deep dorsiflexion, increase depth or add speed or weight. Stop if symptoms worsen during or after the work."
+              ],
+              "rehab_drill_id": "achilles_tendonitis_eccentric_calf_drops_on_step",
+              "exercise_key": "achilles-tendonitis-eccentric-calf-drops-on-step",
+              "injury_id": "463e972f-05aa-4a48-bc2c-068c8bc552df",
+              "injury_episode_id": "0148b63c-4bd2-4898-b0f3-fc66cc9bba05",
+              "target_regions": [
+                "achilles"
+              ],
+              "dose": {
+                "sets": 1,
+                "reps": 10
+              },
+              "instructions": "Beside stable support on firm level ground, raise both heels, then transfer weight to the affected leg and slowly lower its heel only to the floor. Do not use a step, lower into deep dorsiflexion, increase depth or add speed or weight. Stop if symptoms worsen during or after the work.",
+              "sets": 1,
+              "reps": 10,
+              "stop_rules": [
+                "Once daily only: 1 set of 10 controlled lowerings beside stable support on level ground.",
+                "Bodyweight only: no added resistance.",
+                "No step or lowering below floor level.",
+                "No speed, bouncing, hopping or automatic progression.",
+                "Stop for worsening during or delayed symptoms and seek clinical review.",
+                "Stop and seek assessment for a snap, sudden pain or loss of function.",
+                "Follow clinician restrictions; this prescription grants no training or contact clearance."
+              ],
+              "drill_snapshot": {
+                "id": "achilles_tendonitis_eccentric_calf_drops_on_step",
+                "name": "Floor-level controlled Achilles lowering",
+                "notes": "Beside stable support on firm level ground, raise both heels, then transfer weight to the affected leg and slowly lower its heel only to the floor. Do not use a step, lower into deep dorsiflexion, increase depth or add speed or weight. Stop if symptoms worsen during or after the work.",
+                "rehab_stage": "load",
+                "function": "control",
+                "equipment": [
+                  "stable_support"
+                ],
+                "dose": null,
+                "impact": "none",
+                "load": "moderate",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": null,
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": null,
+                "target_regions": [
+                  "achilles"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "Achilles tendon"
+                ],
+                "contraction_type": "eccentric",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Fixed mechanics reviewed; sources: https://www.nhs.uk/conditions/tendonitis/, https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/, https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/. Dormant LOAD content, not an active prescription. External load remains unknown where not measured. Tendon site, individual resistance, functional tolerance and a sourced evaluable transition are required before activation. Eccentrics are not assumed superior."
+              },
+              "policy_id": "achilles_tendonitis",
+              "policy_version": 3,
+              "bank_hash": "557056e938e245ccf7bda3621958820389212034a4eb47c3fb4d04d3e58bad2f",
+              "policy_review_hash": "fb10153611fc19d4bb16a85dabdd6951332dbf36f70e00f8c02d4ba532ee1bf3",
+              "minimum_gap_days": 1,
+              "is_loading": true,
+              "source_references": [
+                "https://bjsm.bmj.com/content/55/20/1125",
+                "https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf",
+                "https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/"
+              ],
+              "required_rehabilitation_level": "loading",
+              "range_choice": "floor_level",
+              "resistance": {
+                "mode": "bodyweight",
+                "kg": null
+              },
+              "mandatory_restrictions": [
+                "bodyweight_only_no_added_resistance",
+                "floor_only_no_step_or_below_floor_dorsiflexion",
+                "follow_clinician_restrictions_no_training_or_contact_clearance",
+                "no_speed_bouncing_hopping_or_automatic_progression",
+                "stable_support_controlled_lowering",
+                "stop_for_worsening_during_or_delayed_symptoms_seek_review",
+                "stop_seek_assessment_for_snap_sudden_pain_or_loss_of_function"
+              ],
+              "frequency": "daily"
+            }
+          ],
+          "session_relation": "today"
+        },
+        "session_scope": "today",
+        "session_label": "Today's session",
+        "completion_status": "not_started"
+      },
+      "risk_watch": [
+        {
+          "category": "reminder",
+          "priority": 7,
+          "icon": "info",
+          "label": "Reminder",
+          "text": "Tracking 1 open injury: Left achilles tendonitis. Train around it.",
+          "tone": "info",
+          "timeframe": "active"
+        }
+      ],
+      "open_injuries": [
+        {
+          "id": "463e972f-05aa-4a48-bc2c-068c8bc552df",
+          "athlete_id": "0ebfdfd4-1c47-4648-914c-7e832c03d91c",
+          "plan_id": "d27910f2-7f8a-45bb-b5f9-6a652ae3d29f",
+          "source": "checkin",
+          "body_area": "Left Achilles",
+          "severity": "mild",
+          "status": "monitoring",
+          "resolved_at": null,
+          "episode_id": "0148b63c-4bd2-4898-b0f3-fc66cc9bba05",
+          "body_region": "achilles",
+          "side": "left",
+          "description": "tendonitis [achilles_site:midportion]",
+          "latest_reported_status": "improving",
+          "created_at": "2026-10-05T12:01:00+00:00",
+          "updated_at": "2026-10-05T12:02:00+00:00",
+          "surface_class": "non_surface",
+          "canonical_location": "achilles",
+          "region_group": "lower_leg_foot",
+          "load_region": "lower_limb",
+          "consequence": "load_sensitive",
+          "rehab_stage": "load",
+          "rehab_stage_reasons": [
+            "symptoms_not_worsening",
+            "insufficient_injury_specific_progression_evidence"
+          ],
+          "rehab_care_pathway": "musculoskeletal",
+          "rehab_medical_gate": false,
+          "label": "Left achilles tendonitis",
+          "assessment_history_complete": true,
+          "progression_assessments": [],
+          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
+          "latest_reported_at": "2026-10-05T12:02:00+00:00",
+          "rehab_improvement_reports": [
+            {
+              "id": "3a9d1938-b463-4d6a-a866-c202234be6fd",
+              "reported_at": "2026-10-05T12:01:00+00:00"
+            },
+            {
+              "id": "86ccd9c2-c5b9-4056-bbc8-9b93fd2caaff",
+              "reported_at": "2026-10-05T12:02:00+00:00"
+            }
+          ],
+          "rehab_improvement_at": "2026-10-05T12:02:00Z",
+          "assessment_setback_at": null,
+          "clinician_clearance": {
+            "episode_id": "0148b63c-4bd2-4898-b0f3-fc66cc9bba05",
+            "scopes": [
+              "rehab"
+            ],
+            "report_id": "3b1f5aa1-f324-5087-b62c-16db493bd499",
+            "reported_at": "2026-10-05T12:03:00+00:00",
+            "source": "athlete_reported",
+            "externally_verified": false,
+            "scope_reported_at": {
+              "rehab": "2026-10-05T12:03:00+00:00"
+            },
+            "rehabilitation_permission": {
+              "schema_version": 1,
+              "level": "loading"
+            }
+          },
+          "rehab_decision": {
+            "injury_id": "463e972f-05aa-4a48-bc2c-068c8bc552df",
+            "injury_episode_id": "0148b63c-4bd2-4898-b0f3-fc66cc9bba05",
+            "region": "achilles",
+            "injury_type": "tendonitis",
+            "stage": "load",
+            "outcome": "prescribed_rehab",
+            "summary": "Your rehab is matched to this injury's current recovery stage.",
+            "reason_codes": [
+              "SELECT_DETERMINISTIC_BEST"
+            ],
+            "activation": "live",
+            "prescription": {
+              "drill_id": "achilles_tendonitis_eccentric_calf_drops_on_step",
+              "drill": {
+                "id": "achilles_tendonitis_eccentric_calf_drops_on_step",
+                "name": "Floor-level controlled Achilles lowering",
+                "notes": "Beside stable support on firm level ground, raise both heels, then transfer weight to the affected leg and slowly lower its heel only to the floor. Do not use a step, lower into deep dorsiflexion, increase depth or add speed or weight. Stop if symptoms worsen during or after the work.",
+                "rehab_stage": "load",
+                "function": "control",
+                "equipment": [
+                  "stable_support"
+                ],
+                "dose": null,
+                "impact": "none",
+                "load": "moderate",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": null,
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": null,
+                "target_regions": [
+                  "achilles"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "Achilles tendon"
+                ],
+                "contraction_type": "eccentric",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Fixed mechanics reviewed; sources: https://www.nhs.uk/conditions/tendonitis/, https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/, https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/. Dormant LOAD content, not an active prescription. External load remains unknown where not measured. Tendon site, individual resistance, functional tolerance and a sourced evaluable transition are required before activation. Eccentrics are not assumed superior."
+              },
+              "instructions": "Beside stable support on firm level ground, raise both heels, then transfer weight to the affected leg and slowly lower its heel only to the floor. Do not use a step, lower into deep dorsiflexion, increase depth or add speed or weight. Stop if symptoms worsen during or after the work.",
+              "dose": {
+                "sets": 1,
+                "reps": 10
+              },
+              "stop_when": [
+                "Once daily only: 1 set of 10 controlled lowerings beside stable support on level ground.",
+                "Bodyweight only: no added resistance.",
+                "No step or lowering below floor level.",
+                "No speed, bouncing, hopping or automatic progression.",
+                "Stop for worsening during or delayed symptoms and seek clinical review.",
+                "Stop and seek assessment for a snap, sudden pain or loss of function.",
+                "Follow clinician restrictions; this prescription grants no training or contact clearance."
+              ],
+              "frequency": "daily",
+              "sources": [
+                "https://bjsm.bmj.com/content/55/20/1125",
+                "https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf",
+                "https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/"
+              ],
+              "bank_hash": "557056e938e245ccf7bda3621958820389212034a4eb47c3fb4d04d3e58bad2f",
+              "policy_id": "achilles_tendonitis",
+              "policy_version": 3,
+              "policy_review_hash": "fb10153611fc19d4bb16a85dabdd6951332dbf36f70e00f8c02d4ba532ee1bf3",
+              "minimum_gap_days": 1,
+              "is_loading": true,
+              "required_rehabilitation_level": "loading",
+              "range_choice": "floor_level",
+              "resistance": {
+                "mode": "bodyweight",
+                "kg": null
+              },
+              "mandatory_restrictions": [
+                "bodyweight_only_no_added_resistance",
+                "floor_only_no_step_or_below_floor_dorsiflexion",
+                "follow_clinician_restrictions_no_training_or_contact_clearance",
+                "no_speed_bouncing_hopping_or_automatic_progression",
+                "stable_support_controlled_lowering",
+                "stop_for_worsening_during_or_delayed_symptoms_seek_review",
+                "stop_seek_assessment_for_snap_sudden_pain_or_loss_of_function"
+              ]
+            },
+            "restrictions": {
+              "blocked_regions": [
+                "achilles"
+              ],
+              "blocked_tags": [],
+              "contact_limit": "none"
+            },
+            "loading_hold": false,
+            "achilles_load_review": {
+              "criterion_id": "achilles_restore_load_review_v1",
+              "criterion_version": 1,
+              "status": "unknown",
+              "reason_codes": [
+                "assessment_observation_missing"
+              ],
+              "subtype": "unknown",
+              "required_input_ids": [
+                "achilles_site_assessed",
+                "achilles_heel_rise_assessed",
+                "achilles_loading_response_assessed",
+                "achilles_range_load_assessed"
+              ],
+              "observation_id": null,
+              "externally_verified": false,
+              "promotion_allowed": false,
+              "sources": [
+                "https://bjsm.bmj.com/content/55/20/1125",
+                "https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf",
+                "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+              ]
+            },
+            "policy_id": "achilles_tendonitis",
+            "policy_version": 3,
+            "progression": {
+              "stage": "load",
+              "reason_codes": [
+                "reported_clinician_permission_entry:load"
+              ],
+              "evidence_ids": [],
+              "engine_version": "2",
+              "entry_basis": "reported_clinician_permission",
+              "authority_event_id": "3b1f5aa1-f324-5087-b62c-16db493bd499",
+              "entry_decision": {
+                "entry_basis": "reported_clinician_permission",
+                "authority_event_id": "3b1f5aa1-f324-5087-b62c-16db493bd499",
+                "from_stage": "restore",
+                "to_stage": "load",
+                "status": "met",
+                "reason_codes": [],
+                "target_stage_live": true,
+                "closed_reason": null,
+                "missing_inputs": [],
+                "requirements": [
+                  {
+                    "requirement_id": "no_unresolved_setback",
+                    "kind": "no_unresolved_setback",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "no_negative_response",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "complete_episode_history",
+                    "kind": "complete_history",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "history_complete",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "reviewed_stage_exposure",
+                    "kind": "completed_reviewed_exposure",
+                    "basis": "data_sufficiency",
+                    "status": "not_applicable",
+                    "reason_code": "prior_stage_work_not_required_for_reported_permission",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "during_response_not_worse",
+                    "kind": "during_session_response",
+                    "basis": "product_safety",
+                    "status": "not_applicable",
+                    "reason_code": "no_prior_rehab_response_to_resolve",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "next_day_response_not_worse",
+                    "kind": "next_day_response",
+                    "basis": "product_safety",
+                    "status": "not_applicable",
+                    "reason_code": "no_prior_rehab_response_to_resolve",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "achilles_midportion_reported_load_permission_v1",
+                    "kind": "functional_checkpoint",
+                    "basis": "clinical",
+                    "status": "pass",
+                    "reason_code": "reported_permission_and_option_applicable",
+                    "evidence_ids": []
+                  }
+                ],
+                "ignored_evidence": {}
+              },
+              "next_transition": {
+                "from_stage": "load",
+                "to_stage": "dynamic",
+                "status": "blocked",
+                "reason_codes": [
+                  "no_reviewed_stage_exposure",
+                  "no_reviewed_response_group",
+                  "no_reviewed_response_group"
+                ],
+                "target_stage_live": false,
+                "closed_reason": null,
+                "missing_inputs": [],
+                "requirements": [
+                  {
+                    "requirement_id": "no_unresolved_setback",
+                    "kind": "no_unresolved_setback",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "no_negative_response",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "complete_episode_history",
+                    "kind": "complete_history",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "history_complete",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "reviewed_stage_exposure",
+                    "kind": "completed_reviewed_exposure",
+                    "basis": "data_sufficiency",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_stage_exposure",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "during_response_not_worse",
+                    "kind": "during_session_response",
+                    "basis": "product_safety",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_response_group",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "next_day_response_not_worse",
+                    "kind": "next_day_response",
+                    "basis": "product_safety",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_response_group",
+                    "evidence_ids": []
+                  }
+                ],
+                "ignored_evidence": {}
+              }
+            },
+            "schedule": {
+              "state": "due",
+              "reason": "Your baseline rehab is due today; missed work adds no extra volume.",
+              "next_due_day": "2026-10-05"
+            }
+          }
+        }
+      ],
+      "live_prescription": {
+        "plan_id": "d27910f2-7f8a-45bb-b5f9-6a652ae3d29f",
+        "training_day": "2026-10-05",
+        "session": {
+          "calendar_date": "2026-10-05",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday",
+          "day_label": "",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-035281aea20cfa032dde0ede",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "effective_load": "reduced",
+          "contact_level": "none",
+          "blocks": [
+            {
+              "injury_side": "left",
+              "block_id": "rehab:463e972f-05aa-4a48-bc2c-068c8bc552df:0148b63c-4bd2-4898-b0f3-fc66cc9bba05",
+              "block_type": "rehab",
+              "title": "Floor-level controlled Achilles lowering",
+              "display_name": "Floor-level controlled Achilles lowering",
+              "coaching_cues": [
+                "Beside stable support on firm level ground, raise both heels, then transfer weight to the affected leg and slowly lower its heel only to the floor. Do not use a step, lower into deep dorsiflexion, increase depth or add speed or weight. Stop if symptoms worsen during or after the work."
+              ],
+              "rehab_drill_id": "achilles_tendonitis_eccentric_calf_drops_on_step",
+              "exercise_key": "achilles-tendonitis-eccentric-calf-drops-on-step",
+              "injury_id": "463e972f-05aa-4a48-bc2c-068c8bc552df",
+              "injury_episode_id": "0148b63c-4bd2-4898-b0f3-fc66cc9bba05",
+              "target_regions": [
+                "achilles"
+              ],
+              "dose": {
+                "sets": 1,
+                "reps": 10
+              },
+              "instructions": "Beside stable support on firm level ground, raise both heels, then transfer weight to the affected leg and slowly lower its heel only to the floor. Do not use a step, lower into deep dorsiflexion, increase depth or add speed or weight. Stop if symptoms worsen during or after the work.",
+              "sets": 1,
+              "reps": 10,
+              "stop_rules": [
+                "Once daily only: 1 set of 10 controlled lowerings beside stable support on level ground.",
+                "Bodyweight only: no added resistance.",
+                "No step or lowering below floor level.",
+                "No speed, bouncing, hopping or automatic progression.",
+                "Stop for worsening during or delayed symptoms and seek clinical review.",
+                "Stop and seek assessment for a snap, sudden pain or loss of function.",
+                "Follow clinician restrictions; this prescription grants no training or contact clearance."
+              ],
+              "drill_snapshot": {
+                "id": "achilles_tendonitis_eccentric_calf_drops_on_step",
+                "name": "Floor-level controlled Achilles lowering",
+                "notes": "Beside stable support on firm level ground, raise both heels, then transfer weight to the affected leg and slowly lower its heel only to the floor. Do not use a step, lower into deep dorsiflexion, increase depth or add speed or weight. Stop if symptoms worsen during or after the work.",
+                "rehab_stage": "load",
+                "function": "control",
+                "equipment": [
+                  "stable_support"
+                ],
+                "dose": null,
+                "impact": "none",
+                "load": "moderate",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": null,
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": null,
+                "target_regions": [
+                  "achilles"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "Achilles tendon"
+                ],
+                "contraction_type": "eccentric",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Fixed mechanics reviewed; sources: https://www.nhs.uk/conditions/tendonitis/, https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/, https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/. Dormant LOAD content, not an active prescription. External load remains unknown where not measured. Tendon site, individual resistance, functional tolerance and a sourced evaluable transition are required before activation. Eccentrics are not assumed superior."
+              },
+              "policy_id": "achilles_tendonitis",
+              "policy_version": 3,
+              "bank_hash": "557056e938e245ccf7bda3621958820389212034a4eb47c3fb4d04d3e58bad2f",
+              "policy_review_hash": "fb10153611fc19d4bb16a85dabdd6951332dbf36f70e00f8c02d4ba532ee1bf3",
+              "minimum_gap_days": 1,
+              "is_loading": true,
+              "source_references": [
+                "https://bjsm.bmj.com/content/55/20/1125",
+                "https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf",
+                "https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/"
+              ],
+              "required_rehabilitation_level": "loading",
+              "range_choice": "floor_level",
+              "resistance": {
+                "mode": "bodyweight",
+                "kg": null
+              },
+              "mandatory_restrictions": [
+                "bodyweight_only_no_added_resistance",
+                "floor_only_no_step_or_below_floor_dorsiflexion",
+                "follow_clinician_restrictions_no_training_or_contact_clearance",
+                "no_speed_bouncing_hopping_or_automatic_progression",
+                "stable_support_controlled_lowering",
+                "stop_for_worsening_during_or_delayed_symptoms_seek_review",
+                "stop_seek_assessment_for_snap_sudden_pain_or_loss_of_function"
+              ],
+              "frequency": "daily"
+            }
+          ]
+        },
+        "changes": [
+          {
+            "action": "held",
+            "reason": "clinician_clearance_ceiling"
+          },
+          {
+            "block_id": "training",
+            "action": "held",
+            "reason": "no_reviewed_safe_substitution",
+            "restriction_reasons": [
+              "injury_loading_restriction"
+            ]
+          }
+        ],
+        "safety_hold": false,
+        "frozen": false,
+        "engine_version": "2",
+        "rehab_only": true,
+        "held_session_id": "training",
+        "injury_ids": [
+          "463e972f-05aa-4a48-bc2c-068c8bc552df"
+        ],
+        "allocation_limit": 2,
+        "training_hold_reason": "Your planned training conflicts with the current injury restrictions.",
+        "revision": "62a6a3a780c05a14452daef52d0ad52fd56c87d3a54852f0180f965c35316f99",
+        "injury_context": [
+          {
+            "id": "463e972f-05aa-4a48-bc2c-068c8bc552df",
+            "episode_id": "0148b63c-4bd2-4898-b0f3-fc66cc9bba05",
+            "updated_at": "2026-10-05T12:02:00+00:00"
+          }
+        ],
+        "evidence_context": {
+          "exposure_id": null,
+          "event_id": "3b1f5aa1-f324-5087-b62c-16db493bd499"
+        },
+        "readiness_context": {
+          "id": "33e53bcc-33cb-4df4-9927-70ea80a89709",
+          "updated_at": "2026-10-05T12:02:00+00:00"
+        }
+      },
+      "exercise_media": {},
+      "effective_clinician_clearance": {
+        "level": "rehab_only",
+        "scopes": [
+          "rehab"
+        ],
+        "requires_update": false,
+        "limited_by": [
+          {
+            "injury_id": "463e972f-05aa-4a48-bc2c-068c8bc552df",
+            "injury_episode_id": "0148b63c-4bd2-4898-b0f3-fc66cc9bba05",
+            "label": "Left achilles tendonitis"
+          }
+        ]
+      },
+      "delayed_rehab_prompts": [],
+      "week_summary": {},
+      "quick_actions": [
+        {
+          "id": "open_today",
+          "label": "Open Today",
+          "route": "/today"
+        },
+        {
+          "id": "view_plan",
+          "label": "View Plan",
+          "route": "/plans/d27910f2-7f8a-45bb-b5f9-6a652ae3d29f"
+        }
+      ]
+    },
+    "profile": {
+      "profile": {
+        "starting_path": "plan_first",
+        "training_habits": {
+          "enabled": true,
+          "decisions": []
+        },
+        "training_habits_revision": 0,
+        "athlete_id": "0ebfdfd4-1c47-4648-914c-7e832c03d91c",
+        "email": "fixture@example.com",
+        "username": null,
+        "username_change_history": [],
+        "role": "athlete",
+        "access_status": "approved",
+        "full_name": "Test athlete",
+        "technical_style": [],
+        "tactical_style": [],
+        "stance": "",
+        "professional_status": "",
+        "record": "",
+        "athlete_timezone": "UTC",
+        "athlete_locale": "",
+        "appearance_mode": "dark",
+        "onboarding_draft": null,
+        "avatar_url": null,
+        "nutrition_profile": {
+          "sex": null,
+          "age": null,
+          "height_cm": null,
+          "daily_activity_level": null,
+          "dietary_restrictions": [],
+          "food_preferences": [],
+          "meals_per_day_preference": null,
+          "foods_avoided_pre_session": [],
+          "foods_avoided_fight_week": [],
+          "supplement_use": [],
+          "caffeine_use": null
+        },
+        "private_trial_ack_at": null,
+        "date_of_birth": "1996-05-04",
+        "age_band": "adult",
+        "is_minor": false,
+        "meets_minimum_age": true,
+        "terms_version": "0.1-pre-launch",
+        "terms_accepted_at": "2026-10-05T12:03:00+00:00",
+        "terms_accepted": true,
+        "health_consent_version": "1.0",
+        "health_data_consent": true,
+        "health_consent_at": "2026-10-05T12:03:00+00:00",
+        "health_consent_withdrawn_at": null,
+        "health_consent_granted": true,
+        "created_at": "2026-10-05T12:03:00+00:00",
+        "updated_at": "2026-10-05T12:03:00+00:00"
+      },
+      "effective_admin": false,
+      "latest_intake": null,
+      "latest_plan": {
+        "custom_plan_id": null,
+        "plan_id": "d27910f2-7f8a-45bb-b5f9-6a652ae3d29f",
+        "plan_name": null,
+        "athlete_id": "0ebfdfd4-1c47-4648-914c-7e832c03d91c",
+        "full_name": "",
+        "fight_date": "",
+        "technical_style": [],
+        "created_at": "2026-10-05T12:00:00+00:00",
+        "status": "ready",
+        "activation_state": "eligible",
+        "pdf_url": null,
+        "review_reason": null
+      },
+      "plan_count": 1,
+      "username_rate_limit": {
+        "max_changes_per_window": 4,
+        "window_days": 30,
+        "remaining": 4,
+        "next_available_at": null
+      }
+    }
+  },
+  "missing_permission": {
+    "view": {
+      "active_plan": {
+        "status": "ready",
+        "phase": "GPP",
+        "id": "f0ff2736-b512-47b3-afb6-a43f440a118d"
+      },
+      "today": {
+        "training_day": "2026-10-05",
+        "recommendation_state": "modify",
+        "recommendation_reason": "Reviewed rehab today\nYour planned training conflicts with the current injury restrictions.\nFollow only the reviewed rehab shown today.",
+        "decision_tier": "modify",
+        "injury_hold_exempt": false,
+        "recommendation_trigger_labels": [
+          "Current injury restrictions"
+        ],
+        "recommendation_context_labels": [],
+        "recommendation_safety_checks": [],
+        "recommendation_sources": [
+          "today's check-in",
+          "today's planned session",
+          "your tracked injuries"
+        ],
+        "recommendation_confidence": "moderate",
+        "recommendation_confidence_note": "Less to go on today: this is based on today's check-in alone, with no recent days to compare.",
+        "primary_safety_notice": null,
+        "warnings": [],
+        "next_session": {
+          "calendar_date": "2026-10-05",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday",
+          "day_label": "",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-f34fc6c5d2b1751dc140ab13",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "effective_load": "reduced",
+          "contact_level": "none",
+          "blocks": [
+            {
+              "block_id": "rehab:999e8d30-0e49-4644-b827-76fb39aa21ef:86293920-8977-417b-b376-8e7d2f6491f6",
+              "block_type": "rehab",
+              "title": "Seated Achilles heel movement",
+              "display_name": "Seated Achilles heel movement",
+              "coaching_cues": [
+                "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport."
+              ],
+              "rehab_drill_id": "achilles_tendonitis_reviewed_restore",
+              "exercise_key": "achilles-tendonitis-reviewed-restore",
+              "injury_id": "999e8d30-0e49-4644-b827-76fb39aa21ef",
+              "injury_episode_id": "86293920-8977-417b-b376-8e7d2f6491f6",
+              "target_regions": [
+                "achilles"
+              ],
+              "dose": {},
+              "instructions": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+              "stop_rules": [
+                "Stop for pain or worsening symptoms during or after the work.",
+                "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+              ],
+              "drill_snapshot": {
+                "id": "achilles_tendonitis_reviewed_restore",
+                "name": "Seated Achilles heel movement",
+                "notes": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+                "rehab_stage": "restore",
+                "function": "tendon_loading",
+                "equipment": [],
+                "dose": null,
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": null,
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": null,
+                "target_regions": [
+                  "achilles"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "Achilles tendon"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/, https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+              },
+              "policy_id": "achilles_tendonitis",
+              "policy_version": 3,
+              "bank_hash": "d8eed079ec51160e7a52dacbf26871bc25e7b0f0df70f1ef42be50694aabad4e",
+              "policy_review_hash": "fb10153611fc19d4bb16a85dabdd6951332dbf36f70e00f8c02d4ba532ee1bf3",
+              "minimum_gap_days": 1,
+              "is_loading": true,
+              "source_references": [
+                "https://www.nhs.uk/conditions/tendonitis/",
+                "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+                "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+              ]
+            }
+          ],
+          "session_relation": "today"
+        },
+        "session_scope": "today",
+        "session_label": "Today's session",
+        "completion_status": "not_started"
+      },
+      "risk_watch": [
+        {
+          "category": "reminder",
+          "priority": 7,
+          "icon": "info",
+          "label": "Reminder",
+          "text": "Tracking 1 open injury: Left achilles tendonitis. Train around it.",
+          "tone": "info",
+          "timeframe": "active"
+        }
+      ],
+      "open_injuries": [
+        {
+          "id": "999e8d30-0e49-4644-b827-76fb39aa21ef",
+          "athlete_id": "2fcaea5b-557f-4824-b14c-f5ef69789072",
+          "plan_id": "f0ff2736-b512-47b3-afb6-a43f440a118d",
+          "source": "checkin",
+          "body_area": "Left Achilles",
+          "severity": "mild",
+          "status": "monitoring",
+          "resolved_at": null,
+          "episode_id": "86293920-8977-417b-b376-8e7d2f6491f6",
+          "body_region": "achilles",
+          "side": "left",
+          "description": "tendonitis [achilles_site:midportion]",
+          "latest_reported_status": "improving",
+          "created_at": "2026-10-05T12:01:00+00:00",
+          "updated_at": "2026-10-05T12:02:00+00:00",
+          "surface_class": "non_surface",
+          "canonical_location": "achilles",
+          "region_group": "lower_leg_foot",
+          "load_region": "lower_limb",
+          "consequence": "load_sensitive",
+          "rehab_stage": "restore",
+          "rehab_stage_reasons": [
+            "symptoms_not_worsening",
+            "insufficient_injury_specific_progression_evidence"
+          ],
+          "rehab_care_pathway": "musculoskeletal",
+          "rehab_medical_gate": false,
+          "label": "Left achilles tendonitis",
+          "assessment_history_complete": true,
+          "progression_assessments": [],
+          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
+          "latest_reported_at": "2026-10-05T12:02:00+00:00",
+          "rehab_improvement_reports": [
+            {
+              "id": "ef3e79be-7a37-479d-a78e-db9bd7b91a8f",
+              "reported_at": "2026-10-05T12:01:00+00:00"
+            },
+            {
+              "id": "fd0bbbc6-6b23-490d-a5fb-3cbedc94e623",
+              "reported_at": "2026-10-05T12:02:00+00:00"
+            }
+          ],
+          "rehab_improvement_at": "2026-10-05T12:02:00Z",
+          "assessment_setback_at": null,
+          "clinician_clearance": {
+            "episode_id": "86293920-8977-417b-b376-8e7d2f6491f6",
+            "scopes": [
+              "rehab"
+            ],
+            "report_id": "76c9879c-b0d3-5607-8824-a034df68d017",
+            "reported_at": "2026-10-05T12:04:00+00:00",
+            "source": "athlete_reported",
+            "externally_verified": false,
+            "scope_reported_at": {
+              "rehab": "2026-10-05T12:04:00+00:00"
+            },
+            "rehabilitation_permission": {
+              "schema_version": 1,
+              "level": "gentle_recovery"
+            }
+          },
+          "rehab_decision": {
+            "injury_id": "999e8d30-0e49-4644-b827-76fb39aa21ef",
+            "injury_episode_id": "86293920-8977-417b-b376-8e7d2f6491f6",
+            "region": "achilles",
+            "injury_type": "tendonitis",
+            "stage": "restore",
+            "outcome": "prescribed_rehab",
+            "summary": "Your rehab is matched to this injury's current recovery stage.",
+            "reason_codes": [
+              "SELECT_DETERMINISTIC_BEST"
+            ],
+            "activation": "live",
+            "prescription": {
+              "drill_id": "achilles_tendonitis_reviewed_restore",
+              "drill": {
+                "id": "achilles_tendonitis_reviewed_restore",
+                "name": "Seated Achilles heel movement",
+                "notes": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+                "rehab_stage": "restore",
+                "function": "tendon_loading",
+                "equipment": [],
+                "dose": null,
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": null,
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": null,
+                "target_regions": [
+                  "achilles"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "Achilles tendon"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/, https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+              },
+              "instructions": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+              "dose": {},
+              "stop_when": [
+                "Stop for pain or worsening symptoms during or after the work.",
+                "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+              ],
+              "frequency": "scheduled_sessions",
+              "sources": [
+                "https://www.nhs.uk/conditions/tendonitis/",
+                "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+                "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+              ],
+              "bank_hash": "d8eed079ec51160e7a52dacbf26871bc25e7b0f0df70f1ef42be50694aabad4e",
+              "policy_id": "achilles_tendonitis",
+              "policy_version": 3,
+              "policy_review_hash": "fb10153611fc19d4bb16a85dabdd6951332dbf36f70e00f8c02d4ba532ee1bf3",
+              "minimum_gap_days": 1,
+              "is_loading": true
+            },
+            "restrictions": {
+              "blocked_regions": [
+                "achilles"
+              ],
+              "blocked_tags": [],
+              "contact_limit": "none"
+            },
+            "loading_hold": false,
+            "achilles_load_review": {
+              "criterion_id": "achilles_restore_load_review_v1",
+              "criterion_version": 1,
+              "status": "unknown",
+              "reason_codes": [
+                "assessment_observation_missing"
+              ],
+              "subtype": "unknown",
+              "required_input_ids": [
+                "achilles_site_assessed",
+                "achilles_heel_rise_assessed",
+                "achilles_loading_response_assessed",
+                "achilles_range_load_assessed"
+              ],
+              "observation_id": null,
+              "externally_verified": false,
+              "promotion_allowed": false,
+              "sources": [
+                "https://bjsm.bmj.com/content/55/20/1125",
+                "https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf",
+                "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+              ]
+            },
+            "policy_id": "achilles_tendonitis",
+            "policy_version": 3,
+            "progression": {
+              "stage": "restore",
+              "reason_codes": [
+                "baseline_only_v1"
+              ],
+              "evidence_ids": [],
+              "engine_version": "2",
+              "next_transition": {
+                "from_stage": "restore",
+                "to_stage": "load",
+                "status": "blocked",
+                "reason_codes": [
+                  "no_reviewed_stage_exposure",
+                  "no_reviewed_response_group",
+                  "no_reviewed_response_group",
+                  "rehabilitation_loading_not_reported"
+                ],
+                "target_stage_live": true,
+                "closed_reason": null,
+                "missing_inputs": [],
+                "requirements": [
+                  {
+                    "requirement_id": "no_unresolved_setback",
+                    "kind": "no_unresolved_setback",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "no_negative_response",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "complete_episode_history",
+                    "kind": "complete_history",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "history_complete",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "reviewed_stage_exposure",
+                    "kind": "completed_reviewed_exposure",
+                    "basis": "data_sufficiency",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_stage_exposure",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "during_response_not_worse",
+                    "kind": "during_session_response",
+                    "basis": "product_safety",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_response_group",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "next_day_response_not_worse",
+                    "kind": "next_day_response",
+                    "basis": "product_safety",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_response_group",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "achilles_midportion_reported_load_permission_v1",
+                    "kind": "functional_checkpoint",
+                    "basis": "clinical",
+                    "status": "unknown",
+                    "reason_code": "rehabilitation_loading_not_reported",
+                    "evidence_ids": []
+                  }
+                ],
+                "ignored_evidence": {}
+              }
+            },
+            "schedule": {
+              "state": "due",
+              "reason": "Your baseline rehab is due today; missed work adds no extra volume.",
+              "next_due_day": "2026-10-05"
+            }
+          }
+        }
+      ],
+      "live_prescription": {
+        "plan_id": "f0ff2736-b512-47b3-afb6-a43f440a118d",
+        "training_day": "2026-10-05",
+        "session": {
+          "calendar_date": "2026-10-05",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday",
+          "day_label": "",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-f34fc6c5d2b1751dc140ab13",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "effective_load": "reduced",
+          "contact_level": "none",
+          "blocks": [
+            {
+              "block_id": "rehab:999e8d30-0e49-4644-b827-76fb39aa21ef:86293920-8977-417b-b376-8e7d2f6491f6",
+              "block_type": "rehab",
+              "title": "Seated Achilles heel movement",
+              "display_name": "Seated Achilles heel movement",
+              "coaching_cues": [
+                "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport."
+              ],
+              "rehab_drill_id": "achilles_tendonitis_reviewed_restore",
+              "exercise_key": "achilles-tendonitis-reviewed-restore",
+              "injury_id": "999e8d30-0e49-4644-b827-76fb39aa21ef",
+              "injury_episode_id": "86293920-8977-417b-b376-8e7d2f6491f6",
+              "target_regions": [
+                "achilles"
+              ],
+              "dose": {},
+              "instructions": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+              "stop_rules": [
+                "Stop for pain or worsening symptoms during or after the work.",
+                "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+              ],
+              "drill_snapshot": {
+                "id": "achilles_tendonitis_reviewed_restore",
+                "name": "Seated Achilles heel movement",
+                "notes": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+                "rehab_stage": "restore",
+                "function": "tendon_loading",
+                "equipment": [],
+                "dose": null,
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": null,
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": null,
+                "target_regions": [
+                  "achilles"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "Achilles tendon"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/, https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+              },
+              "policy_id": "achilles_tendonitis",
+              "policy_version": 3,
+              "bank_hash": "d8eed079ec51160e7a52dacbf26871bc25e7b0f0df70f1ef42be50694aabad4e",
+              "policy_review_hash": "fb10153611fc19d4bb16a85dabdd6951332dbf36f70e00f8c02d4ba532ee1bf3",
+              "minimum_gap_days": 1,
+              "is_loading": true,
+              "source_references": [
+                "https://www.nhs.uk/conditions/tendonitis/",
+                "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+                "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+              ]
+            }
+          ]
+        },
+        "changes": [
+          {
+            "action": "held",
+            "reason": "clinician_clearance_ceiling"
+          },
+          {
+            "block_id": "training",
+            "action": "held",
+            "reason": "no_reviewed_safe_substitution",
+            "restriction_reasons": [
+              "injury_loading_restriction"
+            ]
+          }
+        ],
+        "safety_hold": false,
+        "frozen": false,
+        "engine_version": "2",
+        "rehab_only": true,
+        "held_session_id": "training",
+        "injury_ids": [
+          "999e8d30-0e49-4644-b827-76fb39aa21ef"
+        ],
+        "allocation_limit": 2,
+        "training_hold_reason": "Your planned training conflicts with the current injury restrictions.",
+        "revision": "ee739859eff16d72128846f6ba54a176eade23087fe51b69e789da31c83c621d",
+        "injury_context": [
+          {
+            "id": "999e8d30-0e49-4644-b827-76fb39aa21ef",
+            "episode_id": "86293920-8977-417b-b376-8e7d2f6491f6",
+            "updated_at": "2026-10-05T12:02:00+00:00"
+          }
+        ],
+        "evidence_context": {
+          "exposure_id": null,
+          "event_id": "76c9879c-b0d3-5607-8824-a034df68d017"
+        },
+        "readiness_context": {
+          "id": "4c107eec-edbc-4104-bc92-7549e2d1770d",
+          "updated_at": "2026-10-05T12:02:00+00:00"
+        }
+      },
+      "exercise_media": {},
+      "effective_clinician_clearance": {
+        "level": "rehab_only",
+        "scopes": [
+          "rehab"
+        ],
+        "requires_update": false,
+        "limited_by": [
+          {
+            "injury_id": "999e8d30-0e49-4644-b827-76fb39aa21ef",
+            "injury_episode_id": "86293920-8977-417b-b376-8e7d2f6491f6",
+            "label": "Left achilles tendonitis"
+          }
+        ]
+      },
+      "delayed_rehab_prompts": [],
+      "week_summary": {},
+      "quick_actions": [
+        {
+          "id": "open_today",
+          "label": "Open Today",
+          "route": "/today"
+        },
+        {
+          "id": "view_plan",
+          "label": "View Plan",
+          "route": "/plans/f0ff2736-b512-47b3-afb6-a43f440a118d"
+        }
+      ]
+    },
+    "profile": {
+      "profile": {
+        "starting_path": "plan_first",
+        "training_habits": {
+          "enabled": true,
+          "decisions": []
+        },
+        "training_habits_revision": 0,
+        "athlete_id": "2fcaea5b-557f-4824-b14c-f5ef69789072",
+        "email": "fixture@example.com",
+        "username": null,
+        "username_change_history": [],
+        "role": "athlete",
+        "access_status": "approved",
+        "full_name": "Test athlete",
+        "technical_style": [],
+        "tactical_style": [],
+        "stance": "",
+        "professional_status": "",
+        "record": "",
+        "athlete_timezone": "UTC",
+        "athlete_locale": "",
+        "appearance_mode": "dark",
+        "onboarding_draft": null,
+        "avatar_url": null,
+        "nutrition_profile": {
+          "sex": null,
+          "age": null,
+          "height_cm": null,
+          "daily_activity_level": null,
+          "dietary_restrictions": [],
+          "food_preferences": [],
+          "meals_per_day_preference": null,
+          "foods_avoided_pre_session": [],
+          "foods_avoided_fight_week": [],
+          "supplement_use": [],
+          "caffeine_use": null
+        },
+        "private_trial_ack_at": null,
+        "date_of_birth": "1996-05-04",
+        "age_band": "adult",
+        "is_minor": false,
+        "meets_minimum_age": true,
+        "terms_version": "0.1-pre-launch",
+        "terms_accepted_at": "2026-10-05T12:03:00+00:00",
+        "terms_accepted": true,
+        "health_consent_version": "1.0",
+        "health_data_consent": true,
+        "health_consent_at": "2026-10-05T12:03:00+00:00",
+        "health_consent_withdrawn_at": null,
+        "health_consent_granted": true,
+        "created_at": "2026-10-05T12:03:00+00:00",
+        "updated_at": "2026-10-05T12:04:00+00:00"
+      },
+      "effective_admin": false,
+      "latest_intake": null,
+      "latest_plan": {
+        "custom_plan_id": null,
+        "plan_id": "f0ff2736-b512-47b3-afb6-a43f440a118d",
+        "plan_name": null,
+        "athlete_id": "2fcaea5b-557f-4824-b14c-f5ef69789072",
+        "full_name": "",
+        "fight_date": "",
+        "technical_style": [],
+        "created_at": "2026-10-05T12:00:00+00:00",
+        "status": "ready",
+        "activation_state": "eligible",
+        "pdf_url": null,
+        "review_reason": null
+      },
+      "plan_count": 1,
+      "username_rate_limit": {
+        "max_changes_per_window": 4,
+        "window_days": 30,
+        "remaining": 4,
+        "next_available_at": null
+      }
+    }
+  },
+  "pending_response": {
+    "view": {
+      "active_plan": {
+        "status": "ready",
+        "id": "03fb3ed2-2a58-4191-9852-e07603a4600f"
+      },
+      "today": {
+        "training_day": "2026-10-06",
+        "recommendation_state": "modify",
+        "recommendation_reason": "Reviewed rehab today\nYour planned training conflicts with the current injury restrictions.\nFollow only the reviewed rehab shown today.",
+        "decision_tier": "modify",
+        "injury_hold_exempt": false,
+        "recommendation_trigger_labels": [
+          "Current injury restrictions"
+        ],
+        "recommendation_context_labels": [],
+        "recommendation_safety_checks": [],
+        "recommendation_sources": [
+          "today's check-in",
+          "your tracked injuries"
+        ],
+        "recommendation_confidence": "moderate",
+        "recommendation_confidence_note": "Less to go on today: today's session isn't resolved yet.",
+        "primary_safety_notice": null,
+        "warnings": [],
+        "next_session": {
+          "session_id": "rehab-2026-10-06-a452173eea3526562bea5bdf",
+          "title": "Today's rehab",
+          "session_type": "rehab",
+          "blocks": [
+            {
+              "block_id": "rehab:c9af8868-e913-4f79-a132-e81fe89a4e36:d033be8b-b19a-49a0-a1ab-85b1cedbdee5",
+              "block_type": "rehab",
+              "title": "Seated Achilles heel movement",
+              "display_name": "Seated Achilles heel movement",
+              "coaching_cues": [
+                "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport."
+              ],
+              "rehab_drill_id": "achilles_tendonitis_reviewed_restore",
+              "exercise_key": "achilles-tendonitis-reviewed-restore",
+              "injury_id": "c9af8868-e913-4f79-a132-e81fe89a4e36",
+              "injury_episode_id": "d033be8b-b19a-49a0-a1ab-85b1cedbdee5",
+              "target_regions": [
+                "achilles"
+              ],
+              "dose": {},
+              "instructions": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+              "stop_rules": [
+                "Stop for pain or worsening symptoms during or after the work.",
+                "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+              ],
+              "drill_snapshot": {
+                "id": "achilles_tendonitis_reviewed_restore",
+                "name": "Seated Achilles heel movement",
+                "notes": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+                "rehab_stage": "restore",
+                "function": "tendon_loading",
+                "equipment": [],
+                "dose": null,
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": null,
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": null,
+                "target_regions": [
+                  "achilles"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "Achilles tendon"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/, https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+              },
+              "policy_id": "achilles_tendonitis",
+              "policy_version": 3,
+              "bank_hash": "d8eed079ec51160e7a52dacbf26871bc25e7b0f0df70f1ef42be50694aabad4e",
+              "policy_review_hash": "fb10153611fc19d4bb16a85dabdd6951332dbf36f70e00f8c02d4ba532ee1bf3",
+              "minimum_gap_days": 1,
+              "is_loading": true,
+              "source_references": [
+                "https://www.nhs.uk/conditions/tendonitis/",
+                "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+                "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+              ]
+            }
+          ],
+          "session_relation": "today"
+        },
+        "session_scope": "today",
+        "session_label": "Today's session",
+        "completion_status": "not_started"
+      },
+      "risk_watch": [
+        {
+          "category": "reminder",
+          "priority": 7,
+          "icon": "info",
+          "label": "Reminder",
+          "text": "Tracking 1 open injury: Left achilles tendonitis. Train around it.",
+          "tone": "info",
+          "timeframe": "active"
+        }
+      ],
+      "open_injuries": [
+        {
+          "id": "c9af8868-e913-4f79-a132-e81fe89a4e36",
+          "athlete_id": "5b004f36-c296-4579-b8f5-be6b15b7925b",
+          "plan_id": "03fb3ed2-2a58-4191-9852-e07603a4600f",
+          "source": "checkin",
+          "body_area": "Left Achilles",
+          "severity": "mild",
+          "status": "monitoring",
+          "resolved_at": null,
+          "episode_id": "d033be8b-b19a-49a0-a1ab-85b1cedbdee5",
+          "body_region": "achilles",
+          "side": "left",
+          "description": "tendonitis [achilles_site:midportion]",
+          "latest_reported_status": "improving",
+          "created_at": "2026-10-05T12:01:00+00:00",
+          "updated_at": "2026-10-05T12:06:00+00:00",
+          "surface_class": "non_surface",
+          "canonical_location": "achilles",
+          "region_group": "lower_leg_foot",
+          "load_region": "lower_limb",
+          "consequence": "load_sensitive",
+          "rehab_stage": "restore",
+          "rehab_stage_reasons": [
+            "symptoms_not_worsening",
+            "insufficient_injury_specific_progression_evidence"
+          ],
+          "rehab_care_pathway": "musculoskeletal",
+          "rehab_medical_gate": false,
+          "label": "Left achilles tendonitis",
+          "assessment_history_complete": true,
+          "progression_assessments": [],
+          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
+          "latest_reported_at": "2026-10-05T12:06:00+00:00",
+          "rehab_improvement_reports": [
+            {
+              "id": "63d6c3ac-79ae-46ee-9fa2-05338ce23310",
+              "reported_at": "2026-10-05T12:01:00+00:00"
+            },
+            {
+              "id": "5c3dd0a4-8743-46c8-b1de-bde8f9e1f727",
+              "reported_at": "2026-10-05T12:02:00+00:00"
+            },
+            {
+              "id": "96b278b7-5752-48dc-955a-7bcf7912c569",
+              "reported_at": "2026-10-05T12:06:00+00:00"
+            }
+          ],
+          "rehab_improvement_at": "2026-10-05T12:06:00Z",
+          "assessment_setback_at": null,
+          "clinician_clearance": {
+            "episode_id": "d033be8b-b19a-49a0-a1ab-85b1cedbdee5",
+            "scopes": [
+              "rehab"
+            ],
+            "report_id": "88456d20-c39b-56e5-a90f-f4d14eec6c6e",
+            "reported_at": "2026-10-06T12:07:00+00:00",
+            "source": "athlete_reported",
+            "externally_verified": false,
+            "scope_reported_at": {
+              "rehab": "2026-10-06T12:07:00+00:00"
+            },
+            "rehabilitation_permission": {
+              "schema_version": 1,
+              "level": "loading"
+            }
+          },
+          "rehab_decision": {
+            "injury_id": "c9af8868-e913-4f79-a132-e81fe89a4e36",
+            "injury_episode_id": "d033be8b-b19a-49a0-a1ab-85b1cedbdee5",
+            "region": "achilles",
+            "injury_type": "tendonitis",
+            "stage": "restore",
+            "outcome": "prescribed_rehab",
+            "summary": "Your rehab is matched to this injury's current recovery stage.",
+            "reason_codes": [
+              "SELECT_DETERMINISTIC_BEST"
+            ],
+            "activation": "live",
+            "prescription": {
+              "drill_id": "achilles_tendonitis_reviewed_restore",
+              "drill": {
+                "id": "achilles_tendonitis_reviewed_restore",
+                "name": "Seated Achilles heel movement",
+                "notes": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+                "rehab_stage": "restore",
+                "function": "tendon_loading",
+                "equipment": [],
+                "dose": null,
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": null,
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": null,
+                "target_regions": [
+                  "achilles"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "Achilles tendon"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/, https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+              },
+              "instructions": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+              "dose": {},
+              "stop_when": [
+                "Stop for pain or worsening symptoms during or after the work.",
+                "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+              ],
+              "frequency": "scheduled_sessions",
+              "sources": [
+                "https://www.nhs.uk/conditions/tendonitis/",
+                "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+                "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+              ],
+              "bank_hash": "d8eed079ec51160e7a52dacbf26871bc25e7b0f0df70f1ef42be50694aabad4e",
+              "policy_id": "achilles_tendonitis",
+              "policy_version": 3,
+              "policy_review_hash": "fb10153611fc19d4bb16a85dabdd6951332dbf36f70e00f8c02d4ba532ee1bf3",
+              "minimum_gap_days": 1,
+              "is_loading": true
+            },
+            "restrictions": {
+              "blocked_regions": [
+                "achilles"
+              ],
+              "blocked_tags": [],
+              "contact_limit": "none"
+            },
+            "loading_hold": false,
+            "achilles_load_review": {
+              "criterion_id": "achilles_restore_load_review_v1",
+              "criterion_version": 1,
+              "status": "unknown",
+              "reason_codes": [
+                "assessment_observation_missing"
+              ],
+              "subtype": "unknown",
+              "required_input_ids": [
+                "achilles_site_assessed",
+                "achilles_heel_rise_assessed",
+                "achilles_loading_response_assessed",
+                "achilles_range_load_assessed"
+              ],
+              "observation_id": null,
+              "externally_verified": false,
+              "promotion_allowed": false,
+              "sources": [
+                "https://bjsm.bmj.com/content/55/20/1125",
+                "https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf",
+                "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+              ]
+            },
+            "policy_id": "achilles_tendonitis",
+            "policy_version": 3,
+            "progression": {
+              "stage": "restore",
+              "reason_codes": [
+                "baseline_only_v1"
+              ],
+              "evidence_ids": [],
+              "engine_version": "2",
+              "next_transition": {
+                "entry_basis": "reported_clinician_permission",
+                "authority_event_id": "88456d20-c39b-56e5-a90f-f4d14eec6c6e",
+                "from_stage": "restore",
+                "to_stage": "load",
+                "status": "blocked",
+                "reason_codes": [
+                  "next_day_response_not_yet_known"
+                ],
+                "target_stage_live": true,
+                "closed_reason": null,
+                "missing_inputs": [],
+                "requirements": [
+                  {
+                    "requirement_id": "no_unresolved_setback",
+                    "kind": "no_unresolved_setback",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "no_negative_response",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "complete_episode_history",
+                    "kind": "complete_history",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "history_complete",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "reviewed_stage_exposure",
+                    "kind": "completed_reviewed_exposure",
+                    "basis": "data_sufficiency",
+                    "status": "pass",
+                    "reason_code": "reviewed_stage_work_performed",
+                    "evidence_ids": [
+                      "fbe73f7a-9bcf-5b11-9b90-999e993b90fc"
+                    ]
+                  },
+                  {
+                    "requirement_id": "during_response_not_worse",
+                    "kind": "during_session_response",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "during_response_better",
+                    "evidence_ids": [
+                      "fbe73f7a-9bcf-5b11-9b90-999e993b90fc"
+                    ]
+                  },
+                  {
+                    "requirement_id": "next_day_response_not_worse",
+                    "kind": "next_day_response",
+                    "basis": "product_safety",
+                    "status": "unknown",
+                    "reason_code": "next_day_response_not_yet_known",
+                    "evidence_ids": [
+                      "fbe73f7a-9bcf-5b11-9b90-999e993b90fc"
+                    ]
+                  },
+                  {
+                    "requirement_id": "achilles_midportion_reported_load_permission_v1",
+                    "kind": "functional_checkpoint",
+                    "basis": "clinical",
+                    "status": "pass",
+                    "reason_code": "reported_permission_and_option_applicable",
+                    "evidence_ids": []
+                  }
+                ],
+                "ignored_evidence": {}
+              }
+            },
+            "schedule": {
+              "state": "due",
+              "reason": "Your baseline rehab is due today; missed work adds no extra volume.",
+              "next_due_day": "2026-10-06"
+            }
+          }
+        }
+      ],
+      "live_prescription": {
+        "plan_id": "03fb3ed2-2a58-4191-9852-e07603a4600f",
+        "training_day": "2026-10-06",
+        "session": {
+          "session_id": "rehab-2026-10-06-a452173eea3526562bea5bdf",
+          "title": "Today's rehab",
+          "session_type": "rehab",
+          "blocks": [
+            {
+              "block_id": "rehab:c9af8868-e913-4f79-a132-e81fe89a4e36:d033be8b-b19a-49a0-a1ab-85b1cedbdee5",
+              "block_type": "rehab",
+              "title": "Seated Achilles heel movement",
+              "display_name": "Seated Achilles heel movement",
+              "coaching_cues": [
+                "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport."
+              ],
+              "rehab_drill_id": "achilles_tendonitis_reviewed_restore",
+              "exercise_key": "achilles-tendonitis-reviewed-restore",
+              "injury_id": "c9af8868-e913-4f79-a132-e81fe89a4e36",
+              "injury_episode_id": "d033be8b-b19a-49a0-a1ab-85b1cedbdee5",
+              "target_regions": [
+                "achilles"
+              ],
+              "dose": {},
+              "instructions": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+              "stop_rules": [
+                "Stop for pain or worsening symptoms during or after the work.",
+                "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+              ],
+              "drill_snapshot": {
+                "id": "achilles_tendonitis_reviewed_restore",
+                "name": "Seated Achilles heel movement",
+                "notes": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+                "rehab_stage": "restore",
+                "function": "tendon_loading",
+                "equipment": [],
+                "dose": null,
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": null,
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": null,
+                "target_regions": [
+                  "achilles"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "Achilles tendon"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/, https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+              },
+              "policy_id": "achilles_tendonitis",
+              "policy_version": 3,
+              "bank_hash": "d8eed079ec51160e7a52dacbf26871bc25e7b0f0df70f1ef42be50694aabad4e",
+              "policy_review_hash": "fb10153611fc19d4bb16a85dabdd6951332dbf36f70e00f8c02d4ba532ee1bf3",
+              "minimum_gap_days": 1,
+              "is_loading": true,
+              "source_references": [
+                "https://www.nhs.uk/conditions/tendonitis/",
+                "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+                "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+              ]
+            }
+          ]
+        },
+        "changes": [],
+        "safety_hold": false,
+        "frozen": false,
+        "engine_version": "2",
+        "rehab_only": true,
+        "held_session_id": null,
+        "injury_ids": [
+          "c9af8868-e913-4f79-a132-e81fe89a4e36"
+        ],
+        "allocation_limit": 2,
+        "training_hold_reason": "Your planned training conflicts with the current injury restrictions.",
+        "revision": "d0ec2730857325b99d742c9b05f383c62dc05a2234eaf2178bcd8f1260cfe6d8",
+        "injury_context": [
+          {
+            "id": "c9af8868-e913-4f79-a132-e81fe89a4e36",
+            "episode_id": "d033be8b-b19a-49a0-a1ab-85b1cedbdee5",
+            "updated_at": "2026-10-05T12:06:00+00:00"
+          }
+        ],
+        "evidence_context": {
+          "exposure_id": "fbe73f7a-9bcf-5b11-9b90-999e993b90fc",
+          "event_id": "88456d20-c39b-56e5-a90f-f4d14eec6c6e"
+        },
+        "readiness_context": {
+          "id": "e1d00d5e-9501-4972-b4a7-fe9958974460",
+          "updated_at": "2026-10-06T12:06:00+00:00"
+        }
+      },
+      "exercise_media": {},
+      "effective_clinician_clearance": {
+        "level": "rehab_only",
+        "scopes": [
+          "rehab"
+        ],
+        "requires_update": false,
+        "limited_by": [
+          {
+            "injury_id": "c9af8868-e913-4f79-a132-e81fe89a4e36",
+            "injury_episode_id": "d033be8b-b19a-49a0-a1ab-85b1cedbdee5",
+            "label": "Left achilles tendonitis"
+          }
+        ]
+      },
+      "delayed_rehab_prompts": [
+        {
+          "exposure_id": "fbe73f7a-9bcf-5b11-9b90-999e993b90fc",
+          "injury_id": "c9af8868-e913-4f79-a132-e81fe89a4e36",
+          "injury_episode_id": "d033be8b-b19a-49a0-a1ab-85b1cedbdee5",
+          "region": "achilles",
+          "question": "How did this injury feel the day after rehab?",
+          "options": [
+            "better",
+            "same",
+            "worse",
+            "not_sure"
+          ]
+        }
+      ],
+      "week_summary": {},
+      "quick_actions": [
+        {
+          "id": "open_today",
+          "label": "Open Today",
+          "route": "/today"
+        },
+        {
+          "id": "view_plan",
+          "label": "View Plan",
+          "route": "/plans/03fb3ed2-2a58-4191-9852-e07603a4600f"
+        }
+      ]
+    },
+    "profile": {
+      "profile": {
+        "starting_path": "plan_first",
+        "training_habits": {
+          "enabled": true,
+          "decisions": []
+        },
+        "training_habits_revision": 0,
+        "athlete_id": "5b004f36-c296-4579-b8f5-be6b15b7925b",
+        "email": "fixture@example.com",
+        "username": null,
+        "username_change_history": [],
+        "role": "athlete",
+        "access_status": "approved",
+        "full_name": "Test athlete",
+        "technical_style": [],
+        "tactical_style": [],
+        "stance": "",
+        "professional_status": "",
+        "record": "",
+        "athlete_timezone": "UTC",
+        "athlete_locale": "",
+        "appearance_mode": "dark",
+        "onboarding_draft": null,
+        "avatar_url": null,
+        "nutrition_profile": {
+          "sex": null,
+          "age": null,
+          "height_cm": null,
+          "daily_activity_level": null,
+          "dietary_restrictions": [],
+          "food_preferences": [],
+          "meals_per_day_preference": null,
+          "foods_avoided_pre_session": [],
+          "foods_avoided_fight_week": [],
+          "supplement_use": [],
+          "caffeine_use": null
+        },
+        "private_trial_ack_at": null,
+        "date_of_birth": "1996-05-04",
+        "age_band": "adult",
+        "is_minor": false,
+        "meets_minimum_age": true,
+        "terms_version": "0.1-pre-launch",
+        "terms_accepted_at": "2026-10-05T12:03:00+00:00",
+        "terms_accepted": true,
+        "health_consent_version": "1.0",
+        "health_data_consent": true,
+        "health_consent_at": "2026-10-05T12:03:00+00:00",
+        "health_consent_withdrawn_at": null,
+        "health_consent_granted": true,
+        "created_at": "2026-10-05T12:03:00+00:00",
+        "updated_at": "2026-10-06T12:07:00+00:00"
+      },
+      "effective_admin": false,
+      "latest_intake": null,
+      "latest_plan": {
+        "custom_plan_id": null,
+        "plan_id": "03fb3ed2-2a58-4191-9852-e07603a4600f",
+        "plan_name": null,
+        "athlete_id": "5b004f36-c296-4579-b8f5-be6b15b7925b",
+        "full_name": "",
+        "fight_date": "",
+        "technical_style": [],
+        "created_at": "2026-10-05T12:00:00+00:00",
+        "status": "ready",
+        "activation_state": "eligible",
+        "pdf_url": null,
+        "review_reason": null
+      },
+      "plan_count": 1,
+      "username_rate_limit": {
+        "max_changes_per_window": 4,
+        "window_days": 30,
+        "remaining": 4,
+        "next_available_at": null
+      }
+    }
+  },
+  "worsening": {
+    "view": {
+      "active_plan": {
+        "status": "ready",
+        "phase": "GPP",
+        "id": "a1d030f0-a46f-4273-be13-3220a41cc0e1"
+      },
+      "today": {
+        "training_day": "2026-10-05",
+        "recommendation_state": "pull_back",
+        "recommendation_reason": "Rehab only today.\nThe left achilles tendonitis injury is worse. Hard combat work is not safe today.\nNo sparring, live rounds, clinch work, hard bag work, or conditioning.\nSeek medical advice if pain is sharp, unstable, swollen, or neurological.",
+        "decision_tier": "stop",
+        "injury_hold_exempt": false,
+        "recommendation_trigger_labels": [
+          "Left achilles tendonitis \u2014 getting worse"
+        ],
+        "recommendation_context_labels": [],
+        "recommendation_safety_checks": [],
+        "recommendation_sources": [
+          "today's check-in",
+          "your tracked injuries",
+          "today's planned session"
+        ],
+        "recommendation_confidence": "high",
+        "recommendation_confidence_note": "",
+        "primary_safety_notice": null,
+        "warnings": [],
+        "next_session": {
+          "calendar_date": "2026-10-05",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday",
+          "day_label": "",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-4470a9e918f76b681bae5eb6",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "effective_load": "reduced",
+          "contact_level": "none",
+          "blocks": [
+            {
+              "block_id": "rehab:87f591c2-1b0d-4b1f-823d-577c36f33f8f:166bd8d7-c53d-4fae-bfa2-9df3de91924a",
+              "block_type": "rehab",
+              "title": "Achilles tendon load-management guidance",
+              "display_name": "Achilles tendon load-management guidance",
+              "coaching_cues": [
+                "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative running, hopping and forceful push-off; do not stretch into deep dorsiflexion or use heel drops below floor level when insertional status is unknown."
+              ],
+              "rehab_drill_id": "achilles_tendonitis_recovery_support",
+              "exercise_key": "achilles-tendonitis-recovery-support",
+              "injury_id": "87f591c2-1b0d-4b1f-823d-577c36f33f8f",
+              "injury_episode_id": "166bd8d7-c53d-4fae-bfa2-9df3de91924a",
+              "target_regions": [
+                "achilles"
+              ],
+              "dose": {},
+              "instructions": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative running, hopping and forceful push-off; do not stretch into deep dorsiflexion or use heel drops below floor level when insertional status is unknown.",
+              "stop_rules": [
+                "Stop for pain or worsening symptoms during or after the work.",
+                "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+              ],
+              "drill_snapshot": {
+                "id": "achilles_tendonitis_recovery_support",
+                "name": "Achilles tendon load-management guidance",
+                "notes": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative running, hopping and forceful push-off; do not stretch into deep dorsiflexion or use heel drops below floor level when insertional status is unknown.",
+                "rehab_stage": "calm",
+                "function": "recovery_downregulation",
+                "equipment": [],
+                "dose": null,
+                "impact": "none",
+                "load": "minimal",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": null,
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": null,
+                "target_regions": [
+                  "achilles"
+                ],
+                "laterality_applicability": "not_applicable",
+                "target_tissues": [
+                  "Achilles tendon"
+                ],
+                "contraction_type": "unknown",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/, https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+              },
+              "policy_id": "achilles_tendonitis",
+              "policy_version": 3,
+              "bank_hash": "70a9441201b7667d69ce922ce9bf1767629a54475efc6c268107ece7456755f8",
+              "policy_review_hash": "fb10153611fc19d4bb16a85dabdd6951332dbf36f70e00f8c02d4ba532ee1bf3",
+              "minimum_gap_days": 1,
+              "is_loading": false,
+              "source_references": [
+                "https://www.nhs.uk/conditions/tendonitis/",
+                "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+                "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+              ]
+            }
+          ],
+          "session_relation": "today"
+        },
+        "session_scope": "today",
+        "session_label": "Today's session",
+        "completion_status": "not_started"
+      },
+      "risk_watch": [
+        {
+          "category": "stop_red_flag",
+          "priority": 1,
+          "icon": "octagon-x",
+          "label": "Stop",
+          "text": "Recommendation: pull back today.",
+          "tone": "stop",
+          "timeframe": "today"
+        },
+        {
+          "category": "reminder",
+          "priority": 7,
+          "icon": "info",
+          "label": "Reminder",
+          "text": "Tracking 1 open injury: Left achilles tendonitis. Train around it.",
+          "tone": "info",
+          "timeframe": "active"
+        }
+      ],
+      "open_injuries": [
+        {
+          "id": "87f591c2-1b0d-4b1f-823d-577c36f33f8f",
+          "athlete_id": "1708f83f-1ed5-4409-8d3b-8674ada21153",
+          "plan_id": "a1d030f0-a46f-4273-be13-3220a41cc0e1",
+          "source": "checkin",
+          "body_area": "Left Achilles",
+          "severity": "mild",
+          "status": "open",
+          "resolved_at": null,
+          "episode_id": "166bd8d7-c53d-4fae-bfa2-9df3de91924a",
+          "body_region": "achilles",
+          "side": "left",
+          "description": "tendonitis [achilles_site:midportion]",
+          "latest_reported_status": "worse",
+          "created_at": "2026-10-05T12:01:00+00:00",
+          "updated_at": "2026-10-05T12:04:00+00:00",
+          "severity_source": "manual",
+          "manual_severity": null,
+          "surface_class": "non_surface",
+          "canonical_location": "achilles",
+          "region_group": "lower_leg_foot",
+          "load_region": "lower_limb",
+          "consequence": "load_sensitive",
+          "rehab_stage": "calm",
+          "rehab_stage_reasons": [
+            "injury_reported_worse"
+          ],
+          "rehab_care_pathway": "musculoskeletal",
+          "rehab_medical_gate": false,
+          "label": "Left achilles tendonitis",
+          "assessment_history_complete": true,
+          "progression_assessments": [],
+          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
+          "latest_reported_at": "2026-10-05T12:04:00+00:00",
+          "rehab_improvement_reports": [
+            {
+              "id": "0ed89a7f-140c-49a8-98d1-87242f1b9b5e",
+              "reported_at": "2026-10-05T12:01:00+00:00"
+            },
+            {
+              "id": "798a1e9c-339c-4a0f-ab37-93ad252f0c8e",
+              "reported_at": "2026-10-05T12:02:00+00:00"
+            }
+          ],
+          "rehab_improvement_at": "2026-10-05T12:02:00Z",
+          "assessment_setback_at": "2026-10-05T12:04:00Z",
+          "rehab_decision": {
+            "injury_id": "87f591c2-1b0d-4b1f-823d-577c36f33f8f",
+            "injury_episode_id": "166bd8d7-c53d-4fae-bfa2-9df3de91924a",
+            "region": "achilles",
+            "injury_type": "tendonitis",
+            "stage": "calm",
+            "outcome": "prescribed_rehab",
+            "summary": "Your rehab is matched to this injury's current recovery stage.",
+            "reason_codes": [
+              "SELECT_DETERMINISTIC_BEST"
+            ],
+            "activation": "live",
+            "prescription": {
+              "drill_id": "achilles_tendonitis_recovery_support",
+              "drill": {
+                "id": "achilles_tendonitis_recovery_support",
+                "name": "Achilles tendon load-management guidance",
+                "notes": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative running, hopping and forceful push-off; do not stretch into deep dorsiflexion or use heel drops below floor level when insertional status is unknown.",
+                "rehab_stage": "calm",
+                "function": "recovery_downregulation",
+                "equipment": [],
+                "dose": null,
+                "impact": "none",
+                "load": "minimal",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": null,
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": null,
+                "target_regions": [
+                  "achilles"
+                ],
+                "laterality_applicability": "not_applicable",
+                "target_tissues": [
+                  "Achilles tendon"
+                ],
+                "contraction_type": "unknown",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/, https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+              },
+              "instructions": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative running, hopping and forceful push-off; do not stretch into deep dorsiflexion or use heel drops below floor level when insertional status is unknown.",
+              "dose": {},
+              "stop_when": [
+                "Stop for pain or worsening symptoms during or after the work.",
+                "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+              ],
+              "frequency": "scheduled_sessions",
+              "sources": [
+                "https://www.nhs.uk/conditions/tendonitis/",
+                "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+                "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+              ],
+              "bank_hash": "70a9441201b7667d69ce922ce9bf1767629a54475efc6c268107ece7456755f8",
+              "policy_id": "achilles_tendonitis",
+              "policy_version": 3,
+              "policy_review_hash": "fb10153611fc19d4bb16a85dabdd6951332dbf36f70e00f8c02d4ba532ee1bf3",
+              "minimum_gap_days": 1,
+              "is_loading": false
+            },
+            "restrictions": {
+              "blocked_regions": [
+                "achilles"
+              ],
+              "blocked_tags": [],
+              "contact_limit": "none"
+            },
+            "loading_hold": true,
+            "achilles_load_review": {
+              "criterion_id": "achilles_restore_load_review_v1",
+              "criterion_version": 1,
+              "status": "fail",
+              "reason_codes": [
+                "achilles_medical_or_setback_hold"
+              ],
+              "subtype": "unknown",
+              "required_input_ids": [
+                "achilles_site_assessed",
+                "achilles_heel_rise_assessed",
+                "achilles_loading_response_assessed",
+                "achilles_range_load_assessed"
+              ],
+              "observation_id": null,
+              "externally_verified": false,
+              "promotion_allowed": false,
+              "sources": [
+                "https://bjsm.bmj.com/content/55/20/1125",
+                "https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf",
+                "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+              ]
+            },
+            "policy_id": "achilles_tendonitis",
+            "policy_version": 3,
+            "progression": {
+              "stage": "calm",
+              "reason_codes": [
+                "episode_setback_loading_held"
+              ],
+              "evidence_ids": [],
+              "engine_version": "2"
+            },
+            "schedule": {
+              "state": "due",
+              "reason": "Your baseline rehab is due today; missed work adds no extra volume.",
+              "next_due_day": "2026-10-05"
+            }
+          }
+        }
+      ],
+      "live_prescription": {
+        "plan_id": "a1d030f0-a46f-4273-be13-3220a41cc0e1",
+        "training_day": "2026-10-05",
+        "session": {
+          "calendar_date": "2026-10-05",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday",
+          "day_label": "",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-4470a9e918f76b681bae5eb6",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "effective_load": "reduced",
+          "contact_level": "none",
+          "blocks": [
+            {
+              "block_id": "rehab:87f591c2-1b0d-4b1f-823d-577c36f33f8f:166bd8d7-c53d-4fae-bfa2-9df3de91924a",
+              "block_type": "rehab",
+              "title": "Achilles tendon load-management guidance",
+              "display_name": "Achilles tendon load-management guidance",
+              "coaching_cues": [
+                "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative running, hopping and forceful push-off; do not stretch into deep dorsiflexion or use heel drops below floor level when insertional status is unknown."
+              ],
+              "rehab_drill_id": "achilles_tendonitis_recovery_support",
+              "exercise_key": "achilles-tendonitis-recovery-support",
+              "injury_id": "87f591c2-1b0d-4b1f-823d-577c36f33f8f",
+              "injury_episode_id": "166bd8d7-c53d-4fae-bfa2-9df3de91924a",
+              "target_regions": [
+                "achilles"
+              ],
+              "dose": {},
+              "instructions": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative running, hopping and forceful push-off; do not stretch into deep dorsiflexion or use heel drops below floor level when insertional status is unknown.",
+              "stop_rules": [
+                "Stop for pain or worsening symptoms during or after the work.",
+                "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+              ],
+              "drill_snapshot": {
+                "id": "achilles_tendonitis_recovery_support",
+                "name": "Achilles tendon load-management guidance",
+                "notes": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative running, hopping and forceful push-off; do not stretch into deep dorsiflexion or use heel drops below floor level when insertional status is unknown.",
+                "rehab_stage": "calm",
+                "function": "recovery_downregulation",
+                "equipment": [],
+                "dose": null,
+                "impact": "none",
+                "load": "minimal",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": null,
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": null,
+                "target_regions": [
+                  "achilles"
+                ],
+                "laterality_applicability": "not_applicable",
+                "target_tissues": [
+                  "Achilles tendon"
+                ],
+                "contraction_type": "unknown",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/, https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+              },
+              "policy_id": "achilles_tendonitis",
+              "policy_version": 3,
+              "bank_hash": "70a9441201b7667d69ce922ce9bf1767629a54475efc6c268107ece7456755f8",
+              "policy_review_hash": "fb10153611fc19d4bb16a85dabdd6951332dbf36f70e00f8c02d4ba532ee1bf3",
+              "minimum_gap_days": 1,
+              "is_loading": false,
+              "source_references": [
+                "https://www.nhs.uk/conditions/tendonitis/",
+                "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+                "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+              ]
+            }
+          ]
+        },
+        "changes": [
+          {
+            "block_id": "training",
+            "action": "held",
+            "reason": "no_reviewed_safe_substitution",
+            "restriction_reasons": [
+              "injury_loading_restriction"
+            ]
+          }
+        ],
+        "safety_hold": true,
+        "frozen": false,
+        "engine_version": "2",
+        "rehab_only": true,
+        "held_session_id": "training",
+        "injury_ids": [
+          "87f591c2-1b0d-4b1f-823d-577c36f33f8f"
+        ],
+        "allocation_limit": 2,
+        "training_hold_reason": "Your planned training conflicts with the current injury restrictions.",
+        "revision": "a11d8c0aad68c0433b9fc27610632f0bc88bd776c56d3923e67b99f2fed4b314",
+        "injury_context": [
+          {
+            "id": "87f591c2-1b0d-4b1f-823d-577c36f33f8f",
+            "episode_id": "166bd8d7-c53d-4fae-bfa2-9df3de91924a",
+            "updated_at": "2026-10-05T12:04:00+00:00"
+          }
+        ],
+        "evidence_context": {
+          "exposure_id": null,
+          "event_id": "34d6c676-9290-4a4f-aaf3-cd67e430c71e"
+        },
+        "safety_hold_reason": "Follow today's stop guidance before training.",
+        "readiness_context": {
+          "id": "cf8eeadb-ed8f-4b98-bdc3-34a9deb5fda8",
+          "updated_at": "2026-10-05T12:04:00+00:00"
+        }
+      },
+      "exercise_media": {},
+      "effective_clinician_clearance": null,
+      "delayed_rehab_prompts": [],
+      "week_summary": {},
+      "quick_actions": [
+        {
+          "id": "open_today",
+          "label": "Open Today",
+          "route": "/today"
+        },
+        {
+          "id": "view_plan",
+          "label": "View Plan",
+          "route": "/plans/a1d030f0-a46f-4273-be13-3220a41cc0e1"
+        }
+      ]
+    },
+    "profile": {
+      "profile": {
+        "starting_path": "plan_first",
+        "training_habits": {
+          "enabled": true,
+          "decisions": []
+        },
+        "training_habits_revision": 0,
+        "athlete_id": "1708f83f-1ed5-4409-8d3b-8674ada21153",
+        "email": "fixture@example.com",
+        "username": null,
+        "username_change_history": [],
+        "role": "athlete",
+        "access_status": "approved",
+        "full_name": "Test athlete",
+        "technical_style": [],
+        "tactical_style": [],
+        "stance": "",
+        "professional_status": "",
+        "record": "",
+        "athlete_timezone": "UTC",
+        "athlete_locale": "",
+        "appearance_mode": "dark",
+        "onboarding_draft": null,
+        "avatar_url": null,
+        "nutrition_profile": {
+          "sex": null,
+          "age": null,
+          "height_cm": null,
+          "daily_activity_level": null,
+          "dietary_restrictions": [],
+          "food_preferences": [],
+          "meals_per_day_preference": null,
+          "foods_avoided_pre_session": [],
+          "foods_avoided_fight_week": [],
+          "supplement_use": [],
+          "caffeine_use": null
+        },
+        "private_trial_ack_at": null,
+        "date_of_birth": "1996-05-04",
+        "age_band": "adult",
+        "is_minor": false,
+        "meets_minimum_age": true,
+        "terms_version": "0.1-pre-launch",
+        "terms_accepted_at": "2026-10-05T12:03:00+00:00",
+        "terms_accepted": true,
+        "health_consent_version": "1.0",
+        "health_data_consent": true,
+        "health_consent_at": "2026-10-05T12:03:00+00:00",
+        "health_consent_withdrawn_at": null,
+        "health_consent_granted": true,
+        "created_at": "2026-10-05T12:03:00+00:00",
+        "updated_at": "2026-10-05T12:04:00+00:00"
+      },
+      "effective_admin": false,
+      "latest_intake": null,
+      "latest_plan": {
+        "custom_plan_id": null,
+        "plan_id": "a1d030f0-a46f-4273-be13-3220a41cc0e1",
+        "plan_name": null,
+        "athlete_id": "1708f83f-1ed5-4409-8d3b-8674ada21153",
+        "full_name": "",
+        "fight_date": "",
+        "technical_style": [],
+        "created_at": "2026-10-05T12:00:00+00:00",
+        "status": "ready",
+        "activation_state": "eligible",
+        "pdf_url": null,
+        "review_reason": null
+      },
+      "plan_count": 1,
+      "username_rate_limit": {
+        "max_changes_per_window": 4,
+        "window_days": 30,
+        "remaining": 4,
+        "next_available_at": null
+      }
+    }
+  },
+  "missing_equipment": {
+    "view": {
+      "active_plan": {
+        "status": "ready",
+        "phase": "GPP",
+        "id": "3bccf195-c3d0-49d4-b0aa-8f89f548e0f7"
+      },
+      "today": {
+        "training_day": "2026-10-05",
+        "recommendation_state": "modify",
+        "recommendation_reason": "Reviewed rehab today\nYour planned training conflicts with the current injury restrictions.\nFollow only the reviewed rehab shown today.",
+        "decision_tier": "modify",
+        "injury_hold_exempt": false,
+        "recommendation_trigger_labels": [
+          "Current injury restrictions"
+        ],
+        "recommendation_context_labels": [],
+        "recommendation_safety_checks": [],
+        "recommendation_sources": [
+          "today's check-in",
+          "today's planned session",
+          "your tracked injuries"
+        ],
+        "recommendation_confidence": "moderate",
+        "recommendation_confidence_note": "Less to go on today: this is based on today's check-in alone, with no recent days to compare.",
+        "primary_safety_notice": null,
+        "warnings": [],
+        "next_session": {
+          "calendar_date": "2026-10-05",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday",
+          "day_label": "",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-2606da7f5340038262d13456",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "effective_load": "reduced",
+          "contact_level": "none",
+          "blocks": [
+            {
+              "block_id": "rehab:cd5683cf-b774-48d0-8f19-2f6ed2f86c5a:a8db04a8-7e95-4a9d-a4cb-8227a680a655",
+              "block_type": "rehab",
+              "title": "Seated Achilles heel movement",
+              "display_name": "Seated Achilles heel movement",
+              "coaching_cues": [
+                "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport."
+              ],
+              "rehab_drill_id": "achilles_tendonitis_reviewed_restore",
+              "exercise_key": "achilles-tendonitis-reviewed-restore",
+              "injury_id": "cd5683cf-b774-48d0-8f19-2f6ed2f86c5a",
+              "injury_episode_id": "a8db04a8-7e95-4a9d-a4cb-8227a680a655",
+              "target_regions": [
+                "achilles"
+              ],
+              "dose": {},
+              "instructions": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+              "stop_rules": [
+                "Stop for pain or worsening symptoms during or after the work.",
+                "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+              ],
+              "drill_snapshot": {
+                "id": "achilles_tendonitis_reviewed_restore",
+                "name": "Seated Achilles heel movement",
+                "notes": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+                "rehab_stage": "restore",
+                "function": "tendon_loading",
+                "equipment": [],
+                "dose": null,
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": null,
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": null,
+                "target_regions": [
+                  "achilles"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "Achilles tendon"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/, https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+              },
+              "policy_id": "achilles_tendonitis",
+              "policy_version": 3,
+              "bank_hash": "d8eed079ec51160e7a52dacbf26871bc25e7b0f0df70f1ef42be50694aabad4e",
+              "policy_review_hash": "fb10153611fc19d4bb16a85dabdd6951332dbf36f70e00f8c02d4ba532ee1bf3",
+              "minimum_gap_days": 1,
+              "is_loading": true,
+              "source_references": [
+                "https://www.nhs.uk/conditions/tendonitis/",
+                "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+                "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+              ]
+            }
+          ],
+          "session_relation": "today"
+        },
+        "session_scope": "today",
+        "session_label": "Today's session",
+        "completion_status": "not_started"
+      },
+      "risk_watch": [
+        {
+          "category": "reminder",
+          "priority": 7,
+          "icon": "info",
+          "label": "Reminder",
+          "text": "Tracking 1 open injury: Left achilles tendonitis. Train around it.",
+          "tone": "info",
+          "timeframe": "active"
+        }
+      ],
+      "open_injuries": [
+        {
+          "id": "cd5683cf-b774-48d0-8f19-2f6ed2f86c5a",
+          "athlete_id": "67c5a053-9f6b-48af-ace1-1bb4e3d5e42f",
+          "plan_id": "3bccf195-c3d0-49d4-b0aa-8f89f548e0f7",
+          "source": "checkin",
+          "body_area": "Left Achilles",
+          "severity": "mild",
+          "status": "monitoring",
+          "resolved_at": null,
+          "episode_id": "a8db04a8-7e95-4a9d-a4cb-8227a680a655",
+          "body_region": "achilles",
+          "side": "left",
+          "description": "tendonitis [achilles_site:midportion]",
+          "latest_reported_status": "improving",
+          "created_at": "2026-10-05T12:01:00+00:00",
+          "updated_at": "2026-10-05T12:02:00+00:00",
+          "surface_class": "non_surface",
+          "canonical_location": "achilles",
+          "region_group": "lower_leg_foot",
+          "load_region": "lower_limb",
+          "consequence": "load_sensitive",
+          "rehab_stage": "restore",
+          "rehab_stage_reasons": [
+            "symptoms_not_worsening",
+            "insufficient_injury_specific_progression_evidence"
+          ],
+          "rehab_care_pathway": "musculoskeletal",
+          "rehab_medical_gate": false,
+          "label": "Left achilles tendonitis",
+          "assessment_history_complete": true,
+          "progression_assessments": [],
+          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
+          "latest_reported_at": "2026-10-05T12:02:00+00:00",
+          "rehab_improvement_reports": [
+            {
+              "id": "c3b57b6d-4bb7-46e3-a84a-02fd3d879195",
+              "reported_at": "2026-10-05T12:01:00+00:00"
+            },
+            {
+              "id": "18c515ff-5f89-4885-8659-dc0d742f6e75",
+              "reported_at": "2026-10-05T12:02:00+00:00"
+            }
+          ],
+          "rehab_improvement_at": "2026-10-05T12:02:00Z",
+          "assessment_setback_at": null,
+          "clinician_clearance": {
+            "episode_id": "a8db04a8-7e95-4a9d-a4cb-8227a680a655",
+            "scopes": [
+              "rehab"
+            ],
+            "report_id": "b3234e83-cb03-5d5e-b79a-3a733c3e06ae",
+            "reported_at": "2026-10-05T12:03:00+00:00",
+            "source": "athlete_reported",
+            "externally_verified": false,
+            "scope_reported_at": {
+              "rehab": "2026-10-05T12:03:00+00:00"
+            },
+            "rehabilitation_permission": {
+              "schema_version": 1,
+              "level": "loading"
+            }
+          },
+          "rehab_decision": {
+            "injury_id": "cd5683cf-b774-48d0-8f19-2f6ed2f86c5a",
+            "injury_episode_id": "a8db04a8-7e95-4a9d-a4cb-8227a680a655",
+            "region": "achilles",
+            "injury_type": "tendonitis",
+            "stage": "restore",
+            "outcome": "prescribed_rehab",
+            "summary": "Your rehab is matched to this injury's current recovery stage.",
+            "reason_codes": [
+              "SELECT_DETERMINISTIC_BEST"
+            ],
+            "activation": "live",
+            "prescription": {
+              "drill_id": "achilles_tendonitis_reviewed_restore",
+              "drill": {
+                "id": "achilles_tendonitis_reviewed_restore",
+                "name": "Seated Achilles heel movement",
+                "notes": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+                "rehab_stage": "restore",
+                "function": "tendon_loading",
+                "equipment": [],
+                "dose": null,
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": null,
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": null,
+                "target_regions": [
+                  "achilles"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "Achilles tendon"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/, https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+              },
+              "instructions": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+              "dose": {},
+              "stop_when": [
+                "Stop for pain or worsening symptoms during or after the work.",
+                "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+              ],
+              "frequency": "scheduled_sessions",
+              "sources": [
+                "https://www.nhs.uk/conditions/tendonitis/",
+                "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+                "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+              ],
+              "bank_hash": "d8eed079ec51160e7a52dacbf26871bc25e7b0f0df70f1ef42be50694aabad4e",
+              "policy_id": "achilles_tendonitis",
+              "policy_version": 3,
+              "policy_review_hash": "fb10153611fc19d4bb16a85dabdd6951332dbf36f70e00f8c02d4ba532ee1bf3",
+              "minimum_gap_days": 1,
+              "is_loading": true
+            },
+            "restrictions": {
+              "blocked_regions": [
+                "achilles"
+              ],
+              "blocked_tags": [],
+              "contact_limit": "none"
+            },
+            "loading_hold": false,
+            "achilles_load_review": {
+              "criterion_id": "achilles_restore_load_review_v1",
+              "criterion_version": 1,
+              "status": "unknown",
+              "reason_codes": [
+                "assessment_observation_missing"
+              ],
+              "subtype": "unknown",
+              "required_input_ids": [
+                "achilles_site_assessed",
+                "achilles_heel_rise_assessed",
+                "achilles_loading_response_assessed",
+                "achilles_range_load_assessed"
+              ],
+              "observation_id": null,
+              "externally_verified": false,
+              "promotion_allowed": false,
+              "sources": [
+                "https://bjsm.bmj.com/content/55/20/1125",
+                "https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf",
+                "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+              ]
+            },
+            "policy_id": "achilles_tendonitis",
+            "policy_version": 3,
+            "progression": {
+              "stage": "restore",
+              "reason_codes": [
+                "baseline_only_v1"
+              ],
+              "evidence_ids": [],
+              "engine_version": "2",
+              "next_transition": {
+                "entry_basis": "reported_clinician_permission",
+                "authority_event_id": "b3234e83-cb03-5d5e-b79a-3a733c3e06ae",
+                "from_stage": "restore",
+                "to_stage": "load",
+                "status": "blocked",
+                "reason_codes": [
+                  "reviewed_target_content_unavailable",
+                  "target_equipment_unavailable"
+                ],
+                "target_stage_live": true,
+                "closed_reason": null,
+                "missing_inputs": [],
+                "requirements": [
+                  {
+                    "requirement_id": "no_unresolved_setback",
+                    "kind": "no_unresolved_setback",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "no_negative_response",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "complete_episode_history",
+                    "kind": "complete_history",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "history_complete",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "reviewed_stage_exposure",
+                    "kind": "completed_reviewed_exposure",
+                    "basis": "data_sufficiency",
+                    "status": "not_applicable",
+                    "reason_code": "prior_stage_work_not_required_for_reported_permission",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "during_response_not_worse",
+                    "kind": "during_session_response",
+                    "basis": "product_safety",
+                    "status": "not_applicable",
+                    "reason_code": "no_prior_rehab_response_to_resolve",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "next_day_response_not_worse",
+                    "kind": "next_day_response",
+                    "basis": "product_safety",
+                    "status": "not_applicable",
+                    "reason_code": "no_prior_rehab_response_to_resolve",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "achilles_midportion_reported_load_permission_v1",
+                    "kind": "functional_checkpoint",
+                    "basis": "clinical",
+                    "status": "pass",
+                    "reason_code": "reported_permission_and_option_applicable",
+                    "evidence_ids": []
+                  }
+                ],
+                "ignored_evidence": {},
+                "target_content_rejections": [
+                  "REJECT_EQUIPMENT_UNAVAILABLE"
+                ]
+              }
+            },
+            "schedule": {
+              "state": "due",
+              "reason": "Your baseline rehab is due today; missed work adds no extra volume.",
+              "next_due_day": "2026-10-05"
+            }
+          }
+        }
+      ],
+      "live_prescription": {
+        "plan_id": "3bccf195-c3d0-49d4-b0aa-8f89f548e0f7",
+        "training_day": "2026-10-05",
+        "session": {
+          "calendar_date": "2026-10-05",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday",
+          "day_label": "",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-2606da7f5340038262d13456",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "effective_load": "reduced",
+          "contact_level": "none",
+          "blocks": [
+            {
+              "block_id": "rehab:cd5683cf-b774-48d0-8f19-2f6ed2f86c5a:a8db04a8-7e95-4a9d-a4cb-8227a680a655",
+              "block_type": "rehab",
+              "title": "Seated Achilles heel movement",
+              "display_name": "Seated Achilles heel movement",
+              "coaching_cues": [
+                "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport."
+              ],
+              "rehab_drill_id": "achilles_tendonitis_reviewed_restore",
+              "exercise_key": "achilles-tendonitis-reviewed-restore",
+              "injury_id": "cd5683cf-b774-48d0-8f19-2f6ed2f86c5a",
+              "injury_episode_id": "a8db04a8-7e95-4a9d-a4cb-8227a680a655",
+              "target_regions": [
+                "achilles"
+              ],
+              "dose": {},
+              "instructions": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+              "stop_rules": [
+                "Stop for pain or worsening symptoms during or after the work.",
+                "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+              ],
+              "drill_snapshot": {
+                "id": "achilles_tendonitis_reviewed_restore",
+                "name": "Seated Achilles heel movement",
+                "notes": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+                "rehab_stage": "restore",
+                "function": "tendon_loading",
+                "equipment": [],
+                "dose": null,
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": null,
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": null,
+                "target_regions": [
+                  "achilles"
+                ],
+                "laterality_applicability": "side_specific",
+                "target_tissues": [
+                  "Achilles tendon"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/, https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+              },
+              "policy_id": "achilles_tendonitis",
+              "policy_version": 3,
+              "bank_hash": "d8eed079ec51160e7a52dacbf26871bc25e7b0f0df70f1ef42be50694aabad4e",
+              "policy_review_hash": "fb10153611fc19d4bb16a85dabdd6951332dbf36f70e00f8c02d4ba532ee1bf3",
+              "minimum_gap_days": 1,
+              "is_loading": true,
+              "source_references": [
+                "https://www.nhs.uk/conditions/tendonitis/",
+                "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+                "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+              ]
+            }
+          ]
+        },
+        "changes": [
+          {
+            "action": "held",
+            "reason": "clinician_clearance_ceiling"
+          },
+          {
+            "block_id": "training",
+            "action": "held",
+            "reason": "no_reviewed_safe_substitution",
+            "restriction_reasons": [
+              "injury_loading_restriction"
+            ]
+          }
+        ],
+        "safety_hold": false,
+        "frozen": false,
+        "engine_version": "2",
+        "rehab_only": true,
+        "held_session_id": "training",
+        "injury_ids": [
+          "cd5683cf-b774-48d0-8f19-2f6ed2f86c5a"
+        ],
+        "allocation_limit": 2,
+        "training_hold_reason": "Your planned training conflicts with the current injury restrictions.",
+        "revision": "a25bba6cc1b51a13ba0f4d903810948ee5c25d5220d38462385c61eb3ddb3d36",
+        "injury_context": [
+          {
+            "id": "cd5683cf-b774-48d0-8f19-2f6ed2f86c5a",
+            "episode_id": "a8db04a8-7e95-4a9d-a4cb-8227a680a655",
+            "updated_at": "2026-10-05T12:02:00+00:00"
+          }
+        ],
+        "evidence_context": {
+          "exposure_id": null,
+          "event_id": "b3234e83-cb03-5d5e-b79a-3a733c3e06ae"
+        },
+        "readiness_context": {
+          "id": "f144f0b8-0fe6-401b-84a8-365eed04bc68",
+          "updated_at": "2026-10-05T12:02:00+00:00"
+        }
+      },
+      "exercise_media": {},
+      "effective_clinician_clearance": {
+        "level": "rehab_only",
+        "scopes": [
+          "rehab"
+        ],
+        "requires_update": false,
+        "limited_by": [
+          {
+            "injury_id": "cd5683cf-b774-48d0-8f19-2f6ed2f86c5a",
+            "injury_episode_id": "a8db04a8-7e95-4a9d-a4cb-8227a680a655",
+            "label": "Left achilles tendonitis"
+          }
+        ]
+      },
+      "delayed_rehab_prompts": [],
+      "week_summary": {},
+      "quick_actions": [
+        {
+          "id": "open_today",
+          "label": "Open Today",
+          "route": "/today"
+        },
+        {
+          "id": "view_plan",
+          "label": "View Plan",
+          "route": "/plans/3bccf195-c3d0-49d4-b0aa-8f89f548e0f7"
+        }
+      ]
+    },
+    "profile": {
+      "profile": {
+        "starting_path": "plan_first",
+        "training_habits": {
+          "enabled": true,
+          "decisions": []
+        },
+        "training_habits_revision": 0,
+        "athlete_id": "67c5a053-9f6b-48af-ace1-1bb4e3d5e42f",
+        "email": "fixture@example.com",
+        "username": null,
+        "username_change_history": [],
+        "role": "athlete",
+        "access_status": "approved",
+        "full_name": "Test athlete",
+        "technical_style": [],
+        "tactical_style": [],
+        "stance": "",
+        "professional_status": "",
+        "record": "",
+        "athlete_timezone": "UTC",
+        "athlete_locale": "",
+        "appearance_mode": "dark",
+        "onboarding_draft": null,
+        "avatar_url": null,
+        "nutrition_profile": {
+          "sex": null,
+          "age": null,
+          "height_cm": null,
+          "daily_activity_level": null,
+          "dietary_restrictions": [],
+          "food_preferences": [],
+          "meals_per_day_preference": null,
+          "foods_avoided_pre_session": [],
+          "foods_avoided_fight_week": [],
+          "supplement_use": [],
+          "caffeine_use": null
+        },
+        "private_trial_ack_at": null,
+        "date_of_birth": "1996-05-04",
+        "age_band": "adult",
+        "is_minor": false,
+        "meets_minimum_age": true,
+        "terms_version": "0.1-pre-launch",
+        "terms_accepted_at": "2026-10-05T12:03:00+00:00",
+        "terms_accepted": true,
+        "health_consent_version": "1.0",
+        "health_data_consent": true,
+        "health_consent_at": "2026-10-05T12:03:00+00:00",
+        "health_consent_withdrawn_at": null,
+        "health_consent_granted": true,
+        "created_at": "2026-10-05T12:03:00+00:00",
+        "updated_at": "2026-10-05T12:03:00+00:00"
+      },
+      "effective_admin": false,
+      "latest_intake": null,
+      "latest_plan": {
+        "custom_plan_id": null,
+        "plan_id": "3bccf195-c3d0-49d4-b0aa-8f89f548e0f7",
+        "plan_name": null,
+        "athlete_id": "67c5a053-9f6b-48af-ace1-1bb4e3d5e42f",
+        "full_name": "",
+        "fight_date": "",
+        "technical_style": [],
+        "created_at": "2026-10-05T12:00:00+00:00",
+        "status": "ready",
+        "activation_state": "eligible",
+        "pdf_url": null,
+        "review_reason": null
+      },
+      "plan_count": 1,
+      "username_rate_limit": {
+        "max_changes_per_window": 4,
+        "window_days": 30,
+        "remaining": 4,
+        "next_available_at": null
+      }
+    }
+  }
+}
