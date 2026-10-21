@@ -4500,12 +4500,5 @@
       "activation": "live",
       "content_hash": "76728114b78764c5b477a36e7e9fef3bacfe6df6bf97186e994a1ff8af82262c"
     }
-  ],
-  "bank_publication_profiles": [
-    "achilles_tendonitis",
-    "elbow_tendonitis",
-    "ankle_sprain",
-    "shoulder_tendonitis",
-    "groin_strain"
   ]
 }

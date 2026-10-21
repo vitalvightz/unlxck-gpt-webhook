@@ -18778,10 +18778,10 @@
   },
   {
     "drill_id": "wrist_sprain_wrist_stability_drill_with_dynamometer",
-    "source_hash": "00991efec71abd819a2d6556c756b853ffd3e4810898ea64e6660d8a25d30709",
+    "source_hash": "12132a309d020ff819021443349c36c54449dbf6f3c19b19fcf7a52b1d654a20",
     "location": "wrist",
     "injury_type": "sprain",
-    "name": "Wrist Stability Drill with Dynamometer",
+    "name": "Supported dynamometer grip loading",
     "notes": "With the forearm supported and wrist neutral, gently squeeze a dynamometer using one clinician-selected fixed resistance. This is grip loading, not a test of ligament healing or clearance. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "balance_control",
     "proposed": {
@@ -18813,6 +18813,11 @@
         "source_hash": "90797a4c97a62fe4801361788957b66bf770b92ce15971b8e94eca558a58eb4b",
         "name": "Wrist Stability Drill with Dynamometer",
         "notes": "SPP: Test joint under load → TAPER: Maintain refined control"
+      },
+      {
+        "source_hash": "00991efec71abd819a2d6556c756b853ffd3e4810898ea64e6660d8a25d30709",
+        "name": "Wrist Stability Drill with Dynamometer",
+        "notes": "With the forearm supported and wrist neutral, gently squeeze a dynamometer using one clinician-selected fixed resistance. This is grip loading, not a test of ligament healing or clearance. Stop if pain, giving way or symptoms worsen during or after the work."
       }
     ]
   },

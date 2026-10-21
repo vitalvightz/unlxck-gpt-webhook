@@ -90,8 +90,7 @@ def build_report():
             # Alternative content can require different props. Full apparatus
             # alone only demonstrates the preferred option, not reachability.
             equipment_probes = []
-            setups = (sorted({tuple(sorted(d.get("equipment") or [])) for d in candidates})
-                      if policy.policy_id in pathways.get("bank_publication_profiles", []) else [])
+            setups = sorted({tuple(sorted(d.get("equipment") or [])) for d in candidates})
             for setup in setups:
                 ids = surfaced_options(compatible(equipment=setup)[0], "low", setup)
                 surfaced_all.update(ids)
@@ -174,7 +173,7 @@ def markdown(report):
         f"{s['live_unique_identities']} live prescribed identities; {s['reviewed_dormant']} reviewed but dormant. "
         f"{s['surfaced_unique_identities']} identities surface under the supported-severity/full-apparatus content probes.", "",
         "A probe tests the actual compatibility filter and selector, including priority and atomic bundles. It does not override or certify clinical stage eligibility. The published LOAD prescriptions support shared reported-clinician entry without mandatory RESTORE logs; known unresolved responses and setbacks still hold loading. DYNAMIC/RETURN and groin LOAD remain closed. Exact IDs below are current prescription IDs, not the wider bank. JSON includes derived entry/recovery support, fallbacks, severity/equipment/side results, requirements, rejection codes and each dormant candidate's missing information. Empty dose on approved self-paced baselines is intentional.", "",
-        "The historical advanced review supplies planning reasons only. Current bank classification and the live catalog determine present inventory. The five pilots also admit complete bank prescriptions with explicit injury compatibility; an unspecified group alone never assigns a diagnosis. Equipment probes include each routine's actual props so alternatives are not mistaken for unreachable content.", "",
+        "The historical advanced review supplies planning reasons only. Current bank classification and the live catalog determine present inventory. All live profiles admit complete bank prescriptions with explicit injury compatibility; an unspecified group alone never assigns a diagnosis. Equipment probes include each routine's actual props so alternatives are not mistaken for unreachable content.", "",
         "| Profile | Reviewed / exact bank | Live / dormant | CALM IDs | RESTORE IDs | LOAD IDs | Alternatives C/R/L | Presentation |",
         "| --- | ---: | ---: | --- | --- | --- | --- | --- |"]
     for p in report["profiles"]:

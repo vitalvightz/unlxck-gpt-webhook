@@ -68,8 +68,8 @@ def test_drill_stage_metadata_is_optional_and_valid_where_migrated():
     assert stages.count(None) > len(stages) // 2
 
 
-def test_rehab_selection_still_works_with_null_drill_stages(monkeypatch):
-    """A null ``rehab_stage`` must not filter a drill out of selection."""
+def test_null_stage_content_cannot_bypass_a_missing_published_policy(monkeypatch):
+    """A null stage supplies no approval when the published policy is missing."""
     monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
     assert any(
         drill.get("rehab_stage") is None
@@ -87,7 +87,7 @@ def test_rehab_selection_still_works_with_null_drill_stages(monkeypatch):
             ],
         )
         assert "Ankle" in text
-        assert "•" in text, f"no drills selected during {phase}"
+        assert "  • " not in text, f"unpublished drills selected during {phase}"
 
 
 @pytest.mark.parametrize("phase", PHASES)
@@ -144,15 +144,15 @@ def test_the_phase_walking_helper_is_gone():
     assert not hasattr(rehab_protocols, "combine_three_phase_drills")
 
 
-def test_phase_progression_is_still_a_selection_key():
-    """Removing the conflation must not remove phase-based selection itself."""
+def test_legacy_phase_tokens_remain_readable_for_provenance():
+    """Keep legacy provenance without using camp phase as clinical approval."""
     entries = [entry for entry in get_rehab_bank() if entry.get("phase_progression")]
     assert entries
     assert rehab_protocols._entry_phases(entries[0])
 
 
 @pytest.mark.parametrize("phase", PHASES)
-def test_phase_specific_rehab_notes_still_render(phase, monkeypatch):
+def test_camp_phase_cannot_supply_a_missing_published_prescription(phase, monkeypatch):
     monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
     text, _seen = generate_rehab_protocols(
         injury_string="ankle sprain",
@@ -160,10 +160,11 @@ def test_phase_specific_rehab_notes_still_render(phase, monkeypatch):
         current_phase=phase,
         parsed_entries=[{"canonical_location": "ankle", "rehab_type": "sprain"}],
     )
-    assert "Why today:" in text
+    assert "  • " not in text
+    assert "current restrictions" in text
 
 
-def test_sparring_day_volume_ceiling_is_unchanged(monkeypatch):
+def test_sparring_cannot_bypass_a_missing_published_policy(monkeypatch):
     monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
     text, _seen = generate_rehab_protocols(
         injury_string="ankle sprain",
@@ -172,7 +173,7 @@ def test_sparring_day_volume_ceiling_is_unchanged(monkeypatch):
         parsed_entries=[{"canonical_location": "ankle", "rehab_type": "sprain"}],
         day_type="sparring",
     )
-    assert text.count("  • ") == 1
+    assert text.count("  • ") == 0
 
 
 def test_high_severity_filtering_is_unchanged():

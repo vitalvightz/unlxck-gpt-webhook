@@ -18381,7 +18381,7 @@
     "drills": [
       {
         "id": "wrist_sprain_wrist_stability_drill_with_dynamometer",
-        "name": "Wrist Stability Drill with Dynamometer",
+        "name": "Supported dynamometer grip loading",
         "notes": "With the forearm supported and wrist neutral, gently squeeze a dynamometer using one clinician-selected fixed resistance. This is grip loading, not a test of ligament healing or clearance. Stop if pain, giving way or symptoms worsen during or after the work.",
         "rehab_stage": "load",
         "function": "control",

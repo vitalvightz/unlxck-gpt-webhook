@@ -136,8 +136,8 @@ def test_rehab_drills_for_phase_returns_surface_wound_care_only():
         joined = " ".join(drills).lower()
         for loading_term in LOADING_TERMS:
             assert loading_term not in joined, (injury_type, loading_term)
-    # Non-surface types still resolve loading drills.
-    assert _rehab_drills_for_phase("sprain", "knee", "GPP", limit=6)
+    # Unpublished structural content cannot bypass clinical selection.
+    assert _rehab_drills_for_phase("sprain", "knee", "GPP", limit=6) == []
 
 
 def test_guardrails_surface_priority_shows_wound_care():
@@ -201,26 +201,27 @@ def test_surface_rehab_is_not_promoted_to_stage2_slots():
         parsed_entries=[_surface_entry("laceration", severity="moderate")],
     )
     assert _build_rehab_slots(block, "GPP") == []
-    # A real (non-surface) injury still produces rehab slots.
+    # Structural content without published eligibility cannot produce slots.
     sprain_block, _ = generate_rehab_protocols(
         injury_string="knee sprain",
         exercise_data=[],
         current_phase="GPP",
         parsed_entries=[_surface_entry("sprain", severity="moderate")],
     )
-    assert _build_rehab_slots(sprain_block, "GPP")
+    assert _build_rehab_slots(sprain_block, "GPP") == []
 
 
-def test_mixed_location_keeps_loading_rehab_for_structural_injury():
-    # A sprain at the same region must still receive normal loading rehab; the
-    # surface path only applies when the injury is purely surface.
+def test_structural_injury_without_publication_keeps_guidance():
+    # Structural injuries keep guidance without borrowing wound care
+    # or unpublished loading exercises.
     block, _ = generate_rehab_protocols(
         injury_string="knee sprain",
         exercise_data=[],
         current_phase="GPP",
         parsed_entries=[_surface_entry("sprain", severity="moderate")],
     )
-    assert "[Function:" in block
+    assert "current restrictions" in block
+    assert "  • " not in block
     assert "[Wound care]" not in block
 
 

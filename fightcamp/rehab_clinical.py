@@ -15,6 +15,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator, model_serializer
 
 from .config import DATA_DIR
+from .injury_location_registry import canonicalize_location_from_registry
 from .rehab_pathways import PathwayCatalog, PathwayTransition, TransitionOverride, compose_transitions
 from .rehab_schema import REHAB_STAGES, canonical_rehab_locations, canonical_rehab_types
 
@@ -198,7 +199,7 @@ def compose_policy(catalog: PathwayCatalog, profile: dict, *, bank: list[dict] |
     overrides = {key: TransitionOverride.model_validate(value)
                  for key, value in (profile.pop("transition_overrides", None) or {}).items()}
     policy = ClinicalPolicy.model_validate({**profile, "transitions": compose_transitions(catalog, family, overrides)})
-    if policy.policy_id in catalog.bank_publication_profiles:
+    if policy.status == "active" and policy.activation == "live":
         from .rehab_publication import expand_bank_prescriptions
         if bank is None:
             bank = json.loads((DATA_DIR / "rehab_bank.json").read_text(encoding="utf-8"))
@@ -222,9 +223,20 @@ def load_clinical_policies(path: Path | None = None, *, bank: list[dict] | None 
             raise ValueError("legacy policy files cannot declare transitions or higher live stages")
     elif isinstance(raw, dict) and raw.get("schema_version") == 1 and "families" in raw:
         catalog = PathwayCatalog.model_validate(raw)
-        if bank is None and catalog.bank_publication_profiles:
+        if bank is None:
             bank = json.loads((DATA_DIR / "rehab_bank.json").read_text(encoding="utf-8"))
-        policies = tuple(compose_policy(catalog, profile, bank=bank) for profile in catalog.profiles)
+        # Derive candidate targets from content once. This replaces the rollout
+        # list without rescanning the full bank for unrelated profiles.
+        targets = {
+            (canonicalize_location_from_registry(group.get("location")), kind)
+            for group in bank for drill in group.get("drills", [])
+            if isinstance(drill.get("prescription"), dict)
+            and isinstance(drill.get("compatible_injury_types"), list)
+            for kind in drill["compatible_injury_types"] if isinstance(kind, str)
+        }
+        policies = tuple(compose_policy(catalog, profile, bank=bank if (
+            canonicalize_location_from_registry(profile.get("region")), profile.get("injury_type")) in targets
+            else []) for profile in catalog.profiles)
     else:
         raise ValueError("unsupported clinical policy schema")
     keys = [(p.region, p.injury_type) for p in policies]

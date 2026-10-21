@@ -48,19 +48,21 @@ def before_bank_publication(rows, kind):
     The fixture is history, not another exercise publication/approval manifest.
     """
     from fightcamp.rehab_clinical import content_hash
-    history = json.loads((REPO_ROOT / 'tests/fixtures/rehab_pilot_publication_history.json').read_text(encoding='utf-8'))
     snapshot = deepcopy(rows)
     values = ([d for g in snapshot for d in g['drills']] if kind == 'drills' else
               snapshot['profiles'] if kind == 'profiles' else snapshot)
     key = {'drills': 'id', 'reviews': 'drill_id', 'profiles': 'policy_id'}[kind]
-    for row in values:
-        revision = history[kind].get(row[key])
-        if revision and content_hash(row) == revision['after_sha256']:
-            for field in revision['remove']:
-                row.pop(field)
-            row.update(deepcopy(revision['restore']))
-    if kind == 'profiles' and snapshot.get('bank_publication_profiles') == history['bank_publication_profiles']:
-        snapshot.pop('bank_publication_profiles')
+    for name in ('rehab_bank_readiness_history.json', 'rehab_pilot_publication_history.json'):
+        history = json.loads((REPO_ROOT / 'tests/fixtures' / name).read_text(encoding='utf-8'))
+        for row in values:
+            revision = history[kind].get(row[key])
+            if revision and content_hash(row) == revision['after_sha256']:
+                for field in revision['remove']:
+                    row.pop(field)
+                row.update(deepcopy(revision['restore']))
+        if (kind == 'profiles' and 'bank_publication_profiles' in history
+                and snapshot.get('bank_publication_profiles') == history['bank_publication_profiles']):
+            snapshot.pop('bank_publication_profiles')
     return snapshot
 
 

@@ -27,16 +27,16 @@ def candidate(identity):
     return next((deepcopy(g), deepcopy(d)) for g in get_rehab_bank() for d in g["drills"] if d["id"] == identity)
 
 
-def test_publication_expands_only_five_pilots_and_opens_no_stages():
+def test_current_complete_bank_options_expand_five_pilots_and_open_no_stages():
     catalog = load_pathway_catalog()
     before = load_clinical_policies(bank=[])
     after = load_clinical_policies()
-    assert set(catalog.bank_publication_profiles) == {o[0][0] for o in OPTIONS}
+    assert not catalog.bank_publication_profiles  # no per-profile rollout gate
     for old, new in zip(before, after):
         assert new.live_stages == old.live_stages
         assert new.transitions == old.transitions
         assert new.prescriptions[:len(old.prescriptions)] == old.prescriptions
-        if old.policy_id not in catalog.bank_publication_profiles:
+        if old.policy_id not in {option[0][0] for option in OPTIONS}:
             assert old == new
     assert sum(len(p.prescriptions) for p in after) - sum(len(p.prescriptions) for p in before) == 5
     expected_counts = [(1, 1, 2), (1, 2, 1), (1, 3, 1), (1, 2, 1), (1, 2, 0)]
