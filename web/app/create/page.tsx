@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { RequireAuth } from "@/components/auth-guard";
+import { hasInternalPreviousPage } from "@/lib/internal-back";
 import styles from "./create.module.css";
 
 // The one place to start any kind of plan, reached from + Create. Each option
@@ -18,7 +19,12 @@ export default function CreatePage() {
   const router = useRouter();
 
   function goBack() {
-    if (window.history.length > 1) router.back();
+    const internal = hasInternalPreviousPage({
+      documentUrl: performance.getEntriesByType("navigation")[0]?.name,
+      currentUrl: window.location.href,
+      referrer: document.referrer,
+    });
+    if (internal) router.back();
     else router.push("/");
   }
 
