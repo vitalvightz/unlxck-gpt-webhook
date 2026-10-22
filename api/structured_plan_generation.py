@@ -2678,7 +2678,11 @@ def _conversion_support(computed_support: Any) -> Any:
     """
     if not isinstance(computed_support, dict):
         return computed_support
-    support = {key: value for key, value in computed_support.items() if key != "nutrition"}
+    support = {
+        key: value
+        for key, value in computed_support.items()
+        if key not in {"nutrition", "athlete_facing_note"}
+    }
     by_phase = (computed_support.get("nutrition") or {}).get("by_phase") or {}
     weight_cut_by_phase = {
         phase: entry["weight_cut"]
@@ -4175,9 +4179,9 @@ def build_structured_plan_prompt(
                 support_json = ""
             if support_json and is_minor:
                 sections.append(
-                    "STAGE 1 COMPUTED SUPPORT (authoritative weight-cut risk "
-                    "bands and mindset classification — use these exact values; "
-                    "do not invent or round differently):\n" + support_json
+                    "STAGE 1 COMPUTED SUPPORT (authoritative mindset "
+                    "classification — use these exact values; do not invent "
+                    "or round differently):\n" + support_json
                 )
             elif support_json:
                 sections.append(

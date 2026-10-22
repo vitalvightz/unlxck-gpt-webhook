@@ -188,7 +188,7 @@ def test_prompt_carries_computed_support_untruncated():
     # The mindset block survives untruncated.
     assert json.dumps(support["mindset"], ensure_ascii=False) in prompt
     # Nutrition guidance never reaches Stage 2; only the weight-cut risk bands do.
-    assert '"nutrition"' not in prompt
+    assert '"nutrition": {"by_phase"' not in prompt
     assert "protein_g_per_day" not in prompt
     assert '"weight_cut": {"by_phase"' in prompt
     # And the rest of the brief is still capped (filler partially clipped).

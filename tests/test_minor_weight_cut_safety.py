@@ -601,12 +601,15 @@ def test_a_minors_conversion_prompt_carries_no_cut_wording(weight):
 
 
 def test_an_adults_conversion_prompt_is_unchanged():
-    from api.structured_plan_generation import _MINOR_CONVERSION_RULE
+    from api.structured_plan_generation import _MINOR_CONVERSION_RULE, _STRUCTURED_PLAN_RULES
 
     prompt = _conversion_prompt(is_minor=False)
 
     assert _MINOR_CONVERSION_RULE not in prompt
-    assert "NEVER surface them directly" in prompt
+    # Nutrition guidance (and its coach-gated dosing) never reaches Stage 2;
+    # an adult still gets the weight-cut risk bands.
+    assert "coach_gated" not in prompt.replace(_STRUCTURED_PLAN_RULES, "")
+    assert '"weight_cut": {"by_phase"' in prompt
     # An adult's taper still gets its weight-making guidance.
     assert "weight making" in prompt
     assert "days before weigh-in" in prompt
