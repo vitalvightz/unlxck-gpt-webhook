@@ -9,12 +9,10 @@ import { submitTodayCheckin } from "@/lib/api";
 import { TODAY_RED_FLAG_SAFETY } from "@/lib/safety-copy";
 import { buildTodayCheckinPayload, getAthleteWarnings, getRecommendationCopy } from "@/lib/today";
 import type {
-  TodayActiveInjury,
   TodayActivePlan,
   TodayCheckinBody,
   TodayCheckinPain,
   TodayCheckinSleep,
-  TodayPreviousSession,
 } from "@/lib/types";
 
 const SLEEP_OPTIONS: Array<{ value: TodayCheckinSleep; label: string }> = [
@@ -33,18 +31,6 @@ const PAIN_OPTIONS: Array<{ value: TodayCheckinPain; label: string }> = [
   { value: "none", label: "None" },
   { value: "manageable", label: "Manageable" },
   { value: "high", label: "High" },
-];
-
-const ACTIVE_INJURY_OPTIONS: Array<{ value: TodayActiveInjury; label: string }> = [
-  { value: "none", label: "None" },
-  { value: "stable", label: "Stable" },
-  { value: "worse", label: "Worse" },
-];
-
-const PREVIOUS_SESSION_OPTIONS: Array<{ value: TodayPreviousSession; label: string }> = [
-  { value: "none", label: "N/A" },
-  { value: "normal", label: "Normal" },
-  { value: "very_hard", label: "Very hard" },
 ];
 
 const SAFETY_FLAGS: Array<{ key: keyof TodaySafetyFlags; label: string }> = [
@@ -88,8 +74,6 @@ export function TodayReadinessForm({
   const [sleep, setSleep] = useState<TodayCheckinSleep>("good");
   const [body, setBody] = useState<TodayCheckinBody>("normal");
   const [pain, setPain] = useState<TodayCheckinPain>("none");
-  const [activeInjury, setActiveInjury] = useState<TodayActiveInjury>("none");
-  const [previousSession, setPreviousSession] = useState<TodayPreviousSession>("none");
   const [safetyFlags, setSafetyFlags] = useState<TodaySafetyFlags>({
     sharp_pain: false,
     instability: false,
@@ -117,8 +101,6 @@ export function TodayReadinessForm({
           sleep,
           body,
           pain,
-          activeInjury,
-          previousSession,
           safetyFlags,
         }),
       );
@@ -150,18 +132,7 @@ export function TodayReadinessForm({
         <SegmentGroup label="Sleep" value={sleep} options={SLEEP_OPTIONS} onChange={setSleep} />
         <SegmentGroup label="Body" value={body} options={BODY_OPTIONS} onChange={setBody} />
         <SegmentGroup label="Pain" value={pain} options={PAIN_OPTIONS} onChange={setPain} />
-        <SegmentGroup
-          label="Active injury"
-          value={activeInjury}
-          options={ACTIVE_INJURY_OPTIONS}
-          onChange={setActiveInjury}
-        />
-        <SegmentGroup
-          label="Previous session"
-          value={previousSession}
-          options={PREVIOUS_SESSION_OPTIONS}
-          onChange={setPreviousSession}
-        />
+        {/* Injury and last-session answers come from Today's injuries and logged sessions (server-derived). */}
         {inlineWarning ? (
           <p className="today-inline-warning" role="status">{inlineWarning}</p>
         ) : null}
