@@ -44,6 +44,7 @@ import {
 } from "@/lib/guided-injury";
 import { StepValidationPanel, type StepValidationCheck } from "@/components/onboarding-step-validation";
 import { GuidedInjuryCard } from "@/components/guided-injury-card";
+import { formatInjuryDetail, stripInternalMarkers } from "@/lib/injury-display";
 import { OnboardingTrustNote } from "@/components/onboarding-trust-note";
 import { SafetyNote } from "@/components/safety-note";
 import { WhyTooltip } from "@/components/why-tooltip";
@@ -323,8 +324,33 @@ function hasValue(value: string | number | null | undefined): boolean {
   return !(value === null || value === undefined || value === "");
 }
 
-function formatRestrictionSummary(value: string | null | undefined): string {
-  return value?.trim() ? value.trim() : "No injuries or restrictions reported.";
+function humanizeToken(value: string): string {
+  return value.replace(/_/g, " ").trim();
+}
+
+// Athlete-facing injury line: "Left bicep: cut, low severity, stable. Avoid
+// friction." The stored planner text carries internal keys and markers
+// ("Type: surface_injury", "[training_impact:not_limiting]") that stay hidden.
+function formatRestrictionSummary(injuries: GuidedInjuryState[], fallback: string | null | undefined): string {
+  const lines = injuries
+    .filter((injury) => hasGuidedInjuryContent(injury))
+    .map((injury) => {
+      const descriptors = [
+        humanizeToken(injury.surface_type || injury.injury_type),
+        injury.severity ? `${humanizeToken(injury.severity)} severity` : "",
+        humanizeToken(injury.trend),
+      ].filter(Boolean);
+      const head = [injury.area.trim(), descriptors.join(", ")].filter(Boolean).join(": ");
+      const avoid = injury.avoid.trim() ? `Avoid ${humanizeToken(injury.avoid)}` : "";
+      const notes = stripInternalMarkers(injury.notes);
+      return [head, avoid, notes].filter(Boolean).join(". ");
+    })
+    .filter(Boolean);
+  if (lines.length) {
+    return lines.join("; ");
+  }
+  const detail = formatInjuryDetail(fallback);
+  return detail || "No injuries or restrictions reported.";
 }
 
 function getTodayIsoDate(): string {
@@ -417,16 +443,16 @@ function formatSparringCollisionRisk({
   const fixedHardSparring = hardSparringDays.length >= 2;
 
   if (fixedHardSparring) {
-    return `High - declared hard sparring on ${hardSparringDays.join(", ")} should stay away from primary strength and the main glycolytic day`;
+    return `Hard sparring on ${hardSparringDays.join(", ")} will be kept apart from your heaviest strength and conditioning days`;
   }
 
   if (fatigueLevel === "high" || (hasTissueIssue && highLoad)) {
-    return "High - keep hard sparring away from primary strength and glycolytic work";
+    return "Hard sparring will be kept well away from heavy strength and conditioning";
   }
   if (fatigueLevel === "moderate" || hasTissueIssue || highLoad) {
-    return "Moderate - separate hard sparring from peak S&C days";
+    return "Hard sparring will be separated from your hardest strength and conditioning days";
   }
-  return "Standard - still avoid stacking hard sparring with peak S&C days";
+  return "Hard sparring won't be stacked on your hardest strength and conditioning days";
 }
 
 function StepPills({
@@ -2135,7 +2161,7 @@ export function PlanIntakeForm() {
   const highFatigueFlag = (form.fatigue_level || "low") === "high" ? "High fatigue already reported" : null;
   const hasExtraPerformanceNotes = Boolean(mindsetChallengesText || notesText);
   const hasTrainingPreference = Boolean(trainingPreferenceText);
-  const restrictionSummary = formatRestrictionSummary(form.injuries);
+  const restrictionSummary = formatRestrictionSummary(guidedInjuries, form.injuries);
   const sexLabel = form.athlete.sex
     ? SEX_OPTIONS.find((option) => option.value === form.athlete.sex)?.label ?? formatValue(form.athlete.sex)
     : "Not provided";
@@ -2192,7 +2218,7 @@ export function PlanIntakeForm() {
     ...(weightCutStatus ? [{ label: "Weight-cut status", value: weightCutStatus }] : []),
     ...(highFatigueFlag ? [{ label: "Fatigue flag", value: highFatigueFlag }] : []),
     ...(equipmentLimitations ? [{ label: "Equipment limitations", value: equipmentLimitations }] : []),
-    ...(sparringCollisionRisk ? [{ label: "Sparring collision risk", value: sparringCollisionRisk }] : []),
+    ...(sparringCollisionRisk ? [{ label: "Sparring", value: sparringCollisionRisk }] : []),
   ];
   const performanceReviewItems = [
     { label: "Goals - Primary", value: primaryGoalLabel },
@@ -2622,23 +2648,6 @@ export function PlanIntakeForm() {
                 </div>
               </OptionalDetails>
             </div>
-
-            <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
-              <div className="support-panel">
-                <div className="form-section-header">
-                  <p className="kicker">Profile snapshot</p>
-                  <h2 className="form-section-title">{t("currentSelections")}</h2>
-                </div>
-                <ul className="summary-list">
-                  <li>Name: {formatValue(form.athlete.full_name)}</li>
-                  <li>Combat sport: {technicalStyleLabel}</li>
-                  <li>Tactical Style: {tacticalStyleLabel}</li>
-                  <li>Stance: {stanceLabel}</li>
-                  <li>Professional Status: {statusLabel}</li>
-                  <li>Record: {formatValue(form.athlete.record)}</li>
-                </ul>
-              </div>
-            </aside>
           </div>
         ) : null}
 
@@ -2769,25 +2778,6 @@ export function PlanIntakeForm() {
                 ) : <p className="muted">{HEALTH_CONSENT_BLOCKED_MESSAGE}</p>}
               </OptionalDetails>
             </div>
-
-            <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
-              <div className="support-panel">
-                <div className="form-section-header">
-                  <p className="kicker">Context snapshot</p>
-                  <h2 className="form-section-title">{t("currentSetup")}</h2>
-                </div>
-                <ul className="summary-list">
-                  <li>Fight date: {formatFightDateValue(form.fight_date)}</li>
-                  <li>Rounds: {formatValue(form.rounds_format)}</li>
-                  <li>Planned sessions per week: {formatValue(form.weekly_training_frequency)}</li>
-                  <li>Fatigue level: {formatValue(form.fatigue_level || "low")}</li>
-                </ul>
-              </div>
-              <div className="support-panel">
-                <p className="kicker">Guidance</p>
-                <p className="muted">Fight date and your planned weekly session count shape the camp timeline.</p>
-              </div>
-            </aside>
           </div>
         ) : null}
 
@@ -3001,25 +2991,6 @@ export function PlanIntakeForm() {
               </OptionalDetails>
               )}
             </div>
-
-            <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
-              <div className="support-panel">
-                <div className="form-section-header">
-                  <p className="kicker">Current input</p>
-                  <h2 className="form-section-title">{t("selectedAvailability")}</h2>
-                </div>
-                <ul className="summary-list">
-                  <li>Training Availability: {selectedTrainingAvailability}</li>
-                  <li>Hard Sparring Days: {selectedHardSparring}</li>
-                  <li>Light Combat days: {selectedSupportWorkDays}</li>
-                  <li>Equipment Access: {selectedEquipmentAccess}</li>
-                </ul>
-              </div>
-              <div className="support-panel">
-                <p className="kicker">Preference</p>
-                <p className="muted">This field is for training feel only, not injuries or general notes.</p>
-              </div>
-            </aside>
           </div>
         ) : null}
 
@@ -3339,20 +3310,6 @@ export function PlanIntakeForm() {
                 </fieldset>
               </OptionalDetails>
             </div>
-
-            <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
-              <div className="support-panel">
-                <div className="form-section-header">
-                  <p className="kicker">Performance snapshot</p>
-                  <h2 className="form-section-title">{t("selectedFocus")}</h2>
-                </div>
-                <ul className="summary-list">
-                  <li>Key Goals: {selectedGoals}</li>
-                  <li>Weak Areas: {selectedWeakAreas}</li>
-                  <li>Mental / confidence issue: {formatValue(form.mindset_challenges)}</li>
-                </ul>
-              </div>
-            </aside>
           </div>
         ) : null}
 
@@ -3409,10 +3366,6 @@ export function PlanIntakeForm() {
             </div>
 
             <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
-              <div className="support-panel">
-                <p className="kicker">Restrictions</p>
-                <p className="muted">Injuries or restrictions: {restrictionSummary}</p>
-              </div>
               <div className="support-panel">
                 <p className="kicker">Nutrition foundation</p>
                 <p className="muted">Weight, weigh-ins and readiness are set in Nutrition.</p>

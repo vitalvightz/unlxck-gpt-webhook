@@ -5250,7 +5250,8 @@ button.mobile-step-rail-item {
   grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.82fr);
 }
 
-.onboarding-step-layout-restrictions {
+.onboarding-step-layout-restrictions,
+.onboarding-step-layout:not(:has(> .step-aside)) {
   grid-template-columns: minmax(0, 1fr);
 }
 
