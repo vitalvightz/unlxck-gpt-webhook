@@ -14367,6 +14367,13 @@ html[data-theme="light"] .gi-suggested-types {
   color: #ffffff;
 }
 
+/* White on the pale-red tint has poor contrast on the light theme. */
+html[data-theme="light"] .gi-remove-confirm-panel .danger-button,
+html[data-theme="light"] .gi-remove-confirm-panel .danger-button:hover,
+html[data-theme="light"] .gi-remove-confirm-panel .danger-button:focus-visible {
+  color: var(--danger-ink);
+}
+
 .gi-remove-confirm-panel .danger-button:active {
   transform: scale(0.97);
 }
