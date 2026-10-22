@@ -101,6 +101,49 @@ Then validate the full flow:
 
 There is currently no dedicated admin test-send endpoint, so production validation uses an opted-in device and the real plan-ready or morning flow.
 
+## Instagram outreach automation (operator workstation)
+
+UNLXCK outbound DMs and cold follow-ups are **local Power Automate Desktop flows on the operator's Windows PC**, **not** Hetzner services. Deploying this repository does not install, schedule, or update those desktop flows. Notion is the CRM; the Hetzner follow-up sync calculates eligibility and due dates, but **does not send Instagram messages**. See [Notion follow-up sync](notion-followup-server-sync.md).
+
+### Local files and flows
+
+| Item | Local location / purpose |
+| --- | --- |
+| `UNLXCK Outbound` | Power Automate Desktop flow for initial outreach |
+| `UNLXCK Follow-Ups` | Separate duplicate of the flow for cold follow-ups |
+| `prospects.csv` | `C:\\Users\\Micha\\Downloads\\prospects.csv`; fresh initial-outreach export |
+| `followups.csv` | `C:\\Users\\Micha\\Downloads\\followups.csv`; generated on each follow-up run |
+| `unlxck_mark_contacted.py` | Local outbound eligibility, send-attempt journal, Contacted/date update, and `--hold` |
+| `unlxck_followups.py` | Local due-follow-up export, eligibility, send-attempt journal, follow-up count/date update, and `hold` |
+| `NOTION_TOKEN` | Windows **User** environment variable; never commit or log its value |
+
+The PowerShell actions currently invoke the Windows Python 3.12 interpreter at `$env:LOCALAPPDATA\Programs\Python\Python312\python.exe`. If Python moves, update all actions consistently.
+
+### Outbound workflow
+
+1. Read `prospects.csv`, attach to an already-authenticated Instagram Chrome tab, set `SendCount = 0`, and iterate rows with `Stage (AI Fills First) = Ready to Send`.
+2. Before navigation, query **live Notion** with `unlxck_mark_contacted.py --check PROFILE_URL`. If not READY, skip; never rely on an old CSV alone.
+3. After navigation, wait for the profile to load. If Instagram shows `Sorry, this page isn't available.`, call `--hold PROFILE_URL` to set `Review Hold` in Notion, then continue to the next row. A missing Message button also causes a skip, but does **not** automatically set Review Hold.
+4. If messaging is possible, populate `Draft DM`, journal `--attempt PROFILE_URL`, click Send, increment `SendCount`, and update Notion with the final script (sets `Contacted` and `Date Contacted`).
+5. `SendCount >= 50` exits the loop. This is **50 button attempts per run**, not a persistent calendar-day allowance. Do not restart blindly.
+
+### Cold follow-up workflow
+
+1. The first action runs `unlxck_followups.py export`, creating a fresh `followups.csv` from live Notion; the CSV reader must use this path with headers enabled.
+2. Only `Contacted` athletes whose follow-up is due are exported. The normal export includes **follow-up 1 only**. Second follow-ups require `export --include-second` after checking the message's named-athlete claim.
+3. Each row carries `Verified Profile URL`, `Copy Follow-Up`, `Step`, and `Guard` (message hash). Before sending, `check PROFILE_URL STEP GUARD` revalidates the live stage, scheduled time, counter, dates and copy; a non-READY result skips the row.
+4. Use the same unavailable-page check; `hold PROFILE_URL STEP GUARD` sets `Review Hold` and skips. Otherwise populate `Copy Follow-Up`, record `attempt PROFILE_URL STEP GUARD`, click Send, wait, then call `mark PROFILE_URL STEP GUARD` to increment `Follow-Ups Sent` and record the correct `Follow-Up 1/2 Sent At` and `Last Follow-Up Sent`.
+5. The copied flow retains the 50-attempts-per-run cap. It does not use `Draft DM` or mark a follow-up as a new `Contacted` event. The Notion worker computes the next safe due date; never advance follow-up counters to force eligibility.
+
+### Operational checks and limitations
+
+- **No automatic Instagram reply detection.** Check the conversation and update Notion to `Replied` or the appropriate opt-out/rejected stage before any follow-up. A `Contacted` CRM label alone is not evidence of no reply.
+- A successful Send-button action and a two-second wait **do not prove delivery**. The present flows can update Notion without independent delivery confirmation. Supervise initial runs and reconcile sent messages with CRM updates; do not claim unattended delivery verification.
+- The local attempt journals prevent automatic retries when a send is uncertain. Preserve them when replacing helper scripts; never remove a journal to resend without manual reconciliation.
+- Configure browser and Notion action errors to **stop**, not retry or silently continue. Confirm that `Review Hold` writes work against a test record. Instagram blocks or login changes require manual intervention.
+- Signup/onboarding follow-ups for `Replied`/`Accepted` are a **separate warm sequence** in Notion. `Details Sent At` must reflect an actual acknowledged send date; do not infer it from the record's update timestamp.
+- Keep development repositories outside OneDrive-backed Documents (for example `C:\\GitHub`) to avoid filling OneDrive storage; this does not change the deployment path on Hetzner.
+
 ## Server preparation
 
 1. Create a Hetzner CX23 using Ubuntu 24.04 and an SSH key.
