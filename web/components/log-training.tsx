@@ -283,7 +283,7 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
   </details> : null;
 
   return (
-    <div className={entry || repeatEntry ? styles.editControl : styles.training} role={entry || repeatEntry ? undefined : "region"} aria-label={entry ? `Manage ${entry.title}` : "Log Training"}>
+    <div className={entry || repeatEntry ? styles.editControl : styles.training} role={entry || repeatEntry ? undefined : "region"} aria-label={entry ? `Manage ${entry.title}` : "Log session"}>
       {quickSession ? <button className={styles.actionRow} type="button" onClick={() => startEdit(quickSession, true, quickSession.title)} aria-haspopup="dialog" aria-label={quickSession.title} aria-describedby={`${fieldId}-quick`}>
         <span><strong>{quickSession.title}</strong><span className="muted" id={`${fieldId}-quick`}>{trainingLabel(quickSession)} · {quickSession.duration_minutes} min</span></span>
         <svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7" /></svg>
@@ -293,13 +293,13 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
       {repeatEntry ? null : entry ? <button className={styles.editButton} type="button" onClick={() => startEdit(entry)} aria-haspopup="dialog" aria-label={`Edit ${entry.title}`} title="Edit session">
         <svg className="ex-log-edit-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3Z" /><path d="m14.5 7.5 3 3" /></svg>
       </button> :
-        <button className={variant === "primary" ? `cta ${styles.primary}` : variant === "tile" ? `${tileStyles.tile} ${tileStyles.log}` : styles.actionRow} type="button" onClick={() => startEdit()} aria-haspopup="dialog" aria-label="Log Training">
-          {variant === "primary" ? <><span aria-hidden="true">+</span> Log training</> : variant === "tile" ? <TrainingActionContent kind="log" /> : <><span><strong>{recent && (repeatSource || quickSession) ? "Log another session" : "Log Training"}</strong><span className="muted">{mySport ? `${sportLabel(mySport)}, strength, conditioning and more.` : "Sparring, boxing, roadwork, strength and more."}</span></span><span aria-hidden="true">+</span></>}
+        <button className={variant === "primary" ? `cta ${styles.primary}` : variant === "tile" ? `${tileStyles.tile} ${tileStyles.log}` : styles.actionRow} type="button" onClick={() => startEdit()} aria-haspopup="dialog" aria-label="Log session">
+          {variant === "primary" ? <><span aria-hidden="true">+</span> Log session</> : variant === "tile" ? <TrainingActionContent kind="log" /> : <><span><strong>{recent && (repeatSource || quickSession) ? "Log another session" : "Log session"}</strong><span className="muted">{mySport ? `${sportLabel(mySport)}, strength, conditioning and more.` : "Sparring, boxing, roadwork, strength and more."}</span></span><span aria-hidden="true">+</span></>}
         </button>}
       {open ? (
-        <dialog ref={dialog} className={styles.dialog} aria-label={editing ? "Edit training" : "Log Training"} onCancel={event => { if (busy) event.preventDefault(); else setOpen(false); }}>
+        <dialog ref={dialog} className={styles.dialog} aria-label={editing ? "Edit session" : "Log session"} onCancel={event => { if (busy) event.preventDefault(); else setOpen(false); }}>
         <header className={styles.header}>
-          <div><h2>{editing ? "Edit training" : repeating && activity ? `Log ${trainingLabel({ activity, sport, session_type: sessionType })}` : "Log training"}</h2>
+          <div><h2>{editing ? "Edit session" : repeating && activity ? `Log ${trainingLabel({ activity, sport, session_type: sessionType })}` : "Log session"}</h2>
             {repeating ? <p className={styles.source}>{duration} min · {sourceLabel}</p> : null}
           </div>
           <button className={styles.close} type="button" aria-label="Close training log" disabled={busy} onClick={() => setOpen(false)}>×</button>
@@ -311,7 +311,7 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
           {error ? <p role="alert">{error}</p> : null}
           <button type="button" className="cta" data-consent-action aria-describedby={`${fieldId}-consent`} disabled={busy || !me} onClick={() => void grantConsent()}>{busy ? "Saving…" : "Allow health-data use and continue"}</button>
           <button type="button" className="ghost-button" disabled={busy} onClick={() => setOpen(false)}>Not now</button>
-        </div> : <form className={styles.form} onSubmit={save} aria-label={editing ? "Edit training" : "Log Training"}>
+        </div> : <form className={styles.form} onSubmit={save} aria-label={editing ? "Edit session" : "Log session"}>
           <div className={styles.body}>
             {!repeating ? activityAndDuration : null}
             <fieldset className={styles.fieldset} disabled={busy} aria-label="Effort">

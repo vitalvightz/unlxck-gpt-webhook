@@ -356,7 +356,7 @@ export function TodayScreen() {
             )}
           </div>
           {/* Without a programme the logger itself leads directly below. */}
-          {hasPlan ? <a className={styles.logTrainingLink} href="#today-training-log">Log Training</a> : null}
+          {hasPlan ? <a className={styles.logTrainingLink} href="#today-training-log">Log session</a> : null}
         </div>
         <TodayReadinessStrip
           hasPlan={hasPlan}
@@ -484,7 +484,7 @@ export function TodayScreen() {
             // Coach-led athletes put their coach's sessions into a plan of their own.
             <Link href="/plans/custom" className={styles.quickAction}>
               <TileIcon name="plan" />
-              Build my plan manually
+              Build your own plan
               <span className={styles.chevron} aria-hidden="true" />
             </Link>
           )}

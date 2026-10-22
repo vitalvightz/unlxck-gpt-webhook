@@ -667,7 +667,7 @@ function MobileOnboardingHeader({
             Use Quick Build instead
           </Link>
           <Link href="/plans/custom" className="ghost-button onboarding-quick-build-link">
-            Build my plan manually
+            Build your own plan
           </Link>
         </div>
       </div>
@@ -2421,7 +2421,7 @@ export function PlanIntakeForm() {
                 Use Quick Build instead
               </Link>
               <Link href="/plans/custom" className="ghost-button onboarding-quick-build-link">
-                Build my plan manually
+                Build your own plan
               </Link>
             </div>
           </div>

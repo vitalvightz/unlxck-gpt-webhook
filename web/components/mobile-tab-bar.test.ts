@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { visualViewportBottomOffset } from "./mobile-tab-bar";
+import { isTabActive, visualViewportBottomOffset } from "./mobile-tab-bar";
 
 test("the tab bar stays at bottom: 0 while the viewports agree", () => {
   assert.equal(visualViewportBottomOffset(800, { height: 800, offsetTop: 0, scale: 1 }), 0);
@@ -25,4 +25,13 @@ test("the bar is never lifted, and pinch-zoom is left alone", () => {
   // A keyboard shrinks the visual viewport: the bar must not ride up with it.
   assert.equal(visualViewportBottomOffset(800, { height: 480, offsetTop: 0, scale: 1 }), 0);
   assert.equal(visualViewportBottomOffset(800, { height: 400, offsetTop: 500, scale: 2 }), 0);
+});
+
+test("a tab stays active on its sub-pages, so plan detail and the builder highlight Plan", () => {
+  assert.equal(isTabActive("/plans/abc", "/plans"), true);
+  assert.equal(isTabActive("/plans/custom", "/plans"), true);
+  assert.equal(isTabActive("/history", "/history"), true);
+  assert.equal(isTabActive("/timer", "/timer"), true);
+  assert.equal(isTabActive("/plans", "/"), false);
+  assert.equal(isTabActive("/today", "/timer"), false);
 });

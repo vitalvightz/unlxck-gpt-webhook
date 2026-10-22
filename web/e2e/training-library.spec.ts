@@ -211,7 +211,7 @@ for (const width of [390, 1280]) {
     // native player are checked here; live thumbnail/playback get separate QA.
     await page.route("https://i.ytimg.com/**", route => route.fulfill({ status: 204, body: "" }));
     await page.goto("/plan");
-    const log = page.getByRole("button", { name: "Log Training", exact: true });
+    const log = page.getByRole("button", { name: "Log session", exact: true });
     const find = page.getByRole("link", { name: "Find a Drill", exact: true });
     const logBox = (await log.boundingBox())!;
     const findBox = (await find.boundingBox())!;
@@ -219,7 +219,7 @@ for (const width of [390, 1280]) {
     expect(Math.abs(logBox.width - findBox.width)).toBeLessThan(2);
     expect(Math.abs(logBox.height - findBox.height)).toBeLessThan(2);
     await log.click();
-    await expect(page.getByRole("dialog", { name: "Log Training", exact: true })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Log session", exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(log).toBeFocused();
     const profile = page.getByRole("button", { name: /^Athlete profile:/ });

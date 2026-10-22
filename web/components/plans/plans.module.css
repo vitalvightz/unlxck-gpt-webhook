@@ -9,15 +9,6 @@
 .pageHeader { position: relative; display: grid; gap: 6px; padding-bottom: 4px; }
 .pageSubtitle { margin: 0; color: var(--text-secondary); font-size: var(--type-body); line-height: 1.5; }
 
-/* Build and History share one row of equal-width buttons under the subtitle, on the
-   same two-column grid (and gap) as the Log Training / Find a Drill tiles below. */
-.headerActions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 6px; }
-.headerLink.headerLink { display: inline-flex; justify-content: center; align-items: center; gap: 6px; width: 100%; min-width: 0; min-height: 44px; padding: 0 10px; font-size: 14px; white-space: nowrap; }
-@media (min-width: 600px) { .headerActions { gap: var(--space-3); } }
-/* Narrow phones: drop both icons together (as the tiles drop their chevrons) so labels never clip. */
-@media (max-width: 360px) { .headerLink svg { display: none; } }
-.headerLink svg { flex: 0 0 16px; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-
 .pageTitle {
   margin: 0;
   font-size: clamp(32px, 8vw, 40px);
@@ -25,9 +16,6 @@
   letter-spacing: -0.02em;
 }
 
-.campActions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.buildAction.buildAction { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 48px; padding: 10px 8px; gap: 6px; font-size: var(--type-meta); border-radius: var(--radius-btn); text-align: center; }
-.buildAction svg { flex: 0 0 17px; width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 
 /* -- Current camp ----------------------------------------------------------- */
 .campCard {
@@ -244,16 +232,15 @@
 .featuredDetails { display: flex; align-items: center; gap: 12px; padding: 0; min-height: 44px; border: 0; background: transparent; color: var(--text-primary); font: inherit; text-align: left; cursor: pointer; }
 .featuredDetails svg { flex: 0 0 16px; width: 16px; height: 16px; fill: none; stroke: var(--text-muted); stroke-width: 1.8; }
 .featuredDetails:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 4px; border-radius: 4px; }
-@media (min-width: 600px) { .page { gap: 20px; } .buildAction.buildAction { font-size: 15px; } }
+@media (min-width: 600px) { .page { gap: 20px; } }
 @media (min-width: 961px) {
   .pageHeader { grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; }
   .pageTitle { grid-column: 1; grid-row: 1; }
   .pageSubtitle { grid-column: 1; grid-row: 2; }
-  .headerActions { grid-column: 2; grid-row: 1 / 3; align-self: center; margin: 0; grid-template-columns: repeat(2, minmax(176px, 1fr)); }
   .emptyCamp { grid-template-columns: minmax(0, 1fr) minmax(340px, .9fr); gap: 8px 24px; }
   .emptyCamp > p, .emptyCamp > h2 { grid-column: 1; }
   .emptyCamp .campTitle { margin: 0; }
-  .emptyCamp > .campActions, .emptyCamp > a { grid-column: 2; grid-row: 1 / 4; align-self: center; }
+  .emptyCamp > a { grid-column: 2; grid-row: 1 / 4; align-self: center; }
 }
 
 .rowText {

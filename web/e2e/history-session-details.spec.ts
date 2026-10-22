@@ -90,7 +90,7 @@ for (const width of [390, 1280]) {
     await expect(page.getByRole("dialog").locator("ol")).toHaveCount(0);
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Edit Boxing", exact: true }).click();
-    await expect(page.getByRole("dialog", { name: "Edit training" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Edit session" })).toBeVisible();
     await expect(page.getByRole("dialog")).not.toContainText("Session details");
     await page.keyboard.press("Escape");
     expect(errors).toEqual([]);

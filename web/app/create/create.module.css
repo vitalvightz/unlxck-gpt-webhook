@@ -1,0 +1,44 @@
+/* Create: the signup starting-choice rows (starting-path-screen.module.css),
+   tightened into an editorial header with numbered, clearly tappable options. */
+.root { width: min(100%, 560px); box-sizing: border-box; margin: 0 auto; padding: 0 clamp(2px, 2vw, 20px) 24px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 44px; }
+.back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px 0 0; border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+.back svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform 140ms; }
+.back:hover { color: var(--text-primary); }
+.back:hover svg { transform: translateX(-2px); }
+.back:focus-visible, .option:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 2px; box-shadow: none; }
+.trail { margin: 0; color: var(--text-muted); font-family: var(--font-mono), monospace; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
+.trail span { color: var(--text-primary); }
+.intro { margin: clamp(14px, 3vh, 28px) 0 clamp(20px, 3.5vh, 32px); }
+.intro h1 { margin: 10px 0 10px; font-family: var(--font-display), sans-serif; font-size: clamp(30px, 8.5vw, 40px); font-weight: 700; line-height: 1.04; letter-spacing: -.035em; }
+.intro p:last-child { max-width: 420px; margin: 0; color: var(--text-secondary); font-size: 15px; line-height: 1.5; }
+.options { display: grid; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--border-default); }
+.options li { border-bottom: 1px solid var(--border-default); }
+.option { display: grid; grid-template-columns: 28px minmax(0, 1fr) 40px; align-items: center; column-gap: 14px; min-height: 88px; padding: 18px 0; color: var(--text-primary); text-decoration: none; }
+.index { align-self: start; padding-top: 4px; font-variant-numeric: tabular-nums; }
+.copy { display: grid; gap: 5px; min-width: 0; }
+.copy strong { font-family: var(--font-display), sans-serif; font-size: 18px; font-weight: 600; line-height: 1.25; letter-spacing: -.01em; transition: color 140ms; }
+.copy span { color: var(--text-secondary); font-size: 13.5px; line-height: 1.45; }
+.arrow { display: inline-grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--border-strong); border-radius: 50%; color: var(--text-primary); transition: color 140ms, background 140ms, border-color 140ms; }
+.arrow svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.option:hover .copy strong { color: var(--brand-red); }
+.option:hover .arrow, .option:focus-visible .arrow { border-color: var(--brand-red); background: var(--brand-red); color: #fff; }
+.option:active .arrow { transform: scale(.96); }
+/* Phones: + Create is hidden on this screen, so Back takes its slot in the
+   top band, level with the account button, and the heading moves up. */
+@media (max-width: 720px) {
+  :global(html[data-mobile-tab-bar]) .top {
+    position: fixed;
+    top: calc(var(--mobile-nav-offset-top) + var(--safe-area-top) - 2px);
+    left: calc(var(--mobile-nav-offset-side) + var(--safe-area-left));
+    right: calc(var(--mobile-nav-offset-side) + var(--safe-area-right) + 52px);
+    z-index: 70;
+  }
+  :global(html[data-mobile-tab-bar]) .intro { margin-top: 0; }
+}
+@media (max-width: 359px) {
+  .option { grid-template-columns: 22px minmax(0, 1fr) 36px; column-gap: 10px; }
+  .arrow { width: 36px; height: 36px; }
+  .copy strong { font-size: 17px; }
+}
+@media (prefers-reduced-motion: reduce) { .back svg, .copy strong, .arrow { transition: none; } }

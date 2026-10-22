@@ -9723,6 +9723,12 @@ html[data-theme="light"] .today-injury-other-warning {
   line-height: 1;
 }
 
+/* Phone workspace chrome (+ Create, account button); shown only at phone widths. */
+.phone-create-button,
+.phone-account-button {
+  display: none;
+}
+
 @media (min-width: 961px) {
   .auth-layout > .auth-rail {
     grid-column: 1;
@@ -9996,11 +10002,14 @@ html[data-theme="light"] .today-injury-other-warning {
     margin-top: auto;
   }
 
+  /* The nav list is the one part of the drawer that gives way: it shrinks and
+     scrolls so the brand and the profile footer (Sign out, language) always fit
+     on short screens. A fixed 52dvh share used to push the footer off-screen. */
   .sidebar-nav {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    max-height: 52dvh;
     scrollbar-width: thin;
   }
 
@@ -16858,7 +16867,7 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
     right: 0;
     z-index: 95;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     height: var(--mobile-tab-bar-clearance);
     padding-bottom: var(--safe-area-bottom);
     background: linear-gradient(180deg, rgba(17, 19, 23, 0.96), rgba(10, 11, 14, 0.98));
@@ -16939,6 +16948,62 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
 
   html[data-mobile-tab-bar] .global-generation-status-reopen {
     bottom: calc(var(--mobile-tab-bar-clearance) + 12px);
+  }
+
+  /* With the bottom bar showing there is no sidebar on phones: + Create sits
+     top-left and the account button top-right, in the Menu toggle's band. */
+  .mobile-nav-toggle[data-phone-hidden="true"],
+  .app-sidebar[data-phone-hidden="true"] {
+    display: none;
+  }
+
+  .phone-create-button,
+  .phone-account-button {
+    position: fixed;
+    top: calc(var(--mobile-nav-offset-top) + var(--safe-area-top));
+    z-index: 70;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    border: 1px solid var(--border-default);
+    background: var(--bg-panel);
+    color: var(--text-primary);
+  }
+
+  .phone-create-button {
+    left: calc(var(--mobile-nav-offset-side) + var(--safe-area-left));
+    gap: 8px;
+    padding: 0 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .phone-create-button > span {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .phone-account-button {
+    right: calc(var(--mobile-nav-offset-side) + var(--safe-area-right));
+    width: 40px;
+    padding: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    text-decoration: none;
+  }
+
+  .phone-create-button:focus-visible,
+  .phone-account-button:focus-visible {
+    outline: 2px solid var(--text-primary);
+    outline-offset: 2px;
+  }
+
+  .phone-account-button .sidebar-avatar-initials {
+    font-size: 13px;
+    color: var(--text-primary);
   }
 
   /* Add bottom padding to app content so the tab bar doesn't cover the footer */

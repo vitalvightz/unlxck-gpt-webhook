@@ -106,7 +106,7 @@ test("tracking keeps consent optional and grants it in one explicit tap inside t
   // Tracking athletes land on Home; logging lives on Today.
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/today");
-  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await page.getByRole("button", { name: "Log session", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("Training logs include health-related information");
   await expect(dialog.getByRole("form")).toHaveCount(0);
@@ -117,7 +117,7 @@ test("tracking keeps consent optional and grants it in one explicit tap inside t
   await page.screenshot({ path: test.info().outputPath("contextual-consent.png") });
   await allow.click();
   await expect(page).toHaveURL(/\/today$/);
-  await expect(page.getByRole("form", { name: "Log Training", exact: true })).toBeVisible();
+  await expect(page.getByRole("form", { name: "Log session", exact: true })).toBeVisible();
   // The athlete boxes, so the first Activity choice is a boxing session type.
   await expect(page.getByRole("button", { name: "Pads", exact: true })).toBeFocused();
   expect(writes).toEqual([{ starting_path: "tracking_first" }, { health_data_consent: true }]);
@@ -126,7 +126,7 @@ test("tracking keeps consent optional and grants it in one explicit tap inside t
 test("declining contextual consent keeps tracking and the round timer available", async ({ page, baseURL }) => {
   const writes = await setup(page, baseURL!, { consent: false, path: "tracking_first" });
   await page.goto("/today");
-  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await page.getByRole("button", { name: "Log session", exact: true }).click();
   await page.getByRole("button", { name: "Not now", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "Round timer" })).toBeVisible();
@@ -136,21 +136,21 @@ test("declining contextual consent keeps tracking and the round timer available"
 test("failed contextual consent remains optional and can be retried", async ({ page, baseURL }) => {
   const writes = await setup(page, baseURL!, { consent: false, path: "tracking_first", failConsent: true });
   await page.goto("/today");
-  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await page.getByRole("button", { name: "Log session", exact: true }).click();
   const allow = page.getByRole("button", { name: "Allow health-data use and continue", exact: true });
   await allow.click();
   await expect(page.getByRole("dialog").getByRole("alert")).toContainText("could not be saved");
-  await expect(page.getByRole("form", { name: "Log Training", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("form", { name: "Log session", exact: true })).toHaveCount(0);
   await allow.click();
-  await expect(page.getByRole("form", { name: "Log Training", exact: true })).toBeVisible();
+  await expect(page.getByRole("form", { name: "Log session", exact: true })).toBeVisible();
   expect(writes).toEqual([{ health_data_consent: true }, { health_data_consent: true }]);
 });
 
 test("server-side consent withdrawal replaces the logger with a recovery route", async ({ page, baseURL }) => {
   await setup(page, baseURL!, { path: "tracking_first", rejectConsent: true });
   await page.goto("/today");
-  await page.getByRole("button", { name: "Log Training", exact: true }).click();
-  const form = page.getByRole("form", { name: "Log Training", exact: true });
+  await page.getByRole("button", { name: "Log session", exact: true }).click();
+  const form = page.getByRole("form", { name: "Log session", exact: true });
   await form.getByRole("button", { name: "Pads", exact: true }).click();
   await form.getByRole("button", { name: "45", exact: true }).click();
   await form.getByRole("button", { name: "Moderate", exact: true }).click();
@@ -214,20 +214,20 @@ for (const width of [320, 390, 1280]) {
     const quickActions = page.getByRole("navigation", { name: "Quick actions" });
     await expect(quickActions.getByRole("link", { name: "Round timer" })).toBeVisible();
     await expect(quickActions.getByRole("link", { name: "Generate my S&C plan" })).toBeVisible();
-    await expect(quickActions.getByRole("link", { name: "Build my plan manually" })).toHaveAttribute("href", "/plans/custom");
+    await expect(quickActions.getByRole("link", { name: "Build your own plan" })).toHaveAttribute("href", "/plans/custom");
     // The daily check-in is the same as a planned athlete's, sent plan-free.
     await expect(page.getByRole("list", { name: "Today command status" })).toContainText("Check-in");
     await expect(page.getByRole("list", { name: "Today command status" })).toContainText("Due");
     await expect(page.locator("#today-checkin")).toBeVisible();
-    await page.getByRole("button", { name: "Log Training", exact: true }).click();
-    const form = page.getByRole("form", { name: "Log Training", exact: true });
+    await page.getByRole("button", { name: "Log session", exact: true }).click();
+    const form = page.getByRole("form", { name: "Log session", exact: true });
     // A boxer's Activity choices are boxing session types.
     await form.getByRole("button", { name: "Pads", exact: true }).click();
     await form.getByRole("button", { name: "45", exact: true }).click();
     await form.getByRole("button", { name: "Moderate", exact: true }).click();
     await form.getByRole("button", { name: "Save Session", exact: true }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Log Training", exact: true })).toBeFocused();
+    await expect(page.getByRole("button", { name: "Log session", exact: true })).toBeFocused();
     await expect(page.getByRole("button", { name: "Repeat last session", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Repeat last session", exact: true })).toContainText("Boxing · Pads");
     // Boxing gets no sparring follow-up; the tile now reports today's log.
@@ -358,7 +358,7 @@ for (const width of [320, 390, 1280]) {
     await expect(status).not.toContainText("Not assessed");
     await expect(page.locator("#today-checkin")).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "View plan" })).toHaveAttribute("href", "/plans/plan-9");
-    await expect(page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "Build my plan manually" })).toHaveCount(0);
+    await expect(page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "Build your own plan" })).toHaveCount(0);
     // Shared sections are the same components as the no-plan state.
     await expect(page.locator("#today-injury")).toContainText("No injuries tracked.");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -367,13 +367,13 @@ for (const width of [320, 390, 1280]) {
 }
 
 async function logSparring(page: Page, effort: "Easy" | "Moderate" | "Hard") {
-  await page.getByRole("button", { name: "Log Training", exact: true }).click();
-  const form = page.getByRole("form", { name: "Log Training", exact: true });
+  await page.getByRole("button", { name: "Log session", exact: true }).click();
+  const form = page.getByRole("form", { name: "Log session", exact: true });
   await form.getByRole("button", { name: "Sparring", exact: true }).click();
   await form.getByRole("button", { name: "45", exact: true }).click();
   await form.getByRole("button", { name: effort, exact: true }).click();
   await form.getByRole("button", { name: "Save Session", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Log Training", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Log session", exact: true })).toHaveCount(0);
 }
 
 for (const width of [320, 390, 1280]) {
@@ -498,8 +498,8 @@ for (const width of [320, 390, 1280]) {
     await expect(page).toHaveURL(/\/$/);
     await page.goto("/today");
     expect(writes[0]).toEqual({ starting_path: "tracking_first", technical_style: ["muay_thai"] });
-    await page.getByRole("button", { name: "Log Training", exact: true }).click();
-    const form = page.getByRole("form", { name: "Log Training", exact: true });
+    await page.getByRole("button", { name: "Log session", exact: true }).click();
+    const form = page.getByRole("form", { name: "Log session", exact: true });
     const activity = form.getByRole("group", { name: "Activity", exact: true });
     await expect(activity.locator("[data-activity]")).toHaveText(["Pads", "Bag work", "Clinch", "Technical drills", "Sparring", "Strength", "Conditioning", "Roadwork", "Other"]);
     await activity.getByRole("button", { name: "Clinch", exact: true }).click();
@@ -508,7 +508,7 @@ for (const width of [320, 390, 1280]) {
     expect((await new AxeBuilder({ page }).include("dialog").analyze()).violations).toEqual([]);
     await page.screenshot({ path: test.info().outputPath(`muay-thai-log-${width}.png`) });
     await form.getByRole("button", { name: "Save Session", exact: true }).click();
-    await expect(page.getByRole("dialog", { name: "Log Training", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: "Log session", exact: true })).toHaveCount(0);
     expect(writes.at(-1)).toMatchObject({ activity: "other", sport: "muay_thai", session_type: "clinch", duration_minutes: 60, effort: "hard" });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     expect(errors).toEqual([]);
@@ -524,7 +524,7 @@ test("Other sport keeps the original log choices and saves no sport", async ({ p
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/today");
   expect(writes[0]).toEqual({ starting_path: "tracking_first" });
-  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await page.getByRole("button", { name: "Log session", exact: true }).click();
   await expect(page.getByRole("group", { name: "Activity", exact: true }).locator("[data-activity]"))
     .toHaveText(["Boxing", "Sparring", "Strength", "Conditioning", "Roadwork", "Other"]);
 });

@@ -651,7 +651,7 @@ export default function HomePage() {
                 ) : tracking ? (
                   <>
                     <Link href="/quick-build" className="secondary-button">Generate my S&amp;C plan</Link>
-                    <Link href="/plans/custom" className="secondary-button">Build my plan manually</Link>
+                    <Link href="/plans/custom" className="secondary-button">Build your own plan</Link>
                   </>
                 ) : (
                   <Link href="/quick-build" className="secondary-button">Quick Build</Link>

@@ -143,8 +143,8 @@ for (const width of [390, 1280]) {
     await expect(page).toHaveTitle(/UNLXCK/i);
     const prompt = page.getByRole("dialog", { name: "UNLXCK your next move." });
     await expect(prompt).toHaveCount(0);
-    await page.getByRole("button", { name: "Log Training", exact: true }).click();
-    const form = page.getByRole("form", { name: "Log Training", exact: true });
+    await page.getByRole("button", { name: "Log session", exact: true }).click();
+    const form = page.getByRole("form", { name: "Log session", exact: true });
     await choose(form, page, "Activity", "Roadwork");
     await choose(form, page, "Duration", "30");
     await choose(form, page, "Effort", "Moderate");
@@ -193,8 +193,8 @@ for (const width of [390, 1280]) {
     page.on("pageerror", error => errors.push(error.message));
     const submissions = await setup(page, baseURL!, false, true);
     await page.goto("/plan");
-    await page.getByRole("button", { name: "Log Training", exact: true }).click();
-    const form = page.getByRole("form", { name: "Log Training", exact: true });
+    await page.getByRole("button", { name: "Log session", exact: true }).click();
+    const form = page.getByRole("form", { name: "Log session", exact: true });
     await expect(form.getByRole("combobox")).toHaveCount(0);
     // The athlete boxes: the same single grid holds boxing session types, then S&C, roadwork and other.
     await expect(form.getByRole("group", { name: "Activity", exact: true }).locator("[data-activity]")).toHaveText(
@@ -211,12 +211,12 @@ for (const width of [390, 1280]) {
       return [css.backgroundColor, css.backgroundImage, css.borderRadius, css.color];
     };
     expect(await form.getByRole("button", { name: "Save Session", exact: true }).evaluate(ctaAppearance))
-      .toEqual(await page.getByRole("link", { name: "Quick Build Plan" }).evaluate(ctaAppearance));
+      .toEqual(await page.getByRole("link", { name: "Create a plan" }).evaluate(ctaAppearance));
     await page.screenshot({ animations: "disabled", path: test.info().outputPath("log-training-form.png") });
     expect((await new AxeBuilder({ page }).include('dialog').analyze()).violations).toEqual([]);
     await form.getByRole("button", { name: "Save Session", exact: true }).click();
     await skipSparringFollowUp(page);
-    await expect(page.getByRole("region", { name: "Log Training", exact: true }).getByRole("status")).toContainText("logged successfully");
+    await expect(page.getByRole("region", { name: "Log session", exact: true }).getByRole("status")).toContainText("logged successfully");
     await expect(page.locator(".history-list")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Edit Sparring" })).toHaveCount(0);
     expect(submissions[0]).toMatchObject({ activity: "sparring", duration_minutes: 60, effort: "hard" });
@@ -224,8 +224,8 @@ for (const width of [390, 1280]) {
     expect(submissions[0]).toMatchObject({ sport: "boxing", session_type: "sparring" });
     await page.reload();
     await expect(page.getByRole("button", { name: "Edit Sparring" })).toHaveCount(0);
-    if (width === 390) await page.getByRole("button", { name: "Open navigation" }).click();
-    await page.getByRole("link", { name: /^History/ }).first().click();
+    // Phones reach History from the bottom bar; desktop from the sidebar.
+    await page.getByRole("link", { name: /^History/ }).filter({ visible: true }).first().click();
     const history = page.locator(".history-list");
     await expect(history).toContainText("Sparring");
     await expect(history.getByRole("button", { name: "Edit Strength & Power" })).toHaveCount(0);
@@ -259,10 +259,10 @@ for (const width of [390, 1280]) {
     await expect(history).not.toContainText("Boxing");
     await page.goto("/plan");
     await expect(page.locator(".history-list")).toHaveCount(0);
-    await page.getByRole("button", { name: "Log Training", exact: true }).click();
+    await page.getByRole("button", { name: "Log session", exact: true }).click();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Log Training", exact: true })).toBeFocused();
+    await expect(page.getByRole("button", { name: "Log session", exact: true })).toBeFocused();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(errors).toEqual([]);
   });
@@ -271,7 +271,7 @@ for (const width of [390, 1280]) {
 test("retry after a lost save response keeps the same request ID", async ({ page, baseURL }) => {
   const submissions = await setup(page, baseURL!, true);
   await page.goto("/plans");
-  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await page.getByRole("button", { name: "Log session", exact: true }).click();
   await choose(page, page, "Activity", "Sparring");
   await choose(page, page, "Duration", "60");
   await choose(page, page, "Effort", "Hard");
@@ -280,7 +280,7 @@ test("retry after a lost save response keeps the same request ID", async ({ page
   // Re-selecting the same quick pick must still retry the same payload safely.
   await choose(page, page, "Effort", "Hard");
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Log Training", exact: true }).getByRole("status")).toContainText("logged successfully");
+  await expect(page.getByRole("region", { name: "Log session", exact: true }).getByRole("status")).toContainText("logged successfully");
   expect(submissions).toHaveLength(2);
   expect(submissions[1].client_request_id).toBe(submissions[0].client_request_id);
 });
@@ -289,7 +289,7 @@ test("log yesterday's sparring with the optional date and preserve it after edit
   await page.setViewportSize({ width: 390, height: 844 });
   const submissions = await setup(page, baseURL!);
   await page.goto("/plans");
-  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await page.getByRole("button", { name: "Log session", exact: true }).click();
   await choose(page, page, "Activity", "Sparring");
   await choose(page, page, "Duration", "60");
   await choose(page, page, "Effort", "Hard");
@@ -317,7 +317,7 @@ test("failed edits and deletes preserve the session and allow another attempt", 
   await page.setViewportSize({ width: 390, height: 844 });
   await setup(page, baseURL!);
   await page.goto("/plans");
-  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await page.getByRole("button", { name: "Log session", exact: true }).click();
   await choose(page, page, "Activity", "Sparring");
   await choose(page, page, "Duration", "60");
   await choose(page, page, "Effort", "Hard");
@@ -364,9 +364,9 @@ const manual: TrainingHistorySession = {
 test("Today without manual history offers the simple form", async ({ page, baseURL }) => {
   await setup(page, baseURL!, false, false, []);
   await page.goto("/today");
-  await expect(page.getByRole("button", { name: "Log Training", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Log session", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Repeat last session" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await page.getByRole("button", { name: "Log session", exact: true }).click();
   await expect(page.getByRole("group", { name: "Activity", exact: true }).locator('[aria-pressed="true"]')).toHaveCount(0);
   await expect(page.getByRole("group", { name: "Duration", exact: true }).locator('[aria-pressed="true"]')).toHaveCount(0);
   await expect(page.getByRole("group", { name: "Effort", exact: true }).locator('[aria-pressed="true"]')).toHaveCount(0);
@@ -396,7 +396,7 @@ test(`repeat on Today needs only effort and save; a second session stays separat
   await expect(repeat).not.toContainText("Last recorded");
   await expect(repeat).not.toContainText("Review and log");
   expect((await repeat.boundingBox())!.height).toBeLessThanOrEqual(80);
-  const entryLink = page.getByRole("link", { name: "Log Training", exact: true });
+  const entryLink = page.getByRole("link", { name: "Log session", exact: true });
   await expect(entryLink).toBeInViewport();
   await page.screenshot({ animations: "disabled", path: "/tmp/quick-log-today-first-viewport.png" });
   await entryLink.click();
@@ -427,7 +427,7 @@ test(`repeat on Today needs only effort and save; a second session stays separat
     await route.fallback();
   });
   // Two synchronous submits must produce only one request, even before React renders busy state.
-  await page.getByRole("form", { name: "Log Training", exact: true }).evaluate((form: HTMLFormElement) => {
+  await page.getByRole("form", { name: "Log session", exact: true }).evaluate((form: HTMLFormElement) => {
     form.requestSubmit(); form.requestSubmit();
   });
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -442,7 +442,7 @@ test(`repeat on Today needs only effort and save; a second session stays separat
   await expect(page.getByText("Updating Today…", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("status").filter({ hasText: "logged successfully" })).toBeVisible();
   await page.screenshot({ animations: "disabled", path: test.info().outputPath("today-recent-shortcut.png") });
-  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await page.getByRole("button", { name: "Log session", exact: true }).click();
   await choose(page, page, "Activity", "Strength");
   await choose(page, page, "Duration", "45");
   await choose(page, page, "Effort", "Moderate");
@@ -532,7 +532,7 @@ test("Today logging remains available without an active plan", async ({ page, ba
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   await page.goto("/today");
   await expect(page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "Generate my S&C plan" })).toBeVisible();
-  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await page.getByRole("button", { name: "Log session", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -742,7 +742,7 @@ test("failed history leaves simple logging available without inferred suggestion
   await page.goto("/today");
   await expect(page.getByRole("button", { name: "Suggested today", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Yes, usually", exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await page.getByRole("button", { name: "Log session", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
 });
 
@@ -759,7 +759,7 @@ test("history failure never restores a confirmed shortcut blocked by readiness",
     open_injuries: [], risk_watch: [], week_summary: {}, quick_actions: [],
   }) }));
   await page.goto("/today");
-  await expect(page.getByRole("button", { name: "Log Training", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Log session", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toHaveCount(0);
 });
 
@@ -775,7 +775,7 @@ for (const width of [375, 390, 430]) {
       await page.goto("/today");
       await expect(page).toHaveURL(/\/today$/);
       await expect(page).toHaveTitle(/Unlxck/i);
-      const trigger = page.getByRole("button", { name: mode === "new" ? "Log Training" : mode === "repeat" ? "Repeat last session" : "Suggested today", exact: true });
+      const trigger = page.getByRole("button", { name: mode === "new" ? "Log session" : mode === "repeat" ? "Repeat last session" : "Suggested today", exact: true });
       await trigger.click();
       const sheet = page.getByRole("dialog");
       await expect(sheet).toBeVisible();
@@ -841,7 +841,7 @@ test("repeat preserves 75 minutes, can edit details, and supports the full custo
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(submissions[0].duration_minutes).toBe(75);
-  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await page.getByRole("button", { name: "Log session", exact: true }).click();
   await choose(page, page, "Activity", "Conditioning");
   await page.getByRole("button", { name: "Custom", exact: true }).click();
   const duration = page.getByLabel("Duration (minutes)");
@@ -862,13 +862,13 @@ test("date summary uses the athlete timezone and 03:00 rollover without sending 
   // London is UTC+1 in October: 01:30 UTC is still the previous training day.
   await page.clock.setFixedTime(new Date("2026-10-18T01:30:00Z"));
   await page.goto("/today");
-  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await page.getByRole("button", { name: "Log session", exact: true }).click();
   await expect(page.locator("dialog summary")).toContainText("Sat 17 Oct 2026");
   await page.locator("dialog summary").click();
   await expect(page.getByLabel("Training date (optional)")).toHaveAttribute("max", "2026-10-17");
   await expect(page.getByLabel("Training date (optional)")).toHaveValue("");
   await page.getByRole("button", { name: "Close training log" }).click();
-  await expect(page.getByRole("button", { name: "Log Training", exact: true })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Log session", exact: true })).toBeFocused();
 });
 
 test("History edit retains effort and record identity; repeat details can change without changing its source", async ({ page, baseURL }) => {
@@ -906,7 +906,7 @@ test("History edit retains effort and record identity; repeat details can change
 test("quick picks support keyboard selection, modal focus containment and close restoration", async ({ page, baseURL }) => {
   await setup(page, baseURL!, false, false, []);
   await page.goto("/plan");
-  const trigger = page.getByRole("button", { name: "Log Training", exact: true });
+  const trigger = page.getByRole("button", { name: "Log session", exact: true });
   await trigger.focus();
   await page.keyboard.press("Enter");
   const sheet = page.getByRole("dialog");
@@ -934,7 +934,7 @@ test("Change sport is a quiet, optional per-session switch (390px)", async ({ pa
   await page.setViewportSize({ width: 390, height: 844 });
   const submissions = await setup(page, baseURL!, false, false, []);
   await page.goto("/today");
-  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await page.getByRole("button", { name: "Log session", exact: true }).click();
   const sheet = page.getByRole("dialog");
   const toggle = sheet.getByRole("button", { name: /^Change sport for this session/ });
   await expect(toggle).toHaveText("Boxing · Change");
@@ -954,7 +954,7 @@ test("Change sport is a quiet, optional per-session switch (390px)", async ({ pa
   await sheet.getByRole("button", { name: "Save Session", exact: true }).click();
   await expect(sheet).toHaveCount(0);
   expect(submissions[0]).toMatchObject({ activity: "other", sport: "mma", session_type: "grappling" });
-  await page.getByRole("button", { name: "Log another session", exact: true }).or(page.getByRole("button", { name: "Log Training", exact: true })).first().click();
+  await page.getByRole("button", { name: "Log another session", exact: true }).or(page.getByRole("button", { name: "Log session", exact: true })).first().click();
   await expect(page.getByRole("dialog").getByRole("button", { name: /^Change sport for this session/ })).toHaveText("Boxing · Change");
 });
 

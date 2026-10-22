@@ -2761,8 +2761,8 @@ export function PlanViewer({
             <Link className="ghost-button" href={`/plans/custom?plan=${plan.custom_plan_id}`}>Edit Plan</Link>
           ) : null}
           {archivedPreview && viewerRole === "athlete" ? (
-            <Link href="/onboarding" className="ghost-button">
-              Create New Plan
+            <Link href="/create" className="ghost-button">
+              Create a plan
             </Link>
           ) : null}
 

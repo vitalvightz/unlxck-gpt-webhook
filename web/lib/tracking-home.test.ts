@@ -39,7 +39,7 @@ test("not checked in asks for the check-in, but only with health-data consent", 
 
 test("nothing logged: a first-session CTA and an empty strip; the slot shows readiness only if checked in", () => {
   const result = home();
-  assert.deepEqual([result.hero.title, result.hero.primary.label], ["Log your first session", "Log training"]);
+  assert.deepEqual([result.hero.title, result.hero.primary.label], ["Log your first session", "Log session"]);
   assert.deepEqual(result.strip.map(cell => cell.value), ["0 sessions", "None", "None", "None"]);
   assert.equal(result.slot, "readiness");
   const unchecked = state({ recommendation_state: "not_checked_in", decision_tier: "not_checked_in" });

@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/skeleton";
 import { shouldShowAdminPanelLink } from "@/lib/admin-nav-visibility";
 import { getShellSurface, isAuthSurfaceRoute, shouldShowBrandTopbar } from "@/lib/app-surface";
 import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
-import { SIDE_NAV_ITEMS } from "@/lib/beta-navigation";
+import { showsMobileTabBar, SIDE_NAV_ITEMS } from "@/lib/beta-navigation";
 import { isNavToggleCondensed } from "@/lib/nav-toggle-scroll";
 import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 
@@ -40,6 +40,70 @@ function MenuIcon() {
     <svg viewBox="0 0 20 20" width="18" height="18" fill="none" aria-hidden="true" focusable="false">
       <path d="M4 6h12M4 10h12M4 14h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
+  );
+}
+
+type AccountIdentity = {
+  displayName: string;
+  displayEmail: string;
+  initials: string;
+  avatarUrl: string | null | undefined;
+  role: string | null;
+  isSessionResolving: boolean;
+};
+
+function AccountAvatar({ identity }: { identity: AccountIdentity }) {
+  return identity.avatarUrl ? (
+    <img src={identity.avatarUrl} alt="" className="sidebar-avatar-img" />
+  ) : (
+    <span className="sidebar-avatar-initials">{identity.initials}</span>
+  );
+}
+
+function AccountIdentityRow({ identity }: { identity: AccountIdentity }) {
+  const t = useTranslations("Navigation");
+  const { role } = identity;
+  return (
+    <div className="sidebar-user-identity">
+      <div className="sidebar-avatar" aria-hidden="true">
+        <AccountAvatar identity={identity} />
+      </div>
+      <div className="sidebar-user-info">
+        <p className="sidebar-user-name">{identity.displayName}</p>
+        <p className="sidebar-user-email">{identity.displayEmail}</p>
+        {role ? (
+          <span
+            className={`sidebar-role-badge sidebar-role-${role}`}
+            aria-label={t("role", { role: role === "admin" ? t("administrator") : t("athlete") })}
+          >
+            {role === "admin" ? t("admin") : t("athlete")}
+          </span>
+        ) : identity.isSessionResolving ? (
+          <Skeleton variant="block" width={74} height={24} style={{ borderRadius: 999 }} />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Phone chrome while the bottom bar is showing: + Create top-left and the
+ * avatar top-right, which opens Settings (profile, language, sign out, admin).
+ */
+function PhoneWorkspaceBar({ pathname, identity }: { pathname: string; identity: AccountIdentity }) {
+  const t = useTranslations("Navigation");
+  return (
+    <>
+      {pathname === "/create" ? null : (
+        <Link href="/create" className="phone-create-button">
+          <span aria-hidden="true">+</span>
+          {t("create")}
+        </Link>
+      )}
+      <Link href="/settings" className="phone-account-button" aria-label={t("account")}>
+        <AccountAvatar identity={identity} />
+      </Link>
+    </>
   );
 }
 
@@ -316,6 +380,10 @@ export function AppNav() {
   const avatarUrl = profile && isSafeAvatarImageUrl(profile.avatar_url) ? profile.avatar_url : null;
   const role = profile?.role ?? null;
   const isAdminWorkspace = shouldShowAdminPanelLink(role, isActive(pathname, "/admin"));
+  // Phones with the bottom bar get + Create and the account button instead of
+  // the sidebar; CSS limits both to phone widths, so tablets keep the drawer.
+  const hasPhoneBar = isReady && showsMobileTabBar(pathname, hasSession);
+  const identity: AccountIdentity = { displayName, displayEmail, initials, avatarUrl, role, isSessionResolving };
 
   return (
     <>
@@ -347,6 +415,7 @@ export function AppNav() {
         <button
           type="button"
           className="mobile-nav-toggle"
+          data-phone-hidden={hasPhoneBar ? "true" : undefined}
           data-condensed={navToggleCondensed ? "true" : undefined}
           aria-label={t("openNavigation")}
           aria-expanded={false}
@@ -376,6 +445,9 @@ export function AppNav() {
           <span className="nav-toggle-label">{t("menu")}</span>
         </button>
       ) : null}
+      {hasPhoneBar ? (
+        <PhoneWorkspaceBar pathname={pathname} identity={identity} />
+      ) : null}
       {isMobileDrawerVisible ? (
         <button
           type="button"
@@ -388,6 +460,7 @@ export function AppNav() {
       <aside
         id="app-sidebar"
         className="app-sidebar"
+        data-phone-hidden={hasPhoneBar ? "true" : undefined}
         data-mobile-nav-state={mobileNavState}
         data-mobile-nav-visible={isMobileDrawerVisible}
         onTransitionEnd={handleSidebarTransitionEnd}
@@ -497,29 +570,7 @@ export function AppNav() {
               </nav>
               <div className="sidebar-footer">
                 <div className="sidebar-user-card">
-                  <div className="sidebar-user-identity">
-                    <div className="sidebar-avatar" aria-hidden="true">
-                      {avatarUrl ? (
-                        <img src={avatarUrl} alt="" className="sidebar-avatar-img" />
-                      ) : (
-                        <span className="sidebar-avatar-initials">{initials}</span>
-                      )}
-                    </div>
-                    <div className="sidebar-user-info">
-                      <p className="sidebar-user-name">{displayName}</p>
-                      <p className="sidebar-user-email">{displayEmail}</p>
-                      {role ? (
-                        <span
-                          className={`sidebar-role-badge sidebar-role-${role}`}
-                          aria-label={t("role", { role: role === "admin" ? t("administrator") : t("athlete") })}
-                        >
-                          {role === "admin" ? t("admin") : t("athlete")}
-                        </span>
-                      ) : isSessionResolving ? (
-                        <Skeleton variant="block" width={74} height={24} style={{ borderRadius: 999 }} />
-                      ) : null}
-                    </div>
-                  </div>
+                  <AccountIdentityRow identity={identity} />
                   <div className="sidebar-user-actions">
                     <button type="button" className="ghost-button" onClick={handleSignOut}>
                       {t("signOut")}

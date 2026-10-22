@@ -5,21 +5,23 @@ import {
   BOTTOM_NAV_ITEMS,
   isStandaloneNutritionPath,
   NUTRITION_DISABLED_REDIRECT,
+  showsMobileTabBar,
   SIDE_NAV_ITEMS,
   STANDALONE_NUTRITION_ENABLED,
 } from "./beta-navigation.ts";
 
-test("bottom nav shows Overview, Today, Plan and Camp Setup", () => {
+test("bottom nav shows Overview, Today, Plan, History and Timer", () => {
   assert.deepEqual(
-    BOTTOM_NAV_ITEMS.map((item) => item.label),
-    ["Overview", "Today", "Plan", "Camp Setup"],
+    BOTTOM_NAV_ITEMS.map((item) => item.href),
+    ["/", "/today", "/plans", "/history", "/timer"],
   );
 });
 
 test("Progress is not promoted into primary navigation", () => {
   assert.equal(BOTTOM_NAV_ITEMS.some((item) => item.label === "Progress"), false);
   assert.equal(SIDE_NAV_ITEMS.some((item) => item.label === "Progress"), false);
-  assert.equal(BOTTOM_NAV_ITEMS.some((item) => item.label === "Camp Setup"), true);
+  // Camp Setup is occasional: it lives under + Create, not a tab.
+  assert.equal(BOTTOM_NAV_ITEMS.some((item) => item.href === "/onboarding"), false);
 });
 
 test("bottom nav never links to the standalone Nutrition route", () => {
@@ -41,10 +43,20 @@ test("side menu explains the Plan, Camp Setup and Settings destinations", () => 
     SIDE_NAV_ITEMS.filter((item) => ["Plan", "Camp Setup", "Settings"].includes(item.label)),
     [
       { href: "/plans", label: "Plan", meta: "Active and saved plans" },
-      { href: "/onboarding", label: "Camp Setup", meta: "Build your camp" },
+      { href: "/onboarding", label: "Camp Setup", meta: "Start or edit your camp" },
       { href: "/settings", label: "Settings", meta: "Account & preferences" },
     ],
   );
+});
+
+test("the phone bar shows across the signed-in workspace but not on gates or admin", () => {
+  for (const path of ["/", "/today", "/plans/abc", "/history", "/timer", "/create", "/settings", "/onboarding"]) {
+    assert.equal(showsMobileTabBar(path, true), true, path);
+  }
+  for (const path of ["/admin", "/admin/athletes", "/consent", "/private-trial", "/generate", "/get-started"]) {
+    assert.equal(showsMobileTabBar(path, true), false, path);
+  }
+  assert.equal(showsMobileTabBar("/today", false), false);
 });
 
 test("side menu no longer exposes standalone Nutrition", () => {
