@@ -291,12 +291,15 @@ export function TodayInjuryManager({
   openInjuries,
   effectiveClearance,
   delayedPrompts = [],
+  todaySafetyNoticeInjuryId = null,
   token,
   onRefresh,
 }: {
   openInjuries: InjuryFlagRecord[];
   effectiveClearance?: TodayCommandView["effective_clinician_clearance"];
   delayedPrompts?: TodayCommandView["delayed_rehab_prompts"];
+  /** The injury whose skin instruction Today's main advice already shows. */
+  todaySafetyNoticeInjuryId?: string | null;
   token: string;
   onRefresh: () => Promise<void>;
 }) {
@@ -652,7 +655,13 @@ export function TodayInjuryManager({
             // discarded a follow-up in progress on its way to failing.
             const isLockedByOtherWrite = pendingFlagId !== null && !isPending;
 
-            const stageLabel = rehabStageLabel(injury.rehab_decision);
+            // A skin injury shows only its skin-care guidance; nothing is staged.
+            const isSurface = Boolean(surfaceGuidance) || injury.rehab_decision?.outcome === "wound_care";
+            // Only an injury with a guided pathway has a stage to show.
+            const hasPathway = !isSurface && injury.rehab_decision?.outcome === "prescribed_rehab";
+            const stageLabel = hasPathway ? rehabStageLabel(injury.rehab_decision) : null;
+            // Today's main advice already shows this injury's skin instruction.
+            const showSurfaceGuidance = Boolean(surfaceGuidance) && todaySafetyNoticeInjuryId !== injury.id;
             const restriction = injury.clinician_clearance?.scopes.includes("contact")
               ? "Contact training"
               : injury.clinician_clearance?.scopes.includes("training")
@@ -678,7 +687,7 @@ export function TodayInjuryManager({
                   <span className="today-injury-summary-text">
                     <strong>{injuryLabel}</strong>
                     {stageLabel ? <span>Stage: <em>{stageLabel}</em></span> : <span>{impactLabel}</span>}
-                    <RehabStageMeter decision={injury.rehab_decision} />
+                    {hasPathway ? <RehabStageMeter decision={injury.rehab_decision} /> : null}
                   </span>
                   <span className="today-injury-summary-chevron" aria-hidden="true" />
                 </button>
@@ -728,7 +737,7 @@ export function TodayInjuryManager({
                     </small>
                   </span>
                 </div>
-                {surfaceGuidance ? (
+                {surfaceGuidance && showSurfaceGuidance ? (
                   <div
                     className="today-injury-guidance"
                     data-tone={surfaceGuidance.tone}
@@ -738,7 +747,7 @@ export function TodayInjuryManager({
                     <p>{surfaceGuidance.message}</p>
                   </div>
                 ) : null}
-                {injury.rehab_decision || injury.episode_id ? <InjuryCareStatus injury={injury} token={token} onRefresh={onRefresh} showClearance={false} summaryVisible /> : null}
+                {!isSurface && (injury.rehab_decision || injury.episode_id) ? <InjuryCareStatus injury={injury} token={token} onRefresh={onRefresh} showClearance={false} summaryVisible /> : null}
                 <div className="today-injury-update-head">
                   <p className="today-field-label today-injury-status-label">{delayedPrompts.some(prompt =>
                     prompt.injury_id === injury.id && prompt.injury_episode_id === injury.episode_id)
