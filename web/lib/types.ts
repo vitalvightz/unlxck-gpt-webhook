@@ -1068,7 +1068,6 @@ export type InjuryFlagRecord = {
   episode_id?: string | null;
   side?: import("./api-schema.generated").InjuryFlagRecord["side"];
   rehab_decision?: { outcome: string; summary: string; reason_codes: string[];
-    loading_hold?: boolean;
     policy_id?: string;
     stage?: "calm" | "restore" | "load" | "dynamic" | "return";
     progression?: { reason_codes?: string[]; entry_basis?: "reported_clinician_permission"; authority_event_id?: string;

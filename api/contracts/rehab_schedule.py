@@ -83,9 +83,6 @@ def schedule_rehab(injury, decision, *, training_day, completions=(), exposures=
     if readiness_decision == "stop":
         return result("held", "Rehab is held by today's stop guidance.")
     if prescription.get("is_loading"):
-        from .injury_policy import LOADING_STAGES
-        if readiness_decision == "pull_back" and decision.get("stage") in LOADING_STAGES:
-            return result("held", "Loading rehab is held by today's reduced-training guidance.")
         # No unknown or missing next-day response is treated as tolerance.
         recent = [r for r in exposures if str((r.get("event_json") or r).get("injury_episode_id")) == episode_id]
         if recent:

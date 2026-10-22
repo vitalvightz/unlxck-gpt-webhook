@@ -26,11 +26,6 @@ from .achilles_restore_load import review_achilles_restore_load
 from .clinical_review_validity import ClinicalReviewInput, evaluate_clinical_review
 
 
-# Readiness holds only these stages. CALM and RESTORE are gentle recovery (see
-# clinician_clearance), so a verdict never holds them, even when a drill's
-# function keeps its own response and same-region gates (is_loading).
-LOADING_STAGES = frozenset({"load", "dynamic", "return"})
-
 _NON_CONTACT_BLOCK_TYPES = frozenset({
     "preparation", "mobility_activation", "plyometric_power", "speed",
     "strength", "strength_speed", "accessory", "conditioning",
@@ -74,8 +69,8 @@ def resolve_injury_policy(
         "outcome": "unsupported_prescription", "summary": "No suitable rehab is available for this injury yet. Keep to your current restrictions.",
         "reason_codes": ["unsupported_injury_policy"], "activation": "shadow",
         "prescription": None, "restrictions": {},
-        "loading_hold": False,
-        # Pull back holds normal training whatever the injury's stage.
+        # Pull back changes training, never rehab: rehab is identical on
+        # go, modify and pull back days.
         "readiness_hold": readiness_decision == "pull_back",
     }
     as_of = as_of or datetime.now(timezone.utc)
@@ -206,7 +201,6 @@ def resolve_injury_policy(
     if policy.activation == "live":
         stage = progression["stage"]
         result["stage"] = stage
-    result["loading_hold"] = readiness_decision == "pull_back" and stage in LOADING_STAGES
     if stage not in policy.live_stages:
         result.update(outcome="missing_information", summary="More injury-specific evidence is needed before changing your rehab.", reason_codes=["stage_not_activated"])
         return result
@@ -276,12 +270,12 @@ def resolve_injury_policy(
                 and prescription.stage not in {"calm", "restore"}))
         if permission_work:
             if (not prescription.range_choice or not prescription.resistance or not prescription.mandatory_restrictions
-                    or not permits_rehabilitation_stage(injury, prescription.stage) or readiness_decision == "pull_back"):
+                    or not permits_rehabilitation_stage(injury, prescription.stage)):
                 result["reason_codes"] = ["reported_rehabilitation_permission_unavailable_or_held"]
                 return result
         if prescription.clinical_criterion:
             supplied = (clinical_review_inputs or {}).get(prescription.clinical_criterion)
-            if supplied is None or readiness_decision == "pull_back":
+            if supplied is None:
                 result["reason_codes"] = ["reviewed_selection_unavailable_or_held"]
                 return result
             evaluation = evaluate_clinical_review(supplied.context, supplied.reviews, as_of=as_of,
@@ -299,20 +293,10 @@ def resolve_injury_policy(
                 result["reason_codes"] = ["reviewed_selection_policy_mismatch"]
                 return result
             reviewed_work = (evaluation, option, selection)
-        # Fight-camp periodisation cannot change an injury's approved dose.
+        # Neither fight-camp periodisation nor the daily verdict changes an injury's approved dose.
         selected_dose = prescription.dose
         dose = (selection.dose.model_dump(exclude_none=True) if reviewed_work else
                 selected_dose.model_dump(exclude_none=True) if selected_dose else {})
-        readiness_dose = prescription.readiness_doses.get(readiness_decision)
-        if (readiness_decision == "pull_back" and readiness_dose is None and prescription.dose is not None
-                and prescription.stage in LOADING_STAGES):
-            result.update(outcome="missing_information", summary="Follow today's reduced-training guidance. No rehab is set for days like this.",
-                          reason_codes=["reviewed_readiness_dose_missing"])
-            return result
-        if readiness_dose is not None and not reviewed_work:
-            for name, value in readiness_dose.model_dump(exclude_none=True).items():
-                if name in dose:
-                    dose[name] = min(dose[name], value)
         resolved_drills.append({
             "drill_id": prescription.drill_id, "drill": drill,
             "instructions": prescription.instructions,
@@ -322,7 +306,7 @@ def resolve_injury_policy(
             "bank_hash": prescription.bank_hash, "policy_id": policy.policy_id, "policy_version": policy.version,
             "policy_review_hash": policy.content_hash,
             "minimum_gap_days": prescription.minimum_gap_days,
-            "is_loading": prescription.stage in LOADING_STAGES or
+            "is_loading": prescription.stage in {"load", "dynamic", "return"} or
                 prescription.stage != "calm" and drill.get("function") in {"tendon_loading", "isometric_analgesia", "activation", "control"},
         })
         if permission_work:
@@ -467,7 +451,6 @@ def reconcile_session_prescription(
             if block and (decision.get("outcome") != "prescribed_rehab"
                           or block.get("injury_episode_id") != decision.get("injury_episode_id")
                           or (not reserved_baseline and block.get("rehab_drill_id") not in member_ids)
-                          or (block.get("is_loading") and decision.get("loading_hold"))
                           or block.get("policy_review_hash") != (decision.get("prescription") or {}).get("policy_review_hash")):
                 snapshot["safety_hold"] = True
         return snapshot
@@ -520,8 +503,7 @@ def reconcile_session_prescription(
     hold = bool(clearance_hold and not block_contact_ceiling) or any(d.get("outcome") == "medical_review" for d in decisions)
     # A current pull-back holds camp independently of tissue demand. Eligible
     # non-loading rehab can then use the existing standalone replacement path.
-    readiness_hold = entry.get("session_type") != "rehab" and any(
-        d.get("readiness_hold", d.get("loading_hold")) for d in decisions)
+    readiness_hold = entry.get("session_type") != "rehab" and any(d.get("readiness_hold") for d in decisions)
     hold = hold or readiness_hold
     # The planner also uses a sparring type to budget app-owned support work.
     # An explicit contact headline/coach portion remains contact even when its

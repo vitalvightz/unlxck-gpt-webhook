@@ -64,11 +64,11 @@ def test_known_hard_training_defers_loading_and_is_not_rehab_credit():
     assert schedule_rehab(row, decision, training_day="2026-10-01", training_session=training)["state"] == "deferred"
     normal = dict(athlete_id="a", training_day="2026-10-01", status="done", session_id="strength")
     assert schedule_rehab(row, decision, training_day="2026-10-01", completions=[normal])["state"] == "due"
-    # Pull back never holds RESTORE (gentle recovery); it holds only loading stages.
-    assert decision["stage"] == "restore"
-    assert schedule_rehab(row, decision, training_day="2026-10-01", readiness_decision="pull_back")["state"] == "due"
-    assert schedule_rehab(row, {**decision, "stage": "load"}, training_day="2026-10-01",
-                          readiness_decision="pull_back")["state"] == "held"
+    # The daily verdict never changes rehab: go, modify and pull back are identical.
+    for verdict in (None, "green", "modify", "pull_back"):
+        for stage in ("restore", "load"):
+            assert schedule_rehab(row, {**decision, "stage": stage}, training_day="2026-10-01",
+                                  readiness_decision=verdict)["state"] == "due"
 
 
 def test_unknown_response_holds_loading_until_explicit_injury_improvement():
@@ -176,5 +176,6 @@ def test_resuming_a_frozen_alternative_does_not_reselect_the_primary_routine(mon
     primary["schedule"] = {"state": "already_completed"}
     resumed = reconcile_session_prescription(None, decisions=[primary], plan_id="plan", training_day="2026-09-30", frozen=frozen)
     assert not resumed["safety_hold"] and resumed["session"] == frozen["session"]
-    primary["loading_hold"] = True
-    assert reconcile_session_prescription(None, decisions=[primary], plan_id="plan", training_day="2026-09-30", frozen=frozen)["safety_hold"]
+    # The daily verdict never freezes started rehab.
+    primary["readiness_hold"] = True
+    assert not reconcile_session_prescription(None, decisions=[primary], plan_id="plan", training_day="2026-09-30", frozen=frozen)["safety_hold"]
