@@ -4,6 +4,8 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
+from .completed_workload import completion_origin_of
+
 
 def recent_rows(rows: list[dict[str, Any]], as_of: str, days: int = 7) -> list[dict[str, Any]]:
     try:
@@ -35,10 +37,10 @@ def sparring_readiness_flags(context: dict[str, Any]) -> list[str]:
                  if row.get("status") in {"done", "modified"} and row.get("source") != "external"]
     sessions = {
         (row.get("plan_id"), row.get("session_id"), row.get("training_day")): row
-        for row in completed if row.get("completion_origin") == "reported"
+        for row in completed if completion_origin_of(row) == "reported"
     }
     flags = set()
-    if any(row.get("completion_origin") not in {"reported", "day_credit"} for row in completed):
+    if any(completion_origin_of(row) not in {"reported", "day_credit"} for row in completed):
         flags.add("sparring_history_unavailable")
     if sum(row.get("sleep") == "poor" or row.get("body") == "flat" for row in checkins) >= 3:
         flags.add("poor_recovery")
