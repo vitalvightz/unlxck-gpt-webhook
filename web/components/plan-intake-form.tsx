@@ -661,15 +661,10 @@ function MobileOnboardingHeader({
       <div className="onboarding-mobile-header-copy">
         <p className="kicker">Camp Setup</p>
         <p className="onboarding-mobile-title">Build your camp profile.</p>
-        <p className="muted">Saved, resumable athlete intake.</p>
-        <div className="hero-actions">
-          <Link href="/quick-build" className="ghost-button onboarding-quick-build-link">
-            Use Quick Build instead
-          </Link>
-          <Link href="/plans/custom" className="ghost-button onboarding-quick-build-link">
-            Build your own plan
-          </Link>
-        </div>
+        <p className="muted onboarding-mobile-alternatives">
+          Saves as you go. Short on time? <Link href="/quick-build">Quick Build</Link> or{" "}
+          <Link href="/plans/custom">build your own</Link>.
+        </p>
       </div>
       <OnboardingProgressStrip
         currentStep={currentStep}
@@ -3448,8 +3443,9 @@ export function PlanIntakeForm() {
               {isPending ? t("saving") : t("saveDraft")}
             </button>
             {currentStep > 0 ? (
-              <button type="button" className="ghost-button onboarding-action-secondary" onClick={handleBack}>
-                {t("back")}
+              <button type="button" className="ghost-button onboarding-action-secondary onboarding-action-back" onClick={handleBack} aria-label={t("back")}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6" /></svg>
+                <span className="onboarding-action-label">{t("back")}</span>
               </button>
             ) : null}
             {currentStep < steps.length - 1 ? (
