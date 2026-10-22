@@ -2,9 +2,9 @@
 //
 // For the live beta the standalone Nutrition workspace is switched off and Plan
 // access is promoted to a first-class destination. On phones the bottom bar is
-// the primary navigation (Overview, Today, Plan, History, Timer); Camp Setup is
-// an occasional task reached from Plan's "New programme" chooser rather than a
-// permanent tab. The Progress page is deliberately reached from the XP card on
+// the primary navigation (Overview, Today, Plan, History, Timer), with + Create
+// (the /create choice screen) and the account menu at the top instead of a
+// sidebar. Camp Setup is an occasional task reached from Create, not a tab. The Progress page is deliberately reached from the XP card on
 // Overview for now, rather than being promoted into primary navigation.
 
 export type NavItem = {
@@ -37,11 +37,25 @@ export const SIDE_NAV_ITEMS: readonly NavItem[] = [
   { href: "/settings", label: "Settings", meta: "Account & preferences" },
 ] as const;
 
-// While the bottom bar is showing, the phone menu becomes a compact account
-// menu: everything the bar already covers (and Camp Setup, which lives under
-// Plan) is left out so the profile, language and sign out always fit.
-export function isAccountMenuItem(href: string): boolean {
-  return href === "/settings";
+// `/private-trial` and `/consent` are one-way gates: every tab would only bounce
+// the athlete straight back to the gate, so the bar is dead chrome there (and it
+// sat on top of the gate's only action). The Menu keeps sign-out reachable.
+const TAB_BAR_HIDDEN_ROUTES = new Set<string>([
+  "/get-started",
+  "/generate",
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/reset-password",
+  "/private-trial",
+  "/consent",
+]);
+
+// Whether the phone bottom bar (and with it + Create and the account button
+// in place of the sidebar) belongs on this route. Admin keeps its sidebar.
+export function showsMobileTabBar(pathname: string, signedIn: boolean): boolean {
+  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
+  return signedIn && !isAdminRoute && !TAB_BAR_HIDDEN_ROUTES.has(pathname);
 }
 
 export function isStandaloneNutritionPath(path: string): boolean {

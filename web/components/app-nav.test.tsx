@@ -61,3 +61,30 @@ test("menu survives same-account session refresh but closes for route, account a
     host.remove();
   }
 });
+
+test("phone bar links + Create to /create and the avatar to Settings", async () => {
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const router = { push() {}, replace() {}, refresh() {}, back() {}, forward() {}, prefetch() {}, bfcacheId: "fixture" };
+  try {
+    await act(async () => root.render(
+      <NextIntlClientProvider locale="en" timeZone="Europe/London" messages={messages}>
+        <AppRouterContext.Provider value={router}>
+          <PathnameContext.Provider value="/today">
+            <AppSessionContext.Provider value={{ isReady: true, isMeHydrated: true, hasTransientMeError: false,
+              session: { user_id: "athlete-a", access_token: "token-a" }, me: null,
+              previewAppearanceMode() {}, refreshMe: async () => {}, replaceMe() {}, signOut: async () => {} }}>
+              <AppNav />
+            </AppSessionContext.Provider>
+          </PathnameContext.Provider>
+        </AppRouterContext.Provider>
+      </NextIntlClientProvider>,
+    ));
+    assert.equal(host.querySelector(".phone-create-button")?.getAttribute("href"), "/create");
+    assert.equal(host.querySelector(".phone-account-button")?.getAttribute("href"), "/settings");
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});

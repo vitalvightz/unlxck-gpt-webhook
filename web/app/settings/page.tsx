@@ -8,6 +8,7 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
 import { InstallUnlxck } from "@/components/install-unlxck";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { PushNotificationSettings } from "@/components/push-notification-settings";
 import { PrivateTrialGuide } from "@/components/private-trial-guide";
 import { GlobalFeedback } from "@/components/feedback/global-feedback";
@@ -21,6 +22,7 @@ import {
   validateDateOfBirthChange,
 } from "@/lib/compliance";
 import { PRIVACY_HREF, TERMS_HREF, buildDataRequestMailto } from "@/lib/legal-documents";
+import { shouldShowAdminPanelLink } from "@/lib/admin-nav-visibility";
 import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
 import { formatAppDate, formatAppDateTime } from "@/lib/date-format";
 import {
@@ -332,6 +334,7 @@ function SettingsSummaryItem({ label, value }: Readonly<{ label: string; value: 
 
 export default function SettingsPage() {
   const t = useTranslations("Workspace");
+  const tNav = useTranslations("Navigation");
   const { isMeHydrated, me, previewAppearanceMode, replaceMe, session, signOut } = useAppSession();
 
   const [fullName, setFullName] = useState("");
@@ -1588,6 +1591,16 @@ export default function SettingsPage() {
             <p className="muted">
               {isAdmin ? t("adminSettingsSummary") : t("athleteSettingsSummary")}
             </p>
+            {/* Account controls that the phone avatar button leads here for. */}
+            <div className="sidebar-user-actions settings-quick-account">
+              <LanguageSwitcher placement="inline" />
+              {shouldShowAdminPanelLink(me?.profile.role) ? (
+                <Link href="/admin" className="ghost-button">{tNav("adminPanel")}</Link>
+              ) : null}
+              <button type="button" className="ghost-button" onClick={() => void signOut()}>
+                {tNav("signOut")}
+              </button>
+            </div>
           </div>
           <div
             className={`status-card athlete-motion-slot athlete-motion-status${isAdmin ? "" : " settings-sync-card"}`}

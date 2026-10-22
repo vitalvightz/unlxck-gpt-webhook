@@ -169,3 +169,34 @@ html[data-app-surface="brand"] .app-safety-footer {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Settings' account row (language, Admin panel, Sign out) sits near the top of
+   the page. The language control leads the row so its list can open down and
+   to the right without leaving the screen, even when the row wraps. */
+.settings-quick-account {
+  flex-wrap: wrap;
+  max-width: 420px;
+}
+
+.settings-quick-account > .ghost-button {
+  white-space: nowrap;
+}
+
+/* The heading's entrance animation makes it a stacking context; lift it so the
+   open language list draws over the cards that follow. */
+.settings-page > .section-heading {
+  position: relative;
+  z-index: 3;
+}
+
+.settings-page > .section-heading > .athlete-motion-header {
+  position: relative;
+  z-index: 1;
+}
+
+.settings-quick-account .unlxck-language-menu {
+  top: calc(100% + 8px);
+  right: auto;
+  bottom: auto;
+  left: 0;
+}

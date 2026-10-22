@@ -9723,9 +9723,9 @@ html[data-theme="light"] .today-injury-other-warning {
   line-height: 1;
 }
 
-/* Account-menu form of the toggle; only shown on phones with the bottom bar. */
-.nav-toggle-avatar,
-.nav-toggle-account-label {
+/* Phone workspace chrome (+ Create, account button); shown only at phone widths. */
+.phone-create-button,
+.phone-account-button {
   display: none;
 }
 
@@ -9880,13 +9880,6 @@ html[data-theme="light"] .today-injury-other-warning {
 @media (max-width: 1200px) {
   .step-progress {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 960px) and (max-height: 740px) {
-  .app-sidebar .sidebar-tagline,
-  .app-sidebar .sidebar-link-meta {
-    display: none;
   }
 }
 
@@ -16957,83 +16950,60 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
     bottom: calc(var(--mobile-tab-bar-clearance) + 12px);
   }
 
-  /* With the bottom bar showing, the Menu toggle becomes the account menu:
-     the bar covers every workspace destination, so the drawer drops them and
-     shrinks to a short sheet (profile, Settings, Admin, language, sign out). */
-  html[data-mobile-tab-bar] .mobile-nav-toggle .nav-toggle-icon,
-  html[data-mobile-tab-bar] .mobile-nav-toggle .nav-toggle-label {
+  /* With the bottom bar showing there is no sidebar on phones: + Create sits
+     top-left and the account button top-right, in the Menu toggle's band. */
+  .mobile-nav-toggle[data-phone-hidden="true"],
+  .app-sidebar[data-phone-hidden="true"] {
     display: none;
   }
 
-  html[data-mobile-tab-bar] .mobile-nav-toggle {
-    padding-left: 6px;
-  }
-
-  html[data-mobile-tab-bar] .mobile-nav-toggle[data-condensed="true"] {
-    padding: 0;
-  }
-
-  html[data-mobile-tab-bar] .mobile-nav-toggle .nav-toggle-avatar {
+  .phone-create-button,
+  .phone-account-button {
+    position: fixed;
+    top: calc(var(--mobile-nav-offset-top) + var(--safe-area-top));
+    z-index: 70;
     display: inline-flex;
-    flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    overflow: hidden;
-    background: linear-gradient(135deg, rgba(181, 18, 43, 0.22), rgba(181, 18, 43, 0.1));
-    border: 1px solid rgba(181, 18, 43, 0.32);
+    min-height: 40px;
+    border: 1px solid var(--border-default);
+    background: var(--bg-panel);
+    color: var(--text-primary);
   }
 
-  html[data-mobile-tab-bar] .mobile-nav-toggle .nav-toggle-avatar .sidebar-avatar-initials {
-    font-size: 11px;
+  .phone-create-button {
+    left: calc(var(--mobile-nav-offset-side) + var(--safe-area-left));
+    gap: 8px;
+    padding: 0 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
   }
 
-  html[data-mobile-tab-bar] .mobile-nav-toggle .nav-toggle-account-label {
-    display: inline;
+  .phone-create-button > span {
+    font-size: 18px;
     line-height: 1;
   }
 
-  html[data-mobile-tab-bar] .mobile-nav-toggle[data-condensed="true"] .nav-toggle-account-label {
-    display: none;
+  .phone-account-button {
+    right: calc(var(--mobile-nav-offset-side) + var(--safe-area-right));
+    width: 40px;
+    padding: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    text-decoration: none;
   }
 
-  html[data-mobile-tab-bar] .app-sidebar {
-    bottom: auto;
-    height: auto;
-    max-height: 100dvh;
-    overflow: visible;
-    border-bottom: 1px solid var(--border-default);
-    border-bottom-right-radius: 16px;
+  .phone-create-button:focus-visible,
+  .phone-account-button:focus-visible {
+    outline: 2px solid var(--text-primary);
+    outline-offset: 2px;
   }
 
-  html[data-mobile-tab-bar] .app-sidebar .sidebar-shell {
-    height: auto;
-    overflow: visible;
-  }
-
-  html[data-mobile-tab-bar] .app-sidebar .sidebar-brand .brand,
-  html[data-mobile-tab-bar] .app-sidebar .sidebar-tagline,
-  html[data-mobile-tab-bar] .app-sidebar .sidebar-nav > .sidebar-section-label:first-child,
-  html[data-mobile-tab-bar] .app-sidebar .sidebar-nav > .sidebar-link:not([data-account-menu-item]) {
-    display: none;
-  }
-
-  html[data-mobile-tab-bar] .app-sidebar .sidebar-nav {
-    flex: 0 0 auto;
-    overflow: visible;
-  }
-
-  html[data-mobile-tab-bar] .app-sidebar .sidebar-footer {
-    margin-top: 0;
-  }
-
-  /* The sheet sits at the top of the screen, so the language list opens
-     downward over the page instead of up past the sheet's top edge. */
-  html[data-mobile-tab-bar] .app-sidebar .unlxck-language-switcher-inline .unlxck-language-menu {
-    top: calc(100% + 8px);
-    bottom: auto;
+  .phone-account-button .sidebar-avatar-initials {
+    font-size: 13px;
+    color: var(--text-primary);
   }
 
   /* Add bottom padding to app content so the tab bar doesn't cover the footer */

@@ -3,9 +3,9 @@ import test from "node:test";
 
 import {
   BOTTOM_NAV_ITEMS,
-  isAccountMenuItem,
   isStandaloneNutritionPath,
   NUTRITION_DISABLED_REDIRECT,
+  showsMobileTabBar,
   SIDE_NAV_ITEMS,
   STANDALONE_NUTRITION_ENABLED,
 } from "./beta-navigation.ts";
@@ -20,7 +20,7 @@ test("bottom nav shows Overview, Today, Plan, History and Timer", () => {
 test("Progress is not promoted into primary navigation", () => {
   assert.equal(BOTTOM_NAV_ITEMS.some((item) => item.label === "Progress"), false);
   assert.equal(SIDE_NAV_ITEMS.some((item) => item.label === "Progress"), false);
-  // Camp Setup is occasional: it lives under Plan's "New programme", not a tab.
+  // Camp Setup is occasional: it lives under + Create, not a tab.
   assert.equal(BOTTOM_NAV_ITEMS.some((item) => item.href === "/onboarding"), false);
 });
 
@@ -49,14 +49,14 @@ test("side menu explains the Plan, Camp Setup and Settings destinations", () => 
   );
 });
 
-test("the phone account menu keeps only what the bottom bar does not cover", () => {
-  assert.deepEqual(
-    SIDE_NAV_ITEMS.filter((item) => isAccountMenuItem(item.href)).map((item) => item.href),
-    ["/settings"],
-  );
-  for (const tab of BOTTOM_NAV_ITEMS) {
-    assert.equal(isAccountMenuItem(tab.href), false);
+test("the phone bar shows across the signed-in workspace but not on gates or admin", () => {
+  for (const path of ["/", "/today", "/plans/abc", "/history", "/timer", "/create", "/settings", "/onboarding"]) {
+    assert.equal(showsMobileTabBar(path, true), true, path);
   }
+  for (const path of ["/admin", "/admin/athletes", "/consent", "/private-trial", "/generate", "/get-started"]) {
+    assert.equal(showsMobileTabBar(path, true), false, path);
+  }
+  assert.equal(showsMobileTabBar("/today", false), false);
 });
 
 test("side menu no longer exposes standalone Nutrition", () => {

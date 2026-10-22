@@ -3,6 +3,8 @@
 .brand span:first-child { font-size: 15px; font-weight: 800; letter-spacing: .18em; }
 .accountAction { min-height: 44px; padding: 8px 0 8px 16px; border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: 12px; cursor: pointer; }
 .accountAction:hover { color: var(--text-primary); }
+/* Create reuses this screen's rows; its Back sits on the left. */
+.back { padding: 8px 16px 8px 0; }
 .accountAction:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 4px; box-shadow: none; }
 .intro { margin: 40px 0 28px; }
 .intro h1 { max-width: 490px; margin: 0 0 10px; font-size: clamp(26px, 4vw, 34px); line-height: 1.12; letter-spacing: -.04em; }
@@ -14,7 +16,7 @@
 .sport:hover { color: var(--text-primary); }
 .sport[aria-pressed="true"] { color: var(--text-primary); background: color-mix(in srgb, var(--text-primary) 10%, var(--bg-panel)); border-color: var(--brand-red); }
 .choices { display: grid; border-top: 1px solid var(--border-subtle); }
-.choice { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 72px; padding: 14px 2px; border: 0; border-bottom: 1px solid var(--border-subtle); background: transparent; color: var(--text-primary); text-align: left; font: inherit; cursor: pointer; }
+.choice { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 72px; padding: 14px 2px; border: 0; border-bottom: 1px solid var(--border-subtle); background: transparent; color: var(--text-primary); text-align: left; text-decoration: none; font: inherit; cursor: pointer; }
 .choice:hover strong { color: var(--brand-red); }
 .choice:disabled, .sport:disabled { cursor: wait; opacity: .6; }
 .copy { display: grid; gap: 4px; min-width: 0; }

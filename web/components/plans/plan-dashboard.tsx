@@ -395,8 +395,8 @@ export function PlanManageSheet({
               </button>
             ) : null}
             {archived ? (
-              <Link href="/onboarding" className="ghost-button">
-                Full camp setup
+              <Link href="/create" className="ghost-button">
+                Create a plan
               </Link>
             ) : (
               <>
@@ -495,16 +495,7 @@ export function CurrentCampCard({
             : "Set your goals and get a plan in about two minutes."}
         </p>
         {hasSavedIntake ? <Link href="/onboarding" className="cta">Resume Camp Setup</Link> :
-          <div className={styles.campActions}>
-            <Link href="/quick-build" className={`cta ${styles.buildAction}`}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-8 12h6l-1 8 9-13h-7z" /></svg>
-              Quick Build Plan
-            </Link>
-            <Link href="/onboarding" className={`ghost-button ${styles.buildAction}`}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H5v17h14V4h-4M9 2h6v5H9zM8 11h8m-8 4h8" /></svg>
-              Camp Setup
-            </Link>
-          </div>}
+          <Link href="/create" className="cta">Create a plan</Link>}
       </article>
     );
   }

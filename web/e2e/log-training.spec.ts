@@ -211,7 +211,7 @@ for (const width of [390, 1280]) {
       return [css.backgroundColor, css.backgroundImage, css.borderRadius, css.color];
     };
     expect(await form.getByRole("button", { name: "Save Session", exact: true }).evaluate(ctaAppearance))
-      .toEqual(await page.getByRole("link", { name: "Quick Build Plan" }).evaluate(ctaAppearance));
+      .toEqual(await page.getByRole("link", { name: "Create a plan" }).evaluate(ctaAppearance));
     await page.screenshot({ animations: "disabled", path: test.info().outputPath("log-training-form.png") });
     expect((await new AxeBuilder({ page }).include('dialog').analyze()).violations).toEqual([]);
     await form.getByRole("button", { name: "Save Session", exact: true }).click();
