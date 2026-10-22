@@ -500,9 +500,6 @@ def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle,
         "## Nutrition",
         blocks.nutrition_block,
         "",
-        "## Recovery",
-        blocks.recovery_block,
-        "",
     ]
 
     rehab_sections: list[str] = []
@@ -632,7 +629,6 @@ def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle,
         spp=phase_models.get("SPP"),
         taper=phase_models.get("TAPER"),
         nutrition_block=blocks.nutrition_block,
-        recovery_block=blocks.recovery_block,
         rehab_html=rehab_html,
         include_injury_sections=blocks.has_injuries,
         mindset_overview=f"Primary Block(s): {', '.join(context.training_context.mental_block).title()}",

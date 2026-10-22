@@ -369,7 +369,6 @@ def build_html_document(
     spp: Optional[PhaseBlock] = None,
     taper: Optional[PhaseBlock] = None,
     nutrition_block: str = "",
-    recovery_block: str = "",
     rehab_html: str = "",
     mindset_overview: str = "",
     adjustments_table: str = "",
@@ -467,8 +466,6 @@ def build_html_document(
     lines += [
         _section_title("Nutrition"),
         _md_to_html(nutrition_block),
-        _section_title("Recovery"),
-        _md_to_html(recovery_block),
     ]
     if include_injury_sections and rehab_html:
         lines += [

@@ -46,10 +46,9 @@ def test_weekday_normalizers_accept_the_same_spellings(raw, expected):
 
 def test_high_pressure_weight_cut_is_the_canonical_function():
     from fightcamp.nutrition import _is_high_pressure_weight_cut as nutrition_high_pressure
-    from fightcamp.recovery import _is_high_pressure_weight_cut as recovery_high_pressure
     from fightcamp.weight_cut import is_high_pressure_weight_cut as canonical
 
-    assert nutrition_high_pressure is recovery_high_pressure is canonical
+    assert nutrition_high_pressure is canonical
 
 
 def test_utc_now_iso_is_the_canonical_function():

@@ -11,7 +11,7 @@ from fastapi import HTTPException
 from api.contracts.injury_policy import reconcile_session_prescription
 from api.services.rehab_completion_service import session_rehab_items
 from api.services import today_service
-from fightcamp import recovery, rehab_protocols
+from fightcamp import rehab_protocols
 from fightcamp.injury_registry import SURFACE_TISSUE_TYPES, classify_surface_injury
 from fightcamp.surface_wound_safety import (
     SURFACE_WOUND_CARE_NOTE, approved_surface_drill, sanitize_surface_guidance,
@@ -96,12 +96,6 @@ def test_frozen_approved_identity_cannot_outlive_source_approval(monkeypatch):
     live = reconcile_session_prescription(None, decisions=[], plan_id='plan', training_day=DAY, frozen=saved(drill))
     assert live['safety_hold']
     assert drill['id'] not in json.dumps(live)
-
-
-def test_recovery_guard_even_if_legacy_phase_delimiter_is_fixed(monkeypatch):
-    group, drill = next((g, d) for g, d in WITHDRAWN if 'sterile_drainage' in d['id'])
-    monkeypatch.setattr(recovery, 'get_rehab_bank', lambda: [{**group, 'phase_progression': 'GPP -> SPP -> TAPER'}])
-    assert all(drill['name'] not in line for line in recovery._fetch_injury_drills(['blister on heel'], 'GPP'))
 
 
 def test_open_wound_is_no_contact_even_when_covered_and_pain_free():

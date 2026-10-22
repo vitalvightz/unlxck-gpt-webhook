@@ -860,11 +860,6 @@ def collect_goal_evidence(brief: dict) -> list[dict]:
     # These selected goals are serviced by deterministic daily support, not S&C
     # slots. Do not count these records toward conditioning or strength.
     support = brief.get("computed_support") or {}
-    for phase, recovery in (support.get("recovery", {}).get("by_phase") or {}).items():
-        if _number(recovery.get("sleep_hours_target")) > 0 and recovery.get("core_strategies"):
-            evidence.append({"phase": phase, "intents": ["recovery_support"],
-                             "dose_authority": "computed_support.recovery", "development_quality": True,
-                             "sleep_hours_target": recovery["sleep_hours_target"]})
     for phase, nutrition in (support.get("nutrition", {}).get("by_phase") or {}).items():
         if (nutrition.get("weight_cut") or {}).get("active") and nutrition.get("protein_g_per_day"):
             evidence.append({"phase": phase, "intents": ["weight_cut_support"],

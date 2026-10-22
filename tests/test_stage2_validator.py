@@ -1,7 +1,6 @@
 import pytest
 
 from fightcamp.nutrition import generate_nutrition_block
-from fightcamp.recovery import generate_recovery_block
 from fightcamp.stage2_pipeline import review_stage2_output
 from fightcamp.stage2_validator import validate_stage2_output
 
@@ -1089,13 +1088,8 @@ def test_validate_stage2_output_blocks_option_overload_in_adjustment_context():
     assert overload_warnings[0]["blocking"] is True
 
 
-def test_stage1_recovery_and_nutrition_text_avoid_generic_instruction_openers():
-    stage1_text = "\n".join(
-        [
-            generate_nutrition_block(flags={"phase": "TAPER", "fatigue": "high", "weight": 70}),
-            generate_recovery_block({"phase": "GPP", "fatigue": "low", "age": 28}),
-        ]
-    )
+def test_stage1_nutrition_text_avoids_generic_instruction_openers():
+    stage1_text = generate_nutrition_block(flags={"phase": "TAPER", "fatigue": "high", "weight": 70})
     report = validate_stage2_output(
         planning_brief=_planning_brief_fixture(),
         final_plan_text=stage1_text,
@@ -1104,7 +1098,6 @@ def test_stage1_recovery_and_nutrition_text_avoid_generic_instruction_openers():
     warning_codes = [warning["code"] for warning in report["warnings"]]
     assert "generic_instruction_opener" not in warning_codes
     assert "Use easily digestible carbs and hydrate well" in stage1_text
-    assert "Prepare tissue and restore joint mobility" in stage1_text
 
 
 def test_validate_stage2_output_does_not_false_positive_clear_coach_language():
