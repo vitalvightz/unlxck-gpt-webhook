@@ -5,7 +5,8 @@ import { GenerationStatusProvider, useGenerationStatus } from "./generation-stat
 import { GlobalGenerationStatus, getGenerationStatusTarget } from "./global-generation-status";
 import { MobileTabBar } from "./mobile-tab-bar";
 import { useEffect, useRef, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { releaseOrphanedOverlayScroll } from "@/lib/overlay-scroll-lock";
 
 function ApprovedGenerationHandoff() {
   const { me } = useAppSession();
@@ -29,6 +30,32 @@ function ApprovedGenerationHandoff() {
   return null;
 }
 
+// A scroll lock left behind by an overlay that is no longer on screen froze
+// the whole app (no scrolling, a dead band under the tab bar on iOS). Check
+// after every navigation and whenever the page comes back into view.
+function OrphanedScrollLockGuard() {
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const timer = window.setTimeout(releaseOrphanedOverlayScroll, 400);
+    return () => window.clearTimeout(timer);
+  }, [pathname]);
+
+  useEffect(() => {
+    const check = () => {
+      if (document.visibilityState === "visible") releaseOrphanedOverlayScroll();
+    };
+    window.addEventListener("pageshow", check);
+    document.addEventListener("visibilitychange", check);
+    return () => {
+      window.removeEventListener("pageshow", check);
+      document.removeEventListener("visibilitychange", check);
+    };
+  }, []);
+
+  return null;
+}
+
 interface GenerationStatusShellProps {
   children: ReactNode;
 }
@@ -40,6 +67,7 @@ export function GenerationStatusShell({ children }: GenerationStatusShellProps) 
   return (
     <GenerationStatusProvider token={token}>
       <ApprovedGenerationHandoff />
+      <OrphanedScrollLockGuard />
       {children}
       <GlobalGenerationStatus />
       <MobileTabBar />

@@ -50,10 +50,10 @@ test("side menu explains the Plan, Camp Setup and Settings destinations", () => 
 });
 
 test("the phone bar shows across the signed-in workspace but not on gates or admin", () => {
-  for (const path of ["/", "/today", "/plans/abc", "/history", "/timer", "/create", "/settings", "/onboarding"]) {
+  for (const path of ["/", "/today", "/plans/abc", "/history", "/timer", "/create", "/settings", "/onboarding", "/generate"]) {
     assert.equal(showsMobileTabBar(path, true), true, path);
   }
-  for (const path of ["/admin", "/admin/athletes", "/consent", "/private-trial", "/generate", "/get-started"]) {
+  for (const path of ["/admin", "/admin/athletes", "/consent", "/private-trial", "/get-started"]) {
     assert.equal(showsMobileTabBar(path, true), false, path);
   }
   assert.equal(showsMobileTabBar("/today", false), false);

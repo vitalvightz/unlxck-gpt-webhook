@@ -2,7 +2,10 @@ import type { GenerationJobResponse } from "@/lib/types";
 
 export const MAX_PENDING_GENERATION_AGE_MS = 90 * 1000;
 export const MAX_VISIBLE_GENERATION_AGE_MS = 10 * 60 * 1000;
-export const MAX_STAGE1_INVOKED_VISIBLE_AGE_MS = 3 * 60 * 1000;
+// The backend lets Stage 1 run for up to 10 minutes (STAGE1_PLANNER_TIMEOUT_SECONDS
+// default 600) while its heartbeat keeps ticking. A 3-minute cut-off here told
+// the user their build had stopped while the planner was still working.
+export const MAX_STAGE1_INVOKED_VISIBLE_AGE_MS = 11 * 60 * 1000;
 
 export function normalizeLegacyGenerationJobStatus(status: string | null | undefined): string {
   const normalized = String(status || "").trim().toLowerCase();

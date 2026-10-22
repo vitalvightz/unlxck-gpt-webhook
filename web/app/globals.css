@@ -14299,32 +14299,71 @@ html[data-theme="light"] .gi-suggested-types {
   flex-wrap: wrap;
 }
 
-/* Remove-injury confirm: a quieter, more compact variant of the clear-confirm
-   panel so it sits unobtrusively above the cards rather than reading as an
-   amber alert. */
+/* Remove-injury confirm: styled like the injury cards it acts on, with the
+   app's button treatment (danger-button alone has no base button styles). */
 .gi-remove-confirm-panel {
-  margin: 0 0 12px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border-color: rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
+  margin: 0 0 14px;
+  padding: 16px;
+  border-radius: 18px;
+  border-color: rgba(181, 18, 43, 0.28);
+  background: rgba(181, 18, 43, 0.06);
   gap: 6px;
+  font-family: var(--font-display);
 }
 
 .gi-remove-confirm-panel .gi-clear-confirm-title {
-  font-size: 0.9rem;
+  font-size: var(--type-body-lg);
   font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text-primary);
 }
 
 .gi-remove-confirm-panel .muted {
-  font-size: 0.8rem;
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.gi-remove-confirm-panel .gi-clear-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 8px;
 }
 
 .gi-remove-confirm-panel .secondary-button,
 .gi-remove-confirm-panel .danger-button {
-  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   padding: 0 14px;
-  font-size: 0.85rem;
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--border-default);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+    color var(--transition-fast), transform var(--transition-fast);
+}
+
+.gi-remove-confirm-panel .danger-button {
+  background: rgba(181, 18, 43, 0.16);
+  border-color: rgba(181, 18, 43, 0.45);
+  color: #ffd6dc;
+}
+
+.gi-remove-confirm-panel .danger-button:hover,
+.gi-remove-confirm-panel .danger-button:focus-visible {
+  background: rgba(181, 18, 43, 0.26);
+  border-color: rgba(181, 18, 43, 0.7);
+  color: #ffffff;
+}
+
+.gi-remove-confirm-panel .danger-button:active {
+  transform: scale(0.97);
 }
 
 .gi-review-warning-icon {
@@ -16974,6 +17013,26 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
      show without a live build too, and used to sit on top of the tab bar. */
   html[data-mobile-tab-bar] .global-generation-status {
     bottom: var(--mobile-tab-bar-clearance);
+    /* The tab bar under it already clears the home indicator, so the ribbon
+       keeps a slim, fixed band instead of adding the safe area again. */
+    min-height: 0;
+    padding: 6px 8px 6px 14px;
+  }
+
+  html[data-mobile-tab-bar] .global-generation-status-dismiss,
+  html[data-mobile-tab-bar] .global-generation-status-cta {
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    font-size: 18px;
+  }
+
+  html[data-mobile-tab-bar] .global-generation-status-rail {
+    margin-top: 5px;
+  }
+
+  html[data-mobile-tab-bar] {
+    --generation-ribbon-height: 52px;
   }
 
   html[data-mobile-tab-bar] .global-generation-status-reopen {

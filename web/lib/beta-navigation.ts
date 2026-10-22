@@ -42,7 +42,6 @@ export const SIDE_NAV_ITEMS: readonly NavItem[] = [
 // sat on top of the gate's only action). The Menu keeps sign-out reachable.
 const TAB_BAR_HIDDEN_ROUTES = new Set<string>([
   "/get-started",
-  "/generate",
   "/login",
   "/signup",
   "/forgot-password",

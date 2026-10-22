@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   canRecoverPendingGenerationWithoutCreate,
   isGenerationAlreadyInFlightError,
+  isPreStartStaleGenerationJob,
   resolveCompletedTerminalJobOutcome,
   resolveFailedJobWithSavedPlan,
   resolveTerminalJobPlanId,
@@ -180,4 +181,28 @@ test("does not misclassify unrelated errors as the multi-tab conflict", () => {
   assert.equal(isGenerationAlreadyInFlightError(new Error("Plan generation failed.")), false);
   assert.equal(isGenerationAlreadyInFlightError(null), false);
   assert.equal(isGenerationAlreadyInFlightError("string-error"), false);
+});
+
+test("freshly claimed job is not stalled when heartbeat equals started_at", () => {
+  // Athletes never see the internal job_loaded milestone, and the claim stamps
+  // heartbeat_at and started_at with the same instant.
+  const startedAt = "2026-05-22T23:00:00.000Z";
+  const job = buildTerminalJob({
+    status: "running",
+    started_at: startedAt,
+    heartbeat_at: startedAt,
+    progress_milestones: [],
+  });
+  assert.equal(isPreStartStaleGenerationJob(job, Date.parse(startedAt) + 5_000), false);
+  assert.equal(isPreStartStaleGenerationJob(job, Date.parse(startedAt) + 120_000), true);
+});
+
+test("running job with a recent heartbeat and no public milestones is not stalled", () => {
+  const job = buildTerminalJob({
+    status: "running",
+    started_at: "2026-05-22T23:00:00.000Z",
+    heartbeat_at: "2026-05-22T23:01:45.000Z",
+    progress_milestones: [],
+  });
+  assert.equal(isPreStartStaleGenerationJob(job, Date.parse("2026-05-22T23:02:00.000Z")), false);
 });

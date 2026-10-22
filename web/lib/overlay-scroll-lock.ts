@@ -3,6 +3,9 @@
  * Nested overlays share the lock and restore the original scroll position. */
 let locks = 0;
 let restore: (() => void) | null = null;
+// Bumped when an orphaned lock is force-cleared, so a late release from a
+// holder of the cleared lock cannot drive the count below zero.
+let generation = 0;
 
 export function lockOverlayScroll(): () => void {
   if (locks++ === 0) {
@@ -21,13 +24,32 @@ export function lockOverlayScroll(): () => void {
       window.scrollTo(x, y);
     };
   }
+  const lockGeneration = generation;
   let released = false;
   return () => {
-    if (released) return;
+    if (released || lockGeneration !== generation) return;
     released = true;
     if (--locks === 0) {
       restore?.();
       restore = null;
     }
   };
+}
+
+// Everything that legitimately holds the lock while it is on screen.
+const OPEN_OVERLAY_SELECTOR =
+  'dialog[open], [aria-modal="true"], .custom-select-sheet-backdrop, html[data-mobile-nav-lock="true"]';
+
+/** Clear a lock whose overlay is gone. A holder that never released (an
+ * interrupted close, an iOS page restored from the back/forward cache) left
+ * the body position:fixed, so the page could not scroll and iOS drew a dead
+ * band under the tab bar. Called on navigation and page restore; a no-op
+ * while any overlay is still open. */
+export function releaseOrphanedOverlayScroll(): void {
+  if (locks === 0 || document.querySelector(OPEN_OVERLAY_SELECTOR)) return;
+  locks = 0;
+  generation += 1;
+  const release = restore;
+  restore = null;
+  release?.();
 }
