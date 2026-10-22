@@ -1,9 +1,9 @@
 import type { ExercisePerformance } from "./api-schema.generated";
 
 export const PROGRESS_METRICS = [
-  { key: "load", label: "Load" }, { key: "reps", label: "Reps" },
-  { key: "duration", label: "Duration" }, { key: "work", label: "Work duration" },
-  { key: "distance", label: "Distance" }, { key: "rounds", label: "Rounds" },
+  { key: "load", label: "Load", count: ["load", "loads"] }, { key: "reps", label: "Reps", count: ["rep count", "rep counts"] },
+  { key: "duration", label: "Duration", count: ["duration", "durations"] }, { key: "work", label: "Work duration", count: ["work duration", "work durations"] },
+  { key: "distance", label: "Distance", count: ["distance", "distances"] }, { key: "rounds", label: "Rounds", count: ["round count", "round counts"] },
 ] as const;
 export type ProgressMetric = typeof PROGRESS_METRICS[number]["key"];
 export type ProgressSeries = { id: string; metric: ProgressMetric; label: string; unit: string };
@@ -33,9 +33,20 @@ export function progressSeries(records: readonly ExercisePerformance[]): Progres
   return result;
 }
 
-export function progressPoints(records: readonly ExercisePerformance[], series: ProgressSeries) {
-  return [...records].sort((a, b) => a.training_day.localeCompare(b.training_day) || a.id.localeCompare(b.id)).map(record => {
+/**
+ * Eligible measurements for one series, oldest first. Records without a valid value in the
+ * series' metric and unit are dropped entirely: they never plot, extend the date range or count.
+ * They stay in Performance History, which reads the raw records.
+ */
+export function progressPoints(records: readonly ExercisePerformance[], series: ProgressSeries): { record: ExercisePerformance; value: number }[] {
+  return [...records].sort((a, b) => a.training_day.localeCompare(b.training_day) || a.id.localeCompare(b.id)).flatMap(record => {
     const value = performanceValue(record, series.metric);
-    return { record, value: value?.unit === series.unit ? value.value : null };
+    return value?.unit === series.unit ? [{ record, value: value.value }] : [];
   });
+}
+
+/** "3 recorded loads", "1 recorded duration". */
+export function measurementCount(count: number, metric: ProgressMetric): string {
+  const [one, many] = PROGRESS_METRICS.find(item => item.key === metric)!.count;
+  return `${count} recorded ${count === 1 ? one : many}`;
 }

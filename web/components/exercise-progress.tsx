@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ExercisePerformance, PersonalExercise } from "@/lib/api-schema.generated";
 import { formatAppDate } from "@/lib/date-format";
 import { detailMeasurements } from "@/lib/session-details";
-import { progressPoints, progressSeries } from "@/lib/exercise-progress";
+import { measurementCount, progressPoints, progressSeries } from "@/lib/exercise-progress";
 import styles from "./training-progress.module.css";
 
 export function ExerciseProgress({ records, exercise, hasMore, onInspect }: {
@@ -14,8 +14,8 @@ export function ExerciseProgress({ records, exercise, hasMore, onInspect }: {
   const [seriesId, setSeriesId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const series = options.find(option => option.id === seriesId) ?? options[0];
-  const points = useMemo(() => series ? progressPoints(records, series) : [], [records, series]);
-  const valid = points.filter((point): point is typeof point & { value: number } => point.value !== null);
+  // Only eligible measurements: axis, path, count, selection and best all derive from this set.
+  const valid = useMemo(() => series ? progressPoints(records, series) : [], [records, series]);
   const plot = useRef<HTMLDivElement>(null);
   const [plotWidth, setPlotWidth] = useState(600);
   const chartVisible = valid.length >= 3;
@@ -33,16 +33,12 @@ export function ExerciseProgress({ records, exercise, hasMore, onInspect }: {
   const highestPoint = valid.findLast(point => point.value === max);
   const padding = Math.max((max - min) * .2, max * .05, 1);
   const floor = Math.max(0, min - padding), ceiling = max + padding;
-  const firstDay = points[0]?.record.training_day, lastDay = points.at(-1)?.record.training_day;
+  const firstDay = valid[0]?.record.training_day, lastDay = valid.at(-1)?.record.training_day;
   const start = Date.parse(firstDay ?? ""), span = Date.parse(lastDay ?? "") - start;
   const x = (day: string) => span ? 12 + (Date.parse(day) - start) / span * (plotWidth - 24) : plotWidth / 2;
   const y = (value: number) => 180 - (value - floor) / (ceiling - floor) * 160;
-  // Missing measurements split paths; irregular dates without records do not invent samples.
-  const path = points.map((point, index) => {
-    if (point.value === null) return "";
-    const command = index > 0 && points[index - 1].value !== null ? "L" : "M";
-    return `${command}${x(point.record.training_day).toFixed(2)},${y(point.value).toFixed(2)}`;
-  }).join(" ");
+  // Irregular dates without records do not invent samples.
+  const path = valid.map((point, index) => `${index ? "L" : "M"}${x(point.record.training_day).toFixed(2)},${y(point.value).toFixed(2)}`).join(" ");
   const format = (value: number) => `${Number(value.toFixed(2))} ${series?.unit}`;
   const best = series?.metric === "load" ? exercise.best_loads.find(load => load.unit === series.unit)?.value : undefined;
   return <section className={styles.exerciseChart} aria-label="Exercise progress">
@@ -53,7 +49,7 @@ export function ExerciseProgress({ records, exercise, hasMore, onInspect }: {
     </div>
     {!selected ? <p className={styles.note}>No comparable measurements in the loaded records.{hasMore ? " Load earlier performances to check older records." : ""}</p> : <>
       <div className={styles.headline}><strong>{selected.value}</strong><span>{series.unit}<br />{formatAppDate(selected.record.training_day)}</span></div>
-      <p className={styles.note}>{valid.length} measured {valid.length === 1 ? "performance" : "performances"} in {records.length} loaded records{hasMore ? " · Earlier records available" : ""}.</p>
+      <p className={styles.note}>{measurementCount(valid.length, series.metric)}{hasMore ? " · Earlier records available" : ""}.</p>
       {valid.length >= 3 ? <>
         <div ref={plot} className={styles.linePlot} onPointerDown={event => {
           const bounds = event.currentTarget.getBoundingClientRect();
