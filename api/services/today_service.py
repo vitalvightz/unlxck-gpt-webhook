@@ -1602,7 +1602,8 @@ def upsert_session_completion(
         # The same rule Today shows (session_hold); nothing here re-derives it.
         if command.today.decision_tier == "stop" and command._injury_hold_stop:
             raise HTTPException(409, "This session is on hold for the current injury guidance.")
-        hold = session_hold(command.today.decision_tier, live, session_id=session_id)
+        hold = session_hold(command.today.decision_tier, live, session_id=session_id,
+                            check_in_possible=check_in_possible(store, athlete_id))
         if hold["held"]:
             raise HTTPException(409, hold["reason"])
 
@@ -3010,9 +3011,21 @@ def _head_impact_reported(store: AppStore, athlete_id: str, training_day: str) -
     return any(bool(row.get("rocked")) and str(row.get("training_day") or "")[:10] == training_day for row in rows)
 
 
-def apply_readiness_hold(live: dict, decision_tier: str) -> bool:
+def check_in_possible(store: AppStore, athlete_id: str) -> bool:
+    """A check-in is health data: without consent it cannot be given, so it is never required."""
+    try:
+        from api.compliance import evaluate_profile_compliance
+        profile = store.get_profile(athlete_id)
+        return profile is None or evaluate_profile_compliance(profile).health_consent_granted
+    except Exception:
+        logger.exception("[today] check_in_consent_read_failed")
+        return True
+
+
+def apply_readiness_hold(live: dict, decision_tier: str, *, check_in_possible: bool = True) -> bool:
     """Fold today's verdict into the reconciled session. True when it added the hold."""
-    holds = decision_tier in {"stop", "not_checked_in"} or (decision_tier == "pull_back" and not live.get("rehab_only"))
+    holds = (decision_tier == "stop" or (decision_tier == "not_checked_in" and check_in_possible)
+             or (decision_tier == "pull_back" and not live.get("rehab_only")))
     if live["safety_hold"] or not holds:
         return False
     live["safety_hold"] = True
@@ -3023,7 +3036,7 @@ def apply_readiness_hold(live: dict, decision_tier: str) -> bool:
 
 
 def session_hold(decision_tier: str, live: dict | None, *, session_id: str | None = None,
-                 readiness_held: bool = False) -> dict[str, Any]:
+                 readiness_held: bool = False, check_in_possible: bool = True) -> dict[str, Any]:
     """The single rule for whether a session today is blocked, and why.
 
     ``session_id`` names the session being acted on; ``None`` means the session
@@ -3037,7 +3050,7 @@ def session_hold(decision_tier: str, live: dict | None, *, session_id: str | Non
                 "source": "injury"}
     if decision_tier == "stop":
         return {"held": True, "reason": "Training is stopped by today's current safety guidance.", "source": "readiness"}
-    if decision_tier == "not_checked_in":
+    if decision_tier == "not_checked_in" and check_in_possible:
         return {"held": True, "reason": "Complete today's check-in before starting.", "source": "check_in"}
     if decision_tier == "pull_back" and not offered_rehab:
         return {"held": True, "reason": "Today's pull-back guidance holds your planned training.", "source": "readiness"}
@@ -3556,9 +3569,11 @@ def _build_today_command_view(
         ),
         open_injuries=open_injuries,
     )
+    # Only a missing check-in needs to know whether one can be given (consent).
+    can_check_in = view.today.decision_tier != "not_checked_in" or check_in_possible(store, athlete_id)
     if live:
         policy_changed_guidance = False
-        readiness_held = apply_readiness_hold(live, view.today.decision_tier)
+        readiness_held = apply_readiness_hold(live, view.today.decision_tier, check_in_possible=can_check_in)
         # Describe the actual prescription without weakening stronger readiness.
         if live["safety_hold"] and view.today.decision_tier in {"green", "modify"}:
             policy_changed_guidance = True
@@ -3583,7 +3598,7 @@ def _build_today_command_view(
             live["revision"] = content_hash({k: v for k, v in live.items() if k != "revision"})
     view.live_prescription = live
     if view.today.session_scope == "today":
-        view.session_hold = session_hold(view.today.decision_tier, live,
+        view.session_hold = session_hold(view.today.decision_tier, live, check_in_possible=can_check_in,
                                          readiness_held=bool(live and readiness_held))
     if live:
         # Presentation only: never part of the frozen prescription/revision.

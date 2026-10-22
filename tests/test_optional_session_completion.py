@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 
 from api.optional_sessions import is_optional_session
 from api.services.streaks import _scheduled_days, _training_schedule
-from api.services.today_service import build_today_command_view, upsert_session_completion
+from api.services.today_service import build_today_command_view, submit_today_checkin, upsert_session_completion
 from api.services.week_progress import evaluate_week_completion
 from api.structured_plan_locked_merge import merge_locked_structured_content
 from fightcamp.fight_visualization_library import camp_visualization_role
@@ -84,6 +84,13 @@ def _store() -> FakeStore:
 
 
 def _log(store: FakeStore, session_id: str, status: str = "done") -> dict:
+    # Logging today's session needs today's check-in (session_hold).
+    submit_today_checkin(store, athlete_id=ATHLETE, athlete_timezone="", now=datetime.fromisoformat(f"{DAY}T12:00:00+00:00"),
+                         payload={"plan_id": PLAN, "sleep": "good", "body": "normal", "pain": "none", "phase": "GPP",
+                                  "active_injury": "none", "previous_session": "none", "sharp_pain": False,
+                                  "instability": False, "swelling": False, "neurological_symptoms": False,
+                                  "illness_symptoms": False, "cannot_warm_into_movement": False,
+                                  "worse_next_day_pain": False})
     return upsert_session_completion(
         store,
         athlete_id=ATHLETE,

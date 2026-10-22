@@ -137,6 +137,8 @@ class TestPlanOwnership:
 class TestSessionCompletion:
     def _post(self, client, **overrides):
         base = {"plan_id": PLAN_ID, "session_id": "s1", "status": "started"}
+        # Logging today's session needs today's check-in (session_hold).
+        client.post("/api/today/checkin", headers=ATHLETE, json=_checkin_body())
         return client.post("/api/today/session-completion", headers=ATHLETE, json={**base, **overrides})
 
     def test_started_completion(self):

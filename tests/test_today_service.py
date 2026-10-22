@@ -3415,3 +3415,14 @@ class TestCheckInRequiredToLog:
         retro = upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="", now=self.NOW,
             payload={"plan_id": PLAN, "session_id": "sess-2", "status": "done", "training_day": "2026-06-17"})
         assert retro["status"] == "done"
+
+
+def test_athlete_without_health_consent_can_log_without_a_check_in():
+    from tests.support import withdraw_health_consent, seed_default_profiles
+    store = _store_with_plan()
+    seed_default_profiles(store)
+    withdraw_health_consent(store, ATHLETE)
+    row = upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="",
+        payload={"plan_id": PLAN, "session_id": "sess-1", "status": "done"},
+        now=datetime(2026, 6, 19, 12, 0, tzinfo=timezone.utc))
+    assert row["status"] == "done"

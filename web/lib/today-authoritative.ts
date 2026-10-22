@@ -545,11 +545,13 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
     blocksCurrentSession &&
     !state.today.injury_hold_exempt &&
     Boolean(getActiveSevereInjury(state.open_injuries));
+  // session_hold answers check-in too: it is only required when it can be given (consent).
   const canCompleteSession =
     canCompleteTodaySession(state.today.next_session) &&
     sessionIsToday &&
-    authoritativeTier !== "not_checked_in" &&
-    !blocksCurrentSession;
+    (state.session_hold
+      ? !state.session_hold.held
+      : authoritativeTier !== "not_checked_in" && !blocksCurrentSession);
 
   return {
     recommendationState,

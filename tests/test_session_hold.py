@@ -15,6 +15,14 @@ def test_not_checked_in_holds_every_session_until_check_in():
             "held": True, "reason": "Complete today's check-in before starting.", "source": "check_in"}
 
 
+def test_check_in_is_never_required_when_it_cannot_be_given():
+    # No health consent: a check-in is health data, so it cannot be collected or required.
+    assert session_hold("not_checked_in", None, check_in_possible=False)["held"] is False
+    assert session_hold("not_checked_in", live(), check_in_possible=False)["held"] is False
+    # Stop and injury holds still apply without consent.
+    assert session_hold("stop", None, check_in_possible=False)["held"] is True
+
+
 def test_an_injury_hold_outranks_the_missing_check_in():
     hold = session_hold("not_checked_in", live(safety_hold=True, reason="Get this injury checked before training."))
     assert hold["source"] == "injury" and hold["reason"] == "Get this injury checked before training."

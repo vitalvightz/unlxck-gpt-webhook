@@ -859,6 +859,14 @@ test("the backend session_hold is the one answer: a check-in hold is 'check in f
   assert.equal(notCheckedIn.blocksCurrentSession, false);
   assert.equal(notCheckedIn.canCompleteSession, false);
 
+  // Without health consent a check-in cannot be given, so none is required.
+  const noConsent = resolveTodayDecision({
+    ...BASE_STATE,
+    today: { ...BASE_STATE.today, recommendation_state: "not_checked_in", decision_tier: "not_checked_in" },
+    session_hold: { held: false, reason: null, source: null },
+  });
+  assert.equal(noConsent.canCompleteSession, true);
+
   const injuryHeld = resolveTodayDecision({
     ...BASE_STATE,
     today: { ...BASE_STATE.today, decision_tier: "green" },
