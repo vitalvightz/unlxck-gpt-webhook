@@ -2618,7 +2618,6 @@ export function StructuredPlanRenderer({
   const safePos = effectivePos >= 0 && effectivePos < weeks.length ? effectivePos : 0;
   const selectedWeek = weeks[safePos];
 
-  const progressionNotes = cleanText(plan.progression_notes);
   const rawFallback = cleanText(plan.raw_markdown_fallback);
   const safetyOwnershipTexts = useMemo(
     () => [
@@ -2817,16 +2816,6 @@ export function StructuredPlanRenderer({
             )}
           </div>
         </>
-      ) : null}
-
-      {progressionNotes ? (
-        <CollapsibleSection
-          title="Progression notes"
-          detailLabel="notes"
-          className="sp-progression"
-        >
-          <p className="sp-block-purpose">{progressionNotes}</p>
-        </CollapsibleSection>
       ) : null}
 
       {showRawFallback ? (
