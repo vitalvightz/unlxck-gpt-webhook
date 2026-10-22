@@ -166,6 +166,12 @@ def test_rule4_training_hold_names_its_cause(session_name, clearance_level):
             assert pull_back["source"] == "readiness" and "pull-back" in pull_back["reason"]
 
     assert today(row, "stop", session)[2]["held"]
+    # No check-in: held for everyone until the check-in, named as such unless the injury holds too.
+    not_checked_in = today(row, "not_checked_in", session)[2]
+    assert not_checked_in["held"]
+    if not injury_holds:
+        assert not_checked_in["source"] == "check_in"
+        assert "injury restrictions" not in not_checked_in["reason"]
 
 
 def test_rule4_contact_clearance_releases_hard_sparring():
@@ -182,3 +188,20 @@ def test_rule1_pull_back_still_offers_due_rehab_end_to_end():
     if decision.get("schedule", {}).get("state") == "due":
         assert live["session"]["session_type"] == "rehab" and not hold["held"]
         assert any(b.get("block_type") == "rehab" for b in live["session"]["blocks"])
+
+
+LOAD_LIVE = [(r, k) for r, k, stages in LIVE if "load" in stages]
+
+
+@pytest.mark.parametrize("region,kind", LOAD_LIVE, ids=[f"{r}-{k}" for r, k in LOAD_LIVE])
+def test_rule2_better_alone_never_unlocks_load(region, kind):
+    """Better clears the setback hold, but LOAD after a setback still needs new
+    successful rehab. Feeling better is not proof of loading readiness."""
+    base = injury(region, kind, "restore")
+    loading = event(base, "clinician_clearance_report", {"scopes": ["rehab", "training"], "source": "athlete_reported",
+        "rehabilitation_permission": {"level": "loading", "schema_version": 1}}, "2026-10-20T08:00:00Z")
+    events = [loading, checkin(base, "worse", "2026-10-21T10:00:00Z"), checkin(base, "improving", "2026-10-22T09:00:00Z")]
+    row = apply_episode_observations({**base, "latest_reported_status": "improving"}, events)
+    for verdict in TRAINING_VERDICTS:
+        decision = decide(row, verdict)
+        assert decision["stage"] != "load", verdict

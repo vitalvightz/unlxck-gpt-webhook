@@ -1599,16 +1599,12 @@ def upsert_session_completion(
         # A support exemption only covers injury-driven load restrictions. It
         # cannot override a current red-flag STOP. Apply current readiness even
         # when an unsupported injury has no live prescription to carry a hold.
-        if command.today.decision_tier == "stop":
-            if command._injury_hold_stop:
-                raise HTTPException(409, "This session is on hold for the current injury guidance.")
-            raise HTTPException(409, "Training is stopped by today's current safety guidance.")
-        if command.today.decision_tier == "not_checked_in" and command.effective_clinician_clearance:
-            raise HTTPException(409, "Complete today's check-in before starting.")
-        if command.today.decision_tier == "pull_back":
-            hold = session_hold("pull_back", live, session_id=session_id)
-            if hold["held"]:
-                raise HTTPException(409, hold["reason"])
+        # The same rule Today shows (session_hold); nothing here re-derives it.
+        if command.today.decision_tier == "stop" and command._injury_hold_stop:
+            raise HTTPException(409, "This session is on hold for the current injury guidance.")
+        hold = session_hold(command.today.decision_tier, live, session_id=session_id)
+        if hold["held"]:
+            raise HTTPException(409, hold["reason"])
 
     existing_plan_id = str(existing.get("plan_id") or "")
     if existing_plan_id and existing_plan_id != plan_id:
@@ -3033,14 +3029,16 @@ def session_hold(decision_tier: str, live: dict | None, *, session_id: str | Non
     ``session_id`` names the session being acted on; ``None`` means the session
     Today shows. On a pull-back day only the offered reviewed rehab may run.
     """
-    offered_rehab = bool(live and live["session"].get("session_type") == "rehab" and not live.get("safety_hold")
-                         and (session_id is None or live["session"].get("session_id") == session_id))
-    if live and live.get("safety_hold") and (session_id is None or live["session"].get("session_id") == session_id):
-        source = "readiness" if readiness_held or live.get("training_hold_source") == "readiness" else "injury"
+    targeted = bool(live and (session_id is None or live["session"].get("session_id") == session_id))
+    offered_rehab = targeted and live["session"].get("session_type") == "rehab" and not live.get("safety_hold")
+    if (targeted and live.get("safety_hold") and not readiness_held
+            and live.get("training_hold_source") != "readiness"):
         return {"held": True, "reason": live.get("safety_hold_reason") or "This session is on hold for the current injury guidance.",
-                "source": source}
+                "source": "injury"}
     if decision_tier == "stop":
         return {"held": True, "reason": "Training is stopped by today's current safety guidance.", "source": "readiness"}
+    if decision_tier == "not_checked_in":
+        return {"held": True, "reason": "Complete today's check-in before starting.", "source": "check_in"}
     if decision_tier == "pull_back" and not offered_rehab:
         return {"held": True, "reason": "Today's pull-back guidance holds your planned training.", "source": "readiness"}
     return {"held": False, "reason": None, "source": None}

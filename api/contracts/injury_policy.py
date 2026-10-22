@@ -215,11 +215,8 @@ def resolve_injury_policy(
         prescriptions[prescription.drill_id] = prescription
     # An explicit later injury-specific improvement resolves a prior setback
     # for baseline selection only. Preserve the original observations in storage.
-    # The latest Better after the setback clears it, even if Same followed.
-    setback = episode_setback_at(injury, exposures)
-    improvement = (_instant(injury.get("rehab_improvement_at")) or (_instant(injury.get("latest_reported_at"))
-                   if injury.get("latest_reported_status") == "improving" else None))
-    if injury.get("latest_reported_status") != "worse" and setback and improvement and improvement > setback:
+    setback, improvement = episode_setback_at(injury, exposures), _instant(injury.get("latest_reported_at"))
+    if injury.get("latest_reported_status") == "improving" and setback and improvement and improvement > setback:
         selection_exposures = [e for e in selection_exposures if (_instant(e.get("response_recorded_at") or e.get("created_at")
                               or (e.get("event_json") or e).get("occurred_at")) or improvement) >= improvement]
     # Use the existing bank/location aliases just as the bank lookup does.

@@ -537,8 +537,9 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
   // for an older API response without that field.
   const blocksCurrentSession =
     sessionIsToday &&
+    // A missing check-in is "check in first", never a block; canCompleteSession gates it.
     (state.session_hold
-      ? state.session_hold.held
+      ? state.session_hold.held && state.session_hold.source !== "check_in"
       : Boolean(prescription?.safety_hold) || authoritativeTier === "stop" || (authoritativeTier === "pull_back" && !reviewedRehabAllowed));
   const severeInjuryBlocksCurrentSession =
     blocksCurrentSession &&
