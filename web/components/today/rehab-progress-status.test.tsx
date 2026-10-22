@@ -146,8 +146,9 @@ test("a real safety hold still blocks progression when today's schedule is also 
 test("expanded injury controls do not repeat the visible summary", () => {
   const html = renderToStaticMarkup(<RehabProgressStatus decision={decision} summaryVisible />);
   const body = new domWindow.DOMParser().parseFromString(html, "text/html").body;
-  assert.match(body.textContent ?? "", /Load · On hold/);
-  assert.doesNotMatch(body.textContent ?? "", /Confirm the rehab loading/);
+  // One status line per card: the row is only the way into the checks.
+  assert.match(body.textContent ?? "", /Progression checks/);
+  assert.doesNotMatch(body.textContent ?? "", /On hold|Confirm the rehab loading/);
   const held = { ...decision, stage: "calm" as const,
     progression: { reason_codes: ["episode_setback_loading_held"] } };
   assert.equal(renderToStaticMarkup(<RehabProgressStatus decision={held} summaryVisible />), "");

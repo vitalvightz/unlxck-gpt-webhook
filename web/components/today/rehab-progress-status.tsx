@@ -126,7 +126,10 @@ export function RehabProgressStatus({ decision, statusLine, summaryVisible = fal
   const safety = rehabSafetyHold(decision);
   const entry = rehabEntryExplanation(decision);
   const unavailable = next && (!next.target_stage_live || next.status === "closed");
-  const title = safety ? "Progression · On hold" : next ? `${LABELS[next.to_stage] ?? "Next stage"} · ${!next.target_stage_live ? "Unavailable in UNLXCK" : next.status === "met" ? "Available" : "On hold"}` : null;
+  // When the card header already shows the status sentence, this row is only
+  // the way into the checks: one status line per card, never a second "on hold".
+  const title = summaryVisible && next ? "Progression checks"
+    : safety ? "Progression · On hold" : next ? `${LABELS[next.to_stage] ?? "Next stage"} · ${!next.target_stage_live ? "Unavailable in UNLXCK" : next.status === "met" ? "Available" : "On hold"}` : null;
   const nextStep = rehabNextStep(decision);
   if (summaryVisible && !next && !statusLine) return null;
   if (!title && !statusLine && !entry) return null;
