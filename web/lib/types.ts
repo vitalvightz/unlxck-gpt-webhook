@@ -1075,6 +1075,9 @@ export type InjuryFlagRecord = {
       reason_codes: string[]; requirements?: Array<{ requirement_id: string; kind: string; status: string; reason_code: string }> } };
     achilles_load_review?: import("./api-schema.generated").AchillesRestoreLoadReview | null;
     prescription?: { sources?: string[] } | null;
+    /** Recent rehab and injury answers for this episode, newest first. */
+    recent_log?: Array<{ date: string; kind: "rehab" | "checkin"; label: string; felt?: string; next_day?: string;
+      counts?: boolean | null }>;
     schedule?: { state: "due" | "recovery_day" | "already_completed" | "held" | "deferred" | "unsupported";
       reason: string; next_due_day?: string | null } | null } | null;
   clinician_clearance?: { episode_id: string; scopes: string[]; source: "athlete_reported"; externally_verified: false; rehabilitation_permission?: { schema_version: 1; level: "gentle_recovery" | "loading" | "sport_specific" | "not_cleared" } | null } | null;
