@@ -17,9 +17,7 @@ from api.structured_plan_generation import (
 )
 import json
 
-from api.structured_plan_models import safe_parse_structured_plan
 from api.structured_plan_safety import (
-    athlete_safe_support,
     audit_structured_plan,
     detect_coach_gated_leakage,
     detect_computed_support_conflicts,
@@ -333,65 +331,22 @@ def test_strip_coach_gated_is_recursive_and_total():
     assert cleaned["nested"]["keep"][0] == {"ok": 2}
 
 
-def test_athlete_safe_support_excludes_coach_gated_for_active_phases():
-    support = _support(weight_cut_risk=True, weight_cut_pct=7.0, fatigue="high")
-    # Precondition: the raw support DOES carry coach_gated dosing.
-    assert "coach_gated" in json.dumps(support)
-
-    projection = athlete_safe_support(support)
-    assert projection["schema_version"] == "athlete_support.v1"
-    # Nutrition + recovery exist for the active phases...
-    assert set(projection["nutrition"]["by_phase"]) == {"GPP", "SPP", "TAPER"}
-    assert set(projection["recovery"]["by_phase"]) == {"GPP", "SPP", "TAPER"}
-    # ...and athlete-safe fields are present...
-    taper = projection["nutrition"]["by_phase"]["TAPER"]
-    assert "protein_g_per_day" in taper and "weight_cut" in taper
-    rec = projection["recovery"]["by_phase"]["TAPER"]
-    assert "sleep_hours_target" in rec and "weight_cut" in rec
-    # ...but NO coach_gated / dosing survives anywhere.
-    blob = json.dumps(projection)
-    assert "coach_gated" not in blob
-    for token in ("bicarbonate", "magnesium", "taurine", "mmol", "refeed"):
-        assert token not in blob.lower(), token
-
-
-def test_athlete_safe_support_falls_back_to_none_when_empty():
-    assert athlete_safe_support(None) is None
-    assert athlete_safe_support({}) is None
-    assert athlete_safe_support({"mindset": {"primary_blocks": []}}) is None
-
-
-def test_outcome_injects_deterministic_support_without_leaking_coach_gated():
+def test_outcome_no_longer_injects_deterministic_support_or_coach_gated():
     support = _support(weight_cut_risk=True, weight_cut_pct=7.0, fatigue="high")
     source_plan = _valid_plan()
     # Align the card's stated risk with the computed severe band — understating
-    # it is now a blocking CONFLICT (covered elsewhere) and would discard the
-    # card before this test can inspect the injected projection.
+    # it is a blocking CONFLICT (covered elsewhere).
     source_plan["nutrition"]["weight_cut_warning"]["risk_level"] = "red"
     outcome = build_structured_plan_outcome(
         source_plan, raw_markdown=_faithful_source(source_plan), computed_support=support
     )
     assert outcome.status == "valid"
     plan = outcome.structured_plan
-    assert plan["deterministic_support"]["schema_version"] == "athlete_support.v1"
-    # The whole athlete-facing structured_plan is coach_gated-free.
+    # Nutrition/recovery are Stage 1-only and never projected onto the card.
+    assert plan.get("deterministic_support") is None
     blob = json.dumps(plan).lower()
     assert "coach_gated" not in blob
     assert "bicarbonate" not in blob
-
-
-def test_deterministic_support_survives_schema_revalidation():
-    # plan_mappers re-validates the stored structured_plan on read, so the
-    # projection must be a real schema field that round-trips.
-    support = _support()
-    source_plan = _valid_plan()
-    outcome = build_structured_plan_outcome(
-        source_plan, raw_markdown=_faithful_source(source_plan), computed_support=support
-    )
-    reparsed = safe_parse_structured_plan(outcome.structured_plan, raw_markdown="# raw")
-    assert reparsed.ok and reparsed.plan is not None
-    assert reparsed.plan.deterministic_support is not None
-    assert reparsed.plan.deterministic_support["nutrition"]["by_phase"]
 
 
 def test_outcome_without_computed_support_has_no_deterministic_support():

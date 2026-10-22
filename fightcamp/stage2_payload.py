@@ -125,7 +125,6 @@ from .strength_session_quality import (
 )
 from .training_context import TrainingContext, allocate_sessions
 from .nutrition import compute_nutrition_targets
-from .recovery import compute_recovery_plan
 from .mindset_module import compute_mindset_plan
 from .injury_awareness import build_injury_awareness_support
 from .weight_cut import (  # noqa: F401  (re-exported for back-compat)
@@ -1824,12 +1823,13 @@ def _apply_boxing_crowded_week_post_processing(
 
 
 def build_computed_support(*, flags: dict, phases: list[str] | None = None) -> dict:
-    """Bundle Stage 1's own computed nutrition/recovery/mindset numbers.
+    """Bundle Stage 1's own computed nutrition/mindset numbers.
 
     Carries the deterministic Stage 1 support data into the planning brief as
-    structured (not prose) blocks so the Stage 1 → structured_plan conversion
-    consumes them faithfully instead of re-deriving them from compressed
-    markdown. ``coach_gated`` sub-sections inside nutrition/recovery hold exact
+    structured (not prose) blocks. Nutrition stays Stage 1-only: the safety
+    audit checks Stage 2 output against it, but it is never handed to Stage 2
+    (see :func:`strip_stage1_nutrition_section`). ``coach_gated`` sub-sections
+    inside nutrition hold exact
     acute weight-cut and supplement dosing and must never be surfaced directly
     to athletes (coach/medical-gated only).
     """
@@ -1841,10 +1841,6 @@ def build_computed_support(*, flags: dict, phases: list[str] | None = None) -> d
         phase: compute_nutrition_targets(flags={**flags, "phase": phase})
         for phase in ordered_phases
     }
-    recovery_by_phase = {
-        phase: compute_recovery_plan({**flags, "phase": phase})
-        for phase in ordered_phases
-    }
     support = {
         "schema_version": "computed_support.v1",
         "source": "stage1_deterministic",
@@ -1853,7 +1849,6 @@ def build_computed_support(*, flags: dict, phases: list[str] | None = None) -> d
             "dosing — never surface them directly to athletes."
         ),
         "nutrition": {"by_phase": nutrition_by_phase},
-        "recovery": {"by_phase": recovery_by_phase},
         "mindset": compute_mindset_plan(flags),
         # Deterministic safeguard state travels with the deterministic numbers.
         # The structured-plan safety audit reads this to decide whether Stage 2
@@ -4158,6 +4153,16 @@ def _append_countdown_continuation_instructions(
     return continuation_block
 
 
+_STAGE1_NUTRITION_SECTION_RE = re.compile(
+    r"^## Nutrition[ \t]*\n.*?(?=^#{1,2} |\Z)", re.MULTILINE | re.DOTALL
+)
+
+
+def strip_stage1_nutrition_section(plan_text: str) -> str:
+    """Drop the Stage 1 ``## Nutrition`` section; nutrition is Stage 1-only."""
+    return _STAGE1_NUTRITION_SECTION_RE.sub("", plan_text or "")
+
+
 def build_stage2_handoff_text(
     *,
     stage2_payload: dict,
@@ -4273,7 +4278,7 @@ def build_stage2_handoff_text(
     if cleaned_notes:
         sections.append("COACH NOTES\n" + cleaned_notes)
 
-    sections.append("STAGE 1 DRAFT PLAN\n" + (plan_text or "").strip())
+    sections.append("STAGE 1 DRAFT PLAN\n" + strip_stage1_nutrition_section(plan_text).strip())
 
     if locked_manifest:
         sections.append(

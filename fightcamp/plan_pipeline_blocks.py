@@ -22,7 +22,6 @@ from .plan_pipeline_runtime import (
     _emit_progress,
 )
 from .plan_rendering_utils import sanitize_phase_text
-from .recovery import generate_recovery_block
 from .rehab_protocols import (
     format_injury_guardrails,
     generate_rehab_protocols,
@@ -401,7 +400,7 @@ def _infer_rehab_day_type(*, phase: str) -> str | None:
 def _generate_rehab_support_bundle(
     context: PlanRuntimeContext,
     rehab_injury_string: str,
-) -> tuple[dict[str, str], dict[str, str], str, bool, str, str, str]:
+) -> tuple[dict[str, str], dict[str, str], str, bool, str, str]:
     rehab_blocks = {phase: "" for phase in PHASES}
 
     if context.phase_active("GPP"):
@@ -445,10 +444,6 @@ def _generate_rehab_support_bundle(
     # Compute once; captured as a default argument by each builder lambda so
     # the dict is not re-created for every active phase.
     base_flags = context.training_context.to_flags()
-    recovery_block = _build_phase_support_block(
-        context,
-        lambda phase, bf=base_flags: generate_recovery_block({**bf, "phase": phase}),
-    )
     nutrition_block = _build_phase_support_block(
         context,
         lambda phase, bf=base_flags: generate_nutrition_block(flags={**bf, "phase": phase}),
@@ -476,7 +471,7 @@ def _generate_rehab_support_bundle(
     }
     support_notes = sanitize_phase_text(support_notes, context.sanitize_labels) if support_notes else ""
 
-    return rehab_blocks, guardrails, support_notes, has_injuries, current_phase, recovery_block, nutrition_block
+    return rehab_blocks, guardrails, support_notes, has_injuries, current_phase, nutrition_block
 
 
 def _names_from_grouped(grouped: dict[str, list[dict]]) -> list[str]:
@@ -581,7 +576,6 @@ def generate_plan_blocks(
         support_notes,
         has_injuries,
         current_phase,
-        recovery_block,
         nutrition_block,
     ) = _run_stage1_module(
         module_name="rehab_support_bundle",
@@ -597,7 +591,7 @@ def generate_plan_blocks(
     if has_injuries:
         rehab_detail = "Rehab protocols and injury guardrails added to every active phase."
     else:
-        rehab_detail = "No injury guardrails needed. Recovery and nutrition cues added."
+        rehab_detail = "No injury guardrails needed. Nutrition cues added."
     _emit_progress(
         progress_callback,
         "rehab_support_built",
@@ -608,8 +602,6 @@ def generate_plan_blocks(
 
     _emit_progress(progress_callback, "stage1_mobility_block_started", "Stage 1 mobility block started")
     _emit_progress(progress_callback, "stage1_mobility_block_finished", "Stage 1 mobility block finished")
-    _emit_progress(progress_callback, "stage1_recovery_block_started", "Stage 1 recovery block started")
-    _emit_progress(progress_callback, "stage1_recovery_block_finished", "Stage 1 recovery block finished")
     _emit_progress(progress_callback, "stage1_nutrition_block_started", "Stage 1 nutrition block started")
     _emit_progress(progress_callback, "stage1_nutrition_block_finished", "Stage 1 nutrition block finished")
     _emit_progress(progress_callback, "stage1_weekly_schedule_started", "Stage 1 weekly schedule started")
@@ -677,7 +669,6 @@ def generate_plan_blocks(
         rehab_blocks=rehab_blocks,
         guardrails=guardrails,
         nutrition_block=nutrition_block,
-        recovery_block=recovery_block,
         has_injuries=has_injuries,
         support_notes=support_notes,
         strength_reason_log=strength_reason_log,

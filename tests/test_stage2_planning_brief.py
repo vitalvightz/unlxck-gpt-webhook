@@ -23,7 +23,6 @@ from fightcamp.stage2_role_map import (
     _non_spar_role_priority_rank,
 )
 from fightcamp.nutrition import generate_nutrition_block
-from fightcamp.recovery import generate_recovery_block
 from fightcamp.training_context import TrainingContext
 
 
@@ -2818,20 +2817,11 @@ def test_weight_cut_support_blocks_keep_protocol_and_plain_acknowledgement():
     }
 
     nutrition = generate_nutrition_block(flags=flags)
-    recovery = generate_recovery_block(
-        {
-            **flags,
-            "age": 27,
-            "injuries": [],
-        }
-    )
 
     assert "Active Weight-Cut Note" in nutrition
     assert "strength expression" in nutrition
     assert "conditioning tolerance" in nutrition
     assert "Weight Cut Protocol Triggered" in nutrition
-    assert "Active Weight-Cut Recovery Note" in recovery
-    assert "protect freshness" in recovery.lower()
 
 
 def test_record_changes_maturity_without_changing_load_logic():

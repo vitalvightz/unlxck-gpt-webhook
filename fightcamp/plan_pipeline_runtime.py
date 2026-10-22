@@ -199,7 +199,6 @@ class PlanBlocksBundle:
     rehab_blocks: dict[str, str]
     guardrails: dict[str, str]
     nutrition_block: str
-    recovery_block: str
     has_injuries: bool
     support_notes: str
     strength_reason_log: dict[str, list[dict]]

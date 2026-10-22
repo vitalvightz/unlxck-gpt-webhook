@@ -807,10 +807,6 @@ def test_generate_rehab_support_bundle_counts_guided_only_parsed_injury_as_injur
         lambda *args, **kwargs: "guardrail",
     )
     monkeypatch.setattr(
-        "fightcamp.plan_pipeline_blocks.generate_recovery_block",
-        lambda flags: "recovery",
-    )
-    monkeypatch.setattr(
         "fightcamp.plan_pipeline_blocks.generate_nutrition_block",
         lambda flags: "nutrition",
     )

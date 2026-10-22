@@ -7,7 +7,6 @@ import {
   BlockCard,
   ExerciseRationaleProvider,
   ExerciseRow,
-  RecoveryCard,
   SessionCard,
   SessionlessDayCard,
   StructuredPlanRenderer,
@@ -397,22 +396,6 @@ test("open ongoing renderer uses renewable block labels instead of fight-camp ph
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Open Plan", sport: "boxing", plan_type: "fight_camp" },
-    deterministic_support: {
-      nutrition: {
-        by_phase: {
-          GPP: { protein_g_per_day: { min: 140, max: 160 } },
-          SPP: { protein_g_per_day: { min: 150, max: 170 } },
-          TAPER: { protein_g_per_day: { min: 145, max: 165 } },
-        },
-      },
-      recovery: {
-        by_phase: {
-          GPP: { sleep_hours_target: [8, 9] },
-          SPP: { sleep_hours_target: [8, 9] },
-          TAPER: { sleep_hours_target: [8, 9] },
-        },
-      },
-    },
     weeks: [
       { week_id: "wk-1", week_index: 1, phase_label: "SPP", week_goal: "Baseline", days: [{ date: "", day_type: "high", sessions: [] }] },
       { week_id: "wk-2", week_index: 2, phase_label: "SPP", week_goal: "Small progression", days: [] },
@@ -432,7 +415,6 @@ test("open ongoing renderer uses renewable block labels instead of fight-camp ph
   assert.equal(html.includes(">Taper<"), false);
   assert.equal(html.includes(">Load</span>"), false);
   assert.equal(html.includes("Block 1 · Week 1 of 4"), true);
-  assert.equal(countOccurrences(html, "Current block"), 6);
 });
 
 test("open ongoing renderer falls back when schedule and week numbers are non-finite", () => {
@@ -999,63 +981,6 @@ test("keeps calm lead notes out of Red Flags while retaining the safety disclaim
   assert.equal(html.includes("Active notes"), true);
   assert.equal(html.includes("Red flags - stop"), true);
   assert.equal(countOccurrences(html, 'class="safety-note '), 1);
-});
-
-test("collapses deterministic nutrition and recovery into a support section at the bottom", () => {
-  const plan = {
-    schema_version: "1.0",
-    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
-    weeks: [
-      {
-        week_id: "wk-1",
-        week_index: 1,
-        phase_label: "GPP",
-        days: [],
-      },
-      {
-        week_id: "wk-2",
-        week_index: 2,
-        phase_label: "SPP",
-        days: [],
-      },
-    ],
-    deterministic_support: {
-      nutrition: {
-        by_phase: {
-          GPP: {
-            protein_g_per_day: { min: 168, max: 210 },
-            hydration_ml_per_day: { min: 3150, max: 4200 },
-            meal_structure: "3 core meals",
-          },
-          SPP: {
-            carbs_g_per_day: { min: 315, max: 630 },
-          },
-        },
-      },
-      recovery: {
-        by_phase: {
-          GPP: {
-            sleep_hours_target: [8, 9],
-            phase_focus: ["Reset sleep routine"],
-          },
-        },
-      },
-    },
-  } satisfies StructuredPlan;
-
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2030, 0, 1)} />);
-
-  // The week strip exposes both weeks as pills.
-  assert.equal(html.includes("W1"), true);
-  assert.equal(html.includes("W2"), true);
-  // Recovery and Nutrition sit in their own collapsed sections near the bottom
-  // (after the weeks), each toggled independently.
-  assert.equal(html.includes("Show recovery"), true);
-  assert.equal(html.includes("Show nutrition"), true);
-  assert.equal(html.indexOf("Show recovery") > html.indexOf("W2"), true);
-  assert.equal(html.indexOf("Show nutrition") > html.indexOf("W2"), true);
-  // Deterministic per-phase content still renders inside the support sections.
-  assert.equal(html.includes("General prep"), true);
 });
 
 test("renders a coach-led / sparring day with no app blocks as its own card", () => {
@@ -2906,20 +2831,23 @@ test("the effort stat reads in plain words, never as a raw enum token", () => {
   assert.deepEqual(glossaryTerms(html), ["Intent"]);
 });
 
-test("recovery items render one per line instead of a semicolon run-on", () => {
+test("plan page shows no recovery or nutrition section, even for legacy plans", () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    nutrition: {
+      summary: "Eat to fuel training.",
+      daily_focus: "Protein at every meal.",
+      training_day_guidance: "",
+      fight_week_guidance: "",
+    },
     deterministic_support: {
+      nutrition: { by_phase: { GPP: { protein_g_per_day: { min: 140, max: 170 } } } },
       recovery: {
         by_phase: {
           GPP: {
             sleep_hours_target: [8, 9],
-            core_strategies: [
-              "Daily breathwork (5-10 min post-session)",
-              "Optional contrast shower (comfort-based; avoid if it disrupts sleep)",
-              "8-9 h sleep/night + 90-min blue-light cutoff",
-            ],
+            core_strategies: ["Daily breathwork (5-10 min post-session)"],
           },
         },
       },
@@ -2927,12 +2855,12 @@ test("recovery items render one per line instead of a semicolon run-on", () => {
     weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "GPP", days: [] }],
   } satisfies StructuredPlan;
 
-  const html = renderToStaticMarkup(<RecoveryCard plan={plan} />);
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
 
-  // The entry's own semicolon stays inside its line; nothing is glued on after it.
-  assert.equal(html.includes("<li>Optional contrast shower (comfort-based; avoid if it disrupts sleep)</li>"), true);
-  assert.equal(html.includes("disrupts sleep); "), false);
-  assert.equal(countOccurrences(html, '<ul class="sp-kv-items">'), 1);
+  assert.equal(html.includes("Daily breathwork"), false);
+  assert.equal(html.includes("Eat to fuel training."), false);
+  assert.equal(html.includes("sp-recovery"), false);
+  assert.equal(html.includes("sp-nutrition"), false);
 });
 
 

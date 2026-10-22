@@ -1,10 +1,11 @@
 """Tests for the Stage 1 computed-support carry-through (PR-4).
 
-Stage 1 computes nutrition/recovery/mindset numbers deterministically. These
-tests pin that those numbers are emitted as structured data, bundled into the
-planning brief, and fed UNTRUNCATED into the Stage 1 -> structured_plan
-conversion prompt, with acute weight-cut / supplement dosing kept under a
-coach-gated sub-section.
+Stage 1 computes nutrition/mindset numbers deterministically. These tests pin
+that those numbers are emitted as structured data and bundled into the planning
+brief, with acute weight-cut / supplement dosing kept under a coach-gated
+sub-section. Nutrition is Stage 1-only: the Stage 1 -> structured_plan
+conversion prompt carries the mindset and weight-cut risk bands, never the
+nutrition guidance.
 """
 
 import asyncio
@@ -13,7 +14,6 @@ import json
 from fightcamp.main import generate_plan
 from fightcamp.mindset_module import compute_mindset_plan
 from fightcamp.nutrition import compute_nutrition_targets
-from fightcamp.recovery import compute_recovery_plan
 from fightcamp.stage2_payload import build_computed_support
 
 from api.structured_plan_generation import build_structured_plan_prompt
@@ -115,45 +115,28 @@ def test_coach_gated_dosing_never_leaks_to_athlete_facing_fields():
         "weight_cut_risk": True, "weight_cut_pct": 7.0, "age": 38,
     }
     nutrition = compute_nutrition_targets(flags=flags)
-    recovery = compute_recovery_plan(flags)
 
     # Exact acute-cut + supplement dosing that is coach/medical-gated only.
-    # (Generic recovery modalities like a weekly float tank/sauna session are
-    # athlete-safe; only the precise dosing/manipulation numbers are gated.)
     sensitive = [
         "bicarbonate", "magnesium", "taurine", "mmol", "150%",
         "g_per_kg", "refeed",
     ]
 
-    for block in (nutrition, recovery):
-        assert "coach_gated" in block, "expected gated dosing for this scenario"
-        athlete_facing = {k: v for k, v in block.items() if k != "coach_gated"}
-        blob = json.dumps(athlete_facing).lower()
-        for token in sensitive:
-            assert token.lower() not in blob, f"{token!r} leaked into athlete-facing fields"
-        # The athlete-facing weight-cut summary is risk band + supervision only.
-        assert set(block["weight_cut"]) == {"active", "risk_band", "supervision_required"}
+    assert "coach_gated" in nutrition, "expected gated dosing for this scenario"
+    athlete_facing = {k: v for k, v in nutrition.items() if k != "coach_gated"}
+    blob = json.dumps(athlete_facing).lower()
+    for token in sensitive:
+        assert token.lower() not in blob, f"{token!r} leaked into athlete-facing fields"
+    # The athlete-facing weight-cut summary is risk band + supervision only.
+    assert set(nutrition["weight_cut"]) == {"active", "risk_band", "supervision_required"}
 
     # And via the full bundle the same holds for every active phase.
     support = build_computed_support(flags=flags, phases=["GPP", "SPP", "TAPER"])
-    for phase_block in list(support["nutrition"]["by_phase"].values()) + list(
-        support["recovery"]["by_phase"].values()
-    ):
+    for phase_block in support["nutrition"]["by_phase"].values():
         athlete_facing = {k: v for k, v in phase_block.items() if k != "coach_gated"}
         blob = json.dumps(athlete_facing).lower()
         for token in sensitive:
             assert token.lower() not in blob, f"{token!r} leaked in bundle"
-
-
-def test_recovery_plan_structure_and_gating():
-    plan = compute_recovery_plan({"phase": "TAPER", "fatigue": "high", "age": 38,
-                                  "weight_cut_risk": True, "weight_cut_pct": 6.5})
-    assert plan["phase"] == "TAPER"
-    assert plan["age_adjustments"]  # age >= 35
-    assert plan["fatigue_flags"]
-    assert plan["weight_cut"]["risk_band"] == "severe"
-    assert plan["weight_cut"]["supervision_required"] is True
-    assert "severe_cut_recovery" in plan["coach_gated"]
 
 
 def test_mindset_plan_carries_phase_cues():
@@ -186,7 +169,7 @@ def test_build_computed_support_only_includes_active_phases():
     )
     assert support["schema_version"] == "computed_support.v1"
     assert list(support["nutrition"]["by_phase"]) == ["GPP"]  # de-duped
-    assert list(support["recovery"]["by_phase"]) == ["GPP"]
+    assert "recovery" not in support
 
 
 def test_prompt_carries_computed_support_untruncated():
@@ -202,9 +185,12 @@ def test_prompt_carries_computed_support_untruncated():
     prompt = build_structured_plan_prompt(plan_markdown="PLAN", planning_brief=brief)
 
     assert "STAGE 1 COMPUTED SUPPORT" in prompt
-    # The whole support block survives (untruncated): its closing braces are present.
-    support_json = json.dumps(support, ensure_ascii=False)
-    assert support_json in prompt
+    # The mindset block survives untruncated.
+    assert json.dumps(support["mindset"], ensure_ascii=False) in prompt
+    # Nutrition guidance never reaches Stage 2; only the weight-cut risk bands do.
+    assert '"nutrition": {"by_phase"' not in prompt
+    assert "protein_g_per_day" not in prompt
+    assert '"weight_cut": {"by_phase"' in prompt
     # And the rest of the brief is still capped (filler partially clipped).
     assert "PLANNING BRIEF" in prompt
 
@@ -226,5 +212,5 @@ def test_real_generation_attaches_computed_support_to_planning_brief():
 
     assert support["schema_version"] == "computed_support.v1"
     assert support["nutrition"]["by_phase"], "nutrition numbers must be carried"
-    assert support["recovery"]["by_phase"], "recovery numbers must be carried"
+    assert "recovery" not in support
     assert "phase_cues" in support["mindset"]

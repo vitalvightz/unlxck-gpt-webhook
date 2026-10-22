@@ -60,7 +60,6 @@ from .exercise_identity import (
     reconcile_exercise_keys,
 )
 from .structured_plan_safety import (
-    athlete_safe_support,
     audit_structured_plan,
     is_minor_support,
     split_findings,
@@ -2670,20 +2669,29 @@ def bank_conditioning_to_block(entry: dict[str, Any]) -> dict[str, Any]:
     return _normalize_block(block)
 
 
-def _with_deterministic_support(
-    plan_dict: dict[str, Any], computed_support: dict[str, Any] | None
-) -> dict[str, Any]:
-    """Merge an athlete-safe projection of computed_support into the plan dict.
+def _conversion_support(computed_support: Any) -> Any:
+    """computed_support as the conversion sees it: no nutrition guidance.
 
-    Deterministic-first: Stage 1's computed nutrition/recovery numbers are placed
-    onto ``structured_plan.deterministic_support`` so the athlete frontend can
-    render them directly (the raw ``computed_support`` — with ``coach_gated`` —
-    is never exposed). No-op when there is nothing usable to project.
+    Nutrition is Stage 1-only, so macros, hydration, fuel timing and the
+    coach-gated dosing never reach Stage 2. Only each phase's weight-cut risk
+    band survives, because the weight-cut severity gate is a safety rule.
     """
-    projection = athlete_safe_support(computed_support)
-    if projection:
-        plan_dict["deterministic_support"] = projection
-    return plan_dict
+    if not isinstance(computed_support, dict):
+        return computed_support
+    support = {
+        key: value
+        for key, value in computed_support.items()
+        if key not in {"nutrition", "athlete_facing_note"}
+    }
+    by_phase = (computed_support.get("nutrition") or {}).get("by_phase") or {}
+    weight_cut_by_phase = {
+        phase: entry["weight_cut"]
+        for phase, entry in by_phase.items()
+        if isinstance(entry, dict) and isinstance(entry.get("weight_cut"), dict)
+    }
+    if weight_cut_by_phase:
+        support["weight_cut"] = {"by_phase": weight_cut_by_phase}
+    return support
 
 
 # Under-18 cards: the conversion model never sees the refusal note or any
@@ -2729,15 +2737,26 @@ def _minor_conversion_support(node: Any) -> Any:
 
 
 def _with_minor_weight_cut_note(plan_dict: dict[str, Any]) -> dict[str, Any]:
-    """Append the verbatim refusal note to a minor card's nutrition summary."""
+    """Add the verbatim refusal note to a minor card's nutrition summary and notes.
+
+    The plan page no longer shows nutrition, so the note also goes into
+    plan_notes, which the header renders.
+    """
     nutrition = plan_dict.get("nutrition")
-    if not isinstance(nutrition, dict):
-        return plan_dict
-    summary = str(nutrition.get("summary") or "").strip()
-    if MINOR_WEIGHT_CUT_NOTE in summary:
-        return plan_dict
-    note_summary = f"{summary} {MINOR_WEIGHT_CUT_NOTE}".strip()
-    return {**plan_dict, "nutrition": {**nutrition, "summary": note_summary}}
+    if isinstance(nutrition, dict):
+        summary = str(nutrition.get("summary") or "").strip()
+        if MINOR_WEIGHT_CUT_NOTE not in summary:
+            note_summary = f"{summary} {MINOR_WEIGHT_CUT_NOTE}".strip()
+            plan_dict = {**plan_dict, "nutrition": {**nutrition, "summary": note_summary}}
+    notes = plan_dict.get("plan_notes")
+    notes = list(notes) if isinstance(notes, list) else []
+    if not any(
+        isinstance(note, dict) and MINOR_WEIGHT_CUT_NOTE in str(note.get("text") or "")
+        for note in notes
+    ):
+        notes.append({"category": "weight_cut", "label": None, "text": MINOR_WEIGHT_CUT_NOTE})
+        plan_dict = {**plan_dict, "plan_notes": notes}
+    return plan_dict
 
 
 def _open_plan_spec_from_brief(planning_brief: Any) -> dict[str, Any] | None:
@@ -3442,7 +3461,7 @@ def build_structured_plan_outcome(
                 salvage_warnings = candidate_warnings
     first_errors = [*first.errors, *salvage_refusals]
     if first.ok and first.plan is not None:
-        plan_dict = _with_deterministic_support(first.plan.model_dump(mode="json"), computed_support)
+        plan_dict = first.plan.model_dump(mode="json")
         plan_dict = _merge_locked_content(plan_dict, planning_brief, raw_markdown)
         unfaithful = check_structured_faithfulness(plan_dict, raw_markdown, planning_brief)
         first_errors, first_warnings = _split_faithfulness(unfaithful)
@@ -3488,7 +3507,7 @@ def build_structured_plan_outcome(
             cleaned, repair_fn=_clean_repair, raw_markdown=raw_markdown or None
         )
     if repaired.ok and repaired.plan is not None:
-        plan_dict = _with_deterministic_support(repaired.plan.model_dump(mode="json"), computed_support)
+        plan_dict = repaired.plan.model_dump(mode="json")
         plan_dict = _merge_locked_content(plan_dict, planning_brief, raw_markdown)
         unfaithful = check_structured_faithfulness(plan_dict, raw_markdown, planning_brief)
         repaired_errors, repaired_warnings = _split_faithfulness(unfaithful)
@@ -3786,15 +3805,14 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   "Active notes" block and footer "End of plan notes" — in plan_notes[]. Each
   entry is {{"category": one of weight_cut|injury|nutrition|training|recovery|
   general, "label": optional short label, "text": the reminder}}. Use plan_notes
-  for the active weight-cut summary, injury/wound handling, nutrition reminders,
-  and general non-negotiables. Keep stop/modify/report SAFETY thresholds in
-  red_flag_rules and full nutrition macros in nutrition — plan_notes is for the
-  brief, always-on context. A weight_cut note is a brief, calm statement of the
+  for the active weight-cut summary, injury/wound handling and general
+  non-negotiables. Keep stop/modify/report SAFETY thresholds in red_flag_rules —
+  plan_notes is for the brief, always-on context. A weight_cut note is a brief, calm statement of the
   active cut and how it shapes recovery/fuelling; it must NEVER contain acute-cut
   directives (no sauna, dehydration, water-loading, or sodium manipulation). Omit
   plan_notes entirely if the plan states none.
 - WEIGHT-CUT SEVERITY GATE. The deterministic layer grades every active cut into
-  a risk band (see STAGE 1 COMPUTED SUPPORT weight_cut.risk_band: none / moderate
+  a risk band (see STAGE 1 COMPUTED SUPPORT weight_cut.by_phase.*.risk_band: none / moderate
   / high / severe). Match the plan's alarm level to that band — do NOT shout
   medical warnings at a routine cut:
   * band "none" or "moderate": treat the cut as ordinary context. Give at most ONE
@@ -3809,8 +3827,10 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
     at "red" with requires_professional_support = true and a weight-cut
     red_flag_rule.
   Never escalate ABOVE the computed band. When in doubt, under-warn.
-- Provide nutrition with a summary and, where a weight cut applies, a
-  weight_cut_warning whose risk_level matches the computed band per the gate
+- Nutrition is not part of this plan: set nutrition summary, daily_focus,
+  training_day_guidance and fight_week_guidance to "" and never invent
+  macros, hydration or fuelling advice. Where a weight cut applies, give a
+  nutrition weight_cut_warning whose risk_level matches the computed band per the gate
   above. Weight-cut guidance is NEVER direct acute-cut instructions (no sauna,
   dehydration, water-loading, or sodium-manipulation directives).
 - When the plan states them, carry per-block detail into separate semantic fields:
@@ -3929,16 +3949,13 @@ session title/objective, plan_notes, mindset_anchor, nutrition prose):
   than attributing it to "the app".
 
 DETERMINISTIC AUTHORITY (when a "STAGE 1 COMPUTED SUPPORT" section is provided):
-- Treat STAGE 1 COMPUTED SUPPORT as AUTHORITATIVE for nutrition macros,
-  hydration, fuel timing, and weight-cut risk; for recovery sleep/fatigue rules;
-  and for mindset block classification and phase cues. It is the source of truth
-  for those numbers/classifications — the plan text only supplies wording.
-- Do NOT extract or output macro, hydration, or weight-cut values from the plan
-  text that conflict with computed support when computed support is present; use
-  the computed values and let the plan text contribute phrasing only.
+- Treat STAGE 1 COMPUTED SUPPORT as AUTHORITATIVE for weight-cut risk and for
+  mindset block classification and phase cues. It is the source of truth for
+  those classifications — the plan text only supplies wording.
+- Do NOT output a weight-cut risk that conflicts with computed support when
+  computed support is present.
 - Keep today_card brief: a short headline, readiness, and the day's mindset
-  anchor. Do NOT pack full nutrition detail into today_card — the NutritionCard
-  (plan-level "nutrition") owns full nutrition details.
+  anchor. Do NOT put nutrition detail into today_card.
 - red_flag_rules MUST contain only stop / modify / report safety rules. Do not
   put general training or nutrition content there.
 - Do NOT duplicate identical mindset anchors at both the day and session level —
@@ -4120,8 +4137,8 @@ def build_structured_plan_prompt(
         sections.append(f"EVENT/FIGHT DATE: {event_date}")
 
     if planning_brief:
-        # Carry Stage 1's own computed nutrition/recovery/mindset numbers
-        # through UNTRUNCATED so the conversion does not re-derive them from
+        # Carry Stage 1's own computed mindset classification and weight-cut
+        # risk bands through UNTRUNCATED so the conversion does not re-derive them from
         # compressed prose. The rest of the brief stays capped (it is broad
         # context, not source-of-truth numbers).
         computed_support = None
@@ -4133,6 +4150,7 @@ def build_structured_plan_prompt(
                     for key, value in computed_support.items()
                     if key != "injury_awareness"
                 }
+            computed_support = _conversion_support(computed_support)
             if is_minor:
                 computed_support = _minor_conversion_support(computed_support)
 
@@ -4161,20 +4179,15 @@ def build_structured_plan_prompt(
                 support_json = ""
             if support_json and is_minor:
                 sections.append(
-                    "STAGE 1 COMPUTED SUPPORT (authoritative nutrition/recovery/"
-                    "mindset numbers — use these exact values when the plan "
-                    "covers nutrition, recovery, or mental coaching; do not "
-                    "invent or round differently):\n" + support_json
+                    "STAGE 1 COMPUTED SUPPORT (authoritative mindset "
+                    "classification — use these exact values; do not invent "
+                    "or round differently):\n" + support_json
                 )
             elif support_json:
                 sections.append(
-                    "STAGE 1 COMPUTED SUPPORT (authoritative nutrition/recovery/"
-                    "mindset numbers — use these exact values when the plan "
-                    "covers nutrition, recovery, or mental coaching; do not "
-                    "invent or round differently). The `coach_gated` sub-sections "
-                    "hold acute weight-cut and supplement dosing: keep them for "
-                    "coach/medical use only and NEVER surface them directly to "
-                    "the athlete:\n" + support_json
+                    "STAGE 1 COMPUTED SUPPORT (authoritative weight-cut risk "
+                    "bands and mindset classification — use these exact values; "
+                    "do not invent or round differently):\n" + support_json
                 )
 
     sections.append(

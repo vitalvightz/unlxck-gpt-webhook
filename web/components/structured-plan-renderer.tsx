@@ -34,17 +34,10 @@ import {
   isDeEmphasisedWeightCutSafety,
   planNoteLabel,
   formatSessionObjective,
-  formatWeightCutBand,
-  getDeterministicNutritionPhases,
-  getDeterministicRecoveryPhases,
   getSessionCoachingLines,
   getSessions,
   getStringList,
   getWeeks,
-  hasNutrition,
-  normalizeSupportPhaseKey,
-  nutritionPhaseRows,
-  recoveryPhaseView,
   redFlagView,
   resolvedWeekPhase,
   selectBlockMetric,
@@ -109,9 +102,7 @@ import {
   stripSafetyOwnedStopRules,
 } from "@/lib/block-display-guardrails";
 import type {
-  DeterministicNutritionPhase,
   ExerciseMedia,
-  DeterministicRecoveryPhase,
   MindsetAnchor,
   PlanScheduleContext,
   RehabLabelPolicy,
@@ -2216,294 +2207,6 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
   );
 }
 
-/** Athlete-safe deterministic weight-cut line: risk band + supervision only. */
-function DeterministicWeightCutLine({
-  weightCut,
-}: {
-  weightCut: { band: string; supervisionRequired: boolean } | null;
-}) {
-  if (!weightCut) {
-    return null;
-  }
-  return (
-    <p className="sp-warning">
-      <span className="sp-tag">{titleize(weightCut.band)} weight-cut risk</span>
-      {weightCut.supervisionRequired ? ". Qualified supervision required." : ""}
-    </p>
-  );
-}
-
-/** Plan nutrition prose (the legacy LLM/string fields) — fallback only. */
-function NutritionProse({ plan }: { plan: StructuredPlan }) {
-  const nutrition = plan.nutrition;
-  const rows: Array<{
-    label: string;
-    value: string | null;
-    wide?: boolean;
-    wideMobile?: boolean;
-  }> = [
-    { label: "Summary", value: cleanText(nutrition?.summary) },
-    { label: "Daily", value: cleanText(nutrition?.daily_focus) },
-    { label: "Training days", value: cleanText(nutrition?.training_day_guidance) },
-    { label: "Fight week", value: cleanText(nutrition?.fight_week_guidance) },
-  ].filter((row) => row.value);
-  const weightCut = cleanText(nutrition?.weight_cut_warning?.display_text);
-  const cutRisk = cleanText(nutrition?.weight_cut_warning?.risk_level);
-  const needsSupport = nutrition?.weight_cut_warning?.requires_professional_support === true;
-  return (
-    <>
-      <ul className="sp-kv-list">
-        {rows.map((row) => (
-          <li key={row.label}>
-            <span className="sp-kv-label">{row.label}</span>
-            <span>{row.value}</span>
-          </li>
-        ))}
-      </ul>
-      {weightCut ? (
-        <p className="sp-warning">
-          {cutRisk && cutRisk !== "none" ? (
-            <>
-              <span className="sp-tag">{titleize(cutRisk)} risk</span>{" "}
-            </>
-          ) : null}
-          {weightCut}
-          {needsSupport
-            ? `${/[.!?]$/.test(String(weightCut).trim()) ? " " : ". "}Qualified supervision required.`
-            : ""}
-        </p>
-      ) : null}
-    </>
-  );
-}
-
-type NutritionPhaseItem = {
-  phase: string;
-  phaseKey: string | null;
-  rows: { label: string; value: string }[];
-  weightCut: { band: string; supervisionRequired: boolean } | null;
-};
-
-type RecoveryPhaseItem = {
-  phase: string;
-  phaseKey: string | null;
-  view: ReturnType<typeof recoveryPhaseView>;
-  lists: { label: string; items: string[] }[];
-};
-
-/** Index of the support phase matching the viewed week (else the first phase),
- * so nutrition/recovery open on the phase the athlete is actually looking at. */
-function resolveActiveSupportPhaseIndex(
-  items: { phaseKey: string | null }[],
-  activePhaseKey: string | null,
-): number {
-  if (activePhaseKey) {
-    const match = items.findIndex((item) => item.phaseKey === activePhaseKey);
-    if (match >= 0) {
-      return match;
-    }
-  }
-  return 0;
-}
-
-function getNutritionPhaseItems(plan: StructuredPlan): NutritionPhaseItem[] {
-  return getDeterministicNutritionPhases(plan)
-    .map(({ phase, entry }: { phase: string; entry: DeterministicNutritionPhase }) => {
-      const rows = nutritionPhaseRows(entry);
-      const weightCut = formatWeightCutBand(entry.weight_cut);
-      if (rows.length === 0 && !weightCut) {
-        return null;
-      }
-      return { phase, phaseKey: normalizeSupportPhaseKey(phase), rows, weightCut };
-    })
-    .filter((item): item is NutritionPhaseItem => item !== null);
-}
-
-function getRecoveryPhaseItems(plan: StructuredPlan): RecoveryPhaseItem[] {
-  return getDeterministicRecoveryPhases(plan)
-    .map(({ phase, entry }: { phase: string; entry: DeterministicRecoveryPhase }) => {
-      const view = recoveryPhaseView(entry);
-      const lists: { label: string; items: string[] }[] = [
-        { label: "Core", items: view.coreStrategies },
-        { label: "Phase focus", items: view.phaseFocus },
-        { label: "Fatigue", items: view.fatigue },
-        { label: "Age", items: view.ageAdjustments },
-      ].filter((group) => group.items.length > 0);
-      if (!view.sleep && lists.length === 0 && !view.weightCut) {
-        return null;
-      }
-      return { phase, phaseKey: normalizeSupportPhaseKey(phase), view, lists };
-    })
-    .filter((item): item is RecoveryPhaseItem => item !== null);
-}
-
-function NutritionPhaseCard({
-  item,
-  defaultOpen,
-  syncKey,
-  displayLabel,
-}: {
-  item: NutritionPhaseItem;
-  defaultOpen?: boolean;
-  syncKey?: string | null;
-  displayLabel?: string;
-}) {
-  const phaseLabel = displayLabel || titleize(item.phase);
-  return (
-    <section className="sp-card sp-support-card sp-nutrition">
-      <div className="sp-support-head">
-        <p className="sp-eyebrow">Nutrition</p>
-        <span className="sp-tag">{phaseLabel}</span>
-      </div>
-      <CollapsibleSection
-        title={phaseLabel}
-        detailLabel={`${phaseLabel} nutrition`}
-        defaultOpen={defaultOpen}
-        syncKey={syncKey}
-        className="sp-nutrition-phase"
-      >
-        <ul className="sp-kv-list">
-          {item.rows.map((row) => (
-            <li key={row.label}>
-              <span className="sp-kv-label">{row.label}</span>
-              <span>{row.value}</span>
-            </li>
-          ))}
-        </ul>
-        <DeterministicWeightCutLine weightCut={item.weightCut} />
-      </CollapsibleSection>
-    </section>
-  );
-}
-
-function RecoveryPhaseCard({
-  item,
-  defaultOpen,
-  syncKey,
-  displayLabel,
-}: {
-  item: RecoveryPhaseItem;
-  defaultOpen?: boolean;
-  syncKey?: string | null;
-  displayLabel?: string;
-}) {
-  const phaseLabel = displayLabel || titleize(item.phase);
-  return (
-    <section className="sp-card sp-support-card sp-recovery">
-      <div className="sp-support-head">
-        <p className="sp-eyebrow">Recovery</p>
-        <span className="sp-tag">{phaseLabel}</span>
-      </div>
-      <CollapsibleSection
-        title={phaseLabel}
-        detailLabel={`${phaseLabel} recovery`}
-        defaultOpen={defaultOpen}
-        syncKey={syncKey}
-        className="sp-recovery-phase"
-      >
-        <ul className="sp-kv-list">
-          {item.view.sleep ? (
-            <li>
-              <span className="sp-kv-label">Sleep</span>
-              <span>{item.view.sleep}</span>
-            </li>
-          ) : null}
-          {item.lists.map((group) => (
-            <li key={group.label}>
-              <span className="sp-kv-label">{group.label}</span>
-              {/* One line per item: entries carry their own semicolons
-                  ("comfort-based; avoid if…"), so a "; " join read as text
-                  cut off mid-sentence. */}
-              <ul className="sp-kv-items">
-                {group.items.map((entry, entryIndex) => (
-                  <li key={`${entryIndex}-${entry}`}>{entry}</li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
-        <DeterministicWeightCutLine weightCut={item.view.weightCut} />
-      </CollapsibleSection>
-    </section>
-  );
-}
-
-// Owns the full nutrition details. Deterministic Stage 1 macros/hydration/fuel
-// timing win when present; the legacy prose fields are the fallback only. Never
-// renders coach_gated (it is stripped server-side before reaching the frontend).
-export function NutritionCard({
-  plan,
-  activePhaseKey = null,
-  openOngoing = false,
-}: {
-  plan: StructuredPlan;
-  /** Normalized phase key of the week the athlete is viewing. The matching
-   * phase opens by default so a taper/SPP week does not land on expanded GPP. */
-  activePhaseKey?: string | null;
-  openOngoing?: boolean;
-}) {
-  const items = getNutritionPhaseItems(plan);
-  if (items.length === 0 && !hasNutrition(plan)) {
-    return null;
-  }
-  if (items.length === 0) {
-    return (
-      <section className="sp-card sp-nutrition">
-        <p className="sp-eyebrow">Nutrition</p>
-        <NutritionProse plan={plan} />
-      </section>
-    );
-  }
-  const openIndex = resolveActiveSupportPhaseIndex(items, activePhaseKey);
-  const visibleItems = openOngoing ? items.slice(openIndex, openIndex + 1) : items;
-  return (
-    <div className="sp-phase-support-grid">
-      {visibleItems.map((item, index) => (
-        <NutritionPhaseCard
-          key={item.phase}
-          item={item}
-          defaultOpen={openOngoing || index === openIndex}
-          syncKey={activePhaseKey ?? ""}
-          displayLabel={openOngoing ? "Current block" : undefined}
-        />
-      ))}
-    </div>
-  );
-}
-
-// Owns recovery detail (sleep / fatigue / phase focus / core actions). Renders
-// deterministic Stage 1 recovery; never coach_gated. Stop/modify/report
-// thresholds stay with RedFlagsCard, so this card does not repeat them.
-export function RecoveryCard({
-  plan,
-  activePhaseKey = null,
-  openOngoing = false,
-}: {
-  plan: StructuredPlan;
-  activePhaseKey?: string | null;
-  openOngoing?: boolean;
-}) {
-  const items = getRecoveryPhaseItems(plan);
-  if (items.length === 0) {
-    return null;
-  }
-  const openIndex = resolveActiveSupportPhaseIndex(items, activePhaseKey);
-  const visibleItems = openOngoing ? items.slice(openIndex, openIndex + 1) : items;
-  return (
-    <div className="sp-phase-support-grid">
-      {visibleItems.map((item, index) => (
-        <RecoveryPhaseCard
-          key={item.phase}
-          item={item}
-          defaultOpen={openOngoing || index === openIndex}
-          syncKey={activePhaseKey ?? ""}
-          displayLabel={openOngoing ? "Current block" : undefined}
-        />
-      ))}
-    </div>
-  );
-}
-
 /** Threshold at which the week rail switches from "share the width evenly" to
  * "hold a readable width and scroll". Up to this many weeks fit the strip
  * without scrolling; beyond it the rail shows ~this many per viewport. */
@@ -2915,7 +2618,6 @@ export function StructuredPlanRenderer({
   const safePos = effectivePos >= 0 && effectivePos < weeks.length ? effectivePos : 0;
   const selectedWeek = weeks[safePos];
 
-  const progressionNotes = cleanText(plan.progression_notes);
   const rawFallback = cleanText(plan.raw_markdown_fallback);
   const safetyOwnershipTexts = useMemo(
     () => [
@@ -2932,8 +2634,6 @@ export function StructuredPlanRenderer({
   const scheduleUnavailable =
     openOngoing && scheduleContext?.projection_status === "unavailable";
   const showRawFallback = Boolean(rawFallback) && (isAdmin || scheduleUnavailable);
-  const hasNutritionSupport = getNutritionPhaseItems(plan).length > 0 || hasNutrition(plan);
-  const hasRecoverySupport = getRecoveryPhaseItems(plan).length > 0;
   const dayList = useMemo(() => (selectedWeek ? getDays(selectedWeek) : []), [selectedWeek]);
   const dayTimeline = useMemo(
     () => buildDayTimeline(dayList, !openOngoing),
@@ -2950,8 +2650,6 @@ export function StructuredPlanRenderer({
     : (cleanText(currentTrainingDayIso)?.slice(0, 10) ??
       cleanText(scheduleContext?.current_training_day)?.slice(0, 10) ??
       (calendarDay ? toLocalIsoDay(calendarDay) : null));
-  // Open the support phase that matches the week the athlete is viewing.
-  const activeSupportPhaseKey = normalizeSupportPhaseKey(resolvedWeekPhase(selectedWeek));
   // A block that starts on a future Monday — an open plan generated late enough
   // in the week to join the next one — has no current day to mark. Say when it
   // starts rather than showing a plain week with no "Today" anywhere on it and
@@ -3118,44 +2816,6 @@ export function StructuredPlanRenderer({
             )}
           </div>
         </>
-      ) : null}
-
-      {progressionNotes ? (
-        <CollapsibleSection
-          title="Progression notes"
-          detailLabel="notes"
-          className="sp-progression"
-        >
-          <p className="sp-block-purpose">{progressionNotes}</p>
-        </CollapsibleSection>
-      ) : null}
-
-      {hasRecoverySupport ? (
-        <CollapsibleSection
-          title="Recovery"
-          detailLabel="recovery"
-          className="cm-support-section"
-        >
-          <RecoveryCard
-            plan={plan}
-            activePhaseKey={activeSupportPhaseKey}
-            openOngoing={openOngoing}
-          />
-        </CollapsibleSection>
-      ) : null}
-
-      {hasNutritionSupport ? (
-        <CollapsibleSection
-          title="Nutrition"
-          detailLabel="nutrition"
-          className="cm-support-section"
-        >
-          <NutritionCard
-            plan={plan}
-            activePhaseKey={activeSupportPhaseKey}
-            openOngoing={openOngoing}
-          />
-        </CollapsibleSection>
       ) : null}
 
       {showRawFallback ? (
