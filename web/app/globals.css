@@ -1496,6 +1496,21 @@ html[data-theme="light"] .cta:disabled {
   margin-top: 8px;
 }
 
+.onboarding-action-back {
+  gap: 8px;
+}
+
+.onboarding-action-back svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .auth-success-state {
   display: grid;
   gap: 16px;
@@ -9725,7 +9740,8 @@ html[data-theme="light"] .today-injury-other-warning {
 
 /* Phone workspace chrome (+ Create, account button); shown only at phone widths. */
 .phone-create-button,
-.phone-account-button {
+.phone-account-button,
+.phone-top-band {
   display: none;
 }
 
@@ -10525,7 +10541,7 @@ html[data-theme="light"] .today-injury-other-warning {
 
   .onboarding-panel {
     gap: 18px;
-    padding-bottom: calc(110px + var(--safe-area-bottom));
+    padding-bottom: calc(76px + var(--safe-area-bottom));
   }
 
   .onboarding-heading-desktop,
@@ -10612,13 +10628,13 @@ html[data-theme="light"] .today-injury-other-warning {
 
   .onboarding-action-bar {
     position: fixed;
-    right: calc(14px + var(--safe-area-right));
-    bottom: calc(14px + var(--safe-area-bottom));
-    left: calc(14px + var(--safe-area-left));
+    right: calc(10px + var(--safe-area-right));
+    bottom: calc(10px + var(--safe-area-bottom));
+    left: calc(10px + var(--safe-area-left));
     z-index: 70;
-    padding: 10px 12px;
+    padding: 6px;
     border: 1px solid rgba(181, 18, 43, 0.18);
-    border-radius: 18px;
+    border-radius: 16px;
     background: linear-gradient(180deg, rgba(18, 20, 24, 0.98), rgba(10, 12, 15, 0.98));
     box-shadow: 0 20px 44px rgba(0, 0, 0, 0.34);
     align-items: stretch;
@@ -10638,45 +10654,58 @@ html[data-theme="light"] .today-injury-other-warning {
 
   html[data-mobile-tab-bar="active"] .onboarding-action-bar,
   html[data-mobile-tab-bar="stacked"] .onboarding-action-bar {
-    bottom: calc(14px + var(--mobile-tab-bar-clearance));
+    bottom: calc(8px + var(--mobile-tab-bar-clearance));
   }
 
   html[data-mobile-tab-bar="active"] .onboarding-panel,
   html[data-mobile-tab-bar="stacked"] .onboarding-panel {
-    padding-bottom: calc(110px + var(--mobile-tab-bar-clearance));
+    padding-bottom: calc(76px + var(--mobile-tab-bar-clearance));
   }
 
   .onboarding-action-bar-copy {
     display: none;
   }
 
+  /* One row: [←] [Save draft] [Continue ———]. Back collapses to an icon
+     and Save draft sizes to its label (autosave already runs), so the
+     primary CTA takes the rest of the width. */
   .onboarding-action-buttons {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    flex-wrap: nowrap;
+    gap: 6px;
     width: 100%;
     margin-left: 0;
   }
 
-  /* Secondary actions (Save draft / Back) share a single row and split it
-     evenly. Using flex-basis: 0 means they always spread symmetrically
-     whether one or both are present — no leftover empty column. */
   .onboarding-action-secondary {
-    flex: 1 1 0;
+    flex: 0 0 auto;
+    width: auto;
     min-width: 0;
     min-height: 44px;
-    padding-inline: 8px;
+    padding-inline: 12px;
+    font-size: 13px;
+    white-space: nowrap;
   }
 
-  /* The primary CTA takes its own full-width row so longer labels like
-     "Generate plan" render on one line under normal conditions. It can still
-     wrap gracefully as a fallback on extremely narrow screens or with long
-     localized strings, avoiding overflow. */
+  .onboarding-action-back {
+    order: -1;
+    width: 44px;
+    padding: 0;
+  }
+
+  .onboarding-action-back .onboarding-action-label {
+    display: none;
+  }
+
   .onboarding-action-primary {
-    flex: 1 1 100%;
+    flex: 1 1 auto;
+    width: auto;
     min-width: 0;
     min-height: 44px;
-    padding-inline: 8px;
+    padding-inline: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .field textarea {
@@ -16955,6 +16984,20 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
   .mobile-nav-toggle[data-phone-hidden="true"],
   .app-sidebar[data-phone-hidden="true"] {
     display: none;
+  }
+
+  /* Locks the top band: an opaque strip the height of the buttons' row, fading
+     out at its lower edge, so scrolled content never shows around them. */
+  .phone-top-band {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 69;
+    display: block;
+    height: calc(var(--mobile-nav-offset-top) + var(--safe-area-top) + 52px);
+    background: linear-gradient(180deg, var(--bg-app) 0%, var(--bg-app) 82%, transparent 100%);
+    pointer-events: none;
   }
 
   .phone-create-button,

@@ -94,6 +94,8 @@ function PhoneWorkspaceBar({ pathname, identity }: { pathname: string; identity:
   const t = useTranslations("Navigation");
   return (
     <>
+      {/* Solid band behind both buttons so page content scrolls under it, not past them. */}
+      <div className="phone-top-band" aria-hidden="true" />
       {pathname === "/create" ? null : (
         <Link href="/create" className="phone-create-button">
           <span aria-hidden="true">+</span>

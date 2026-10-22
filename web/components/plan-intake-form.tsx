@@ -3448,8 +3448,9 @@ export function PlanIntakeForm() {
               {isPending ? t("saving") : t("saveDraft")}
             </button>
             {currentStep > 0 ? (
-              <button type="button" className="ghost-button onboarding-action-secondary" onClick={handleBack}>
-                {t("back")}
+              <button type="button" className="ghost-button onboarding-action-secondary onboarding-action-back" onClick={handleBack} aria-label={t("back")}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6" /></svg>
+                <span className="onboarding-action-label">{t("back")}</span>
               </button>
             ) : null}
             {currentStep < steps.length - 1 ? (
