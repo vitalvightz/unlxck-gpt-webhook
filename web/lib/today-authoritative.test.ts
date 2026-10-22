@@ -849,3 +849,36 @@ test("reviewed rehab uses one shared execution decision under reduced readiness"
   assert.equal(held.blocksCurrentSession, true);
   assert.equal(held.sessionOutcome, "blocked");
 });
+
+test("the backend session_hold is the one answer: a check-in hold is 'check in first', not blocked", () => {
+  const notCheckedIn = resolveTodayDecision({
+    ...BASE_STATE,
+    today: { ...BASE_STATE.today, recommendation_state: "not_checked_in", decision_tier: "not_checked_in" },
+    session_hold: { held: true, reason: "Complete today's check-in before starting.", source: "check_in" },
+  });
+  assert.equal(notCheckedIn.blocksCurrentSession, false);
+  assert.equal(notCheckedIn.canCompleteSession, false);
+
+  // Without health consent a check-in cannot be given, so none is required.
+  const noConsent = resolveTodayDecision({
+    ...BASE_STATE,
+    today: { ...BASE_STATE.today, recommendation_state: "not_checked_in", decision_tier: "not_checked_in" },
+    session_hold: { held: false, reason: null, source: null },
+  });
+  assert.equal(noConsent.canCompleteSession, true);
+
+  const injuryHeld = resolveTodayDecision({
+    ...BASE_STATE,
+    today: { ...BASE_STATE.today, decision_tier: "green" },
+    session_hold: { held: true, reason: "Your planned training conflicts with the current injury restrictions.", source: "injury" },
+  });
+  assert.equal(injuryHeld.blocksCurrentSession, true);
+  assert.equal(injuryHeld.canCompleteSession, false);
+
+  const clear = resolveTodayDecision({
+    ...BASE_STATE,
+    today: { ...BASE_STATE.today, decision_tier: "pull_back" },
+    session_hold: { held: false, reason: null, source: null },
+  });
+  assert.equal(clear.blocksCurrentSession, false);
+});

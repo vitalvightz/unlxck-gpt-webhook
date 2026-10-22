@@ -537,18 +537,21 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
   // for an older API response without that field.
   const blocksCurrentSession =
     sessionIsToday &&
+    // A missing check-in is "check in first", never a block; canCompleteSession gates it.
     (state.session_hold
-      ? state.session_hold.held
+      ? state.session_hold.held && state.session_hold.source !== "check_in"
       : Boolean(prescription?.safety_hold) || authoritativeTier === "stop" || (authoritativeTier === "pull_back" && !reviewedRehabAllowed));
   const severeInjuryBlocksCurrentSession =
     blocksCurrentSession &&
     !state.today.injury_hold_exempt &&
     Boolean(getActiveSevereInjury(state.open_injuries));
+  // session_hold answers check-in too: it is only required when it can be given (consent).
   const canCompleteSession =
     canCompleteTodaySession(state.today.next_session) &&
     sessionIsToday &&
-    authoritativeTier !== "not_checked_in" &&
-    !blocksCurrentSession;
+    (state.session_hold
+      ? !state.session_hold.held
+      : authoritativeTier !== "not_checked_in" && !blocksCurrentSession);
 
   return {
     recommendationState,

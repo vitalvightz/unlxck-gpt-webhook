@@ -215,11 +215,8 @@ def resolve_injury_policy(
         prescriptions[prescription.drill_id] = prescription
     # An explicit later injury-specific improvement resolves a prior setback
     # for baseline selection only. Preserve the original observations in storage.
-    # The latest Better after the setback clears it, even if Same followed.
-    setback = episode_setback_at(injury, exposures)
-    improvement = (_instant(injury.get("rehab_improvement_at")) or (_instant(injury.get("latest_reported_at"))
-                   if injury.get("latest_reported_status") == "improving" else None))
-    if injury.get("latest_reported_status") != "worse" and setback and improvement and improvement > setback:
+    setback, improvement = episode_setback_at(injury, exposures), _instant(injury.get("latest_reported_at"))
+    if injury.get("latest_reported_status") == "improving" and setback and improvement and improvement > setback:
         selection_exposures = [e for e in selection_exposures if (_instant(e.get("response_recorded_at") or e.get("created_at")
                               or (e.get("event_json") or e).get("occurred_at")) or improvement) >= improvement]
     # Use the existing bank/location aliases just as the bank lookup does.
@@ -712,6 +709,10 @@ def reconcile_session_prescription(
                   if readiness_hold and not restriction_hold
                   else "Your planned training conflicts with the current injury restrictions.")
         snapshot["training_hold_reason"] = detail
+        # Which rule held training, so every surface names the same cause.
+        snapshot["training_hold_source"] = ("readiness" if readiness_hold and not restriction_hold and not clearance_hold
+                                            and not any(d.get("outcome") == "medical_review" for d in decisions)
+                                            else "injury")
         if hold:
             snapshot.setdefault("safety_hold_reason", detail)
     snapshot["revision"] = content_hash(snapshot)

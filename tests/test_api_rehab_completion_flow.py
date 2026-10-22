@@ -97,8 +97,15 @@ def _seed_injury(store, *, region: str = "ankle", side: str = "left", **extra) -
     )
 
 
+def _check_in(client, plan_id: str = PLAN_ID) -> None:
+    """Logging today's session needs today's check-in (session_hold)."""
+    client.post("/api/today/checkin", headers=ATHLETE,
+                json={"plan_id": plan_id, "sleep": "good", "body": "normal", "pain": "none", "phase": "GPP"})
+
+
 def _today(client) -> str:
     """The server's own training day, read back rather than assumed."""
+    _check_in(client)
     resp = client.post(
         "/api/today/session-completion",
         headers=ATHLETE,
@@ -109,6 +116,7 @@ def _today(client) -> str:
 
 def _complete(client, *, status: str = "done", plan_id: str = PLAN_ID, **overrides):
     body = {"plan_id": plan_id, "session_id": SESSION_ID, "status": status, **overrides}
+    _check_in(client, plan_id)
     return client.post("/api/today/session-completion", headers=ATHLETE, json=body)
 
 

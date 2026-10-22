@@ -114,20 +114,33 @@ def _reported_entry(transition, policy, injury, as_of):
             and stamp is not None and stamp <= as_of)
 
 
-def _resolved_setback(injury, exposures, as_of):
-    """The athlete's latest answer wins: an explicit improvement reported after
-    the latest setback clears it. No rehab logging is required."""
-    setback = _latest_setback_at(injury, exposures)
-    if not setback or injury.get("latest_reported_status") == "worse":
+def _resolved_setback(policy, transition, injury, exposures, latest, performed, as_of):
+    """Bounded re-entry after a flare, using existing observations only.
+
+    See docs/rehab-progression-investigation.md for source scope and chronology.
+    This never clears clinical restrictions or supplies permission. Other
+    profiles/transitions retain their unresolved-negative hold.
+    """
+    if (not _permission_entry(transition, policy)
+            or not latest or not latest.response_consistent or latest.negative_reasons):
         return False
+    setback = _latest_setback_at(injury, exposures)
     improvements = [(stamp, report["id"]) for report in injury.get("rehab_improvement_reports", ())
-                    if (stamp := _instant(report.get("reported_at"))) and setback < stamp <= as_of]
+                    if (stamp := _instant(report.get("reported_at"))) and setback and setback < stamp <= as_of]
     if not improvements:
-        improvement = _improvement_at(injury)
-        if not improvement or not setback < improvement <= as_of:
+        return False
+    improvement, report_id = min(improvements)
+    if not setback or not improvement or not setback < improvement <= as_of:
+        return False
+    for event in latest.events:
+        # Current completion evidence records the frozen completed_at here.
+        # created_at only dates ingestion: a retry/backfill cannot make older
+        # work new. Legacy midnight markers remain conservative within a day.
+        performed_at = _instant(event.provenance.recorded_at)
+        if (event not in performed or not performed_at or not improvement < performed_at <= as_of
+                or event.response.during_response not in {"better", "same"}
+                or event.response.next_day_response not in {"better", "same"}):
             return False
-        improvements = [(improvement, None)]
-    improvement, report_id = max(improvements)
     return {"recovery_report_id": report_id, "recovery_reported_at": improvement.isoformat(),
             "resolved_setback_at": setback.isoformat()}
 
@@ -161,9 +174,8 @@ def evaluate_transition(transition: PathwayTransition, *, policy: ClinicalPolicy
     latest = performed_groups[-1] if performed_groups else None
     # Permission is an entry basis, not proof of tolerance. A known setback
     # always requires the declared recovery evidence, even after renewed advice.
-    cleared = _resolved_setback(injury, exposures, as_of)
     starter = (_reported_entry(transition, policy, injury, as_of)
-               and (cleared or not _latest_setback_at(injury, exposures)))
+               and not _latest_setback_at(injury, exposures) and not any(g.negative_reasons for g in groups))
     response_latest = groups[-1] if starter and groups else latest
     event_ids = {str(e.exposure_id) for e in events}
     unreadable_owned_work = False
@@ -183,16 +195,18 @@ def evaluate_transition(transition: PathwayTransition, *, policy: ClinicalPolicy
         if kind == "no_unresolved_setback":
             if injury.get("latest_reported_status") == "worse":
                 results.append(_result(requirement, FAIL, "current_report_worse"))
-            elif cleared:
-                results.append({**_result(requirement, PASS, "setback_resolved_by_improvement_and_reviewed_response"),
-                                **cleared})
             elif groups and groups[-1].negative_reasons:
                 results.append(_result(requirement, FAIL, groups[-1].negative_reasons[0], groups[-1].events))
             elif any(g.negative_reasons for g in groups) or _latest_setback_at(injury, exposures):
-                reason = ("unresolved_historical_negative_response" if any(g.negative_reasons for g in groups)
-                          else "unresolved_injury_checkin_setback")
-                results.append(_result(requirement, UNKNOWN, reason,
-                                       [e for g in groups if g.negative_reasons for e in g.events]))
+                resolution = _resolved_setback(policy, transition, injury, exposures, latest, performed, as_of)
+                if resolution:
+                    results.append({**_result(requirement, PASS, "setback_resolved_by_improvement_and_reviewed_response", latest.events),
+                                    **resolution})
+                else:
+                    reason = ("unresolved_historical_negative_response" if any(g.negative_reasons for g in groups)
+                              else "unresolved_injury_checkin_setback")
+                    results.append(_result(requirement, UNKNOWN, reason,
+                                           [e for g in groups if g.negative_reasons for e in g.events]))
             else:
                 results.append(_result(requirement, PASS, "no_negative_response"))
         elif kind == "complete_history":

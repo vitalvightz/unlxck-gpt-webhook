@@ -1213,7 +1213,7 @@ export type TodayCommandView = {
     limited_by: Array<{ injury_id: string; injury_episode_id: string; label: string }>;
   } | null;
   /** The backend's single answer to "is today's session blocked?". */
-  session_hold?: { held: boolean; reason: string | null; source: "readiness" | "injury" | null } | null;
+  session_hold?: { held: boolean; reason: string | null; source: "readiness" | "injury" | "check_in" | null } | null;
   live_prescription?: {
     revision: string;
     session: StructuredSession;

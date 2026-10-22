@@ -505,6 +505,14 @@ def _checkin_payload(**overrides) -> dict:
     return {**base, **overrides}
 
 
+def _checked_in_completion(store, *, athlete_id=ATHLETE, athlete_timezone="", payload, now=None, **kwargs):
+    """Starting or logging today's session needs today's check-in (session_hold)."""
+    submit_today_checkin(store, athlete_id=athlete_id, athlete_timezone=athlete_timezone,
+                         payload=_checkin_payload(plan_id=payload.get("plan_id", PLAN)), now=now)
+    return upsert_session_completion(store, athlete_id=athlete_id, athlete_timezone=athlete_timezone,
+                                     payload=payload, now=now, **kwargs)
+
+
 class TestTrainingDayPersistence:
     def test_0259_local_stores_previous_training_day(self):
         store = _store_with_plan()
@@ -2390,7 +2398,7 @@ class TestCommandView:
              "description": "neck muscle strain", "severity": "severe", "status": "open"},
         )
         now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
-        row = upsert_session_completion(
+        row = _checked_in_completion(
             store, athlete_id=ATHLETE, athlete_timezone="",
             payload={"plan_id": PLAN, "session_id": "2026-06-18-cue", "status": "done"}, now=now,
         )
@@ -2558,7 +2566,7 @@ class TestCommandView:
         assert active_view.today.session_label == "Today's session"
         assert active_view.today.next_session["calendar_date"] == "2026-06-18"
 
-        upsert_session_completion(
+        _checked_in_completion(
             store,
             athlete_id=ATHLETE,
             athlete_timezone="",
@@ -2583,7 +2591,7 @@ class TestCommandView:
         store.plans[PLAN]["structured_plan"] = _out_of_order_countdown_structured_plan()
         now = datetime(2026, 6, 23, 12, 0, tzinfo=timezone.utc)
 
-        upsert_session_completion(
+        _checked_in_completion(
             store,
             athlete_id=ATHLETE,
             athlete_timezone="",
@@ -2611,7 +2619,7 @@ class TestCommandView:
         store.plans[PLAN]["structured_plan"] = _out_of_order_countdown_structured_plan()
         now = datetime(2026, 6, 23, 12, 0, tzinfo=timezone.utc)
 
-        upsert_session_completion(
+        _checked_in_completion(
             store,
             athlete_id=ATHLETE,
             athlete_timezone="",
@@ -2799,7 +2807,7 @@ class TestSessionCompletion:
 
     def test_start_sets_started_at(self):
         store = _store_with_plan()
-        row = upsert_session_completion(
+        row = _checked_in_completion(
             store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="started")
         )
         assert row["status"] == "started"
@@ -2808,7 +2816,7 @@ class TestSessionCompletion:
 
     def test_done_sets_completed_at(self):
         store = _store_with_plan()
-        row = upsert_session_completion(
+        row = _checked_in_completion(
             store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="done")
         )
         assert row["status"] == "done"
@@ -2818,11 +2826,11 @@ class TestSessionCompletion:
     def test_modified_requires_modification_reason(self):
         store = _store_with_plan()
         with pytest.raises(HTTPException) as exc:
-            upsert_session_completion(
+            _checked_in_completion(
                 store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="modified")
             )
         assert exc.value.status_code == 422
-        row = upsert_session_completion(
+        row = _checked_in_completion(
             store,
             athlete_id=ATHLETE,
             athlete_timezone="",
@@ -2905,7 +2913,7 @@ class TestSessionCompletion:
             ATHLETE,
             {"source": "checkin", "plan_id": PLAN, "body_area": "calf", "severity": "moderate", "status": "open"},
         )
-        row = upsert_session_completion(
+        row = _checked_in_completion(
             store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="done")
         )
         assert row["status"] == "done"
@@ -2913,7 +2921,7 @@ class TestSessionCompletion:
     def test_resolved_severe_injury_does_not_block_completion_when_supplied(self):
         store = _store_with_plan()
         self._add_severe_injury(store, status="resolved")
-        row = upsert_session_completion(
+        row = _checked_in_completion(
             store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="done")
         )
         assert row["status"] == "done"
@@ -2921,10 +2929,10 @@ class TestSessionCompletion:
     def test_duplicate_completion_upserts_single_row(self):
         store = _store_with_plan()
         now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
-        upsert_session_completion(
+        _checked_in_completion(
             store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="started"), now=now
         )
-        upsert_session_completion(
+        _checked_in_completion(
             store,
             athlete_id=ATHLETE,
             athlete_timezone="",
@@ -2936,14 +2944,14 @@ class TestSessionCompletion:
 
     def test_completed_at_preserved_on_idempotent_resave(self):
         store = _store_with_plan()
-        first = upsert_session_completion(
+        first = _checked_in_completion(
             store,
             athlete_id=ATHLETE,
             athlete_timezone="",
             payload=self._payload(status="done"),
             now=datetime(2026, 6, 18, 10, 0, tzinfo=timezone.utc),
         )
-        resave = upsert_session_completion(
+        resave = _checked_in_completion(
             store,
             athlete_id=ATHLETE,
             athlete_timezone="",
@@ -2957,10 +2965,10 @@ class TestSessionCompletion:
     def test_backward_transition_clears_completed_at(self):
         store = _store_with_plan()
         now = datetime(2026, 6, 18, 10, 0, tzinfo=timezone.utc)
-        upsert_session_completion(
+        _checked_in_completion(
             store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="done"), now=now
         )
-        back = upsert_session_completion(
+        back = _checked_in_completion(
             store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="started"), now=now
         )
         # Moving back to started keeps started_at but clears completed_at.
@@ -2971,10 +2979,10 @@ class TestSessionCompletion:
     def test_reset_to_not_started_clears_both_timestamps(self):
         store = _store_with_plan()
         now = datetime(2026, 6, 18, 10, 0, tzinfo=timezone.utc)
-        upsert_session_completion(
+        _checked_in_completion(
             store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="done"), now=now
         )
-        reset = upsert_session_completion(
+        reset = _checked_in_completion(
             store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="not_started"), now=now
         )
         assert reset["started_at"] is None
@@ -3082,6 +3090,11 @@ class TestRetroLogCompletion:
 
     def test_todays_date_in_training_day_behaves_like_the_normal_flow(self):
         store = _store_with_plan()
+        # The normal flow: today's session needs today's check-in.
+        with pytest.raises(HTTPException) as exc:
+            self._upsert(store, training_day="2026-06-19", status="started")
+        assert exc.value.status_code == 409
+        submit_today_checkin(store, athlete_id=ATHLETE, athlete_timezone="", payload=_checkin_payload(), now=self.NOW)
         row = self._upsert(store, training_day="2026-06-19", status="started")
         assert row["training_day"] == "2026-06-19"
         assert row["status"] == "started"
@@ -3249,7 +3262,7 @@ class TestSessionTimingAuthority:
         payload = {"plan_id": PLAN, "session_id": session_id, "status": status}
         if status == "skipped":
             payload["modification_reason"] = "was travelling"
-        return upsert_session_completion(
+        return _checked_in_completion(
             store,
             athlete_id=ATHLETE,
             athlete_timezone="",
@@ -3373,3 +3386,43 @@ class TestSessionTimingAuthority:
 
         assert session_is_today(self._view(store, day=23)) is True
         assert session_is_today(self._view(store, day=22)) is False
+
+
+class TestCheckInRequiredToLog:
+    """One rule (session_hold): today's session needs today's check-in, for everyone."""
+
+    NOW = datetime(2026, 6, 19, 12, 0, tzinfo=timezone.utc)
+
+    def test_logging_today_without_a_check_in_is_refused(self):
+        store = _store_with_plan()
+        for status in ("started", "done"):
+            with pytest.raises(HTTPException) as exc:
+                upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="",
+                                          payload={"plan_id": PLAN, "session_id": "sess-1", "status": status}, now=self.NOW)
+            assert exc.value.status_code == 409
+            assert exc.value.detail == "Complete today's check-in before starting."
+
+    def test_check_in_unlocks_logging(self):
+        store = _store_with_plan()
+        row = _checked_in_completion(store, payload={"plan_id": PLAN, "session_id": "sess-1", "status": "done"}, now=self.NOW)
+        assert row["status"] == "done"
+
+    def test_skipping_and_past_days_never_need_a_check_in(self):
+        store = _store_with_plan()
+        skipped = upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="", now=self.NOW,
+            payload={"plan_id": PLAN, "session_id": "sess-1", "status": "skipped", "modification_reason": "travel"})
+        assert skipped["status"] == "skipped"
+        retro = upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="", now=self.NOW,
+            payload={"plan_id": PLAN, "session_id": "sess-2", "status": "done", "training_day": "2026-06-17"})
+        assert retro["status"] == "done"
+
+
+def test_athlete_without_health_consent_can_log_without_a_check_in():
+    from tests.support import withdraw_health_consent, seed_default_profiles
+    store = _store_with_plan()
+    seed_default_profiles(store)
+    withdraw_health_consent(store, ATHLETE)
+    row = upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="",
+        payload={"plan_id": PLAN, "session_id": "sess-1", "status": "done"},
+        now=datetime(2026, 6, 19, 12, 0, tzinfo=timezone.utc))
+    assert row["status"] == "done"

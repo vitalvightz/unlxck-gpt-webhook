@@ -636,7 +636,9 @@ export function TodaySessionPanel({
     status,
     resolvedDecision.sessionIsToday,
   );
-  const decisionBlocksCurrentSession = resolvedDecision.blocksCurrentSession || Boolean(livePrescription?.safety_hold);
+  // session_hold already folds in the prescription hold; older payloads lack it.
+  const decisionBlocksCurrentSession = resolvedDecision.blocksCurrentSession
+    || (!state.session_hold && Boolean(livePrescription?.safety_hold));
   const severeInjuryBlocksCurrentSession =
     resolvedDecision.severeInjuryBlocksCurrentSession;
   // STOP + the scheduled session is today: show the recovery/mobility safe

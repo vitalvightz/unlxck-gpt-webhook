@@ -9,7 +9,32 @@ def live(session_type="strength", *, safety_hold=False, reason=None, session_id=
             "safety_hold": safety_hold, "safety_hold_reason": reason}
 
 
-@pytest.mark.parametrize("tier", ["green", "modify", "not_checked_in"])
+def test_not_checked_in_holds_every_session_until_check_in():
+    for current in (None, live(), live("rehab")):
+        assert session_hold("not_checked_in", current) == {
+            "held": True, "reason": "Complete today's check-in before starting.", "source": "check_in"}
+
+
+def test_check_in_is_never_required_when_it_cannot_be_given():
+    # No health consent: a check-in is health data, so it cannot be collected or required.
+    assert session_hold("not_checked_in", None, check_in_possible=False)["held"] is False
+    assert session_hold("not_checked_in", live(), check_in_possible=False)["held"] is False
+    # Stop and injury holds still apply without consent.
+    assert session_hold("stop", None, check_in_possible=False)["held"] is True
+
+
+def test_an_injury_hold_outranks_the_missing_check_in():
+    hold = session_hold("not_checked_in", live(safety_hold=True, reason="Get this injury checked before training."))
+    assert hold["source"] == "injury" and hold["reason"] == "Get this injury checked before training."
+
+
+def test_a_pull_back_hold_recorded_by_the_injury_pipeline_names_readiness():
+    current = {**live(safety_hold=True, reason="Today's pull-back guidance holds your planned training."),
+               "training_hold_source": "readiness"}
+    assert session_hold("pull_back", current)["source"] == "readiness"
+
+
+@pytest.mark.parametrize("tier", ["green", "modify"])
 def test_go_and_adjust_never_block_without_an_injury_hold(tier):
     assert session_hold(tier, None)["held"] is False
     assert session_hold(tier, live())["held"] is False
