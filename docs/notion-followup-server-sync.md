@@ -67,10 +67,12 @@ After manually sending a DM, use the existing sent checkbox or the existing stag
 - Follow-up 2: **later of** Day 8 after initial contact and 120 elapsed
   hours after the recorded first send. For a *date-only* first-send entry,
   conservatively wait until the beginning of the sixth calendar day after it.
-- If not yet eligible, `Copy Follow-Up` says **WAIT**; it contains no
-  sendable script. If the date is missing or the counter conflicts with
-  history, it says **NEEDS DATE** or **NEEDS REVIEW**.
-- Once eligible, `Copy Follow-Up` contains the existing calculated DM.
+- `Copy Follow-Up` contains the next cold message when the stage, counter and
+  send-date history are valid, including before its due date.
+- `Follow-Up Timing` shows waiting, ready or needs review. `Safe Next Due`
+  remains the official date; an early preview is not permission to send.
+- For missing dates or conflicting counters, `Copy Follow-Up` is blank and
+  the reason stays in `Follow-Up Timing`.
 - At two sends, `Copy Follow-Up` becomes empty and `Safe Next Due` is
   empty. Replied and Accepted have a separate automatic reminder schedule for the manual signup/onboarding check-in; no Instagram messages are ever sent automatically.
 - A blank `Safe Next Due` is **correct** for terminal or blocked records;
