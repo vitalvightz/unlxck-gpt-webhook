@@ -1081,7 +1081,12 @@ def _with_derived_checkin_answers(store: AppStore, *, athlete_id: str, training_
     """Fill active_injury / previous_session from tracked data. A client value
     (older app) only ever escalates, so it can never weaken the derived answer."""
     derived = dict(payload)
-    injury = derived_active_injury(_open_injury_flags(store, athlete_id))
+    try:
+        injury = derived_active_injury(_open_injury_flags(store, athlete_id))
+    except Exception:
+        # The readiness failsafe owns an unreadable injury list (conservative hold).
+        logger.exception("[today] derived_active_injury_failed")
+        injury = "none"
     try:
         from .training_history import training_history
         session = derived_previous_session(training_history(store, athlete_id), training_day)
