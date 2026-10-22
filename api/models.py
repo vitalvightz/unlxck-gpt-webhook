@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import base64
+import binascii
 import math
 import re
 from datetime import date, datetime
 from typing import Any, Literal
+from urllib.parse import urlparse
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
@@ -146,6 +149,41 @@ _PLAN_TEXT_LIMITS = {
 
 def _clean_list(values: list[str] | None) -> list[str]:
     return [str(value).strip() for value in values or [] if str(value).strip()]
+
+
+_AVATAR_DATA_URL_RE = re.compile(r"^data:image/(jpeg|png|webp|gif);base64,([A-Za-z0-9+/]+=*)$")
+_AVATAR_MAGIC_BYTES: dict[str, tuple[bytes, ...]] = {
+    "jpeg": (b"\xff\xd8\xff",),
+    "png": (b"\x89PNG\r\n\x1a\n",),
+    "gif": (b"GIF87a", b"GIF89a"),
+    "webp": (b"RIFF",),
+}
+
+
+def is_safe_avatar_url(value: str) -> bool:
+    """Accept only inert avatar sources: credential-free https links, or a base64
+    raster image whose bytes really are the declared format. SVG, ``javascript:``,
+    ``data:text/html`` and anything else that could carry script is rejected."""
+    match = _AVATAR_DATA_URL_RE.match(value)
+    if match:
+        kind, payload = match.groups()
+        try:
+            head = base64.b64decode(payload[:64], validate=False)
+        except (binascii.Error, ValueError):
+            return False
+        if kind == "webp" and head[8:12] != b"WEBP":
+            return False
+        return head.startswith(_AVATAR_MAGIC_BYTES[kind])
+    if value.startswith("data:"):
+        return False
+    parsed = urlparse(value)
+    return (
+        parsed.scheme == "https"
+        and bool(parsed.hostname)
+        and not parsed.username
+        and not parsed.password
+        and not any(ch.isspace() or ord(ch) < 0x20 for ch in value)
+    )
 
 
 def _clean_optional_text(value: Any) -> str | None:
@@ -1225,6 +1263,15 @@ class ProfileUpdateRequest(BaseModel):
     @classmethod
     def clean_profile_text(cls, value: Any) -> str | None:
         return _clean_optional_text(value)
+
+    @field_validator("avatar_url")
+    @classmethod
+    def validate_avatar_url(cls, value: str | None) -> str | None:
+        if not value:
+            return value
+        if not is_safe_avatar_url(value):
+            raise ValueError("avatar_url must be an https:// link or a base64 JPEG, PNG, WebP or GIF image")
+        return value
 
     @field_validator("technical_style", "tactical_style", mode="before")
     @classmethod

@@ -17103,11 +17103,23 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
 
   .phone-account-button {
     right: calc(var(--mobile-nav-offset-side) + var(--safe-area-right));
+    /* Pin both axes: with only a width, a tall photo stretched it into an oval. */
     width: 40px;
+    height: 40px;
+    min-height: 0;
+    flex-shrink: 0;
+    aspect-ratio: 1;
     padding: 0;
     border-radius: 50%;
     overflow: hidden;
     text-decoration: none;
+  }
+
+  .phone-account-button .sidebar-avatar-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   .phone-create-button:focus-visible,
