@@ -17013,6 +17013,26 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
      show without a live build too, and used to sit on top of the tab bar. */
   html[data-mobile-tab-bar] .global-generation-status {
     bottom: var(--mobile-tab-bar-clearance);
+    /* The tab bar under it already clears the home indicator, so the ribbon
+       keeps a slim, fixed band instead of adding the safe area again. */
+    min-height: 0;
+    padding: 6px 8px 6px 14px;
+  }
+
+  html[data-mobile-tab-bar] .global-generation-status-dismiss,
+  html[data-mobile-tab-bar] .global-generation-status-cta {
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    font-size: 18px;
+  }
+
+  html[data-mobile-tab-bar] .global-generation-status-rail {
+    margin-top: 5px;
+  }
+
+  html[data-mobile-tab-bar] {
+    --generation-ribbon-height: 52px;
   }
 
   html[data-mobile-tab-bar] .global-generation-status-reopen {
