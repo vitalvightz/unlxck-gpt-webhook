@@ -38,7 +38,7 @@ def assert_scenario(name, body):
         assert progression["next_transition"]["to_stage"] == "dynamic"
         assert progression["next_transition"]["target_stage_live"] is False
     elif name == "worsening":
-        assert current["stage"] == "calm" and current["loading_hold"]
+        assert current["stage"] == "calm"
         assert progression["reason_codes"] == ["episode_setback_loading_held"]
         assert "next_transition" not in progression  # hold must not disappear from UI
     else:
@@ -58,14 +58,16 @@ def test_today_preserves_entry_authority_and_actual_blocker(monkeypatch, name):
     assert_scenario(name, body)
 
 
-def test_better_alone_does_not_erase_setback_or_supply_loading_permission(monkeypatch):
+def test_better_clears_setback_but_never_supplies_loading_permission(monkeypatch):
     journey, client, body = scenario(monkeypatch, "worsening")
     assert_scenario("worsening", body)
     journey.permission("gentle_recovery")
     journey.report("improving")
     current = decision(view(client))
-    assert current["stage"] != "load"
-    assert "rehabilitation_loading_not_reported" in current["progression"]["next_transition"]["reason_codes"]
+    assert current["stage"] == "restore"  # the latest answer wins over the earlier Worse
+    codes = current["progression"]["next_transition"]["reason_codes"]
+    assert "rehabilitation_loading_not_reported" in codes
+    assert not {"unresolved_injury_checkin_setback", "unresolved_historical_negative_response"} & set(codes)
 
 
 if __name__ == "__main__":

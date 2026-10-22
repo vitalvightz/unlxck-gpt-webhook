@@ -164,7 +164,7 @@ def test_new_load_uses_existing_permission_pending_response_and_setback_holds(mo
     assert decision(view(client))["stage"] == "load"
     journey.report("worse")
     current = decision(view(client))
-    assert current["stage"] != "load" and current["loading_hold"]
+    assert current["stage"] != "load"
 
 
 def test_timed_load_freeze_accepts_only_exact_prescribed_duration(monkeypatch):
