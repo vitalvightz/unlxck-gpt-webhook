@@ -10,6 +10,21 @@ from datetime import date
 from typing import Any
 
 
+def completion_origin_of(row: Mapping[str, Any]) -> str | None:
+    """Stored provenance, or ``reported`` when a legacy NULL row proves execution.
+
+    Only evidence owned by one executed occurrence counts: its frozen
+    prescription snapshot, rehab result or rehab response contexts. Legacy
+    sibling credit copied RPE, pain and notes, so those prove nothing.
+    """
+    origin = row.get("completion_origin")
+    if origin is not None:
+        return origin
+    if row.get("prescription_snapshot") or row.get("rehab_performance") or row.get("rehab_response_contexts"):
+        return "reported"
+    return None
+
+
 def has_unverified_completions(rows: Sequence[Mapping[str, Any]], as_of: str, *, days: int = 5) -> bool:
     """Unverified legacy records are not proof of independent workouts.
 
@@ -19,7 +34,7 @@ def has_unverified_completions(rows: Sequence[Mapping[str, Any]], as_of: str, *,
     for row in rows:
         if (row.get("source", "unlxck") != "unlxck"
                 or row.get("status") not in {"done", "modified"}
-                or row.get("completion_origin") in {"reported", "day_credit"}):
+                or completion_origin_of(row) in {"reported", "day_credit"}):
             continue
         try:
             age = (today - date.fromisoformat(str(row.get("training_day", "")))).days
@@ -39,7 +54,7 @@ def completed_workload(rows: Sequence[Mapping[str, Any]], as_of: str, *, days: i
     for index, row in enumerate(rows):
         # Only explicit reports prove prescribed workout identity, including
         # when raw completion rows reach this shared helper without a source.
-        if row.get("source") != "external" and row.get("completion_origin") != "reported":
+        if row.get("source") != "external" and completion_origin_of(row) != "reported":
             continue
         # Missing status is retained for legacy readiness inputs. Explicit
         # planned/started/skipped rows never represent completed workload.

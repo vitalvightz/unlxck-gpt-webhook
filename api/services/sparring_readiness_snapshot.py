@@ -13,7 +13,7 @@ from api.contracts.external_training import ExternalTrainingFields
 
 from .today_service import _structured_plan_weeks, resolve_training_day
 from .training_history import training_history
-from fightcamp.completed_workload import completed_workload, has_unverified_completions
+from fightcamp.completed_workload import completed_workload, completion_origin_of, has_unverified_completions
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +138,7 @@ def annotate_payload_with_sparring_readiness(
     for row in completions:
         if row.get("status") not in {"done", "modified"}:
             continue
-        if row.get("completion_origin") != "reported":
+        if completion_origin_of(row) != "reported":
             continue
         plan_id = row.get("plan_id")
         try:

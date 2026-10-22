@@ -40,7 +40,8 @@ def assert_scenario(name, body):
     elif name == "worsening":
         assert current["stage"] == "calm"
         assert progression["reason_codes"] == ["episode_setback_loading_held"]
-        assert "next_transition" not in progression  # hold must not disappear from UI
+        # The hold stays visible: any next step is blocked by the current Worse.
+        assert progression.get("next_transition", {}).get("status") in (None, "blocked")
     else:
         assert current["stage"] == "restore"
         next_step = progression["next_transition"]

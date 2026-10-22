@@ -151,13 +151,14 @@ def test_latest_valid_report_replaces_historical_scopes_in_both_directions(conte
 
 
 @pytest.mark.parametrize("kind", ["injury_checkin", "delayed_rehab_response"])
-def test_later_setback_removes_even_previously_derived_clearance(context, kind):
+def test_later_setback_keeps_reported_clearance(context, kind):
     event = report(context, CONTACT)
     derived = apply_episode_observations(context[3], [event])
     setback = dict(athlete_id=context[1], injury_id=context[3]["id"], injury_episode_id=context[3]["episode_id"],
         event_type=kind, created_at="2026-09-30T10:00:00Z",
         payload={"latest_reported_status": "worse"} if kind == "injury_checkin" else {"response": "worse"})
-    assert "clinician_clearance" not in apply_episode_observations(derived, [event, setback])
+    # A clearance stays until the athlete changes it; Worse only pauses rehab.
+    assert apply_episode_observations(derived, [event, setback])["clinician_clearance"]["scopes"] == sorted(CONTACT)
     fresh = report(context, TRAIN, "2026-09-30T11:00:00Z")
     assert apply_episode_observations(derived, [event, setback, fresh])["clinician_clearance"]["scopes"] == sorted(TRAIN)
 

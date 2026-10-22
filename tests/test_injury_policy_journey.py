@@ -336,7 +336,7 @@ def test_clearance_is_quick_self_reported_episode_specific_and_owned(reviewed):
     setback = {"athlete_id": ATHLETE, "injury_id": injury["id"], "injury_episode_id": injury["episode_id"], "event_type": "injury_checkin",
                "created_at": "2026-10-01T00:00:00Z", "payload": {"latest_reported_status": "worse"}}
     before = {**saved, "created_at": "2026-09-30T12:00:00Z"}
-    assert "clinician_clearance" not in apply_episode_observations(injury, [before, setback])
+    assert apply_episode_observations(injury, [before, setback])["clinician_clearance"]["scopes"] == ["rehab"]
     fresh = record_episode_observation(store, athlete_id=ATHLETE, observation=observation.model_copy(update={"report_id": uuid4()}), training_day="2026-10-02")
     assert fresh["id"] != saved["id"]
     fresh["created_at"] = "2026-10-02T12:00:00Z"

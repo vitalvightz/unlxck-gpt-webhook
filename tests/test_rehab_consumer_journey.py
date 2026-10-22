@@ -220,15 +220,10 @@ def test_setback_requires_improvement_then_new_successful_restore(monkeypatch, p
     resolved = next(r for r in j.transition()["requirements"] if r["kind"] == "no_unresolved_setback")
     assert resolved["reason_code"] == "setback_resolved_by_improvement_and_reviewed_response"
     assert resolved["recovery_report_id"] in j.store.injury_episode_events
-    # Replaying a delayed INSERT cannot make work completed before recovery
-    # into new re-entry evidence. Inspect copies; original records stay intact.
+    # The latest Better clears the setback; no post-recovery work is required,
+    # so replaying older work cannot change the outcome either way.
     replayed = deepcopy(list(j.store.rehab_exposures.values()))
-    recovery_at = datetime.fromisoformat(resolved["recovery_reported_at"])
-    for row in replayed:
-        if datetime.fromisoformat(row["created_at"]) > recovery_at:
-            row["event_json"]["provenance"]["recorded_at"] = (recovery_at - timedelta(minutes=1)).isoformat()
-            row["created_at"] = j.now.isoformat()
-    assert j.transition(replayed)["status"] == "blocked"
+    assert j.transition(replayed)["status"] == "met"
 
 
 @pytest.mark.parametrize("pilot", PILOTS, ids=lambda p: p[0])
@@ -320,18 +315,13 @@ def test_standalone_injury_worse_then_same_cannot_reuse_pre_setback_restore(monk
     live = j.view().live_prescription
     load_id = next(p.drill_id for p in j.policy.prescriptions if p.stage == "load")
     assert not live or all(b.get("rehab_drill_id") != load_id for b in live["session"]["blocks"])
-    # Even explicit improvement restores only the baseline until new reviewed
-    # work and its own delayed response supply recovery evidence.
+    # An explicit Better clears the setback: the latest answer wins and the
+    # clinician's loading permission applies without new logged work.
     j.report("improving")
-    assert j.decision()["stage"] == "restore"
-    assert j.transition()["status"] == "blocked"
-    recovery = j.complete("ongoing")
-    assert recovery and all(e.provenance.rehab_stage == "restore" for e in recovery)
-    j.advance()
-    j.report("ongoing")
     assert j.decision()["stage"] == "load"
-    resolved = next(r for r in j.transition()["requirements"] if r["kind"] == "no_unresolved_setback")
-    assert set(resolved["evidence_ids"]) == {str(e.exposure_id) for e in recovery}
+    resolved = next(r for r in j.decision()["progression"]["entry_decision"]["requirements"]
+                    if r["kind"] == "no_unresolved_setback")
+    assert resolved["status"] == "pass" and resolved["recovery_reported_at"]
     for identity, original in originals.items():
         assert j.store.rehab_exposures[identity] == original
 

@@ -338,6 +338,9 @@ class CommandView(BaseModel):
     # prefill against (never the raw plan). Empty when nothing is being tracked.
     open_injuries: list[dict[str, Any]] = Field(default_factory=list)
     live_prescription: dict[str, Any] | None = None
+    # The one answer to "is today's session blocked?" ({held, reason, source}).
+    # The web and the completion gate both read it; nothing else re-derives it.
+    session_hold: dict[str, Any] | None = None
     # Existing ExerciseMedia values are attached by the presentation service.
     exercise_media: dict[str, Any] = Field(default_factory=dict)
     effective_clinician_clearance: dict[str, Any] | None = None

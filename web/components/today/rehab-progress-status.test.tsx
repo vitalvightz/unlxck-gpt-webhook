@@ -31,7 +31,7 @@ test("the collapsed injury summary distinguishes current stage from unpublished 
 
 for (const [codes, message] of [
   [["no_reviewed_stage_exposure"], /Complete your current rehabilitation exercise in Today/],
-  [["next_day_response_not_yet_known"], /Your next-day rehab response is needed/],
+  [["next_day_response_not_yet_known"], /Tomorrow, answer the follow-up/],
   [["reviewed_target_content_unavailable", "target_equipment_unavailable"], /equipment you haven’t listed/],
   [["rehabilitation_loading_not_reported", "fail_next_day_response_worse"], /Progression is on hold.*felt worse the next day/],
 ] as const) {
@@ -51,7 +51,7 @@ test("a live but closed transition cannot offer a progression override", () => {
 });
 
 for (const [reason, message] of [
-  ["next_day_response_not_yet_known", /Your next-day rehab response is needed/],
+  ["next_day_response_not_yet_known", /Tomorrow, answer the follow-up/],
   ["fail_next_day_response_worse", /felt worse the next day/],
   ["shoulder_nontraumatic_cuff_not_reported", /Edit injury/],
   ["target_equipment_unavailable", /equipment you haven’t listed/],
@@ -146,8 +146,9 @@ test("a real safety hold still blocks progression when today's schedule is also 
 test("expanded injury controls do not repeat the visible summary", () => {
   const html = renderToStaticMarkup(<RehabProgressStatus decision={decision} summaryVisible />);
   const body = new domWindow.DOMParser().parseFromString(html, "text/html").body;
-  assert.match(body.textContent ?? "", /Load · On hold/);
-  assert.doesNotMatch(body.textContent ?? "", /Confirm the rehab loading/);
+  // One status line per card: the row is only the way into the checks.
+  assert.match(body.textContent ?? "", /Progression checks/);
+  assert.doesNotMatch(body.textContent ?? "", /On hold|Confirm the rehab loading/);
   const held = { ...decision, stage: "calm" as const,
     progression: { reason_codes: ["episode_setback_loading_held"] } };
   assert.equal(renderToStaticMarkup(<RehabProgressStatus decision={held} summaryVisible />), "");
@@ -188,8 +189,7 @@ test("unneeded entry evidence is explained as not required, never completed", as
     } }} />));
     await act(async () => container.querySelector("button")!.click());
     const dialog = document.querySelector('[role="dialog"]')!;
-    assert.match(dialog.textContent ?? "", /Not required for this entry/);
-    assert.match(dialog.textContent ?? "", /Prior rehab logs are not required/);
+    assert.match(dialog.textContent ?? "", /Current-stage rehabNot needed/);
     assert.doesNotMatch(dialog.textContent ?? "", /Completed current-stage rehabComplete/);
     assert.equal(dialog.querySelectorAll("form, input, select, textarea").length, 0);
   } finally { act(() => root.unmount()); container.remove(); }
@@ -223,8 +223,8 @@ for (const closed of [false, true]) {
         assert.match(dialog.textContent ?? "", /DYNAMIC exercises aren’t available for this injury in UNLXCK yet/);
         assert.equal(dialog.querySelector(".injury-requirements"), null);
       } else {
-        assert.match(dialog.textContent ?? "", /Complete rehab historyComplete/);
-        assert.match(dialog.textContent ?? "", /Not yet confirmed/);
+        assert.match(dialog.textContent ?? "", /Complete rehab historyDone/);
+        assert.match(dialog.textContent ?? "", /Waiting/);
         assert.match(dialog.textContent ?? "", /Confirm the rehab loading your clinician allows/);
         assert.doesNotMatch(dialog.textContent ?? "", /medical clearance issued|heel-rise|assessor/);
       }
@@ -246,8 +246,9 @@ test("missing rehab responses direct athletes to rehab records, not the daily ch
     } } }} />));
     await act(async () => container.querySelector("button")!.click());
     const text = document.querySelector('[role="dialog"]')!.textContent ?? "";
-    assert.match(text, /Log your rehab session and answer its injury-response question/);
-    assert.match(text, /next-day rehab follow-up when it appears in Today/);
+    // One next action: answer how the rehab felt today; the next-day check waits.
+    assert.match(text, /Next: After your rehab, tap how it feels under How’s your injury/);
+    assert.doesNotMatch(text, /next-day rehab follow-up/);
     assert.doesNotMatch(text, /Better, Same or Worse/);
   } finally { act(() => root.unmount()); container.remove(); }
 });

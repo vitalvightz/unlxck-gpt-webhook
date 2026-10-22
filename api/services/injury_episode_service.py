@@ -176,7 +176,8 @@ def exposure_rows_with_observations(rows, observations, athlete_timezone=None):
                 and instant(e["created_at"]) >= completed_at
                 and exposure_training_day(e, athlete_timezone) == exposure_training_day(event, athlete_timezone)]
             if reports:
-                report = max(reports, key=lambda e: (e["payload"]["latest_reported_status"] == "worse", instant(e["created_at"]), str(e.get("id"))))
+                # The latest answer wins: it can get worse (or settle) as the day goes on.
+                report = max(reports, key=lambda e: (instant(e["created_at"]), str(e.get("id"))))
                 answer = {"improving": "better", "ongoing": "same", "worse": "worse"}[report["payload"]["latest_reported_status"]]
                 event = {**event, "response": {**event.get("response", {}), "during_response": answer}}
                 derived["during_response_recorded_at"] = report["created_at"]
