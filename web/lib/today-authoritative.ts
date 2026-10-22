@@ -533,9 +533,13 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
         : "decision"
     : "none";
   const tone = banner?.tone ?? getTierMeta(displayTier).tone;
+  // The backend decides once (session_hold). The local rule is only a fallback
+  // for an older API response without that field.
   const blocksCurrentSession =
     sessionIsToday &&
-    (Boolean(prescription?.safety_hold) || authoritativeTier === "stop" || (authoritativeTier === "pull_back" && !reviewedRehabAllowed));
+    (state.session_hold
+      ? state.session_hold.held
+      : Boolean(prescription?.safety_hold) || authoritativeTier === "stop" || (authoritativeTier === "pull_back" && !reviewedRehabAllowed));
   const severeInjuryBlocksCurrentSession =
     blocksCurrentSession &&
     !state.today.injury_hold_exempt &&
