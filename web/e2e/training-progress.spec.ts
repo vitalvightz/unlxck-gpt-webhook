@@ -74,8 +74,9 @@ for (const width of [390, 1280]) {
     await selected.getByRole("button", { name: "View original performance" }).click();
     await expect(dialog.locator('[data-performance="p5"]')).toBeFocused();
     await dialog.getByRole("button", { name: "Load earlier performances" }).click();
-    await expect(progress).toContainText("6 measured performances in 7 loaded records");
-    expect(await progress.locator("svg path").getAttribute("d")).toMatch(/M.*M/);
+    await expect(progress).toContainText("6 recorded loads");
+    // Records without a load are excluded from the series rather than splitting the line.
+    expect(await progress.locator("svg path").getAttribute("d")).toMatch(/^M[^M]*$/);
     await progress.getByRole("slider").focus(); await page.keyboard.press("Home");
     await expect(selected).toContainText("80 kg");
     expect((await new AxeBuilder({ page }).include("dialog[open]").analyze()).violations).toEqual([]);
@@ -88,7 +89,7 @@ for (const width of [390, 1280]) {
       await page.getByRole("button", { name: `View ${name} performance history`, exact: true }).click();
       const sparse = page.getByRole("dialog", { name, exact: true }).getByRole("region", { name: "Exercise progress", exact: true });
       await expect(sparse).toBeVisible(); await expect(sparse.getByRole("slider")).toHaveCount(0);
-      if (count) await expect(sparse).toContainText(`${count} measured performance`);
+      if (count) await expect(sparse).toContainText(`${count} recorded `);
       else await expect(sparse).toContainText("No comparable measurements");
       await page.keyboard.press("Escape");
     }
