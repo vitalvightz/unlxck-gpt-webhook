@@ -151,9 +151,7 @@ export function InjuryCareStatus({ injury, token, onRefresh, showClearance = tru
     {injury.rehab_decision ? <>
       {outcome === "prescribed_rehab" ? <RehabProgressStatus decision={injury.rehab_decision} statusLine={stageStatusLine} summaryVisible={summaryVisible} /> : null}
       {hasGuidance ? <div className="injury-rehab-status" role="note" aria-label="Guidance">
-        {trackingOnly ? <><p className="injury-rehab-label"><strong>Recovery monitoring</strong></p>
-          <p className="muted">{outcome === "unsupported_prescription" ? "No guided rehab programme is available for this injury yet." : summary}</p>
-          <p className="injury-sheet-note">Injury restrictions and safety checks still apply.</p></>
+        {trackingOnly ? <p className="muted">{outcome === "unsupported_prescription" ? "No guided rehab in UNLXCK yet." : summary}</p>
           : resolved ? <p className="injury-rehab-label"><strong>Recovered</strong></p>
           : showSummary ? <p>{summary}</p> : null}
         {showScheduleRow && schedule ? <>

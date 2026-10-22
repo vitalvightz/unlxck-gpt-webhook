@@ -607,6 +607,40 @@ def _rehab_equipment_from_intake(intake: Mapping[str, Any]) -> list[str]:
         if isinstance(value, str)))
 
 
+_ANSWER_LABELS = {"better": "Better", "same": "Same", "worse": "Worse", "not_sure": "Not sure"}
+_CHECKIN_LABELS = {"improving": "Better", "ongoing": "Same", "worse": "Worse"}
+
+
+def injury_recent_log(exposures, observations, decision: Mapping[str, Any], bank: Sequence[Mapping[str, Any]],
+                      *, limit: int = 6) -> list[dict[str, Any]]:
+    """The athlete's recent rehab and injury answers for this episode, newest first.
+
+    Read-only, built from rows Today already loaded. ``counts`` says whether a
+    rehab entry is evidence for the current progression check.
+    """
+    names = {d.get("id"): d.get("name") for group in bank for d in group.get("drills", [])}
+    next_transition = (decision.get("progression") or {}).get("next_transition") or {}
+    evidence = {str(i) for r in next_transition.get("requirements", []) for i in r.get("evidence_ids", [])}
+    entries = []
+    for row in exposures:
+        raw = row.get("event_json") or row
+        response = raw.get("response") or {}
+        stamp = str((raw.get("provenance") or {}).get("recorded_at") or row.get("created_at") or raw.get("occurred_at") or "")
+        drill = raw.get("drill_id") or raw.get("rehab_drill_id")
+        entries.append({"at": stamp, "date": stamp[:10], "kind": "rehab",
+                        "label": names.get(drill) or str(drill or "Rehab").replace("_", " ").capitalize(),
+                        "felt": _ANSWER_LABELS.get(response.get("during_response"), "not answered"),
+                        "next_day": _ANSWER_LABELS.get(response.get("next_day_response"), "waiting"),
+                        "counts": (str(raw.get("exposure_id") or row.get("id")) in evidence) if next_transition else None})
+    for event in observations:
+        status = (event.get("payload") or {}).get("latest_reported_status")
+        if (event.get("event_type") == "injury_checkin" and (event.get("payload") or {}).get("explicit_report") is True
+                and status in _CHECKIN_LABELS):
+            stamp = str(event.get("created_at") or "")
+            entries.append({"at": stamp, "date": stamp[:10], "kind": "checkin", "label": _CHECKIN_LABELS[status]})
+    return sorted(entries, key=lambda e: e["at"], reverse=True)[:limit]
+
+
 def _with_injury_policy(injuries, *, store, athlete_id, phase="", current_checkin=None, equipment=(), readiness_decision=None,
                         training_day=None, training_session=None, observations_by_injury=None, as_of=None, athlete_timezone=None):
     if not injuries:
@@ -689,6 +723,7 @@ def _with_injury_policy(injuries, *, store, athlete_id, phase="", current_checki
                     alternative["schedule"]["reason"] = first["schedule"]["reason"] + " A lighter baseline routine is due."
         if row["rehab_decision"].get("activation") == "live":
             row["rehab_stage"] = row["rehab_decision"]["stage"]
+        row["rehab_decision"]["recent_log"] = injury_recent_log(exposures, observations, row["rehab_decision"], bank)
         _log_next_transition(row)
         rows.append(row)
     if training_day:
@@ -1081,7 +1116,12 @@ def _with_derived_checkin_answers(store: AppStore, *, athlete_id: str, training_
     """Fill active_injury / previous_session from tracked data. A client value
     (older app) only ever escalates, so it can never weaken the derived answer."""
     derived = dict(payload)
-    injury = derived_active_injury(_open_injury_flags(store, athlete_id))
+    try:
+        injury = derived_active_injury(_open_injury_flags(store, athlete_id))
+    except Exception:
+        # The readiness failsafe owns an unreadable injury list (conservative hold).
+        logger.exception("[today] derived_active_injury_failed")
+        injury = "none"
     try:
         from .training_history import training_history
         session = derived_previous_session(training_history(store, athlete_id), training_day)

@@ -273,3 +273,39 @@ test("missing elbow suitability shows the actual blocker once without another qu
     assert.equal(dialog.querySelectorAll("form, input, select, textarea").length, 0);
   } finally { act(() => root.unmount()); container.remove(); }
 });
+
+for (const [state, codes, expected] of [
+  ["due", ["unresolved_injury_checkin_setback"], /^Progression is on hold\. Do today’s rehab, then tap how it feels/],
+  ["already_completed", ["during_response_not_reported"], /^Rehab done\. Tap how it feels/],
+  ["already_completed", ["next_day_response_not_yet_known"], /^Rehab done\. Tomorrow, answer how it felt the day after/],
+  ["already_completed", ["unresolved_injury_checkin_setback"], /Rehab before your last Better doesn’t count\. Next rehab Sat 24 Oct/],
+  ["recovery_day", ["unresolved_injury_checkin_setback"], /Next rehab Sat 24 Oct\. After it, say how it felt/],
+] as const) {
+  test(`the next step matches today's rehab (${state}: ${codes.join(",")})`, () => {
+    const current = { ...decision, schedule: { state, reason: "", next_due_day: "2026-10-24" },
+      progression: { next_transition: { ...decision.progression!.next_transition!, reason_codes: [...codes], requirements: [] } } };
+    const step = rehabNextStep(current)!;
+    assert.match(step, expected);
+    assert.doesNotMatch(step, /Log today’s rehab/);
+    // The header meter shows the same sentence.
+    assert.match(renderToStaticMarkup(<RehabStageMeter decision={current} />), new RegExp(expected.source.replace(/^\^/, "")));
+  });
+}
+
+test("the progression sheet shows the recent injury log, and nothing when empty", async () => {
+  const container = document.createElement("div"); document.body.appendChild(container);
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<RehabProgressStatus decision={{ ...decision, recent_log: [
+      { date: "2026-10-22", kind: "rehab", label: "Seated heel raise", felt: "not answered", next_day: "waiting", counts: false },
+      { date: "2026-10-22", kind: "checkin", label: "Better" },
+    ] }} />));
+    await act(async () => container.querySelector("button")!.click());
+    const text = document.querySelector('[role="dialog"]')!.textContent ?? "";
+    assert.match(text, /Recent/);
+    assert.match(text, /Thu 22 Oct Seated heel raise · Felt: not answered · Next day: waiting · doesn’t count/);
+    assert.match(text, /Injury: Better/);
+  } finally { act(() => root.unmount()); container.remove(); }
+  const empty = renderToStaticMarkup(<RehabProgressStatus decision={decision} />);
+  assert.doesNotMatch(empty, /injury-recent-log/);
+});

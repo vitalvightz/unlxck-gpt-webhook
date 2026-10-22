@@ -66,6 +66,52 @@ const REASONS: Record<string, string> = {
 
 type RehabDecision = NonNullable<InjuryFlagRecord["rehab_decision"]>;
 
+const SETBACK_CODES = new Set(["unresolved_injury_checkin_setback", "unresolved_historical_negative_response"]);
+const DURING_CODES = new Set(["during_response_not_reported", "no_reviewed_response_group", "during_response_not_sure"]);
+const NEXT_DAY_CODES = new Set(["next_day_response_not_yet_known", "next_day_response_not_reported", "next_day_response_not_sure"]);
+const WORK_CODES = new Set(["no_reviewed_stage_exposure", "no_defined_dose_completed"]);
+const DAY_FORMAT = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+
+function formatDay(day: string | null | undefined): string | null {
+  const date = day ? new Date(`${day}T12:00:00Z`) : null;
+  return date && !Number.isNaN(date.getTime()) ? DAY_FORMAT.format(date).replace(",", "") : null;
+}
+
+function unmetCodes(decision: RehabDecision): string[] {
+  const next = decision.progression?.next_transition;
+  return [...(next?.reason_codes ?? []), ...(next?.requirements ?? [])
+    .filter(item => !["pass", "not_applicable"].includes(item.status)).map(item => item.reason_code)];
+}
+
+/** One next step for rehab-response checks, matched to today's rehab state so the
+ * card never says "log today's rehab" beside "Done for today". */
+export function rehabResponseStep(decision: RehabDecision): string | null {
+  const codes = unmetCodes(decision);
+  const setback = codes.some(code => SETBACK_CODES.has(code));
+  const needsDuring = codes.some(code => DURING_CODES.has(code));
+  const needsNextDay = codes.some(code => NEXT_DAY_CODES.has(code));
+  const needsWork = codes.some(code => WORK_CODES.has(code));
+  if (!setback && !needsDuring && !needsNextDay && !needsWork) return null;
+  const schedule = decision.schedule;
+  const nextDay = formatDay(schedule?.next_due_day);
+  switch (schedule?.state) {
+    case "due":
+      return "Do today’s rehab, then tap how it feels under How’s your injury.";
+    case "already_completed":
+      if (needsDuring) return "Rehab done. Tap how it feels under How’s your injury.";
+      if (needsNextDay) return "Rehab done. Tomorrow, answer how it felt the day after.";
+      return setback
+        ? `Rehab before your last Better doesn’t count. ${nextDay ? `Next rehab ${nextDay}` : "Do your next rehab"}, then say how it felt.`
+        : null;
+    case "recovery_day":
+    case "deferred":
+      if (needsNextDay && !setback) return `Answer the day-after question on Today. Next rehab ${nextDay ?? "soon"}.`;
+      return `Next rehab ${nextDay ?? "soon"}. After it, say how it felt.`;
+    default:
+      return null;
+  }
+}
+
 function rehabSafetyHold(decision: RehabDecision): string | null {
   const next = decision.progression?.next_transition;
   // A next stage UNLXCK doesn't offer can't be "on hold": its checks don't apply.
@@ -74,6 +120,7 @@ function rehabSafetyHold(decision: RehabDecision): string | null {
     ...(checked?.reason_codes ?? []), ...(checked?.requirements ?? [])
       .filter(item => !["pass", "not_applicable"].includes(item.status)).map(item => item.reason_code)];
   const reason = codes.find(code => /worse|worsening|setback|negative|safety_hold|stopped|medical/.test(code) && REASONS[code]);
+  if (reason && SETBACK_CODES.has(reason)) return rehabResponseStep(decision) ?? REASONS[reason];
   return reason ? REASONS[reason] : null;
 }
 
@@ -107,6 +154,8 @@ export function rehabNextStep(decision: RehabDecision): string | null {
   }
   if (next.status === "closed") return "Progression is on hold for this injury. Follow today’s rehab and your limits.";
   if (next.status === "met") return "Follow the permitted exercise shown in Today.";
+  const responseStep = rehabResponseStep(decision);
+  if (responseStep) return responseStep;
   // Specific selector blockers take precedence over its general content message.
   const reason = ["target_equipment_unavailable", "rehabilitation_loading_not_reported"]
     .find(code => codes.includes(code)) ?? codes.find(code => REASONS[code]);
@@ -136,7 +185,7 @@ export function RehabProgressStatus({ decision, statusLine, summaryVisible = fal
     item.status === "pass" || !REASONS[item.reason_code] || !items.slice(0, index).some(previous =>
       previous.status !== "pass" && REASONS[previous.reason_code] === REASONS[item.reason_code]));
   // One next action: the first unmet check, else the transition's own blocker.
-  const nextAction = [...checks.filter(item => item.status === "fail" || item.status === "unknown").map(item => item.reason_code),
+  const nextAction = rehabResponseStep(decision) ?? [...checks.filter(item => item.status === "fail" || item.status === "unknown").map(item => item.reason_code),
     ...(next?.reason_codes ?? [])].map(code => REASONS[code]).find(Boolean) ?? null;
   if (summaryVisible && !next && !statusLine) return null;
   if (!title && !statusLine && !entry) return null;
@@ -164,6 +213,16 @@ export function RehabProgressStatus({ decision, statusLine, summaryVisible = fal
           <div><strong><span aria-hidden="true" className="injury-requirement-mark">{item.status === "pass" ? "✓" : item.status === "not_applicable" ? "–" : "○"}</span>{REQUIREMENTS[item.kind] ?? "Progression check"}</strong>
             <span>{item.status === "pass" ? "Done" : item.status === "not_applicable" ? "Not needed" : item.status === "fail" ? "On hold" : "Waiting"}</span></div>
         </li>)}</ul> : null}
+        {decision.recent_log?.length ? <div className="injury-recent-log">
+          <p className="injury-sheet-caption">Recent</p>
+          <ul>{decision.recent_log.map((entry, index) => <li key={`${entry.kind}-${entry.date}-${index}`}>
+            <span className="muted">{formatDay(entry.date) ?? entry.date}</span>{" "}
+            {entry.kind === "rehab"
+              ? <>{entry.label} · Felt: {entry.felt} · Next day: {entry.next_day}{entry.counts === false
+                ? <small className="muted"> · doesn’t count</small> : null}</>
+              : <>Injury: {entry.label}</>}
+          </li>)}</ul>
+        </div> : null}
       </div>
     </InjuryDetailSheet> : null}
   </>;

@@ -2232,7 +2232,7 @@ class TestCommandView:
 
         updated = store.get_today_checkin(ATHLETE, PLAN, "2026-06-18")
         assert updated is not None
-        assert updated["active_injury"] == "none"
+        assert updated["active_injury"] == "worse"  # re-derived from the tracked injury
         assert updated["recommendation_state"] == "pull_back"
         assert "active_injury_worse" in updated["recommendation_triggers"]
         assert "Rehab only today." in updated["recommendation_reason"]
