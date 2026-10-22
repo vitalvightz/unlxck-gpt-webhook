@@ -244,14 +244,16 @@ export function isPreStartStaleGenerationJob(job: GenerationJobResponse, nowMs =
   if (Array.isArray(job.progress_milestones) && job.progress_milestones.length > 0) {
     return false;
   }
+  // No "heartbeat <= started_at means stalled" shortcut: the claim writes both
+  // to the same instant, and athletes never see the internal job_loaded
+  // milestone, so every fresh build read as stalled ("Build stopped") until
+  // the first heartbeat — while the server carried on generating. Only a
+  // heartbeat that has genuinely gone quiet counts.
   const heartbeatAtMs = Date.parse(job.heartbeat_at || "");
   const startedAtMs = Date.parse(job.started_at || "");
-  const hasHeartbeat = Number.isFinite(heartbeatAtMs);
-  const hasStartedAt = Number.isFinite(startedAtMs);
-  if (hasHeartbeat && hasStartedAt && heartbeatAtMs <= startedAtMs) {
-    return true;
-  }
-  const lastProgressAtMs = hasHeartbeat ? heartbeatAtMs : startedAtMs;
+  const lastProgressAtMs = Number.isFinite(heartbeatAtMs)
+    ? Math.max(heartbeatAtMs, Number.isFinite(startedAtMs) ? startedAtMs : heartbeatAtMs)
+    : startedAtMs;
   return Number.isFinite(lastProgressAtMs) && nowMs - lastProgressAtMs >= PRE_START_STALE_MS;
 }
 
