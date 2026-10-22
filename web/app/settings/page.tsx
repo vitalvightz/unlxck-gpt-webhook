@@ -61,7 +61,9 @@ type AdminTemplateDraft = {
   coachNotes: string;
 };
 
-const MAX_AVATAR_FILE_BYTES = 7 * 1024 * 1024;
+// Only guards against decoding absurd files on the phone: the original never
+// leaves the device, it is shrunk to ~100 KB first. 25 MB covers 48 MP shots.
+const MAX_AVATAR_FILE_BYTES = 25 * 1024 * 1024;
 // Largest edge (px) we keep for a profile photo — the avatar only ever renders
 // in a small circle, so anything bigger is wasted bytes.
 const AVATAR_MAX_DIMENSION = 512;
@@ -789,7 +791,7 @@ export default function SettingsPage() {
       return;
     }
     if (file.size > MAX_AVATAR_FILE_BYTES) {
-      setError("Image must be smaller than 7 MB. Please choose a smaller file.");
+      setError("Image must be smaller than 25 MB. Please choose a smaller file.");
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
