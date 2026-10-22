@@ -12,17 +12,11 @@ import { TRUST_INTRO_HEADING, TRUST_POINTS } from "@/lib/trust-copy";
  */
 export function OnboardingTrustNote() {
   return (
-    <aside className="onboarding-trust-note" aria-labelledby="onboarding-trust-heading">
-      {/* No eyebrow above the heading. "Before you start" was written for a first
-          camp, but intake is also where an athlete refines or regenerates an
-          existing plan, so on their third camp it read as though they had not
-          begun. The heading carries the section on its own in both cases. */}
-      <div className="form-section-header">
-        <h2 className="form-section-title" id="onboarding-trust-heading">
-          {TRUST_INTRO_HEADING}
-        </h2>
-      </div>
-      <ul className="onboarding-trust-points">
+    <details className="onboarding-trust-note">
+      <summary className="onboarding-trust-summary" id="onboarding-trust-heading">
+        {TRUST_INTRO_HEADING}
+      </summary>
+      <ul className="onboarding-trust-points" aria-labelledby="onboarding-trust-heading">
         {TRUST_POINTS.map((point) => (
           <li key={point.title} className="onboarding-trust-point">
             <p className="onboarding-trust-point-title">{point.title}</p>
@@ -30,6 +24,6 @@ export function OnboardingTrustNote() {
           </li>
         ))}
       </ul>
-    </aside>
+    </details>
   );
 }
