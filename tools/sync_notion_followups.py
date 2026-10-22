@@ -78,10 +78,6 @@ def now_london(value):
     return value.replace(tzinfo=LONDON) if value.tzinfo is None else value.astimezone(LONDON)
 
 
-def waiting_until(due):
-    return f"WAIT: next follow-up is due {due.strftime('%d %b %Y, %H:%M %Z')}."
-
-
 def due_and_copy(properties, count, first, second, now, formula):
     stage = (properties["Stage (AI Fills First)"].get("select") or {}).get("name")
     if stage != "Contacted":
@@ -89,9 +85,9 @@ def due_and_copy(properties, count, first, second, now, formula):
 
     contacted = date_value(properties, "Date Contacted")
     if not contacted:
-        return None, "Needs contact date", MISSING_CONTACT_DATE
+        return None, "Needs contact date", ""
     if count not in (0, 1, 2):
-        return None, "Invalid follow-up count", BAD_COUNT
+        return None, "Invalid follow-up count", ""
     if count == 2:
         if not first or not second:
             return None, "Complete (send history incomplete)", ""
@@ -107,7 +103,7 @@ def due_and_copy(properties, count, first, second, now, formula):
             return None, "Complete (timing review)", ""
         return None, "Complete (2 sent)", ""  # Never issue follow-up 3.
     if (count == 0 and (first or second)) or (count == 1 and second):
-        return None, "Needs count review", BAD_COUNT
+        return None, "Needs count review", ""
 
     contacted_local = parse_stamp(contacted).date()
     if count == 0:
@@ -115,7 +111,7 @@ def due_and_copy(properties, count, first, second, now, formula):
         status = "Follow-up 1"
     else:
         if not first:
-            return None, "Needs first send date", MISSING_SEND_DATE
+            return None, "Needs first send date", ""
         first_stamp = parse_stamp(first)
         # Date-only historical evidence has unknown time of day. Wait through day 5.
         after_first = (datetime.combine(first_stamp.date() + timedelta(days=6),
@@ -126,7 +122,7 @@ def due_and_copy(properties, count, first, second, now, formula):
         status = "Follow-up 2"
 
     if now < due:
-        return due.isoformat(timespec="seconds"), f"{status}: waiting", waiting_until(due)
+        return due.isoformat(timespec="seconds"), f"{status}: waiting", formula
     return due.isoformat(timespec="seconds"), f"{status}: ready", formula
 
 
@@ -241,9 +237,9 @@ def get_changes(page, today, previous=None):
     # A poll missed one or more intermediate send events. Never infer their
     # dates, and never show potentially premature sendable copy.
     if (p["Stage (AI Fills First)"].get("select") or {}).get("name") == "Contacted" and increased and not consecutive:
-        due, status, message = None, "Needs count review", BAD_COUNT
+        due, status, message = None, "Needs count review", ""
     if (p["Stage (AI Fills First)"].get("select") or {}).get("name") == "Contacted" and synced is not None and count < int(synced):
-        due, status, message = None, "Needs count review", BAD_COUNT
+        due, status, message = None, "Needs count review", ""
 
     current_due = date_value(p, "Safe Next Due")
     if not same_date_value(current_due, due):

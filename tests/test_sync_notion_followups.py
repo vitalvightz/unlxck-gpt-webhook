@@ -67,7 +67,7 @@ def get_copy(changed):
 def test_old_baseline_requires_manual_first_send_date():
     changed = sync.get_changes(row(stage="Contacted", sent="1"), date(2026, 10, 19))
     assert changed["Synced Follow-Ups Sent"] == {"number": 1}
-    assert get_copy(changed) == sync.MISSING_SEND_DATE
+    assert changed["Copy Follow-Up"] == {"rich_text": []}
     assert changed["Follow-Up Timing"]["rich_text"][0]["text"]["content"] == "Needs first send date"
     assert "Follow-Up 1 Sent At" not in changed
     assert "Last Follow-Up Sent" not in changed
@@ -81,7 +81,7 @@ def test_first_dropdown_send_records_observation_not_legacy_guess():
     assert changed["Follow-Up 1 Sent At"] == {"date": {"start": stamp}}
     assert changed["Last Follow-Up Sent"] == {"date": {"start": stamp}}
     assert changed["Safe Next Due"] == {"date": {"start": "2026-10-24T20:01:45+01:00"}}
-    assert "WAIT" in get_copy(changed)
+    assert get_copy(changed) == "next DM"
 
 
 def test_verified_native_button_first_timestamp_survives_poll():
@@ -113,7 +113,7 @@ def test_date_only_history_waits_through_full_fifth_day():
         datetime.fromisoformat("2026-10-21T17:00:00+01:00"), "second follow-up text")
     assert due == "2026-10-22T00:00:00+01:00"
     assert status == "Follow-up 2: waiting"
-    assert message.startswith("WAIT")
+    assert message == "second follow-up text"
 
 
 def test_elapsed_gap_is_120_hours_through_spring_dst_change():
@@ -131,7 +131,7 @@ def test_full_five_day_gap_recomputed_on_repeated_poll():
     page = row(stage="Contacted", sent="1", synced=1, first=instant.isoformat(),
                copied="WAIT: next follow-up is due 24 Oct 2026, 18:00 BST.",
                safe_due=prior_due, timing="Follow-up 2: waiting")
-    assert sync.get_changes(page, datetime.fromisoformat("2026-10-20T18:00:00+01:00")) == {}
+    assert sync.get_changes(page, datetime.fromisoformat("2026-10-20T18:00:00+01:00")) == {"Copy Follow-Up": sync.message_patch("next DM")}
 
 
 def test_equivalent_utc_and_local_date_representation_does_not_resync():
@@ -142,7 +142,7 @@ def test_equivalent_utc_and_local_date_representation_does_not_resync():
                copied="WAIT: next follow-up is due 24 Oct 2026, 18:00 BST.",
                safe_due="2026-10-24T17:00:00.000Z",
                timing="Follow-up 2: waiting")
-    assert sync.get_changes(page, datetime.fromisoformat("2026-10-20T18:00:00+01:00")) == {}
+    assert sync.get_changes(page, datetime.fromisoformat("2026-10-20T18:00:00+01:00")) == {"Copy Follow-Up": sync.message_patch("next DM")}
 
 
 def test_first_due_date_and_early_copy_are_consistent():
@@ -152,7 +152,7 @@ def test_first_due_date_and_early_copy_are_consistent():
         datetime.fromisoformat("2026-10-15T12:00:00+01:00"), "follow-up 1 text")
     assert due == "2026-10-16T00:00:00+01:00"
     assert status == "Follow-up 1: waiting"
-    assert "follow-up 1 text" not in message
+    assert message == "follow-up 1 text"
 
 
 def test_second_due_respects_day_eight_and_five_days():
@@ -162,7 +162,7 @@ def test_second_due_respects_day_eight_and_five_days():
         datetime.fromisoformat("2026-10-20T11:00:00+01:00"), "second DM")
     assert due == "2026-10-21T00:00:00+01:00"  # Day 8 wins over 5-day gap.
     assert status.endswith("waiting")
-    assert message.startswith("WAIT")
+    assert message == "second DM"
 
 
 def test_ready_followup_displays_message_at_eligibility():
@@ -220,7 +220,7 @@ def test_counter_reversal_keeps_history_and_blocks_copy():
     assert "Follow-Up 1 Sent At" not in changed
     assert "Follow-Up 2 Sent At" not in changed
     assert "Last Follow-Up Sent" not in changed
-    assert "count" in get_copy(changed).lower()
+    assert changed["Copy Follow-Up"] == {"rich_text": []}
     assert sync.date_value({**page["properties"], **changed}, "Safe Next Due") is None
 
 
@@ -234,7 +234,7 @@ def test_missed_multiple_counter_increments_hold_for_review():
 def test_missing_contact_date_blocks_copy():
     changed = sync.get_changes(
         row(stage="Contacted", sent="0", synced=0, contacted=None), date(2026, 10, 19))
-    assert get_copy(changed) == sync.MISSING_CONTACT_DATE
+    assert changed["Copy Follow-Up"] == {"rich_text": []}
 
 
 def test_replied_stage_copies_early_preview_before_due():
