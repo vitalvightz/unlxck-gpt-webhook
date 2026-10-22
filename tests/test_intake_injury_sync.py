@@ -505,3 +505,24 @@ def test_an_umbrella_type_without_a_specific_condition_has_no_identity() -> None
 
     injury = {"zone": "l_ankle", "injury_type": "surface_injury", "injury_subtypes": [], "surface_type": ""}
     assert _guided_identity(injury, {"body_area": "Left ankle"}) is None
+
+
+def test_a_newly_built_camp_injury_reaches_today_before_the_camp_is_active() -> None:
+    """Build Camp / Quick Build injuries describe the athlete, not the plan.
+
+    The post-generation sync tracks them immediately; Today (still on the old
+    active plan) shows them, and activating the new camp never duplicates them.
+    """
+    store = FakeStore()
+    active = _seed_generated_plan(store, intake_id="intake-active", intake={"guided_injuries": []}, active=True)
+    built = _seed_generated_plan(store, intake_id="intake-built", intake={"injuries": "Bum strain"}, active=False)
+    store.set_active_plan_id(ATHLETE, active["id"])
+
+    sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=built)  # what persistence now runs
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC")
+    assert [flag["plan_id"] for flag in view.open_injuries] == [built["id"]]
+    assert "strain" in view.open_injuries[0]["description"].lower()
+
+    store.set_active_plan_id(ATHLETE, built["id"])
+    build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC")
+    assert len(_live(store)) == 1
