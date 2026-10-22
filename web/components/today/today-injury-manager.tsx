@@ -357,6 +357,7 @@ export function TodayInjuryManager({
   const addErrorId = useId();
   const impactGroupRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
+  const editTitleRef = useRef<HTMLParagraphElement>(null);
   const newInjurySelections: BodyMapSelection[] = newArea.trim()
     ? [
         {
@@ -706,6 +707,11 @@ export function TodayInjuryManager({
                       setNewDetail(typeWord ? description.replace(new RegExp(`^${typeWord}\\.?\\s*`, "i"), "") : description);
                       setNewZone(""); setBodyMapVisible(false); setManualArea(false); setNotesOpen(false); setAddMissing(null);
                       setIsAddFormOpen(true);
+                      // The form sits below every injury card; bring it to the athlete.
+                      requestAnimationFrame(() => {
+                        editTitleRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                        editTitleRef.current?.focus({ preventScroll: true });
+                      });
                     }}>
                       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
                       <span className="sr-only">Edit</span>
@@ -964,7 +970,7 @@ export function TodayInjuryManager({
         hidden={!isAddFormOpen}
         onSubmit={addInjury}
       >
-        {editingFlagId ? <p className="today-injury-add-title">Edit injury</p> : null}
+        {editingFlagId ? <p ref={editTitleRef} tabIndex={-1} className="today-injury-add-title">Edit injury</p> : null}
         {bodyMapVisible ? (
           <div ref={mapRef}>
             <BodyMap side={bodyMapSide} selections={newInjurySelections}

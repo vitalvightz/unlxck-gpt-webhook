@@ -161,12 +161,16 @@ def test_unreported_during_response_is_unknown_not_a_pass():
     assert requirement(result, "during_response_not_worse")["status"] == "unknown"
 
 
-def test_resolved_setback_restores_baseline_but_never_counts_as_progression_evidence():
+def test_later_improvement_clears_setback_without_more_rehab_logging():
     rows = [event(1, next_day="worse"), event(2)]
     rows[0]["response_recorded_at"] = "2026-09-02T12:00:00Z"
+    # The athlete's latest answer wins: Better after Worse clears the hold.
     result = progress(rows, changes={"latest_reported_at": "2026-09-10T00:00:00Z"})
-    assert result["stage"] == "restore"
-    assert requirement(result, "no_unresolved_setback")["reason_code"] == "unresolved_historical_negative_response"
+    setback = requirement(result, "no_unresolved_setback")
+    assert setback["status"] == "pass" and setback["resolved_setback_at"].startswith("2026-09-02")
+    # Without a later improvement the setback still holds.
+    held = progress(rows)
+    assert held["stage"] == "calm"
 
 
 @pytest.mark.parametrize("field,value", [("side", "right"), ("body_region", "shoulder")])

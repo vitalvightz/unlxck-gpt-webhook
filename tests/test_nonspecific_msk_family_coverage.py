@@ -58,13 +58,12 @@ def test_exact_reviewed_identity_calm_restore_completion_and_readiness(key, regi
         assert decision["outcome"] == "prescribed_rehab" and decision["stage"] == stage
         prescription = decision["prescription"]
         assert prescription["bank_hash"] == content_hash(prescription["drill"])
-        # Activation work keeps the existing loading hold on reduced-training days.
+        # The daily verdict never changes rehab.
         activation = prescription["drill"]["function"] == "activation"
         assert prescription["dose"] == (prescription["drill"]["dose"] or {}) and prescription["is_loading"] == activation
         ledger = {r["drill_id"]: r for r in read("data/rehab_metadata_review.json")}
         assert ledger[prescription["drill_id"]]["review_state"] == "reviewed"
-        assert schedule_rehab(row, decision, training_day=DAY, readiness_decision="pull_back")["state"] == (
-            "held" if activation else "due")
+        assert schedule_rehab(row, decision, training_day=DAY, readiness_decision="pull_back")["state"] == "due"
         frozen, items, completion = frozen_work(row)
         eligible = resolve_rehab_completion(items, [row], completion=completion).eligible
         assert len(eligible) == 1

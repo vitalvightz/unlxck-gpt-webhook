@@ -107,7 +107,7 @@ def test_worsening_demotes_to_calm_and_readiness_holds_loading(region):
     row = injury(region, "restore")
     decision = resolve(row)
     if decision["prescription"]["is_loading"]:
-        assert schedule_rehab(row, decision, training_day=DAY, readiness_decision="pull_back")["state"] == "held"
+        assert schedule_rehab(row, decision, training_day=DAY, readiness_decision="pull_back")["state"] == "due"
 
 
 @pytest.mark.parametrize("region", REGIONS)

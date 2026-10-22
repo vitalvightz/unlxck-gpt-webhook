@@ -78,11 +78,11 @@ def schedule_rehab(injury, decision, *, training_day, completions=(), exposures=
     next_due = max((day + timedelta(days=gap) for day, gap in performed), default=today)
     if next_due > today:
         return result("recovery_day", "Allow the configured recovery gap before repeating this routine.", next_due.isoformat())
-    if readiness_decision in {"stop", "not_checked_in"}:
+    if readiness_decision == "not_checked_in":
         return result("held", "Complete today's check-in and follow its training guidance.")
+    if readiness_decision == "stop":
+        return result("held", "Rehab is held by today's stop guidance.")
     if prescription.get("is_loading"):
-        if readiness_decision == "pull_back":
-            return result("held", "Loading rehab is held by today's reduced-training guidance.")
         # No unknown or missing next-day response is treated as tolerance.
         recent = [r for r in exposures if str((r.get("event_json") or r).get("injury_episode_id")) == episode_id]
         if recent:

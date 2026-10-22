@@ -55,7 +55,7 @@ for (const [reason, message] of [
   ["fail_next_day_response_worse", /felt worse the next day/],
   ["shoulder_nontraumatic_cuff_not_reported", /Edit injury/],
   ["target_equipment_unavailable", /equipment you haven’t listed/],
-  ["unresolved_injury_checkin_setback", /Loading is still on hold after a worse response/],
+  ["unresolved_injury_checkin_setback", /reported this injury worse earlier/],
 ]) {
   test(`the actual runtime blocker ${reason} has a specific explanation`, async () => {
     const container = document.createElement("div"); document.body.appendChild(container);
@@ -136,7 +136,7 @@ test("a held schedule does not remove stage eligibility or create a progression 
 });
 
 test("a real safety hold still blocks progression when today's schedule is also held", () => {
-  const current = { ...decision, stage: "calm" as const, loading_hold: true,
+  const current = { ...decision, stage: "calm" as const,
     schedule: { state: "held" as const, reason: "Complete today's check-in and follow its training guidance." },
     progression: { reason_codes: ["episode_setback_loading_held"] } };
   assert.match(rehabNextStep(current)!, /Progression is on hold.*injury got worse/);
@@ -148,13 +148,13 @@ test("expanded injury controls do not repeat the visible summary", () => {
   const body = new domWindow.DOMParser().parseFromString(html, "text/html").body;
   assert.match(body.textContent ?? "", /Load · On hold/);
   assert.doesNotMatch(body.textContent ?? "", /Confirm the rehab loading/);
-  const held = { ...decision, stage: "calm" as const, loading_hold: true,
+  const held = { ...decision, stage: "calm" as const,
     progression: { reason_codes: ["episode_setback_loading_held"] } };
   assert.equal(renderToStaticMarkup(<RehabProgressStatus decision={held} summaryVisible />), "");
 });
 
 test("the real CALM setback decision stays visible without a next transition", () => {
-  const current = { ...decision, stage: "calm" as const, loading_hold: true,
+  const current = { ...decision, stage: "calm" as const,
     progression: { reason_codes: ["episode_setback_loading_held"] } };
   for (const html of [renderToStaticMarkup(<RehabStageMeter decision={current} />),
     renderToStaticMarkup(<RehabProgressStatus decision={current} />)]) {
@@ -165,7 +165,7 @@ test("the real CALM setback decision stays visible without a next transition", (
 });
 
 test("a safety hold wins over unpublished content and successful entry copy", () => {
-  const current = { ...decision, stage: "load" as const, loading_hold: true, progression: {
+  const current = { ...decision, stage: "load" as const, reason_codes: ["current_report_worse"], progression: {
     entry_basis: "reported_clinician_permission" as const,
     next_transition: { ...decision.progression!.next_transition!, to_stage: "dynamic", target_stage_live: false },
   } };

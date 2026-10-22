@@ -8702,6 +8702,11 @@ html[data-theme="light"] .today-injury-other-warning {
   margin: 0 0 11px;
   color: var(--text-primary);
   font-weight: 600;
+  scroll-margin-top: calc(var(--mobile-nav-clearance, 96px) + 16px);
+}
+
+.today-injury-add-title:focus {
+  outline: none;
 }
 
 .today-injury-add .body-map-panel {

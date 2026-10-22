@@ -108,7 +108,7 @@ def test_schedule_gate_applies_to_entire_bundle(state):
 def test_loading_readiness_training_and_medical_gates_hold_whole_bundle():
     _, injury, decision = fixture()
     assert decision["prescription"]["is_loading"]
-    assert schedule_rehab(injury, decision, training_day=DAY, readiness_decision="pull_back")["state"] == "held"
+    assert schedule_rehab(injury, decision, training_day=DAY, readiness_decision="pull_back")["state"] == "due"
     assert schedule_rehab(injury, decision, training_day=DAY, training_session={
         "blocks": [dict(block_type="strength", mechanical_load_regions=["ankle"], load="high")]
     })["state"] == "deferred"
@@ -307,7 +307,6 @@ def test_today_uses_live_bundle_only_for_injury_specific_restore_evidence(report
     if reported == "worse":
         # Main already retains Today's stop guidance even though the CALM
         # movement remains visible. Publication must never bypass that hold.
-        assert decision["loading_hold"]
         assert live["safety_hold_reason"] == "Follow today's stop guidance before training."
     assert [b["rehab_drill_id"] for b in live["session"]["blocks"]] == ids
     if stage == "calm":
@@ -353,7 +352,7 @@ def test_today_does_not_split_a_live_bundle_to_bypass_training_or_readiness_gate
     from api.services import today_service
     _, injury, _ = fixture()
     for context, state in [
-        ({"readiness_decision": "pull_back"}, "held"),
+        ({"readiness_decision": "pull_back"}, "due"),
         ({"readiness_decision": "not_checked_in"}, "held"),
         ({"readiness_decision": "stop"}, "held"),
         ({"training_session": {"blocks": [dict(block_type="strength", mechanical_load_regions=["ankle"], load="high")]}}, "deferred"),

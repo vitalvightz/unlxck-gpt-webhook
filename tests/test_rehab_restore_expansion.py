@@ -171,10 +171,12 @@ def test_unresolved_adverse_response_rejects_the_new_option():
     assert not eligible and "REJECT_UNRESOLVED_NEGATIVE_EXPOSURE" in rejected[0].reason_codes
 
 
-def test_reduced_training_days_keep_existing_dose_and_loading_holds():
+def test_reduced_training_days_keep_the_same_rehab():
     policies, bank = load_clinical_policies(), get_rehab_bank()
-    held = resolve_injury_policy(probe("hip_pain"), policies=policies, bank=bank, readiness_decision="pull_back")
-    assert held["prescription"] is None and held["reason_codes"] == ["reviewed_readiness_dose_missing"]
+    normal = resolve_injury_policy(probe("hip_pain"), policies=policies, bank=bank)
+    for verdict in ("modify", "pull_back"):
+        reduced = resolve_injury_policy(probe("hip_pain"), policies=policies, bank=bank, readiness_decision=verdict)
+        assert reduced["prescription"] == normal["prescription"]
 
 
 def test_two_new_injuries_keep_their_own_region_restrictions_and_prescriptions():

@@ -18,7 +18,7 @@ const injury: InjuryFlagRecord = {
 
 test("a readiness hold pauses today's rehab without changing LOAD eligibility", () => {
   const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, rehab_decision: {
-    ...injury.rehab_decision!, stage: "load", loading_hold: false,
+    ...injury.rehab_decision!, stage: "load",
     progression: { entry_basis: "reported_clinician_permission" },
     schedule: { state: "held", reason: "Complete today's check-in and follow its training guidance." },
   } }} token="token" onRefresh={async () => {}} />);

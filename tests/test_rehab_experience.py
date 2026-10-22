@@ -101,7 +101,6 @@ def test_missing_permission_pending_response_and_worsening_remain_engine_holds(m
     journey.report("worse")
     current = decision(view(client))
     assert current["stage"] != "load"
-    assert current["loading_hold"]
 
 
 @pytest.mark.parametrize("url", ["https://www.youtube.com/watch?v=AAAAAAAAAAA", "https://youtu.be/AAAAAAAAAAA", "https://youtube.com/shorts/AAAAAAAAAAA", None, "https://example.com/AAAAAAAAAAA"])
