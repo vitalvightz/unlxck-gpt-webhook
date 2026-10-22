@@ -1102,7 +1102,7 @@ export function TodaySessionPanel({
         storageKey={storageKey}
         sessionTitle={title}
         visible={mode === "open"}
-        finishLabel={source === "session" ? "Log session" : "Done"}
+        finishLabel={source === "session" ? "Finish session" : "Done"}
         handOffWhenDone={source === "session"}
         onMinimize={() => setActiveTimer({ source, mode: "minimized" })}
         onExpand={() => openTimer(source)}

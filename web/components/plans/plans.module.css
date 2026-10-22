@@ -16,6 +16,13 @@
 @media (min-width: 600px) { .headerActions { gap: var(--space-3); } }
 /* Narrow phones: drop both icons together (as the tiles drop their chevrons) so labels never clip. */
 @media (max-width: 360px) { .headerLink svg { display: none; } }
+
+.newPlanOptions { display: grid; gap: 8px; }
+@media (min-width: 720px) { .newPlanOptions { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.newPlanOption { display: flex; flex-direction: column; gap: 4px; min-height: 44px; padding: 12px 14px; border: 1px solid var(--border-default); border-radius: var(--radius-btn); color: var(--text-primary); text-decoration: none; }
+.newPlanOption:hover, .newPlanOption:focus-visible { border-color: var(--border-strong); }
+.newPlanOptionTitle { font-weight: 600; font-size: 15px; }
+.newPlanOptionMeta { color: var(--text-secondary); font-size: var(--type-meta); }
 .headerLink svg { flex: 0 0 16px; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 .pageTitle {

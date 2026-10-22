@@ -171,7 +171,7 @@ export function SessionReview({
       >
         <header className="today-review-head">
           <div>
-            <p className="kicker">Log session</p>
+            <p className="kicker">Session review</p>
             <h2 id={`${fieldId}-title`}>{title}</h2>
             <p className="today-review-count" aria-live="polite">
               {outcome.total === 0

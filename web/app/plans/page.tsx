@@ -121,6 +121,7 @@ export default function PlansPage() {
   const [customError, setCustomError] = useState<string | null>(null);
   const [plans, setPlans] = useState<PlanSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isNewPlanOpen, setIsNewPlanOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [localPlans, setLocalPlans] = useState<PlanSummary[] | null>(null);
   const [activePlanId, setActivePlanId] = useState<string | null>(null);
@@ -300,20 +301,39 @@ export default function PlansPage() {
           <h1 className={`athlete-motion-slot athlete-motion-header ${styles.pageTitle}`}>{activePlan?.fight_date ? t("fightCampHeading") : t("planWorkspace")}</h1>
           <p className={styles.pageSubtitle}>Build, manage and add to your training.</p>
           <div className={styles.headerActions}>
-            <Link href="/plans/custom" className={`ghost-button ${styles.headerLink}`}>
+            <button
+              type="button"
+              className={`ghost-button ${styles.headerLink}`}
+              aria-expanded={isNewPlanOpen}
+              aria-controls="new-plan-options"
+              onClick={() => setIsNewPlanOpen((current) => !current)}
+            >
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-              Build My Own Plan
-            </Link>
+              New plan
+            </button>
             <Link href="/history" className={`ghost-button ${styles.headerLink}`}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19v-5m5 5V9m5 10V5m5 14V2" /></svg>
               View History
             </Link>
           </div>
         </header>
-        <div className={actionStyles.actions}>
-          <LogTraining accessToken={session?.access_token ?? null} variant="tile" />
-          <TrainingLibraryLink variant="tile" />
-        </div>
+        {/* One way in for every kind of plan; each option keeps its own flow. */}
+        {isNewPlanOpen ? (
+          <nav id="new-plan-options" aria-label="New plan" className={styles.newPlanOptions}>
+            <Link href="/quick-build" className={styles.newPlanOption}>
+              <span className={styles.newPlanOptionTitle}>Quick Build</span>
+              <span className={styles.newPlanOptionMeta}>A few answers, a plan in minutes.</span>
+            </Link>
+            <Link href="/onboarding" className={styles.newPlanOption}>
+              <span className={styles.newPlanOptionTitle}>Full camp setup</span>
+              <span className={styles.newPlanOptionMeta}>Fight date, schedule, injuries and style.</span>
+            </Link>
+            <Link href="/plans/custom" className={styles.newPlanOption}>
+              <span className={styles.newPlanOptionTitle}>Build your own</span>
+              <span className={styles.newPlanOptionMeta}>Pick your own sessions for each day.</span>
+            </Link>
+          </nav>
+        ) : null}
 
         {error ? (
           <div className="error-banner athlete-motion-slot athlete-motion-status" role="alert">
@@ -384,7 +404,7 @@ export default function PlansPage() {
                 ))}
               </ul>
             ) : (
-              <p className="muted">{visiblePlans.length ? "No other saved plans." : "No saved plans yet. Build your own plan or create a camp."}</p>
+              <p className="muted">{visiblePlans.length ? "No other saved plans." : "No saved plans yet. Tap New plan to start one."}</p>
             )}
 
             {customError ? (
@@ -421,6 +441,12 @@ export default function PlansPage() {
             ) : null}
           </section>
         ) : null}
+
+        {/* Logging belongs to Today and History; here it sits after the plans. */}
+        <div className={actionStyles.actions}>
+          <LogTraining accessToken={session?.access_token ?? null} variant="tile" />
+          <TrainingLibraryLink variant="tile" />
+        </div>
 
         <div className={`athlete-motion-slot athlete-motion-main ${styles.section}`}>
           {isProfileLoading ? null : <AthleteProfileRow me={me} />}

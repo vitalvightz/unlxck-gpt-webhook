@@ -80,7 +80,7 @@ export function getTrackingHome({ state, rows, loadedFrom, today, canCheckIn, ha
     hero = {
       eyebrow: "Today", title: "Log your first session",
       lines: ["Your coach plans it. Log it here in seconds and UNLXCK tracks the rest."],
-      primary: { label: "Log training", href: LOG },
+      primary: { label: "Log session", href: LOG },
     };
   } else {
     const readinessLine = checkedIn && banner ? `Check-in: ${banner.title.toLowerCase()}.` : null;
@@ -104,7 +104,7 @@ export function getTrackingHome({ state, rows, loadedFrom, today, canCheckIn, ha
       hero = {
         eyebrow: "Today", title: "Log today's training",
         lines: last ? [`Last: ${sessionLine(last)} · ${daysAgoLabel(last.training_day, today).toLowerCase()}`] : [],
-        primary: { label: "Log training", href: LOG },
+        primary: { label: "Log session", href: LOG },
       };
     }
     if (readinessLine) hero.lines.push(readinessLine);

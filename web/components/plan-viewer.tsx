@@ -2762,7 +2762,7 @@ export function PlanViewer({
           ) : null}
           {archivedPreview && viewerRole === "athlete" ? (
             <Link href="/onboarding" className="ghost-button">
-              Create New Plan
+              Full camp setup
             </Link>
           ) : null}
 

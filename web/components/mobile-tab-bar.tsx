@@ -42,13 +42,28 @@ const TAB_ICONS: Record<string, ReactNode> = {
       <path d="M7 7h6M7 10h6M7 13h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   ),
-  "/onboarding": (
+  "/history": (
     <svg viewBox="0 0 20 20" width="20" height="20" fill="none" aria-hidden="true">
-      <rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M6 8h8M6 11h6M6 14h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M3.5 10a6.5 6.5 0 1 0 1.9-4.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M3 3v3h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M10 6.5V10l2.5 1.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  "/timer": (
+    <svg viewBox="0 0 20 20" width="20" height="20" fill="none" aria-hidden="true">
+      <circle cx="10" cy="11" r="6" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M8 2.5h4M10 2.5V5M10 11l2.5-2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   ),
 };
+
+const TAB_LABEL_KEYS = {
+  "/": "overview",
+  "/today": "today",
+  "/plans": "plan",
+  "/history": "history",
+  "/timer": "timerTab",
+} as const;
 
 /**
  * How far below the layout viewport's bottom edge the visible (visual)
@@ -77,7 +92,7 @@ export function visualViewportBottomOffset(
   return gap < 0 ? gap : 0;
 }
 
-function isActive(pathname: string, href: string): boolean {
+export function isTabActive(pathname: string, href: string): boolean {
   if (href === "/") {
     return pathname === "/";
   }
@@ -187,7 +202,7 @@ export function MobileTabBar() {
   return (
     <nav ref={barRef} className="mobile-tab-bar" aria-label={t("primary")}>
       {BOTTOM_NAV_ITEMS.map((tab) => {
-        const active = isActive(pathname, tab.href);
+        const active = isTabActive(pathname, tab.href);
         return (
           <Link
             key={tab.href}
@@ -199,13 +214,7 @@ export function MobileTabBar() {
               {TAB_ICONS[tab.href]}
             </span>
             <span className="mobile-tab-bar-label">
-              {tab.href === "/"
-                ? t("overview")
-                : tab.href === "/today"
-                  ? t("today")
-                  : tab.href === "/plans"
-                    ? t("plan")
-                    : t("campSetup")}
+              {t(TAB_LABEL_KEYS[tab.href as keyof typeof TAB_LABEL_KEYS])}
             </span>
           </Link>
         );

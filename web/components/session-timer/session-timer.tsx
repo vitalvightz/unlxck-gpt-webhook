@@ -1009,7 +1009,7 @@ export function SessionTimer({
   storageKey,
   sessionTitle,
   visible,
-  finishLabel = "Log session",
+  finishLabel = "Finish session",
   handOffWhenDone = false,
   onMinimize,
   onExpand,
@@ -1120,7 +1120,7 @@ export function SessionTimer({
         <button type="button" className="st-mini" data-tone={tone} {...miniDrag}>
           <span className="st-mini-phase">{phaseLabel(state, item, view)}</span>
           <span className="st-mini-title">{item?.title}</span>
-          <span className="st-mini-clock">{state.phase === "done" ? (finishError ? "Retry save" : finishing ? "Saving…" : "Log session") : state.phase === "ready" ? "Open" : formatClock(clockSeconds)}</span>
+          <span className="st-mini-clock">{state.phase === "done" ? (finishError ? "Retry save" : finishing ? "Saving…" : "Finish session") : state.phase === "ready" ? "Open" : formatClock(clockSeconds)}</span>
         </button>
       </ToBody>
     );

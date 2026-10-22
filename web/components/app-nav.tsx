@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/skeleton";
 import { shouldShowAdminPanelLink } from "@/lib/admin-nav-visibility";
 import { getShellSurface, isAuthSurfaceRoute, shouldShowBrandTopbar } from "@/lib/app-surface";
 import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
-import { SIDE_NAV_ITEMS } from "@/lib/beta-navigation";
+import { isAccountMenuItem, SIDE_NAV_ITEMS } from "@/lib/beta-navigation";
 import { isNavToggleCondensed } from "@/lib/nav-toggle-scroll";
 import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 
@@ -356,7 +356,19 @@ export function AppNav() {
           <span className="nav-toggle-icon" aria-hidden="true">
             <MenuIcon />
           </span>
+          {/* With the bottom bar showing (phones), this button opens the
+              account menu, so it shows who is signed in instead of a burger. */}
+          {session ? (
+            <span className="nav-toggle-avatar" aria-hidden="true">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" className="sidebar-avatar-img" />
+              ) : (
+                <span className="sidebar-avatar-initials">{initials}</span>
+              )}
+            </span>
+          ) : null}
           <span className="nav-toggle-label">{t("menu")}</span>
+          {session ? <span className="nav-toggle-account-label">{t("account")}</span> : null}
           {!session && isReady ? <span className="badge status-badge-neutral">{t("entry")}</span> : null}
         </button>
       ) : null}
@@ -469,6 +481,7 @@ export function AppNav() {
                   <Link
                     key={link.href}
                     className={isLinkActive(link.href) ? "sidebar-link sidebar-link-active" : "sidebar-link"}
+                    data-account-menu-item={isAccountMenuItem(link.href) ? "true" : undefined}
                     href={link.href}
                     onClick={() => handleSidebarLinkSelect(link.href)}
                   >
@@ -484,6 +497,7 @@ export function AppNav() {
                     <p className="sidebar-section-label">{t("control")}</p>
                     <Link
                       className={isLinkActive("/admin") ? "sidebar-link sidebar-link-active" : "sidebar-link"}
+                      data-account-menu-item="true"
                       href="/admin"
                       onClick={() => handleSidebarLinkSelect("/admin")}
                     >

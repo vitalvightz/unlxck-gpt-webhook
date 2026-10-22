@@ -10,7 +10,8 @@ for (const width of [320, 390, 1280]) {
     page.on("pageerror", (e) => errors.push(e.message));
     const { mutations } = await setup(page, baseURL!);
     await page.goto("/plans");
-    await page.getByRole("link", { name: "Build My Own Plan" }).click();
+    await page.getByRole("button", { name: "New plan" }).click();
+    await page.getByRole("link", { name: /^Build your own/ }).click();
     await page.getByLabel("Plan name", { exact: true }).fill(`Weekly strength ${width}`);
     await page.getByRole("button", { name: "+ Add Session", exact: true }).click();
     await page.getByRole("button", { name: "Edit session 1", exact: true }).click();
@@ -259,10 +260,10 @@ test("Saved-plan failures are visible and retryable", async ({ page, baseURL }) 
     "temporarily unavailable",
   );
   await expect(page.getByRole("button", { name: "Retry custom plans" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Build My Own Plan" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "New plan" })).toBeVisible();
   await page.route("**/api/custom-plans", (route) => route.fulfill({ contentType: "application/json", body: "[]" }));
   await page.getByRole("button", { name: "Retry custom plans" }).click();
-  await expect(page.getByText("No saved plans yet. Build your own plan or create a camp.")).toBeVisible();
+  await expect(page.getByText("No saved plans yet. Tap New plan to start one.")).toBeVisible();
 });
 
 for (const width of [390, 1280]) {
@@ -327,15 +328,15 @@ for (const width of [320, 390, 1280]) {
     await expect(page.getByRole("heading", { name: "Custom plans", exact: true })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Edit Plan", exact: true })).toHaveAttribute("href", "/plans/custom?plan=active-draft");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    // Build and History are equal-width buttons with centred content and no clipped labels.
-    const headerButtons = await Promise.all(["Build My Own Plan", "View History"].map(async (name) => {
-      const link = page.getByRole("link", { name, exact: true });
+    // New plan and History are equal-width buttons with centred content and no clipped labels.
+    const headerButtons = await Promise.all([["button", "New plan"], ["link", "View History"]].map(async ([role, name]) => {
+      const link = page.getByRole(role as "button" | "link", { name, exact: true });
       return { box: (await link.boundingBox())!, fits: await link.evaluate((node) => node.scrollWidth <= node.clientWidth) };
     }));
     expect(Math.abs(headerButtons[0].box.width - headerButtons[1].box.width)).toBeLessThan(1);
     expect(headerButtons.every(({ fits }) => fits)).toBe(true);
     if (width < 961) {
-      const tiles = (await page.getByRole("button", { name: "Log Training", exact: true }).boundingBox())!;
+      const tiles = (await page.getByRole("button", { name: "Log session", exact: true }).boundingBox())!;
       expect(Math.abs(headerButtons[0].box.x - tiles.x)).toBeLessThan(1);
       expect(Math.abs(headerButtons[0].box.width - tiles.width)).toBeLessThan(1);
     }

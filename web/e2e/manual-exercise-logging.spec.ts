@@ -119,8 +119,8 @@ for (const width of [390, 1280]) {
     const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
     const { puts } = await setup(page, baseURL!);
     await page.goto("/plan");
-    await page.getByRole("button", { name: "Log Training", exact: true }).click();
-    const form = page.getByRole("form", { name: "Log Training", exact: true });
+    await page.getByRole("button", { name: "Log session", exact: true }).click();
+    const form = page.getByRole("form", { name: "Log session", exact: true });
     // The existing three steps still save immediately.
     await form.getByRole("group", { name: "Activity", exact: true }).getByRole("button", { name: "Strength", exact: true }).click();
     await form.getByRole("group", { name: "Duration", exact: true }).getByRole("button", { name: "60", exact: true }).click();

@@ -396,7 +396,7 @@ export function PlanManageSheet({
             ) : null}
             {archived ? (
               <Link href="/onboarding" className="ghost-button">
-                Create new plan
+                Full camp setup
               </Link>
             ) : (
               <>

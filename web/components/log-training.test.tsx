@@ -67,7 +67,7 @@ const sent = (call: Call) => ({ ...call.body, client_request_id: undefined });
 test("without a known sport the original six activities and payload are unchanged", async () => {
   const ui = await mount([]);
   try {
-    await ui.click("Log Training");
+    await ui.click("Log session");
     assert.deepEqual(labels(ui), ["Boxing", "Sparring", "Strength", "Conditioning", "Roadwork", "Other"]);
     assert.deepEqual(ui.pressed("Activity"), []);
     await ui.pick("Activity", "Roadwork");
@@ -81,7 +81,7 @@ test("without a known sport the original six activities and payload are unchange
 test("a boxer sees boxing session types in the same single grid, with nothing preselected", async () => {
   const ui = await mount(["boxing"]);
   try {
-    await ui.click("Log Training");
+    await ui.click("Log session");
     assert.deepEqual(labels(ui), ["Pads", "Bag work", "Shadowboxing", "Technical drills", "Sparring", "Strength", "Conditioning", "Roadwork", "Other"]);
     assert.deepEqual(ui.pressed("Activity"), []);
     assert.equal(ui.group("Sport"), null);
@@ -105,7 +105,7 @@ for (const [sport, pick, minutes, expected] of [
   test(`${sport}: ${pick} saves as logged, never as Boxing, with no sparring follow-up`, async () => {
     const ui = await mount([sport]);
     try {
-      await ui.click("Log Training");
+      await ui.click("Log session");
       assert.ok(!labels(ui).includes("Boxing"));
       await ui.pick("Activity", pick);
       await ui.pick("Duration", minutes);
@@ -120,7 +120,7 @@ for (const [sport, pick, minutes, expected] of [
 test("strength from a sport grid is stored exactly as before, without a sport", async () => {
   const ui = await mount(["bjj"]);
   try {
-    await ui.click("Log Training");
+    await ui.click("Log session");
     await ui.pick("Activity", "Rolling");
     await ui.pick("Activity", "Strength");
     assert.deepEqual(ui.pressed("Activity"), ["Strength"]);
@@ -135,7 +135,7 @@ test("strength from a sport grid is stored exactly as before, without a sport", 
 test("striking sparring keeps the sparring follow-up; it asks about head contact rather than assuming it", async () => {
   const ui = await mount(["kickboxing"]);
   try {
-    await ui.click("Log Training");
+    await ui.click("Log session");
     await ui.pick("Activity", "Sparring");
     await ui.pick("Duration", "30");
     await ui.pick("Effort", "Hard");
@@ -196,7 +196,7 @@ test("a lost response retries the same request ID; double submits send one reque
     : new Response(JSON.stringify({ id: "m", source: "external", status: "done", plan_id: null, training_day: "2026-10-19",
       title: "BJJ · Drilling", activity: "other", sport: "bjj", session_type: "drilling", duration_minutes: 60, effort: "hard" }), { status: 201 }));
   try {
-    await ui.click("Log Training");
+    await ui.click("Log session");
     await ui.pick("Activity", "Drilling");
     await ui.pick("Duration", "60");
     await ui.pick("Effort", "Hard");
@@ -213,7 +213,7 @@ test("a lost response retries the same request ID; double submits send one reque
 test("Change sport switches the choices for this session only, then defaults back to the saved sport", async () => {
   const ui = await mount(["boxing"]);
   try {
-    await ui.click("Log Training");
+    await ui.click("Log session");
     const toggle = ui.container.querySelector<HTMLButtonElement>("dialog legend button")!;
     assert.equal(toggle.textContent, "Boxing · Change");
     assert.equal(toggle.getAttribute("aria-expanded"), "false");
@@ -234,7 +234,7 @@ test("Change sport switches the choices for this session only, then defaults bac
     assert.deepEqual(sent(ui.calls[0]), { activity: "other", sport: "bjj", session_type: "rolling", duration_minutes: 90, effort: "hard", client_request_id: undefined });
     // Nothing is written to the profile.
     assert.ok(ui.calls.every(call => !call.url.includes("/api/me")));
-    await ui.click("Log Training");
+    await ui.click("Log session");
     assert.equal(ui.container.querySelector("dialog legend button")!.textContent, "Boxing · Change");
     assert.equal(labels(ui)[0], "Pads");
   } finally { ui.cleanup(); }
@@ -243,7 +243,7 @@ test("Change sport switches the choices for this session only, then defaults bac
 test("switching sport clears a session type that no longer fits, but keeps Strength; No sport shows the original six", async () => {
   const ui = await mount(["muay_thai"]);
   try {
-    await ui.click("Log Training");
+    await ui.click("Log session");
     const toggle = () => ui.container.querySelector<HTMLButtonElement>("dialog legend button")!;
     await ui.pick("Activity", "Clinch");
     await act(async () => toggle().click());
@@ -261,7 +261,7 @@ test("switching sport clears a session type that no longer fits, but keeps Stren
 test("saving needs only activity, duration and effort; exercises are a dismissible offer afterwards", async () => {
   const ui = await mount([]);
   try {
-    await ui.click("Log Training");
+    await ui.click("Log session");
     await ui.pick("Activity", "Strength");
     await ui.pick("Duration", "60");
     await ui.pick("Effort", "Hard");
@@ -280,7 +280,7 @@ test("saving needs only activity, duration and effort; exercises are a dismissib
 test("sparring keeps its own follow-up without an exercise offer", async () => {
   const ui = await mount([]);
   try {
-    await ui.click("Log Training");
+    await ui.click("Log session");
     await ui.pick("Activity", "Sparring");
     await ui.pick("Duration", "30");
     await ui.pick("Effort", "Hard");
