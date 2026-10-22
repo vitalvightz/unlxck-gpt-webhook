@@ -1819,7 +1819,6 @@ def current_injury_medical_hold(body_area: str, description: str, severity: str)
 
 def current_report_medical_hold_reasons(injury: Mapping[str, Any]) -> tuple[str, ...]:
     """Shared current-report gate for Today and persisted sparring evidence."""
-    from api.contracts.clinician_clearance import has_reported_clinician_permission
     from .injury_danger_terms import reported_medical_symptoms
     from .injury_taxonomy import INJURY_TAXONOMY
 
@@ -1847,7 +1846,7 @@ def current_report_medical_hold_reasons(injury: Mapping[str, Any]) -> tuple[str,
                    "urgent_fracture", "suspected_concussion", "concussion_symptoms", "suspected_acute_nerve_issue"}))
                or (str(injury.get("severity") or "").strip().lower() in {"severe", "high"}
                    and any("fracture" in category for category in categories))
-               or (not reasons and not has_reported_clinician_permission(injury) and current_injury_medical_hold(". ".join(fields[:2]), fields[2], str(injury.get("severity") or ""))))
+               or (not reasons and current_injury_medical_hold(". ".join(fields[:2]), fields[2], str(injury.get("severity") or ""))))
     if serious:
         reasons.add("a serious injury requiring medical review")
     return tuple(sorted(reasons))

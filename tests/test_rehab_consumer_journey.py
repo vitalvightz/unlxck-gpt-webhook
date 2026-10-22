@@ -288,6 +288,7 @@ def test_load_flare_reentry_uses_resolved_engine_evidence_without_erasing_old_wo
     j.report("ongoing")
     assert j.decision()["stage"] == "load"
     adverse = j.complete("worse")[0]
+    assert str(adverse.injury_episode_id) == j.injury["episode_id"]
     originals = deepcopy(j.store.rehab_exposures)
     assert j.decision()["stage"] == "calm"
     j.advance()
@@ -300,7 +301,7 @@ def test_load_flare_reentry_uses_resolved_engine_evidence_without_erasing_old_wo
     j.report("ongoing")
     decision = j.decision()
     assert decision["stage"] == "load", decision["progression"]
-    assert j.view().live_prescription["session"]["blocks"][0]["rehab_drill_id"] == adverse.drill_id
+    assert j.view().live_prescription["session"]["blocks"][0]["rehab_drill_id"] == decision["prescription"]["drill_id"]
     for identity, original in originals.items():
         assert j.store.rehab_exposures[identity] == original
 

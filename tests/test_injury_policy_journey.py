@@ -147,12 +147,18 @@ def test_stale_review_and_missing_provenance_fail_closed(reviewed):
         ClinicalPolicy.model_validate(changed)
 
 
-def test_retired_policy_holds_work_instead_of_resuming_legacy_prescriptions(reviewed, monkeypatch):
+def test_retired_content_is_unavailable_and_frozen_work_cannot_resume(reviewed, monkeypatch):
     policy, bank, injury = reviewed
+    active = resolve_injury_policy(injury, policies=(policy,), bank=bank)
+    frozen = reconcile_session_prescription(None, decisions=[active], plan_id=PLAN, training_day=DAY)
     retired = ClinicalPolicy.model_validate({**policy.model_dump(), "status": "retired", "activation": "shadow"})
     decision = resolve_injury_policy(injury, policies=(retired,), bank=bank)
-    assert decision["outcome"] == "medical_review" and decision["prescription"] is None
-    assert reconcile_session_prescription({"session_id": "s", "blocks": []}, decisions=[decision], plan_id=PLAN, training_day=DAY)["safety_hold"]
+    assert decision["outcome"] == "unsupported_prescription" and decision["prescription"] is None
+    session = {"session_id": "s", "session_type": "strength", "blocks": [
+        {"block_id": "training", "block_type": "strength", "mechanical_load_regions": ["ankle"], "contact_level": "none"}]}
+    assert not reconcile_session_prescription(session, decisions=[decision], plan_id=PLAN, training_day=DAY)["safety_hold"]
+    assert reconcile_session_prescription(None, decisions=[decision], plan_id=PLAN, training_day=DAY,
+        frozen=frozen)["safety_hold"]
     from fightcamp import rehab_clinical, rehab_protocols
     monkeypatch.setattr(rehab_clinical, "load_clinical_policies", lambda: (retired,))
     monkeypatch.setattr(rehab_protocols, "get_rehab_bank", lambda: bank)

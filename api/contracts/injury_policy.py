@@ -272,7 +272,7 @@ def resolve_injury_policy(
         drill = deepcopy(drill_by_id[identity])
         reviewed_work = None
         permission_work = (prescription.required_rehabilitation_level or
-            (progression.get("entry_basis") == "reported_clinician_permission" and not prescription.clinical_criterion
+            (prescription.range_choice and not prescription.clinical_criterion
                 and prescription.stage not in {"calm", "restore"}))
         if permission_work:
             if (not prescription.range_choice or not prescription.resistance or not prescription.mandatory_restrictions

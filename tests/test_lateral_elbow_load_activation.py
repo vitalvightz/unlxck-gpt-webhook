@@ -298,9 +298,8 @@ def test_real_restore_completion_and_existing_checkins_supply_consumer_progressi
     decision = resolve_injury_policy(injury, policies=load_clinical_policies(), bank=get_rehab_bank(),
         equipment=["table"], exposures=exposure_rows_with_observations(list(b[0].rehab_exposures.values()), events),
         as_of=NOW + timedelta(days=1))
-    assert decision["stage"] == "load"
-    if not eligible:
-        assert decision["progression"]["entry_basis"] == "reported_clinician_permission"
+    assert decision["stage"] == ("load" if eligible else "restore")
+    assert "entry_basis" not in decision["progression"]
     assert not any(e["event_type"] == "rehab_progression_assessment" for e in events)
 
 

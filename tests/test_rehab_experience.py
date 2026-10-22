@@ -131,7 +131,8 @@ def test_exact_demo_metadata_does_not_change_prescription_or_completion(monkeypa
             json={**payload, "status": status, **({"rehab_performance": "done_as_shown"} if status == "done" else {})})
         assert response.status_code == 201, response.text
     assert journey.store.rehab_exposures
-    event = next(iter(journey.store.rehab_exposures.values()))["event_json"]
+    event = next(row["event_json"] for row in journey.store.rehab_exposures.values()
+                 if row["event_json"]["drill_id"] == block["rehab_drill_id"])
     assert event["drill_id"] == block["rehab_drill_id"]
     assert event["dose_completed"]["completion_state"] == "quantified"
     for field, value in block["dose"].items():
