@@ -41,3 +41,22 @@ def test_injury_hold_names_its_source_and_reason():
     readiness = session_hold("pull_back", live(safety_hold=True, reason="Today's pull-back guidance holds your planned training."),
                              readiness_held=True)
     assert readiness["source"] == "readiness"
+
+
+def test_latest_same_day_injury_answer_is_the_rehab_response():
+    from api.services.injury_episode_service import exposure_rows_with_observations
+    exposure = {"id": "x1", "created_at": "2026-10-22T13:17:00Z", "event_json": {
+        "injury_id": "i", "injury_episode_id": "e", "occurred_at": "2026-10-22T00:00:00Z",
+        "response": {"during_response": "not_reported"},
+        "provenance": {"response_tracking": "injury_checkin", "recorded_at": "2026-10-22T13:16:55Z"}}}
+
+    def report(status, at):
+        return {"id": at, "event_type": "injury_checkin", "injury_id": "i", "injury_episode_id": "e", "created_at": at,
+                "payload": {"explicit_report": True, "latest_reported_status": status}}
+    before = report("improving", "2026-10-22T13:16:30Z")  # before the rehab: never counts
+    assert exposure_rows_with_observations([exposure], [before])[0]["event_json"]["response"]["during_response"] == "not_reported"
+    # It can get worse as the day goes on, or settle again: the latest answer counts.
+    worse_later = [before, report("improving", "2026-10-22T14:00:00Z"), report("worse", "2026-10-22T20:00:00Z")]
+    assert exposure_rows_with_observations([exposure], worse_later)[0]["event_json"]["response"]["during_response"] == "worse"
+    settled = [*worse_later, report("improving", "2026-10-22T21:00:00Z")]
+    assert exposure_rows_with_observations([exposure], settled)[0]["event_json"]["response"]["during_response"] == "better"

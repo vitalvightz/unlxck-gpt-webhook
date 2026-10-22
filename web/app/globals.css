@@ -21827,6 +21827,10 @@ button.injury-progress:hover > svg { color: var(--text-primary); }
 .injury-requirements strong { font-weight: 550; }
 .injury-requirements span { color: var(--text-secondary); flex-shrink: 0; font-size: 11px; }
 .injury-requirements li > p { margin-top: 8px; color: var(--text-secondary); font-size: 12px; }
+.injury-requirements li { padding: 12px 0; }
+.injury-requirements li[data-status="pass"] .injury-requirement-mark { color: var(--success, #3fb950); }
+.injury-requirement-mark { display: inline-block; width: 18px; color: var(--text-secondary); }
+.injury-requirements-next { margin: 4px 0 12px; padding: 10px 12px; border-radius: 10px; background: var(--surface-raised, rgba(255, 255, 255, 0.04)); font-size: 13px; }
 @keyframes injury-sheet-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 600px) {
   .today-injury-card .today-injury-item { padding: 18px; }

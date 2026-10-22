@@ -47,9 +47,9 @@ const REASONS: Record<string, string> = {
   no_reviewed_stage_exposure: "Complete your current rehabilitation exercise in Today.",
   no_defined_dose_completed: "No completed current-stage prescription is recorded yet.",
   no_reviewed_response_group: "An injury response after current-stage rehab is still needed.",
-  during_response_not_reported: "Log your rehab session and answer its injury-response question.",
+  during_response_not_reported: "After your rehab, tap how it feels under How’s your injury. Your latest answer that day counts.",
   next_day_response_not_reported: "Answer the next-day rehab follow-up when it appears in Today.",
-  next_day_response_not_yet_known: "Your next-day rehab response is needed. Answer it in Today before starting rehab.",
+  next_day_response_not_yet_known: "Tomorrow, answer the follow-up on Today about this rehab.",
   next_day_response_not_sure: "Your next-day response is unclear. Loading stays on hold. Follow today’s rehab.",
   during_response_not_sure: "Your rehab response is unclear. Follow today’s permitted rehab.",
   inconsistent_response_group: "Your last rehab responses are missing or do not match. Loading stays on hold.",
@@ -131,6 +131,13 @@ export function RehabProgressStatus({ decision, statusLine, summaryVisible = fal
   const title = summaryVisible && next ? "Progression checks"
     : safety ? "Progression · On hold" : next ? `${LABELS[next.to_stage] ?? "Next stage"} · ${!next.target_stage_live ? "Unavailable in UNLXCK" : next.status === "met" ? "Available" : "On hold"}` : null;
   const nextStep = rehabNextStep(decision);
+  // Checks blocked for the same reason show once.
+  const checks = (next?.requirements ?? []).filter((item, index, items) =>
+    item.status === "pass" || !REASONS[item.reason_code] || !items.slice(0, index).some(previous =>
+      previous.status !== "pass" && REASONS[previous.reason_code] === REASONS[item.reason_code]));
+  // One next action: the first unmet check, else the transition's own blocker.
+  const nextAction = [...checks.filter(item => item.status === "fail" || item.status === "unknown").map(item => item.reason_code),
+    ...(next?.reason_codes ?? [])].map(code => REASONS[code]).find(Boolean) ?? null;
   if (summaryVisible && !next && !statusLine) return null;
   if (!title && !statusLine && !entry) return null;
   const content = <>
@@ -149,20 +156,14 @@ export function RehabProgressStatus({ decision, statusLine, summaryVisible = fal
       : <div className="injury-progress">{content}</div>}
     {open && next ? <InjuryDetailSheet title="Progression requirements" onClose={() => setOpen(false)}>
       <div className="injury-sheet-body">
-        <p className="injury-sheet-lead">{LABELS[stage]} → {LABELS[next.to_stage] ?? "Next stage"}</p>
-        {entry ? <p>{entry}{decision.progression?.entry_basis === "reported_clinician_permission" ? " All other safety checks still apply." : ""}</p> : null}
-        <p className="muted">{unavailable ? nextStep
-          : "These checks use your reported permission and rehab response."}</p>
-        {!unavailable ? <ul className="injury-requirements">{(next.requirements ?? []).filter((item, index, items) =>
-          item.status === "pass" || !REASONS[item.reason_code] || !items.slice(0, index).some(previous =>
-            previous.status !== "pass" && REASONS[previous.reason_code] === REASONS[item.reason_code])
-        ).map(item => <li key={item.requirement_id}>
-          <div><strong>{REQUIREMENTS[item.kind] ?? "Progression check"}</strong>
-            <span>{item.status === "pass" ? "Complete" : item.status === "not_applicable" ? "Not required for this entry" : item.status === "fail" ? "On hold" : "Not yet confirmed"}</span></div>
-          {item.status !== "pass" ? <p>{REASONS[item.reason_code] ?? "This check is still needed. Follow today’s guidance."}</p> : null}
+        <p className="injury-sheet-lead">{LABELS[stage]} → {LABELS[next.to_stage] ?? "Next stage"}
+          {!unavailable && checks.length ? <small className="muted"> · {checks.filter(item => item.status !== "unknown" && item.status !== "fail").length} of {checks.length} done</small> : null}</p>
+        {unavailable ? <p className="muted">{nextStep}</p>
+          : nextAction ? <p className="injury-requirements-next"><strong>Next:</strong> {nextAction}</p> : null}
+        {!unavailable ? <ul className="injury-requirements">{checks.map(item => <li key={item.requirement_id} data-status={item.status}>
+          <div><strong><span aria-hidden="true" className="injury-requirement-mark">{item.status === "pass" ? "✓" : item.status === "not_applicable" ? "–" : "○"}</span>{REQUIREMENTS[item.kind] ?? "Progression check"}</strong>
+            <span>{item.status === "pass" ? "Done" : item.status === "not_applicable" ? "Not needed" : item.status === "fail" ? "On hold" : "Waiting"}</span></div>
         </li>)}</ul> : null}
-        {!unavailable ? (next.reason_codes ?? []).filter(code => !(next.requirements ?? []).some(item => item.reason_code === code)).map(code =>
-          <p key={code}>{REASONS[code] ?? "Progression stays on hold. Follow today’s rehab."}</p>) : null}
       </div>
     </InjuryDetailSheet> : null}
   </>;

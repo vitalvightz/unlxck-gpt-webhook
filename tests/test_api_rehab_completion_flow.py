@@ -1189,5 +1189,7 @@ def test_daily_checkin_projects_only_observed_responses_after_completed_work():
     assert exposure_rows_with_observations([row], [report("ongoing",13)])[0]["event_json"]["response"]["during_response"] == "same"
     assert exposure_rows_with_observations([row], [report("improving",13,"new-episode")])[0]["event_json"]["response"]["during_response"] == "not_reported"
     assert exposure_rows_with_observations([row], [report("improving",13,explicit=False)])[0]["event_json"]["response"]["during_response"] == "not_reported"
-    assert exposure_rows_with_observations([row], [report("worse",13), report("improving",14)])[0]["event_json"]["response"]["during_response"] == "worse"
+    # The latest same-day answer counts, whichever way it moved.
+    assert exposure_rows_with_observations([row], [report("worse",13), report("improving",14)])[0]["event_json"]["response"]["during_response"] == "better"
+    assert exposure_rows_with_observations([row], [report("improving",13), report("worse",14)])[0]["event_json"]["response"]["during_response"] == "worse"
     assert row == saved

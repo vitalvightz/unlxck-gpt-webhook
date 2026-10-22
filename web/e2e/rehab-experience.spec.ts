@@ -62,7 +62,7 @@ async function setup(page: Page, baseURL: string, name: keyof typeof cases, vide
 for (const [name, message] of [
   ["permission_entry", "LOAD follows your reported clinician advice. RESTORE completion isn’t needed."],
   ["missing_permission", "Confirm the rehab loading your clinician allows"],
-  ["pending_response", "Your next-day rehab response is needed"],
+  ["pending_response", "Tomorrow, answer the follow-up"],
   ["worsening", "Your injury got worse"],
   ["missing_equipment", "This exercise needs equipment you haven’t listed"],
 ] as const) {
