@@ -78,6 +78,8 @@ def _seed_plan(store, *, blocks: list[dict], plan_id: str = PLAN_ID, athlete_id:
 
 
 def _start(client, *, status: str = "started", plan_id: str = PLAN_ID, **extra):
+    # Starting today's session needs today's check-in (session_hold).
+    client.post("/api/today/checkin", headers=ATHLETE, json={"plan_id": plan_id, "sleep": "good", "body": "normal", "pain": "none", "phase": "GPP"})
     resp = client.post(
         "/api/today/session-completion",
         headers=ATHLETE,

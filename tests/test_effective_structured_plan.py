@@ -8,7 +8,7 @@ from fastapi import HTTPException
 
 from api.services.effective_structured_plan import resolve_effective_structured_plan
 from api.services.session_timing_notifications import build_session_timing_candidates_from_view
-from api.services.today_service import build_today_command_view, upsert_session_completion
+from api.services.today_service import build_today_command_view, submit_today_checkin, upsert_session_completion
 from api.services.xp_progress import _RecordRead, _opportunities
 from api.notification_models import NotificationPreferences
 from tests.support import FakeStore
@@ -341,6 +341,12 @@ def test_idless_session_on_declared_sparring_day_is_startable_and_counts(monkeyp
     assert session_id == "ses-22222222-2026-09-21-breathing-reset"
     assert view.today.next_session.get("coach_led_contact") == "Hard sparring"
 
+    # Starting today's session needs today's check-in (session_hold).
+    submit_today_checkin(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=monday, payload={
+        "plan_id": PLAN, "sleep": "good", "body": "normal", "pain": "none", "phase": "GPP", "active_injury": "none",
+        "previous_session": "none", "sharp_pain": False, "instability": False, "swelling": False,
+        "neurological_symptoms": False, "illness_symptoms": False, "cannot_warm_into_movement": False,
+        "worse_next_day_pain": False})
     upsert_session_completion(
         store,
         athlete_id=ATHLETE,

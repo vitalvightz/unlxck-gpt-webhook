@@ -51,6 +51,8 @@ def test_terminal_session_route_awards_training_and_planned_xp_once():
         "pain_after": 1,
     }
 
+    # Logging today's session needs today's check-in (session_hold).
+    client.post("/api/today/checkin", headers=ATHLETE, json={"plan_id": PLAN_ID, "sleep": "good", "body": "normal", "pain": "none", "phase": "GPP"})
     first = client.post("/api/today/session-completion", headers=ATHLETE, json=payload)
     repeated = client.post("/api/today/session-completion", headers=ATHLETE, json=payload)
 
