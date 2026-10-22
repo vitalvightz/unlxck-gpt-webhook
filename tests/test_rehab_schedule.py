@@ -64,7 +64,11 @@ def test_known_hard_training_defers_loading_and_is_not_rehab_credit():
     assert schedule_rehab(row, decision, training_day="2026-10-01", training_session=training)["state"] == "deferred"
     normal = dict(athlete_id="a", training_day="2026-10-01", status="done", session_id="strength")
     assert schedule_rehab(row, decision, training_day="2026-10-01", completions=[normal])["state"] == "due"
-    assert schedule_rehab(row, decision, training_day="2026-10-01", readiness_decision="pull_back")["state"] == "held"
+    # Pull back never holds RESTORE (gentle recovery); it holds only loading stages.
+    assert decision["stage"] == "restore"
+    assert schedule_rehab(row, decision, training_day="2026-10-01", readiness_decision="pull_back")["state"] == "due"
+    assert schedule_rehab(row, {**decision, "stage": "load"}, training_day="2026-10-01",
+                          readiness_decision="pull_back")["state"] == "held"
 
 
 def test_unknown_response_holds_loading_until_explicit_injury_improvement():

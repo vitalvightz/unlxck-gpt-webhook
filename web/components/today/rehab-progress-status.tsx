@@ -32,7 +32,7 @@ const REASONS: Record<string, string> = {
   injury_loading_safety_hold: "Your current injury restrictions take priority over loading permission.",
   current_report_worse: "Your injury got worse. Follow today’s guidance.",
   unresolved_historical_negative_response: "A previous worsening response is still holding progression.",
-  unresolved_injury_checkin_setback: "Loading is still on hold after a worse response. Follow today’s rehab and clinician advice.",
+  unresolved_injury_checkin_setback: "You reported this injury worse earlier. Log today’s rehab and how it felt to move on.",
   incomplete_prior_rehab_evidence: "Your past rehab record is incomplete. Loading stays on hold.",
   prior_stage_work_not_required_for_reported_permission: "Prior rehab logs are not required for this clinician-permitted entry.",
   prior_restore_not_required_for_reported_permission: "Prior RESTORE logs are not required for this clinician-permitted entry.",
@@ -68,8 +68,10 @@ type RehabDecision = NonNullable<InjuryFlagRecord["rehab_decision"]>;
 
 function rehabSafetyHold(decision: RehabDecision): string | null {
   const next = decision.progression?.next_transition;
+  // A next stage UNLXCK doesn't offer can't be "on hold": its checks don't apply.
+  const checked = next?.target_stage_live === false ? undefined : next;
   const codes = [...(decision.progression?.reason_codes ?? []), ...decision.reason_codes,
-    ...(next?.reason_codes ?? []), ...(next?.requirements ?? [])
+    ...(checked?.reason_codes ?? []), ...(checked?.requirements ?? [])
       .filter(item => !["pass", "not_applicable"].includes(item.status)).map(item => item.reason_code)];
   const reason = codes.find(code => /worse|worsening|setback|negative|safety_hold|stopped|medical/.test(code) && REASONS[code]);
   if (reason) return REASONS[reason];

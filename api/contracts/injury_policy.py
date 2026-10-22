@@ -26,6 +26,11 @@ from .achilles_restore_load import review_achilles_restore_load
 from .clinical_review_validity import ClinicalReviewInput, evaluate_clinical_review
 
 
+# Readiness holds only these stages. CALM and RESTORE are gentle recovery (see
+# clinician_clearance), so a verdict never holds them, even when a drill's
+# function keeps its own response and same-region gates (is_loading).
+LOADING_STAGES = frozenset({"load", "dynamic", "return"})
+
 _NON_CONTACT_BLOCK_TYPES = frozenset({
     "preparation", "mobility_activation", "plyometric_power", "speed",
     "strength", "strength_speed", "accessory", "conditioning",
@@ -69,7 +74,9 @@ def resolve_injury_policy(
         "outcome": "unsupported_prescription", "summary": "No suitable rehab is available for this injury yet. Keep to your current restrictions.",
         "reason_codes": ["unsupported_injury_policy"], "activation": "shadow",
         "prescription": None, "restrictions": {},
-        "loading_hold": readiness_decision == "pull_back",
+        "loading_hold": False,
+        # Pull back holds normal training whatever the injury's stage.
+        "readiness_hold": readiness_decision == "pull_back",
     }
     as_of = as_of or datetime.now(timezone.utc)
     if region == "achilles" and kind == "tendonitis":
@@ -199,6 +206,7 @@ def resolve_injury_policy(
     if policy.activation == "live":
         stage = progression["stage"]
         result["stage"] = stage
+    result["loading_hold"] = readiness_decision == "pull_back" and stage in LOADING_STAGES
     if stage not in policy.live_stages:
         result.update(outcome="missing_information", summary="More injury-specific evidence is needed before changing your rehab.", reason_codes=["stage_not_activated"])
         return result
@@ -296,7 +304,8 @@ def resolve_injury_policy(
         dose = (selection.dose.model_dump(exclude_none=True) if reviewed_work else
                 selected_dose.model_dump(exclude_none=True) if selected_dose else {})
         readiness_dose = prescription.readiness_doses.get(readiness_decision)
-        if readiness_decision == "pull_back" and readiness_dose is None and prescription.dose is not None:
+        if (readiness_decision == "pull_back" and readiness_dose is None and prescription.dose is not None
+                and prescription.stage in LOADING_STAGES):
             result.update(outcome="missing_information", summary="Follow today's reduced-training guidance. No rehab is set for days like this.",
                           reason_codes=["reviewed_readiness_dose_missing"])
             return result
@@ -313,7 +322,7 @@ def resolve_injury_policy(
             "bank_hash": prescription.bank_hash, "policy_id": policy.policy_id, "policy_version": policy.version,
             "policy_review_hash": policy.content_hash,
             "minimum_gap_days": prescription.minimum_gap_days,
-            "is_loading": prescription.stage in {"load", "dynamic", "return"} or
+            "is_loading": prescription.stage in LOADING_STAGES or
                 prescription.stage != "calm" and drill.get("function") in {"tendon_loading", "isometric_analgesia", "activation", "control"},
         })
         if permission_work:
@@ -483,7 +492,7 @@ def reconcile_session_prescription(
         current = dict(decision.get("restrictions", {}))
         injury = next((row for row in injuries if str(row.get("id")) == str(decision.get("injury_id"))
                        and str(row.get("episode_id")) == str(decision.get("injury_episode_id"))), None)
-        if (injury and decision.get("activation") == "live" and not decision.get("loading_hold")
+        if (injury and decision.get("activation") == "live"
                 and decision.get("outcome") != "medical_review" and clinician_clears_baseline(injury)):
             current["blocked_regions"], current["blocked_tags"] = [], []
             # Training clearance covers technical sparring; hard sparring needs contact.
@@ -511,14 +520,17 @@ def reconcile_session_prescription(
     hold = bool(clearance_hold and not block_contact_ceiling) or any(d.get("outcome") == "medical_review" for d in decisions)
     # A current pull-back holds camp independently of tissue demand. Eligible
     # non-loading rehab can then use the existing standalone replacement path.
-    hold = hold or (entry.get("session_type") != "rehab" and any(d.get("loading_hold") for d in decisions))
+    readiness_hold = entry.get("session_type") != "rehab" and any(
+        d.get("readiness_hold", d.get("loading_hold")) for d in decisions)
+    hold = hold or readiness_hold
     # The planner also uses a sparring type to budget app-owned support work.
     # An explicit contact headline/coach portion remains contact even when its
     # child blocks are only support; the allocation type alone is not that owner.
     headline = {**entry, "blocks": [], "session_type": ""}
+    restriction_hold = False
     if _session_has_contact(headline) and (allowed_contact < contact_rank["controlled"]
                                            or (allowed_contact < contact_rank["full"] and _hard_contact(headline))):
-        hold = True
+        hold = restriction_hold = True
     # A blockless day has nothing to check against restrictions. Clearance that
     # removes them all releases it: training covers technical sparring, contact
     # covers hard sparring.
@@ -638,7 +650,7 @@ def reconcile_session_prescription(
             elif not athlete_owned and clearance_contact and not uncertain and not ((demands or set()) & blocked_regions) and not ((tags or set()) & blocked_tags):
                 changes.append({"block_id": block.get("block_id"), "action": "removed", "reason": "clinician_clearance_ceiling"})
             else:
-                hold = True
+                hold = restriction_hold = True
                 blocks.append({**deepcopy(block), "_policy_held": True})
                 reasons = []
                 if blocked_regions and demands is None:
@@ -710,6 +722,9 @@ def reconcile_session_prescription(
         reasons = {reason for change in changes for reason in change.get("restriction_reasons", [])}
         detail = ("The injury-loading details for your planned training are unavailable."
                   if reasons & {"missing_load_details", "unknown_load_regions"}
+                  # Pull back is a readiness verdict, not an injury restriction.
+                  else "Today's pull-back guidance holds your planned training."
+                  if readiness_hold and not restriction_hold
                   else "Your planned training conflicts with the current injury restrictions.")
         snapshot["training_hold_reason"] = detail
         if hold:
