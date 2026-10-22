@@ -1,4 +1,5 @@
-const SAFE_DATA_IMAGE_RE = /^data:image\/[a-zA-Z0-9.+\-]+;base64,[A-Za-z0-9+/]+=*$/;
+// Raster formats only: SVG can carry script, so it is never accepted as an avatar.
+const SAFE_DATA_IMAGE_RE = /^data:image\/(?:jpeg|png|webp|gif);base64,[A-Za-z0-9+/]+=*$/;
 
 export function isSafeAvatarImageUrl(url: string | null | undefined): boolean {
   if (!url) {
@@ -12,7 +13,7 @@ export function isSafeAvatarImageUrl(url: string | null | undefined): boolean {
 
   try {
     const parsed = new URL(trimmed);
-    return parsed.protocol === "https:";
+    return parsed.protocol === "https:" && !parsed.username && !parsed.password;
   } catch {
     return false;
   }

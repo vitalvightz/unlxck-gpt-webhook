@@ -17,3 +17,10 @@ test("avatar image URLs reject HTTP, malformed data images, and invalid values",
   assert.equal(isSafeAvatarImageUrl(undefined), false);
   assert.equal(isSafeAvatarImageUrl(""), false);
 });
+
+test("avatar image URLs reject scriptable formats and embedded credentials", () => {
+  assert.equal(isSafeAvatarImageUrl("data:image/svg+xml;base64,PHN2Zz4="), false);
+  assert.equal(isSafeAvatarImageUrl("data:text/html;base64,PHNjcmlwdD4="), false);
+  assert.equal(isSafeAvatarImageUrl("javascript:alert(1)"), false);
+  assert.equal(isSafeAvatarImageUrl("https://user:pass@example.com/photo.jpg"), false);
+});
