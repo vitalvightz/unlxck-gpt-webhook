@@ -562,8 +562,6 @@ export function buildTodayCheckinPayload(params: {
   sleep: TodayCheckinSleep;
   body: TodayCheckinBody;
   pain: TodayCheckinPain;
-  activeInjury?: TodayActiveInjury;
-  previousSession?: TodayPreviousSession;
   safetyFlags: TodaySafetyFlags;
 }): TodayCheckinRequest {
   // A camp phase only exists with a plan, and is never invented without one.
@@ -576,11 +574,8 @@ export function buildTodayCheckinPayload(params: {
     sleep: params.sleep,
     body: params.body,
     pain: params.pain,
-    // Carry the athlete-reported injury/session truth so the backend safety
-    // evaluator can pull back for a worsening injury or modify after a very hard
-    // prior session. Defaults stay conservative-neutral when not collected.
-    active_injury: params.activeInjury ?? "none",
-    previous_session: params.previousSession ?? "none",
+    // active_injury / previous_session are derived on the server from Today's
+    // injuries and logged sessions, so they are not asked or sent.
     ...params.safetyFlags,
   };
 }

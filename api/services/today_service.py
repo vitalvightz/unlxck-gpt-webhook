@@ -1014,6 +1014,9 @@ def _refresh_today_recommendation_after_injury_change(
     # it through the same "worse" path keeps the engine's copy ("Rehab only
     # today.") consistent across both entry points.
     has_active_severe = _active_severe_injury(open_injuries) is not None
+    # The injury answer is re-read from the injuries as they are now, so a later
+    # Better clears an earlier Worse.
+    today_checkin = {**today_checkin, "active_injury": derived_active_injury(open_injuries)}
     active_injury_override = "worse" if (injury_reported_worse or has_active_severe) else None
     decision, context_status = _readiness_decision_with_failsafe(
         store,
@@ -1039,6 +1042,59 @@ def _refresh_today_recommendation_after_injury_change(
     return refreshed
 
 
+_INJURY_RANK = {"none": 0, "stable": 1, "worse": 2}
+_SESSION_RANK = {"none": 0, "normal": 1, "very_hard": 2}
+
+
+def derived_active_injury(open_injuries: Sequence[Mapping[str, Any]]) -> str:
+    """The check-in's injury answer, read from the tracked injuries.
+
+    Skin injuries route through the surface evaluator, so they never count here.
+    """
+    from api.contracts.readiness_message import _surface_assessment
+
+    tracked = [i for i in open_injuries if str(i.get("status") or "").lower() in {"open", "monitoring"}
+               and not _surface_assessment(i).is_surface]
+    if _active_severe_injury(tracked) is not None or any(
+            str(i.get("latest_reported_status") or "").lower() == "worse" for i in tracked):
+        return "worse"
+    return "stable" if tracked else "none"
+
+
+def derived_previous_session(recent_sessions: Sequence[Mapping[str, Any]], training_day: str) -> str:
+    """The check-in's last-session answer, read from logged sessions.
+
+    Sessions logged on the previous training day or earlier today. Any one of
+    them meeting the recent-workload demanding test makes it "very_hard"
+    (conservative: a hard yesterday is not hidden by an easy morning).
+    """
+    from fightcamp.completed_workload import completed_workload
+
+    window = completed_workload(recent_sessions, training_day, days=2, limit=None)
+    if window["demanding_sessions"]:
+        return "very_hard"
+    return "normal" if window["sessions"] else "none"
+
+
+def _with_derived_checkin_answers(store: AppStore, *, athlete_id: str, training_day: str,
+                                  payload: Mapping[str, Any]) -> dict[str, Any]:
+    """Fill active_injury / previous_session from tracked data. A client value
+    (older app) only ever escalates, so it can never weaken the derived answer."""
+    derived = dict(payload)
+    injury = derived_active_injury(_open_injury_flags(store, athlete_id))
+    try:
+        from .training_history import training_history
+        session = derived_previous_session(training_history(store, athlete_id), training_day)
+    except Exception:
+        logger.exception("[today] derived_previous_session_failed")
+        session = "none"
+    client_injury = str(payload.get("active_injury") or "none")
+    client_session = str(payload.get("previous_session") or "none")
+    derived["active_injury"] = max(injury, client_injury, key=lambda v: _INJURY_RANK.get(v, 0))
+    derived["previous_session"] = max(session, client_session, key=lambda v: _SESSION_RANK.get(v, 0))
+    return derived
+
+
 def submit_today_checkin(
     store: AppStore,
     *,
@@ -1059,6 +1115,10 @@ def submit_today_checkin(
     no active plan, so a stale client can never record a plan-free check-in for
     an athlete whose programme should own the day.
     """
+    # Injury and last-session answers come from tracked injuries and logged
+    # sessions, never a second question that could contradict them.
+    payload = _with_derived_checkin_answers(store, athlete_id=athlete_id, payload=payload,
+                                            training_day=resolve_training_day(athlete_timezone, now=now))
     plan_id = str(payload.get("plan_id") or "").strip()
     if not plan_id:
         return _submit_plan_free_checkin(
