@@ -605,6 +605,15 @@ async def persist_plan_and_finalize(
             athlete_id,
             plan_id,
         )
+    # Injuries entered in Build Camp / Quick Build describe the athlete, not a
+    # plan: track them in Today now, not only once this plan is made active.
+    if str(plan_row.get("status") or "").strip().lower() in {"ready", "publishable_with_flags"}:
+        try:
+            from api.services.intake_injury_sync import sync_intake_injuries_for_plan
+            await asyncio.to_thread(sync_intake_injuries_for_plan, store, athlete_id=athlete_id, plan_row=plan_row)
+        except Exception:  # noqa: BLE001 - injury sync must never break canonical persistence
+            logger.exception("[intake_injury_sync] post-generation sync failed athlete_id=%s plan_id=%s",
+                             athlete_id, plan_id)
     job = await asyncio.to_thread(
         store.update_generation_job,
         job_id,
