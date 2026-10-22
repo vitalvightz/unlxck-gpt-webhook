@@ -10551,23 +10551,7 @@ html[data-theme="light"] .today-injury-other-warning {
 
   .onboarding-heading-mobile {
     display: grid;
-    gap: 10px;
-  }
-
-  /* Quick Build / Build your own are escape hatches, not next steps: one
-     line of inline links instead of two full-width buttons. */
-  .onboarding-mobile-alternatives {
-    margin: 0;
-    font-size: 13.5px;
-    line-height: 1.45;
-  }
-
-  .onboarding-mobile-alternatives a {
-    color: var(--text-primary);
-    font-weight: 600;
-    text-decoration: underline;
-    text-decoration-color: var(--border-strong);
-    text-underline-offset: 3px;
+    gap: 14px;
   }
 
   .onboarding-quick-build-link {
@@ -10576,43 +10560,23 @@ html[data-theme="light"] .today-injury-other-warning {
   }
 
   .onboarding-mobile-title {
-    font-size: clamp(26px, 7.4vw, 30px);
+    font-size: clamp(28px, 8vw, 34px);
   }
 
-  /* Compact progress: "Step N of 6" beside the All steps toggle, then a thin
-     bar. The badge and "N steps remaining" sentence only repeat the title. */
   .onboarding-progress-strip {
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 10px 12px;
-    padding-block: 12px;
-  }
-
-  .onboarding-progress-strip-topline,
-  .onboarding-progress-helper {
-    display: none;
+    padding-block: 14px 16px;
   }
 
   .onboarding-progress-strip-title {
-    grid-column: 1;
-    grid-row: 1;
-    font-size: 18px;
+    font-size: 20px;
   }
 
   .onboarding-progress-strip-footer {
-    grid-column: 2;
-    grid-row: 1;
     align-items: center;
   }
 
-  .onboarding-progress-track {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    height: 6px;
-  }
-
-  .onboarding-progress-affordance {
-    min-height: 32px;
+  .onboarding-progress-helper {
+    max-width: 44ch;
   }
 
   .onboarding-mobile-progress-panel {

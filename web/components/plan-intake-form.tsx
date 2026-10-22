@@ -661,10 +661,15 @@ function MobileOnboardingHeader({
       <div className="onboarding-mobile-header-copy">
         <p className="kicker">Camp Setup</p>
         <p className="onboarding-mobile-title">Build your camp profile.</p>
-        <p className="muted onboarding-mobile-alternatives">
-          Saves as you go. Short on time? <Link href="/quick-build">Quick Build</Link> or{" "}
-          <Link href="/plans/custom">build your own</Link>.
-        </p>
+        <p className="muted">Saved, resumable athlete intake.</p>
+        <div className="hero-actions">
+          <Link href="/quick-build" className="ghost-button onboarding-quick-build-link">
+            Use Quick Build instead
+          </Link>
+          <Link href="/plans/custom" className="ghost-button onboarding-quick-build-link">
+            Build your own plan
+          </Link>
+        </div>
       </div>
       <OnboardingProgressStrip
         currentStep={currentStep}
