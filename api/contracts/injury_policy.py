@@ -712,6 +712,10 @@ def reconcile_session_prescription(
                   if readiness_hold and not restriction_hold
                   else "Your planned training conflicts with the current injury restrictions.")
         snapshot["training_hold_reason"] = detail
+        # Which rule held training, so every surface names the same cause.
+        snapshot["training_hold_source"] = ("readiness" if readiness_hold and not restriction_hold and not clearance_hold
+                                            and not any(d.get("outcome") == "medical_review" for d in decisions)
+                                            else "injury")
         if hold:
             snapshot.setdefault("safety_hold_reason", detail)
     snapshot["revision"] = content_hash(snapshot)

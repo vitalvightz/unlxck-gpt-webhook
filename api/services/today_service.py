@@ -3014,6 +3014,18 @@ def _head_impact_reported(store: AppStore, athlete_id: str, training_day: str) -
     return any(bool(row.get("rocked")) and str(row.get("training_day") or "")[:10] == training_day for row in rows)
 
 
+def apply_readiness_hold(live: dict, decision_tier: str) -> bool:
+    """Fold today's verdict into the reconciled session. True when it added the hold."""
+    holds = decision_tier in {"stop", "not_checked_in"} or (decision_tier == "pull_back" and not live.get("rehab_only"))
+    if live["safety_hold"] or not holds:
+        return False
+    live["safety_hold"] = True
+    live["safety_hold_reason"] = ("Complete today's check-in before starting." if decision_tier == "not_checked_in"
+        else "Today's pull-back guidance holds your planned training." if decision_tier == "pull_back"
+        else "Follow today's stop guidance before training.")
+    return True
+
+
 def session_hold(decision_tier: str, live: dict | None, *, session_id: str | None = None,
                  readiness_held: bool = False) -> dict[str, Any]:
     """The single rule for whether a session today is blocked, and why.
@@ -3024,7 +3036,7 @@ def session_hold(decision_tier: str, live: dict | None, *, session_id: str | Non
     offered_rehab = bool(live and live["session"].get("session_type") == "rehab" and not live.get("safety_hold")
                          and (session_id is None or live["session"].get("session_id") == session_id))
     if live and live.get("safety_hold") and (session_id is None or live["session"].get("session_id") == session_id):
-        source = "readiness" if readiness_held else "injury"
+        source = "readiness" if readiness_held or live.get("training_hold_source") == "readiness" else "injury"
         return {"held": True, "reason": live.get("safety_hold_reason") or "This session is on hold for the current injury guidance.",
                 "source": source}
     if decision_tier == "stop":
@@ -3548,14 +3560,7 @@ def _build_today_command_view(
     )
     if live:
         policy_changed_guidance = False
-        readiness_holds_session = view.today.decision_tier in {"stop", "not_checked_in"} or (
-            view.today.decision_tier == "pull_back" and not live.get("rehab_only"))
-        readiness_held = not live["safety_hold"] and readiness_holds_session
-        if readiness_held:
-            live["safety_hold"] = True
-            live["safety_hold_reason"] = ("Complete today's check-in before starting." if view.today.decision_tier == "not_checked_in"
-                else "Today's pull-back guidance holds your planned training." if view.today.decision_tier == "pull_back"
-                else "Follow today's stop guidance before training.")
+        readiness_held = apply_readiness_hold(live, view.today.decision_tier)
         # Describe the actual prescription without weakening stronger readiness.
         if live["safety_hold"] and view.today.decision_tier in {"green", "modify"}:
             policy_changed_guidance = True
