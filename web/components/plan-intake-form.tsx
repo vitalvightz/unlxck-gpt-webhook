@@ -806,9 +806,11 @@ function OptionalDetails({ title, hint, comingSoon = false, children }: { title:
     <details className="overview-disclosure onboarding-optional-disclosure">
       <summary className="overview-disclosure-summary">
         <div className="overview-disclosure-copy">
-          <p className="kicker">Optional</p>
-          <p className="overview-disclosure-title">{title}{comingSoon ? <> <span className="badge coming-soon-badge">Coming soon</span></> : null}</p>
-          {hint ? <p className="muted">{hint}</p> : null}
+          <p className="overview-disclosure-title">
+            {title} <span className="onboarding-optional-tag">Optional</span>
+            {comingSoon ? <> <span className="badge coming-soon-badge">Coming soon</span></> : null}
+          </p>
+          {hint ? <p className="muted onboarding-optional-hint">{hint}</p> : null}
         </div>
         <span className="overview-disclosure-meta">
           <span className="overview-disclosure-chevron" aria-hidden="true" />
@@ -2750,7 +2752,7 @@ export function PlanIntakeForm() {
                       />
                       <p className="muted">
                         {getFieldHelperText(daysOutCtx, "weekly_training_frequency") ||
-                          "Total sessions per week, including boxing and double days. Availability is the days you can train; the planner manages compatible S&C around combat work."}
+                          "All sessions per week, including boxing and doubles."}
                       </p>
                       {invalidFieldId === "sessionsPerWeek" && error ? (
                         <p id="sessionsPerWeek-error" className="error-text" role="alert">{error}</p>

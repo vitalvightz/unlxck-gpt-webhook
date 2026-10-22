@@ -21879,3 +21879,79 @@ fieldset.priority-clarification-options,
 .ex-detail-logging .ex-log-bar > .ex-log-save {
   min-height: 52px;
 }
+
+/* Camp setup, condensed: optional sections are one-line rows, "How Unlxck
+   works" is a single collapsible line, and clarification options are slim. */
+.onboarding-optional-tag {
+  margin-left: 6px;
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.onboarding-optional-hint {
+  display: none;
+}
+
+.onboarding-optional-disclosure[open] .onboarding-optional-hint {
+  display: block;
+}
+
+.onboarding-optional-disclosure > .overview-disclosure-summary {
+  padding-block: 12px;
+}
+
+.onboarding-trust-note {
+  padding: 12px var(--space-3);
+}
+
+.onboarding-trust-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.onboarding-trust-summary::-webkit-details-marker {
+  display: none;
+}
+
+.onboarding-trust-summary::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform var(--transition-base);
+}
+
+.onboarding-trust-note[open] .onboarding-trust-summary::after {
+  transform: rotate(-135deg);
+}
+
+.onboarding-trust-note[open] .onboarding-trust-points {
+  margin-top: 12px;
+}
+
+.priority-clarification-option {
+  min-height: 0;
+  padding-block: 8px;
+}
+
+.field .priority-clarification-option input[type="radio"] {
+  inline-size: 16px;
+  block-size: 16px;
+  min-height: 0;
+  padding: 0;
+  border-radius: 50%;
+}
