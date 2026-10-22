@@ -362,3 +362,8 @@
   font-size: 13px;
   line-height: 1.5;
 }
+
+/* Phones: the bottom tab bar and + Create already carry every quick action. */
+@media (max-width: 720px) {
+  :global(html[data-mobile-tab-bar]) .quickActions { display: none; }
+}
