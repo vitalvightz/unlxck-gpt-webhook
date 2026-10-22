@@ -114,8 +114,8 @@ def test_loading_readiness_training_and_medical_gates_hold_whole_bundle():
     })["state"] == "deferred"
     first = snapshot([decision])
     changed = deepcopy(decision)
-    changed["loading_hold"] = True
-    assert snapshot([changed], frozen=first)["safety_hold"]
+    changed["readiness_hold"] = True  # the daily verdict never freezes started rehab
+    assert not snapshot([changed], frozen=first)["safety_hold"]
     changed = deepcopy(decision)
     changed["outcome"] = "medical_review"
     assert snapshot([changed], frozen=first)["safety_hold"]
@@ -362,7 +362,11 @@ def test_today_does_not_split_a_live_bundle_to_bypass_training_or_readiness_gate
         decision = rows[0]["rehab_decision"]
         assert decision["schedule"]["state"] == state
         assert [d["drill_id"] for d in decision["prescription"]["drills"]] == IDS
-        assert snapshot([decision]) is None
+        offered = snapshot([decision])
+        if state == "due":
+            assert [b["rehab_drill_id"] for b in offered["session"]["blocks"]] == IDS
+        else:
+            assert offered is None
 
 
 @pytest.mark.parametrize("stage", ["load", "dynamic", "return"])
