@@ -528,6 +528,47 @@ def test_prescription_function_composes_with_recorded_clearance_history(postgres
         connection.rollback()
 
 
+def test_plan_free_rehab_uses_the_same_postgres_episode_and_allocation_guards(postgres_database):
+    import psycopg
+    from psycopg.types.json import Jsonb
+
+    with psycopg.connect(postgres_database) as connection:
+        connection.execute((ROOT / "supabase/migrations/20261019061051_allow_plan_free_today_checkins.sql").read_text(encoding="utf-8"))
+        connection.execute((ROOT / "supabase/migrations/20261022184651_standalone_rehab_completions.sql").read_text(encoding="utf-8"))
+        athlete = str(uuid4())
+        connection.execute("insert into profiles values (%s)", (athlete,))
+        for _ in range(3):
+            connection.execute("""insert into injury_flags(athlete_id,body_area,description,body_region,side)
+                values(%s,'Chest','Chest strain','chest','unknown')""", (athlete,))
+        injuries = connection.execute("select id,episode_id,updated_at from injury_flags where athlete_id=%s order by id", (athlete,)).fetchall()
+        checkin = connection.execute("""insert into today_checkins(athlete_id,training_day,sleep,body,pain,phase,recommendation_state)
+            values(%s,'2026-10-22','good','normal','none',null,'train_as_planned') returning id,updated_at""", (athlete,)).fetchone()
+        event = connection.execute("select id from injury_episode_events where athlete_id=%s order by created_at desc,id desc limit 1", (athlete,)).fetchone()
+
+        def accept(index, owner):
+            identity = "rehab-2026-10-22-" + str(index) * 24
+            snapshot = dict(plan_id=None, training_day="2026-10-22", revision="a" * 64, rehab_only=True, allocation_limit=2,
+                session=dict(session_id=identity, session_type="rehab", blocks=[dict(block_type="rehab", policy_id="test",
+                    injury_id=str(injuries[owner][0]), injury_episode_id=str(injuries[owner][1]), rehab_drill_id="test", minimum_gap_days=1)]),
+                readiness_context=dict(id=str(checkin[0]), updated_at=checkin[1].isoformat()),
+                injury_context=[dict(id=str(i[0]), episode_id=str(i[1]), updated_at=i[2].isoformat()) for i in injuries],
+                evidence_context=dict(exposure_id=None, event_id=str(event[0]) if event else None))
+            connection.execute("""insert into session_completions(athlete_id,session_id,training_day,status,prescription_snapshot)
+                values(%s,%s,'2026-10-22','done',%s)""", (athlete, identity, Jsonb(snapshot)))
+
+        accept(0, 0)
+        with pytest.raises(psycopg.errors.CheckViolation, match="rehab_daily_allocation_conflict"), connection.transaction():
+            accept(1, 0)
+        accept(1, 1)
+        with pytest.raises(psycopg.errors.CheckViolation, match="rehab_daily_allocation_conflict"), connection.transaction():
+            accept(2, 2)
+        with pytest.raises(psycopg.errors.CheckViolation, match="standalone_rehab_prescription_required"), connection.transaction():
+            connection.execute("""insert into session_completions(athlete_id,session_id,training_day,status)
+                values(%s,'fake','2026-10-22','done')""", (athlete,))
+        assert connection.execute("select count(*) from session_completions where athlete_id=%s", (athlete,)).fetchone()[0] == 2
+        connection.rollback()
+
+
 def test_independent_standalone_owners_use_existing_postgres_allocation_guard(postgres_database):
     import psycopg
     from psycopg.types.json import Jsonb

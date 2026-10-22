@@ -41,6 +41,15 @@ def permits_rehabilitation_stage(injury: Mapping, stage: str) -> bool:
             and required in levels and levels.get(permission.level, -1) >= levels[required])
 
 
+def has_reported_clinician_permission(injury: Mapping) -> bool:
+    """An episode-owned permission report, without claiming independent verification."""
+    report = injury.get("clinician_clearance")
+    return (injury.get("status") in {"open", "monitoring"} and bool(injury.get("episode_id"))
+            and isinstance(report, Mapping) and str(report.get("episode_id")) == str(injury["episode_id"])
+            and canonical_clearance_scopes(report.get("scopes")) is not None
+            and ("training" in report["scopes"] or permits_rehabilitation_stage(injury, "calm")))
+
+
 def achilles_load_permission_reason(injury: Mapping) -> str | None:
     """Applicability of the single reviewed option, without diagnosing readiness."""
     if not permits_rehabilitation_loading(injury):
@@ -97,11 +106,13 @@ def clinician_clears_baseline(injury: Mapping, *, contact: bool = False) -> bool
         return False
     if str(injury.get("severity") or "").lower() not in {"mild", "moderate", "low", "medium"}:
         return False
+    from .rehab_stage import _is_urgent_injury
     if (injury.get("latest_reported_status") == "worse" or injury.get("rehab_medical_gate")
-            or (injury.get("rehab_decision") or {}).get("outcome") == "medical_review"):
+            or injury.get("medical_hold") or injury.get("restriction_hold")
+            or injury.get("progression_assessment_medical_hold") or _is_urgent_injury(injury)):
         return False
     consequence = injury.get("consequence") if "consequence" in injury else injury_consequence_tier(
         injury.get("body_area"), injury.get("description"), severity=injury.get("severity"))
-    if consequence in {"structural", "neuro"}:
+    if consequence == "neuro":
         return False
     return ("contact" if contact else "training") in clearance["scopes"]

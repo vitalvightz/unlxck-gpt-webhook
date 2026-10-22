@@ -1455,7 +1455,7 @@ export type ExerciseLogListResponse = {
 };
 
 export type TodaySessionCompletionRequest = {
-  plan_id: string;
+  plan_id: string | null;
   session_id: string;
   status: TodayCompletionStatus;
   prescription_revision?: string;
@@ -1547,7 +1547,7 @@ export type RehabResponseResult = {
 export type TodaySessionCompletionRecord = {
   id: string;
   athlete_id: string;
-  plan_id: string;
+  plan_id: string | null;
   session_id: string;
   session_title?: string | null;
   training_day: string;

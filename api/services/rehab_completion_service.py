@@ -280,7 +280,10 @@ def resolve_completed_session_rehab(
     """
     plan_id = _clean(plan_row.get("id"))
     completion_plan_id = _clean((completion or {}).get("plan_id"))
-    if not plan_id or completion_plan_id != plan_id:
+    snapshot = (completion or {}).get("prescription_snapshot") or {}
+    standalone = (not plan_id and (completion or {}).get("plan_id") is None
+                  and snapshot.get("plan_id") is None and snapshot.get("rehab_only") is True)
+    if completion_plan_id != plan_id or (not plan_id and not standalone):
         return RehabCompletionResolution(), []
     if (_clean((completion or {}).get("status")).lower() not in COMPLETED_STATUSES
             or (completion or {}).get("rehab_performance") == "skipped"):

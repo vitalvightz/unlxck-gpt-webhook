@@ -1621,7 +1621,7 @@ test("a skin injury card shows only skin care, and not twice when Today already 
   cleanup();
 });
 
-test("an injury without a guided pathway shows no stage and one short line", async () => {
+test("an injury without published exercises keeps its actual stage and content message", async () => {
   const { container, root, cleanup } = mount();
   const stiffness = { ...SHOULDER, description: "stiffness", label: "Left shoulder stiffness", rehab_decision: {
     outcome: "unsupported_prescription", summary: "No suitable rehab is available for this injury yet.",
@@ -1630,8 +1630,9 @@ test("an injury without a guided pathway shows no stage and one short line", asy
     root.render(<TodayInjuryManager openInjuries={[stiffness]} token="t" onRefresh={async () => {}} />);
   });
   const text = container.textContent ?? "";
-  assert.doesNotMatch(text, /Stage:|Stage 1 of 5|Future availability|Recovery monitoring|safety checks still apply/);
+  assert.match(text, /Stage: Calm/);
+  assert.match(text, /CALM → RESTORE → LOAD → DYNAMIC → RETURN/);
   await act(async () => (container.querySelector(".today-injury-summary-row") as HTMLButtonElement).click());
-  assert.match(container.textContent ?? "", /No guided rehab in UNLXCK yet\./);
+  assert.match(container.textContent ?? "", /No rehab exercises available for this stage yet\./);
   cleanup();
 });

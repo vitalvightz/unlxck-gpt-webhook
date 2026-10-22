@@ -54,8 +54,10 @@ def _prescribed(block):
 def _snapshot_session(row):
     snapshot = _map(row.get("prescription_snapshot"))
     session = _map(snapshot.get("session"))
+    standalone_rehab = (row.get("plan_id") is None and snapshot.get("plan_id") is None
+                        and snapshot.get("rehab_only") is True and session.get("session_type") == "rehab")
     # Tolerate a legacy null plan ID. Current plan deletion cascades completions.
-    if (not session or not snapshot.get("plan_id")
+    if (not session or (not snapshot.get("plan_id") and not standalone_rehab)
             or (row.get("plan_id") and snapshot.get("plan_id") != row["plan_id"])
             or (snapshot.get("training_day") and snapshot["training_day"] != row.get("training_day"))
             or session.get("session_id") != row.get("session_id")):

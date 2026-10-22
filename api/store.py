@@ -4557,7 +4557,7 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
         athlete_id: str,
         *,
         completion_id: str,
-        plan_id: str,
+        plan_id: str | None,
         session_id: str,
         training_day: str,
         contexts: list[dict[str, Any]],
@@ -4568,11 +4568,11 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
             .update({"rehab_response_contexts": contexts})
             .eq("id", completion_id)
             .eq("athlete_id", athlete_id)
-            .eq("plan_id", plan_id)
             .eq("session_id", session_id)
             .eq("training_day", training_day)
             .is_("rehab_response_contexts", "null")
         )
+        query = query.is_("plan_id", "null") if plan_id is None else query.eq("plan_id", plan_id)
         response = query.execute()
         rows = getattr(response, "data", None) or []
         if rows:

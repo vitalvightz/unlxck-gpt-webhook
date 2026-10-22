@@ -108,8 +108,8 @@ export function InjuryClearance({ injury, token, onRefresh }: {
   </div>;
 }
 
-export function InjuryCareStatus({ injury, token, onRefresh, showClearance = true, summaryVisible = false }: {
-  injury: InjuryFlagRecord; token: string; onRefresh: () => Promise<void>; showClearance?: boolean; summaryVisible?: boolean;
+export function InjuryCareStatus({ injury, token, onRefresh, showClearance = true, summaryVisible = false, rehabHref }: {
+  injury: InjuryFlagRecord; token: string; onRefresh: () => Promise<void>; showClearance?: boolean; summaryVisible?: boolean; rehabHref?: string;
 }) {
   const schedule = injury.rehab_decision?.schedule;
   const outcome = injury.rehab_decision?.outcome;
@@ -125,7 +125,7 @@ export function InjuryCareStatus({ injury, token, onRefresh, showClearance = tru
   const scheduleLabel = schedule
     ? schedule.state === "already_completed" && /started session/i.test(schedule.reason)
       ? "In today's session"
-      : SCHEDULE_LABELS[schedule.state]
+      : schedule.state === "due" && !rehabHref ? "Rehab unavailable" : SCHEDULE_LABELS[schedule.state]
     : "";
   const scheduleReason = !schedule || routine ? ""
     : schedule.reason === injury.rehab_decision?.summary ? summary ?? "" : schedule.reason;
@@ -151,11 +151,11 @@ export function InjuryCareStatus({ injury, token, onRefresh, showClearance = tru
     {injury.rehab_decision ? <>
       {outcome === "prescribed_rehab" ? <RehabProgressStatus decision={injury.rehab_decision} statusLine={stageStatusLine} summaryVisible={summaryVisible} /> : null}
       {hasGuidance ? <div className="injury-rehab-status" role="note" aria-label="Guidance">
-        {trackingOnly ? <p className="muted">{outcome === "unsupported_prescription" ? "No guided rehab in UNLXCK yet." : summary}</p>
+        {trackingOnly ? <p className="muted">{outcome === "unsupported_prescription" ? "No rehab exercises available for this stage yet." : summary}</p>
           : resolved ? <p className="injury-rehab-label"><strong>Recovered</strong></p>
           : showSummary ? <p>{summary}</p> : null}
         {showScheduleRow && schedule ? <>
-          {schedule.state === "due" ? <a className="injury-rehab-action" href="#today-session"><span><strong>{scheduleLabel}</strong><small>View today’s recovery exercises</small></span><InjuryChevron /></a>
+          {schedule.state === "due" && rehabHref ? <a className="injury-rehab-action" href={rehabHref}><span><strong>{scheduleLabel}</strong><small>View rehab</small></span><InjuryChevron /></a>
             : <p className="injury-rehab-label"><strong>{scheduleLabel}</strong>{schedule.next_due_day ? <small>Next {formatNextDay(schedule.next_due_day)}</small> : null}</p>}
         </> : null}
         {showTrackingSchedule ? <p className="injury-rehab-label"><strong>{scheduleLabel}</strong></p> : null}

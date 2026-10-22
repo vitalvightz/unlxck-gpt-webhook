@@ -68,6 +68,7 @@ def test_chest_restore_has_no_published_load_through_today_api(monkeypatch):
 @pytest.mark.parametrize("pilot", PILOTS, ids=lambda p: p[0])
 def test_published_load_keeps_exact_prescription_through_today_api(monkeypatch, pilot):
     journey, client = consumer(monkeypatch, pilot)
+    journey.reach_load()
     body = view(client)
     current = decision(body)
     assert current["stage"] == "load"
@@ -106,6 +107,7 @@ def test_missing_permission_pending_response_and_worsening_remain_engine_holds(m
 @pytest.mark.parametrize("url", ["https://www.youtube.com/watch?v=AAAAAAAAAAA", "https://youtu.be/AAAAAAAAAAA", "https://youtube.com/shorts/AAAAAAAAAAA", None, "https://example.com/AAAAAAAAAAA"])
 def test_exact_demo_metadata_does_not_change_prescription_or_completion(monkeypatch, url):
     journey, client = consumer(monkeypatch, PILOTS[0])
+    journey.reach_load()
     before = view(client)
     live = before["live_prescription"]
     block = live["session"]["blocks"][0]

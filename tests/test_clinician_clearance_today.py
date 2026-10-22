@@ -292,6 +292,11 @@ def test_no_contact_does_not_remove_stricter_block_restrictions(context):
 
 def live_injury(context, region, severity="moderate"):
     store, athlete, _, injury = context
+    # Published ankle RESTORE bundles require the athlete's declared support.
+    intake_id = str(uuid4())
+    store.intakes[athlete] = [dict(id=intake_id, athlete_id=athlete,
+        equipment_access=["stable_support", "chair", "wall", "table"])]
+    store.plans[context[2]]["intake_id"] = intake_id
     fields = dict(body_area="Right ankle" if region == "ankle" else "Chest",
                   description=region + (" sprain" if region == "ankle" else " strain"),
                   body_region=region, side="right" if region == "ankle" else "unknown",

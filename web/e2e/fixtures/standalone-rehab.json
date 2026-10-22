@@ -1,0 +1,908 @@
+{
+  "available": {
+    "view": {
+      "active_plan": {},
+      "today": {
+        "training_day": "2026-10-05",
+        "recommendation_state": "train_as_planned",
+        "recommendation_reason": "Train around it.\nYour check-in is clear, with the chest strain still being tracked.\nEase into the session and stop if the chest strain pulls or sharpens.\nThis check-in is not medical clearance for sparring or contact.",
+        "decision_tier": "green",
+        "injury_hold_exempt": false,
+        "recommendation_trigger_labels": [],
+        "recommendation_context_labels": [],
+        "recommendation_safety_checks": [],
+        "recommendation_sources": [
+          "today's check-in"
+        ],
+        "recommendation_confidence": "moderate",
+        "recommendation_confidence_note": "Less to go on today: today's session isn't resolved yet.",
+        "primary_safety_notice": null,
+        "warnings": [],
+        "next_session": {},
+        "session_scope": "none",
+        "session_label": "",
+        "completion_status": "not_started"
+      },
+      "risk_watch": [],
+      "open_injuries": [
+        {
+          "id": "56f89e8c-7c6d-4a71-b8ac-8a6c773eb19c",
+          "athlete_id": "24a917fe-af3b-48ec-b441-8e120498a611",
+          "plan_id": "93fb534b-7e80-48e2-b1b4-3fb998da3e4a",
+          "source": "checkin",
+          "body_area": "Chest",
+          "severity": "mild",
+          "status": "monitoring",
+          "resolved_at": null,
+          "episode_id": "ea2a1d23-32e7-4f3d-9f57-675de47fb7ef",
+          "body_region": "chest",
+          "side": "unknown",
+          "description": "strain []",
+          "latest_reported_status": "improving",
+          "created_at": "2026-10-05T12:01:00+00:00",
+          "updated_at": "2026-10-05T12:02:00+00:00",
+          "surface_class": "non_surface",
+          "canonical_location": "chest",
+          "region_group": "spine_pelvis",
+          "load_region": "trunk_spine",
+          "consequence": null,
+          "assessment_history_complete": true,
+          "progression_assessments": [],
+          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
+          "latest_reported_at": "2026-10-05T12:02:00+00:00",
+          "rehab_improvement_reports": [
+            {
+              "id": "db5ece7a-6bfd-4fb5-aa74-4ba60e17c641",
+              "reported_at": "2026-10-05T12:01:00+00:00"
+            },
+            {
+              "id": "72587801-45a4-476b-84c8-20f57c9b35e7",
+              "reported_at": "2026-10-05T12:02:00+00:00"
+            }
+          ],
+          "rehab_improvement_at": "2026-10-05T12:02:00Z",
+          "assessment_setback_at": null,
+          "rehab_stage": "restore",
+          "rehab_stage_reasons": [
+            "symptoms_not_worsening",
+            "insufficient_injury_specific_progression_evidence"
+          ],
+          "rehab_care_pathway": "musculoskeletal",
+          "rehab_medical_gate": false,
+          "rehab_decision": {
+            "injury_id": "56f89e8c-7c6d-4a71-b8ac-8a6c773eb19c",
+            "injury_episode_id": "ea2a1d23-32e7-4f3d-9f57-675de47fb7ef",
+            "region": "chest",
+            "injury_type": "strain",
+            "stage": "restore",
+            "outcome": "prescribed_rehab",
+            "summary": "Your rehab is matched to this injury's current recovery stage.",
+            "reason_codes": [
+              "SELECT_DETERMINISTIC_BEST"
+            ],
+            "activation": "live",
+            "prescription": {
+              "drill_id": "chest_strain_comfortable_movement",
+              "drill": {
+                "id": "chest_strain_comfortable_movement",
+                "name": "Comfortable chest-region movement",
+                "notes": "When pain no longer stops movement, gently move your shoulder and arm through a comfortable range. Go at your own pace and stop before pain prevents movement. Avoid forced chest stretches, resisted chest flies and surgical-repair routines.",
+                "rehab_stage": "restore",
+                "function": "mobility",
+                "equipment": [],
+                "dose": {},
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": "unrestricted",
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "progress_when": [],
+                "regress_when": [
+                  "Symptoms worsen: return to comfortable movement and recovery support."
+                ],
+                "stop_when": [
+                  "Stop if pain prevents comfortable movement or symptoms worsen.",
+                  "Seek help for severe or worsening pain, swelling or inability to use the area."
+                ],
+                "target_regions": [
+                  "chest"
+                ],
+                "laterality_applicability": "not_applicable",
+                "target_tissues": [
+                  "chest region soft tissues"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/. Self-paced; no starting numerical dose is prescribed."
+              },
+              "instructions": "When pain no longer stops movement, gently move your shoulder and arm through a comfortable range. Go at your own pace and stop before pain prevents movement. Avoid forced chest stretches, resisted chest flies and surgical-repair routines.",
+              "dose": {},
+              "stop_when": [
+                "Stop if pain prevents comfortable movement or symptoms worsen.",
+                "Seek help for severe or worsening pain, swelling or inability to use the area."
+              ],
+              "frequency": "daily",
+              "sources": [
+                "https://www.nhs.uk/conditions/sprains-and-strains/"
+              ],
+              "bank_hash": "86969b567e9daf022d873d0c9df06983493f3d017edf0c0e86e0b6bd07cae150",
+              "policy_id": "chest_strain",
+              "policy_version": 3,
+              "policy_review_hash": "bcb04950b08fa56d411e0117010d9dcc47c6057bc8fc84c2304fb746e20ba8d9",
+              "minimum_gap_days": 1,
+              "is_loading": false
+            },
+            "restrictions": {
+              "blocked_regions": [
+                "chest"
+              ],
+              "blocked_tags": [],
+              "contact_limit": "none"
+            },
+            "readiness_hold": false,
+            "policy_id": "chest_strain",
+            "policy_version": 3,
+            "progression": {
+              "stage": "restore",
+              "reason_codes": [
+                "baseline_only_v1"
+              ],
+              "evidence_ids": [],
+              "engine_version": "2",
+              "next_transition": {
+                "from_stage": "restore",
+                "to_stage": "load",
+                "status": "blocked",
+                "reason_codes": [
+                  "no_reviewed_stage_exposure",
+                  "no_reviewed_response_group",
+                  "no_reviewed_response_group"
+                ],
+                "target_stage_live": false,
+                "closed_reason": null,
+                "missing_inputs": [],
+                "requirements": [
+                  {
+                    "requirement_id": "no_unresolved_setback",
+                    "kind": "no_unresolved_setback",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "no_negative_response",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "complete_episode_history",
+                    "kind": "complete_history",
+                    "basis": "product_safety",
+                    "status": "pass",
+                    "reason_code": "history_complete",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "reviewed_stage_exposure",
+                    "kind": "completed_reviewed_exposure",
+                    "basis": "data_sufficiency",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_stage_exposure",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "during_response_not_worse",
+                    "kind": "during_session_response",
+                    "basis": "product_safety",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_response_group",
+                    "evidence_ids": []
+                  },
+                  {
+                    "requirement_id": "next_day_response_not_worse",
+                    "kind": "next_day_response",
+                    "basis": "product_safety",
+                    "status": "unknown",
+                    "reason_code": "no_reviewed_response_group",
+                    "evidence_ids": []
+                  }
+                ],
+                "ignored_evidence": {}
+              }
+            },
+            "schedule": {
+              "state": "due",
+              "reason": "Your baseline rehab is due today; missed work adds no extra volume.",
+              "next_due_day": "2026-10-05"
+            },
+            "recent_log": [
+              {
+                "at": "2026-10-05T12:02:00+00:00",
+                "date": "2026-10-05",
+                "kind": "checkin",
+                "label": "Better"
+              },
+              {
+                "at": "2026-10-05T12:01:00+00:00",
+                "date": "2026-10-05",
+                "kind": "checkin",
+                "label": "Better"
+              }
+            ]
+          },
+          "label": "Chest strain",
+          "clinician_clearance": {
+            "episode_id": "ea2a1d23-32e7-4f3d-9f57-675de47fb7ef",
+            "scopes": [
+              "rehab"
+            ],
+            "report_id": "b6e472ff-9b28-5f27-8400-a9c8d616eeb0",
+            "reported_at": "2026-10-05T12:03:00+00:00",
+            "source": "athlete_reported",
+            "externally_verified": false,
+            "scope_reported_at": {
+              "rehab": "2026-10-05T12:03:00+00:00"
+            },
+            "rehabilitation_permission": {
+              "schema_version": 1,
+              "level": "loading"
+            }
+          }
+        }
+      ],
+      "live_prescription": {
+        "plan_id": null,
+        "training_day": "2026-10-05",
+        "session": {
+          "session_id": "rehab-2026-10-05-ea62035ac7f67cb24e28a6e6",
+          "title": "Today's rehab",
+          "session_type": "rehab",
+          "blocks": [
+            {
+              "block_id": "rehab:56f89e8c-7c6d-4a71-b8ac-8a6c773eb19c:ea2a1d23-32e7-4f3d-9f57-675de47fb7ef",
+              "block_type": "rehab",
+              "title": "Comfortable chest-region movement",
+              "display_name": "Comfortable chest-region movement",
+              "coaching_cues": [
+                "When pain no longer stops movement, gently move your shoulder and arm through a comfortable range. Go at your own pace and stop before pain prevents movement. Avoid forced chest stretches, resisted chest flies and surgical-repair routines."
+              ],
+              "rehab_drill_id": "chest_strain_comfortable_movement",
+              "exercise_key": "chest-strain-comfortable-movement",
+              "injury_id": "56f89e8c-7c6d-4a71-b8ac-8a6c773eb19c",
+              "injury_episode_id": "ea2a1d23-32e7-4f3d-9f57-675de47fb7ef",
+              "target_regions": [
+                "chest"
+              ],
+              "dose": {},
+              "instructions": "When pain no longer stops movement, gently move your shoulder and arm through a comfortable range. Go at your own pace and stop before pain prevents movement. Avoid forced chest stretches, resisted chest flies and surgical-repair routines.",
+              "stop_rules": [
+                "Stop if pain prevents comfortable movement or symptoms worsen.",
+                "Seek help for severe or worsening pain, swelling or inability to use the area."
+              ],
+              "drill_snapshot": {
+                "id": "chest_strain_comfortable_movement",
+                "name": "Comfortable chest-region movement",
+                "notes": "When pain no longer stops movement, gently move your shoulder and arm through a comfortable range. Go at your own pace and stop before pain prevents movement. Avoid forced chest stretches, resisted chest flies and surgical-repair routines.",
+                "rehab_stage": "restore",
+                "function": "mobility",
+                "equipment": [],
+                "dose": {},
+                "impact": "none",
+                "load": "low",
+                "velocity": "low",
+                "pain_ceiling": "unrestricted",
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "progress_when": [],
+                "regress_when": [
+                  "Symptoms worsen: return to comfortable movement and recovery support."
+                ],
+                "stop_when": [
+                  "Stop if pain prevents comfortable movement or symptoms worsen.",
+                  "Seek help for severe or worsening pain, swelling or inability to use the area."
+                ],
+                "target_regions": [
+                  "chest"
+                ],
+                "laterality_applicability": "not_applicable",
+                "target_tissues": [
+                  "chest region soft tissues"
+                ],
+                "contraction_type": "mixed",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/. Self-paced; no starting numerical dose is prescribed."
+              },
+              "policy_id": "chest_strain",
+              "policy_version": 3,
+              "bank_hash": "86969b567e9daf022d873d0c9df06983493f3d017edf0c0e86e0b6bd07cae150",
+              "policy_review_hash": "bcb04950b08fa56d411e0117010d9dcc47c6057bc8fc84c2304fb746e20ba8d9",
+              "minimum_gap_days": 1,
+              "is_loading": false,
+              "source_references": [
+                "https://www.nhs.uk/conditions/sprains-and-strains/"
+              ]
+            }
+          ],
+          "completion_status": "not_started"
+        },
+        "changes": [],
+        "safety_hold": false,
+        "frozen": false,
+        "engine_version": "2",
+        "rehab_only": true,
+        "held_session_id": null,
+        "injury_ids": [
+          "56f89e8c-7c6d-4a71-b8ac-8a6c773eb19c"
+        ],
+        "allocation_limit": 2,
+        "training_hold_reason": "Your planned training conflicts with the current injury restrictions.",
+        "training_hold_source": "injury",
+        "revision": "e4445c012062ffa3ddb6b1bc56ad829219cc70c53bec6d9a5d585b9428222328",
+        "injury_context": [
+          {
+            "id": "56f89e8c-7c6d-4a71-b8ac-8a6c773eb19c",
+            "episode_id": "ea2a1d23-32e7-4f3d-9f57-675de47fb7ef",
+            "updated_at": "2026-10-05T12:02:00+00:00"
+          }
+        ],
+        "evidence_context": {
+          "exposure_id": null,
+          "event_id": "b6e472ff-9b28-5f27-8400-a9c8d616eeb0"
+        },
+        "readiness_context": {
+          "id": "5fbad01e-9dd6-43b6-8cce-118dfb524c2e",
+          "updated_at": "2026-10-05T12:03:00+00:00"
+        }
+      },
+      "session_hold": null,
+      "exercise_media": {},
+      "effective_clinician_clearance": {
+        "level": "rehab_only",
+        "scopes": [
+          "rehab"
+        ],
+        "requires_update": false,
+        "limited_by": [
+          {
+            "injury_id": "56f89e8c-7c6d-4a71-b8ac-8a6c773eb19c",
+            "injury_episode_id": "ea2a1d23-32e7-4f3d-9f57-675de47fb7ef",
+            "label": "Chest strain"
+          }
+        ]
+      },
+      "delayed_rehab_prompts": [],
+      "week_summary": {},
+      "quick_actions": [
+        {
+          "id": "complete_intake",
+          "label": "Complete Intake / Create Plan",
+          "route": "/intake"
+        }
+      ]
+    },
+    "profile": {
+      "profile": {
+        "starting_path": "plan_first",
+        "training_habits": {
+          "enabled": true,
+          "decisions": []
+        },
+        "training_habits_revision": 0,
+        "athlete_id": "24a917fe-af3b-48ec-b441-8e120498a611",
+        "email": "fixture@example.com",
+        "username": null,
+        "username_change_history": [],
+        "role": "athlete",
+        "access_status": "approved",
+        "full_name": "Test athlete",
+        "technical_style": [],
+        "tactical_style": [],
+        "stance": "",
+        "professional_status": "",
+        "record": "",
+        "athlete_timezone": "UTC",
+        "athlete_locale": "",
+        "appearance_mode": "dark",
+        "onboarding_draft": null,
+        "avatar_url": null,
+        "nutrition_profile": {
+          "sex": null,
+          "age": null,
+          "height_cm": null,
+          "daily_activity_level": null,
+          "dietary_restrictions": [],
+          "food_preferences": [],
+          "meals_per_day_preference": null,
+          "foods_avoided_pre_session": [],
+          "foods_avoided_fight_week": [],
+          "supplement_use": [],
+          "caffeine_use": null
+        },
+        "private_trial_ack_at": null,
+        "date_of_birth": "1996-05-04",
+        "age_band": "adult",
+        "is_minor": false,
+        "meets_minimum_age": true,
+        "terms_version": "0.1-pre-launch",
+        "terms_accepted_at": "2026-10-05T12:03:00+00:00",
+        "terms_accepted": true,
+        "health_consent_version": "1.0",
+        "health_data_consent": true,
+        "health_consent_at": "2026-10-05T12:03:00+00:00",
+        "health_consent_withdrawn_at": null,
+        "health_consent_granted": true,
+        "created_at": "2026-10-05T12:03:00+00:00",
+        "updated_at": "2026-10-05T12:03:00+00:00"
+      },
+      "effective_admin": false,
+      "latest_intake": null,
+      "latest_plan": null,
+      "plan_count": 0,
+      "username_rate_limit": {
+        "max_changes_per_window": 4,
+        "window_days": 30,
+        "remaining": 4,
+        "next_available_at": null
+      }
+    }
+  },
+  "tracking_only": {
+    "view": {
+      "active_plan": {},
+      "today": {
+        "training_day": "2026-10-05",
+        "recommendation_state": "train_as_planned",
+        "recommendation_reason": "Train around it.\nYour check-in is clear, with the left shoulder sprain still being tracked.\nKeep the left shoulder sprain stable and stop if it gives way.\nThis check-in is not medical clearance for sparring or contact.",
+        "decision_tier": "green",
+        "injury_hold_exempt": false,
+        "recommendation_trigger_labels": [],
+        "recommendation_context_labels": [],
+        "recommendation_safety_checks": [],
+        "recommendation_sources": [
+          "today's check-in"
+        ],
+        "recommendation_confidence": "moderate",
+        "recommendation_confidence_note": "Less to go on today: today's session isn't resolved yet.",
+        "primary_safety_notice": null,
+        "warnings": [],
+        "next_session": {},
+        "session_scope": "none",
+        "session_label": "",
+        "completion_status": "not_started"
+      },
+      "risk_watch": [],
+      "open_injuries": [
+        {
+          "id": "5b596619-45a2-421e-8f7d-857ecb484b35",
+          "athlete_id": "24a917fe-af3b-48ec-b441-8e120498a611",
+          "plan_id": null,
+          "source": "checkin",
+          "body_area": "Left shoulder",
+          "severity": "mild",
+          "status": "open",
+          "resolved_at": null,
+          "episode_id": "3a495ab4-3f82-4b45-88da-e55b1fdda38c",
+          "body_region": "shoulder",
+          "side": "left",
+          "description": "sprain",
+          "latest_reported_status": "ongoing",
+          "created_at": "2026-10-05T12:03:00+00:00",
+          "updated_at": "2026-10-05T12:03:00+00:00",
+          "surface_class": "non_surface",
+          "canonical_location": "shoulder",
+          "region_group": "upper_limb",
+          "load_region": "upper_limb",
+          "consequence": null,
+          "assessment_history_complete": true,
+          "progression_assessments": [],
+          "assessment_episode_started_at": "2026-10-05T12:03:00Z",
+          "latest_reported_at": null,
+          "rehab_improvement_reports": [],
+          "rehab_improvement_at": null,
+          "assessment_setback_at": null,
+          "rehab_stage": "calm",
+          "rehab_stage_reasons": [
+            "newly_reported_injury",
+            "no_injury_specific_followup_report",
+            "insufficient_injury_specific_progression_evidence"
+          ],
+          "rehab_care_pathway": "musculoskeletal",
+          "rehab_medical_gate": false,
+          "rehab_decision": {
+            "injury_id": "5b596619-45a2-421e-8f7d-857ecb484b35",
+            "injury_episode_id": "3a495ab4-3f82-4b45-88da-e55b1fdda38c",
+            "region": "shoulder",
+            "injury_type": "sprain",
+            "stage": "calm",
+            "outcome": "prescribed_rehab",
+            "summary": "Your rehab is matched to this injury's current recovery stage.",
+            "reason_codes": [
+              "SELECT_DETERMINISTIC_BEST"
+            ],
+            "activation": "live",
+            "prescription": {
+              "drill_id": "shoulder_sprain_recovery_support",
+              "drill": {
+                "id": "shoulder_sprain_recovery_support",
+                "name": "Shoulder sprain protective guidance",
+                "notes": "Protect the injured joint and avoid exercise or activity that aggravates it. During the first few days of a new sprain, rest from loading it and avoid massage or forced stretching. Follow any clinician-directed support or movement restrictions. Seek assessment for severe or worsening pain, deformity, inability to use the joint or loss of sensation.",
+                "rehab_stage": "calm",
+                "function": "recovery_downregulation",
+                "equipment": [],
+                "dose": null,
+                "impact": "none",
+                "load": "minimal",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": null,
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": null,
+                "target_regions": [
+                  "shoulder"
+                ],
+                "laterality_applicability": "not_applicable",
+                "target_tissues": [
+                  "shoulder joint supporting soft tissues"
+                ],
+                "contraction_type": "unknown",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+              },
+              "instructions": "Protect the injured joint and avoid exercise or activity that aggravates it. During the first few days of a new sprain, rest from loading it and avoid massage or forced stretching. Follow any clinician-directed support or movement restrictions. Seek assessment for severe or worsening pain, deformity, inability to use the joint or loss of sensation.",
+              "dose": {},
+              "stop_when": [
+                "Stop for pain, giving way, slipping or worsening symptoms.",
+                "Seek assessment for deformity, inability to use the joint or loss of sensation."
+              ],
+              "frequency": "scheduled_sessions",
+              "sources": [
+                "https://www.nhs.uk/conditions/sprains-and-strains/",
+                "https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/"
+              ],
+              "bank_hash": "6dc1bcdd0f2dcb1338450c8b8bcc329cb1b49e5f9c3182dd959829434afcf4cf",
+              "policy_id": "shoulder_sprain",
+              "policy_version": 1,
+              "policy_review_hash": "059dd858d4217f962378293c3c5e69a960ac6e9e9db7db73def55ca2b4b92bd9",
+              "minimum_gap_days": 1,
+              "is_loading": false
+            },
+            "restrictions": {
+              "blocked_regions": [
+                "shoulder"
+              ],
+              "blocked_tags": [],
+              "contact_limit": "none"
+            },
+            "readiness_hold": false,
+            "policy_id": "shoulder_sprain",
+            "policy_version": 1,
+            "progression": {
+              "stage": "calm",
+              "reason_codes": [
+                "baseline_only_v1"
+              ],
+              "evidence_ids": [],
+              "engine_version": "2"
+            },
+            "schedule": {
+              "state": "due",
+              "reason": "Your baseline rehab is due today; missed work adds no extra volume.",
+              "next_due_day": "2026-10-05"
+            },
+            "recent_log": []
+          },
+          "label": "Left shoulder sprain",
+          "clinician_clearance": {
+            "episode_id": "3a495ab4-3f82-4b45-88da-e55b1fdda38c",
+            "scopes": [
+              "contact",
+              "rehab",
+              "training"
+            ],
+            "report_id": "faaf76f8-9ccf-5c01-8b46-f548808cac5d",
+            "reported_at": "2026-10-05T12:03:00+00:00",
+            "source": "athlete_reported",
+            "externally_verified": false,
+            "scope_reported_at": {
+              "contact": "2026-10-05T12:03:00+00:00",
+              "rehab": "2026-10-05T12:03:00+00:00",
+              "training": "2026-10-05T12:03:00+00:00"
+            },
+            "rehabilitation_permission": {
+              "schema_version": 1,
+              "level": "sport_specific"
+            }
+          }
+        },
+        {
+          "id": "142ee49e-3f63-4bc1-a440-f4d08aaa410b",
+          "athlete_id": "24a917fe-af3b-48ec-b441-8e120498a611",
+          "plan_id": null,
+          "source": "checkin",
+          "body_area": "Right knee",
+          "severity": "mild",
+          "status": "open",
+          "resolved_at": null,
+          "episode_id": "b9096e59-e424-47ac-a5b4-5a484bd06f93",
+          "body_region": "knee",
+          "side": "right",
+          "description": "swelling",
+          "latest_reported_status": "ongoing",
+          "created_at": "2026-10-05T12:03:00+00:00",
+          "updated_at": "2026-10-05T12:03:00+00:00",
+          "surface_class": "non_surface",
+          "canonical_location": "knee",
+          "region_group": "knee",
+          "load_region": "lower_limb",
+          "consequence": null,
+          "assessment_history_complete": true,
+          "progression_assessments": [],
+          "assessment_episode_started_at": "2026-10-05T12:03:00Z",
+          "latest_reported_at": null,
+          "rehab_improvement_reports": [],
+          "rehab_improvement_at": null,
+          "assessment_setback_at": null,
+          "rehab_stage": "calm",
+          "rehab_stage_reasons": [
+            "newly_reported_injury",
+            "no_injury_specific_followup_report",
+            "insufficient_injury_specific_progression_evidence"
+          ],
+          "rehab_care_pathway": "musculoskeletal",
+          "rehab_medical_gate": false,
+          "rehab_decision": {
+            "injury_id": "142ee49e-3f63-4bc1-a440-f4d08aaa410b",
+            "injury_episode_id": "b9096e59-e424-47ac-a5b4-5a484bd06f93",
+            "region": "knee",
+            "injury_type": "swelling",
+            "stage": "calm",
+            "outcome": "unsupported_prescription",
+            "summary": "No suitable rehab is available for this injury yet. Keep to your current restrictions.",
+            "reason_codes": [
+              "unsupported_injury_policy"
+            ],
+            "activation": "shadow",
+            "prescription": null,
+            "restrictions": {},
+            "readiness_hold": false,
+            "schedule": {
+              "state": "unsupported",
+              "reason": "No suitable rehab is available for this injury yet. Keep to your current restrictions.",
+              "next_due_day": null
+            },
+            "recent_log": []
+          },
+          "label": "Right knee swelling",
+          "clinician_clearance": {
+            "episode_id": "b9096e59-e424-47ac-a5b4-5a484bd06f93",
+            "scopes": [
+              "contact",
+              "rehab",
+              "training"
+            ],
+            "report_id": "05b815a1-e826-54c2-80f0-c7f306c86058",
+            "reported_at": "2026-10-05T12:03:00+00:00",
+            "source": "athlete_reported",
+            "externally_verified": false,
+            "scope_reported_at": {
+              "contact": "2026-10-05T12:03:00+00:00",
+              "rehab": "2026-10-05T12:03:00+00:00",
+              "training": "2026-10-05T12:03:00+00:00"
+            },
+            "rehabilitation_permission": {
+              "schema_version": 1,
+              "level": "sport_specific"
+            }
+          }
+        }
+      ],
+      "live_prescription": {
+        "plan_id": null,
+        "training_day": "2026-10-05",
+        "session": {
+          "session_id": "rehab-2026-10-05-24777a5e766c5208cf190e38",
+          "title": "Today's rehab",
+          "session_type": "rehab",
+          "blocks": [
+            {
+              "block_id": "rehab:5b596619-45a2-421e-8f7d-857ecb484b35:3a495ab4-3f82-4b45-88da-e55b1fdda38c",
+              "block_type": "rehab",
+              "title": "Shoulder sprain protective guidance",
+              "display_name": "Shoulder sprain protective guidance",
+              "coaching_cues": [
+                "Protect the injured joint and avoid exercise or activity that aggravates it. During the first few days of a new sprain, rest from loading it and avoid massage or forced stretching. Follow any clinician-directed support or movement restrictions. Seek assessment for severe or worsening pain, deformity, inability to use the joint or loss of sensation."
+              ],
+              "rehab_drill_id": "shoulder_sprain_recovery_support",
+              "exercise_key": "shoulder-sprain-recovery-support",
+              "injury_id": "5b596619-45a2-421e-8f7d-857ecb484b35",
+              "injury_episode_id": "3a495ab4-3f82-4b45-88da-e55b1fdda38c",
+              "target_regions": [
+                "shoulder"
+              ],
+              "dose": {},
+              "instructions": "Protect the injured joint and avoid exercise or activity that aggravates it. During the first few days of a new sprain, rest from loading it and avoid massage or forced stretching. Follow any clinician-directed support or movement restrictions. Seek assessment for severe or worsening pain, deformity, inability to use the joint or loss of sensation.",
+              "stop_rules": [
+                "Stop for pain, giving way, slipping or worsening symptoms.",
+                "Seek assessment for deformity, inability to use the joint or loss of sensation."
+              ],
+              "drill_snapshot": {
+                "id": "shoulder_sprain_recovery_support",
+                "name": "Shoulder sprain protective guidance",
+                "notes": "Protect the injured joint and avoid exercise or activity that aggravates it. During the first few days of a new sprain, rest from loading it and avoid massage or forced stretching. Follow any clinician-directed support or movement restrictions. Seek assessment for severe or worsening pain, deformity, inability to use the joint or loss of sensation.",
+                "rehab_stage": "calm",
+                "function": "recovery_downregulation",
+                "equipment": [],
+                "dose": null,
+                "impact": "none",
+                "load": "minimal",
+                "velocity": "low",
+                "pain_ceiling": null,
+                "allowed_severities": null,
+                "progress_when": null,
+                "regress_when": null,
+                "stop_when": null,
+                "target_regions": [
+                  "shoulder"
+                ],
+                "laterality_applicability": "not_applicable",
+                "target_tissues": [
+                  "shoulder joint supporting soft tissues"
+                ],
+                "contraction_type": "unknown",
+                "sport_specificity": "general_rehab",
+                "contact_level": "none",
+                "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+              },
+              "policy_id": "shoulder_sprain",
+              "policy_version": 1,
+              "bank_hash": "6dc1bcdd0f2dcb1338450c8b8bcc329cb1b49e5f9c3182dd959829434afcf4cf",
+              "policy_review_hash": "059dd858d4217f962378293c3c5e69a960ac6e9e9db7db73def55ca2b4b92bd9",
+              "minimum_gap_days": 1,
+              "is_loading": false,
+              "source_references": [
+                "https://www.nhs.uk/conditions/sprains-and-strains/",
+                "https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/"
+              ]
+            }
+          ],
+          "completion_status": "not_started"
+        },
+        "changes": [],
+        "safety_hold": false,
+        "frozen": false,
+        "engine_version": "2",
+        "rehab_only": true,
+        "held_session_id": null,
+        "injury_ids": [
+          "5b596619-45a2-421e-8f7d-857ecb484b35"
+        ],
+        "allocation_limit": 2,
+        "training_hold_reason": "Your planned training conflicts with the current injury restrictions.",
+        "training_hold_source": "injury",
+        "revision": "d72254b074684ef8d93bb37217b46506f4a5d89b9784e60d0ce84cd9442bc1e1",
+        "injury_context": [
+          {
+            "id": "142ee49e-3f63-4bc1-a440-f4d08aaa410b",
+            "episode_id": "b9096e59-e424-47ac-a5b4-5a484bd06f93",
+            "updated_at": "2026-10-05T12:03:00+00:00"
+          },
+          {
+            "id": "5b596619-45a2-421e-8f7d-857ecb484b35",
+            "episode_id": "3a495ab4-3f82-4b45-88da-e55b1fdda38c",
+            "updated_at": "2026-10-05T12:03:00+00:00"
+          }
+        ],
+        "evidence_context": {
+          "exposure_id": null,
+          "event_id": "faaf76f8-9ccf-5c01-8b46-f548808cac5d"
+        },
+        "readiness_context": {
+          "id": "5fbad01e-9dd6-43b6-8cce-118dfb524c2e",
+          "updated_at": "2026-10-05T12:03:00+00:00"
+        }
+      },
+      "session_hold": null,
+      "exercise_media": {},
+      "effective_clinician_clearance": {
+        "level": "train_contact",
+        "scopes": [
+          "rehab",
+          "training",
+          "contact"
+        ],
+        "requires_update": false,
+        "limited_by": [
+          {
+            "injury_id": "142ee49e-3f63-4bc1-a440-f4d08aaa410b",
+            "injury_episode_id": "b9096e59-e424-47ac-a5b4-5a484bd06f93",
+            "label": "Right knee swelling"
+          },
+          {
+            "injury_id": "5b596619-45a2-421e-8f7d-857ecb484b35",
+            "injury_episode_id": "3a495ab4-3f82-4b45-88da-e55b1fdda38c",
+            "label": "Left shoulder sprain"
+          }
+        ]
+      },
+      "delayed_rehab_prompts": [],
+      "week_summary": {},
+      "quick_actions": [
+        {
+          "id": "complete_intake",
+          "label": "Complete Intake / Create Plan",
+          "route": "/intake"
+        }
+      ]
+    },
+    "profile": {
+      "profile": {
+        "starting_path": "plan_first",
+        "training_habits": {
+          "enabled": true,
+          "decisions": []
+        },
+        "training_habits_revision": 0,
+        "athlete_id": "24a917fe-af3b-48ec-b441-8e120498a611",
+        "email": "fixture@example.com",
+        "username": null,
+        "username_change_history": [],
+        "role": "athlete",
+        "access_status": "approved",
+        "full_name": "Test athlete",
+        "technical_style": [],
+        "tactical_style": [],
+        "stance": "",
+        "professional_status": "",
+        "record": "",
+        "athlete_timezone": "UTC",
+        "athlete_locale": "",
+        "appearance_mode": "dark",
+        "onboarding_draft": null,
+        "avatar_url": null,
+        "nutrition_profile": {
+          "sex": null,
+          "age": null,
+          "height_cm": null,
+          "daily_activity_level": null,
+          "dietary_restrictions": [],
+          "food_preferences": [],
+          "meals_per_day_preference": null,
+          "foods_avoided_pre_session": [],
+          "foods_avoided_fight_week": [],
+          "supplement_use": [],
+          "caffeine_use": null
+        },
+        "private_trial_ack_at": null,
+        "date_of_birth": "1996-05-04",
+        "age_band": "adult",
+        "is_minor": false,
+        "meets_minimum_age": true,
+        "terms_version": "0.1-pre-launch",
+        "terms_accepted_at": "2026-10-05T12:03:00+00:00",
+        "terms_accepted": true,
+        "health_consent_version": "1.0",
+        "health_data_consent": true,
+        "health_consent_at": "2026-10-05T12:03:00+00:00",
+        "health_consent_withdrawn_at": null,
+        "health_consent_granted": true,
+        "created_at": "2026-10-05T12:03:00+00:00",
+        "updated_at": "2026-10-05T12:03:00+00:00"
+      },
+      "effective_admin": false,
+      "latest_intake": null,
+      "latest_plan": null,
+      "plan_count": 0,
+      "username_rate_limit": {
+        "max_changes_per_window": 4,
+        "window_days": 30,
+        "remaining": 4,
+        "next_available_at": null
+      }
+    }
+  }
+}

@@ -9,20 +9,23 @@ from tests.test_rehab_experience import HEADERS, consumer, decision, view
 import pytest
 
 
-SCENARIOS = ("permission_entry", "missing_permission", "pending_response", "worsening", "missing_equipment")
+SCENARIOS = ("earned_load", "missing_permission", "pending_response", "worsening", "missing_equipment")
 
 
 def scenario(monkeypatch, name):
     journey, client = consumer(monkeypatch, PILOTS[0])
     if name in {"missing_permission", "pending_response"}:
         journey.permission("gentle_recovery")
-    if name == "pending_response":
+    if name == "earned_load":
+        journey.reach_load()
+    elif name == "pending_response":
         journey.complete()
         journey.advance()
         journey.permission("loading")
     elif name == "worsening":
         journey.report("worse")
     elif name == "missing_equipment":
+        journey.reach_load()
         journey.store.intakes[journey.athlete][0]["equipment_access"] = []
     return journey, client, view(client)
 
@@ -31,10 +34,10 @@ def assert_scenario(name, body):
     current = decision(body)
     progression = current["progression"]
     assert body["live_prescription"]["session"]["blocks"]
-    if name == "permission_entry":
+    if name == "earned_load":
         assert current["stage"] == "load"
-        assert progression["entry_basis"] == "reported_clinician_permission"
-        assert progression["entry_decision"]["status"] == "met"
+        assert "entry_basis" not in progression
+        assert progression["evidence_ids"]
         assert progression["next_transition"]["to_stage"] == "dynamic"
         assert progression["next_transition"]["target_stage_live"] is False
     elif name == "worsening":

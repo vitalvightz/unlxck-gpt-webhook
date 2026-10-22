@@ -173,7 +173,7 @@ test("unsupported guidance shows a repeated reason only once and keeps schedule 
       outcome: "unsupported_prescription", summary, reason_codes: [],
       schedule: { state: "unsupported", reason },
     } }} token="token" onRefresh={async () => {}} />);
-    assert.match(html, /No guided rehab in UNLXCK yet\./);
+    assert.match(html, /No rehab exercises available for this stage yet\./);
     assert.doesNotMatch(html, /Recovery monitoring|safety checks still apply/);
     assert.doesNotMatch(html, /No rehab yet/);
   }
@@ -207,7 +207,7 @@ for (const [reasonCodes, summary, expected] of [
 for (const state of ["due", "recovery_day", "already_completed", "held", "deferred", "unsupported"] as const) {
   test(`${state} guidance shows its label once, the next day, and a reason only when it explains something`, () => {
     const summary = "Keep the current injury restrictions in place.";
-    const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, rehab_decision: {
+    const html = renderToStaticMarkup(<InjuryCareStatus rehabHref="#rehab-row" injury={{ ...injury, rehab_decision: {
       outcome: "missing_information", summary, reason_codes: [],
       schedule: { state, reason: summary, next_due_day: "2026-10-09" },
     } }} token="token" onRefresh={async () => {}} />);
@@ -226,7 +226,7 @@ test("a matched routine drops the boilerplate summary and the routine reason", (
     ["recovery_day", "Allow the configured recovery gap before repeating this routine.", "Rest day"],
     ["due", "Your baseline rehab is due today; missed work adds no extra volume.", "Rehab due today"],
   ] as const) {
-    const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, rehab_decision: {
+    const html = renderToStaticMarkup(<InjuryCareStatus rehabHref="#rehab-row" injury={{ ...injury, rehab_decision: {
       outcome: "prescribed_rehab", summary: "Your rehab is matched to this injury's current recovery stage.", reason_codes: [],
       schedule: { state, reason, next_due_day: "2026-10-10" },
     } }} token="token" onRefresh={async () => {}} />);
@@ -235,7 +235,7 @@ test("a matched routine drops the boilerplate summary and the routine reason", (
     assert.ok(!text.includes("current recovery stage"));
     assert.ok(!text.includes(reason));
   }
-  const held = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, rehab_decision: {
+  const held = renderToStaticMarkup(<InjuryCareStatus rehabHref="#rehab-row" injury={{ ...injury, rehab_decision: {
     outcome: "prescribed_rehab", summary: "Your rehab is matched to this injury's current recovery stage.", reason_codes: [],
     schedule: { state: "deferred", reason: "Demanding training already loads this region today.", next_due_day: "2026-10-10" },
   } }} token="token" onRefresh={async () => {}} />);
@@ -431,11 +431,11 @@ test("a routine state folds under the stage block, which opens progression requi
 });
 
 test("rehab due today keeps its own row: it links to the exercises", () => {
-  const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, rehab_decision: {
+  const html = renderToStaticMarkup(<InjuryCareStatus rehabHref="#actual-rehab-exercise" injury={{ ...injury, rehab_decision: {
     outcome: "prescribed_rehab", summary: "Matched.", reason_codes: [], stage: "restore",
     schedule: { state: "due", reason: "Due.", next_due_day: "2026-10-10" },
   } }} token="token" onRefresh={async () => {}} />);
-  assert.match(html, /class="injury-rehab-action" href="#today-session"/);
+  assert.match(html, /class="injury-rehab-action" href="#actual-rehab-exercise"/);
   assert.doesNotMatch(html, /injury-progress-status/);
 });
 
@@ -457,7 +457,7 @@ test("unsupported elbow monitoring does not imply a route to Load, even with per
     }, rehab_decision: { outcome, summary: "Add the injury area and type so your rehab can be matched.", reason_codes: outcome === "missing_information" ? ["missing_injury_identity"] : [], stage: "restore",
       progression: { next_transition: { to_stage: "load", status: "closed", target_stage_live: false, reason_codes: [] } }, schedule: { state: "unsupported", reason: "No matching exercise." },
     } }} token="token" onRefresh={async () => {}} />);
-    assert.match(html, outcome === "unsupported_prescription" ? /No guided rehab in UNLXCK yet\./ : /Review your injury details/);
+    assert.match(html, outcome === "unsupported_prescription" ? /No rehab exercises available for this stage yet\./ : /Review your injury details/);
     assert.match(html, /injury-clearance-value">Contact training</);
     assert.doesNotMatch(html, /Rehabilitation stages|Next:|Progression requirements|unlock rehab|Add injury area/);
   }
@@ -467,4 +467,14 @@ test("resolved injuries do not need to traverse rehab stages", () => {
   const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, rehab_decision: { outcome: "no_rehab_indicated", summary: "Resolved", reason_codes: ["resolved_episode"], stage: "return" } }} token="token" onRefresh={async () => {}} />);
   assert.match(html, /Recovered/);
   assert.doesNotMatch(html, /Rehabilitation stages/);
+});
+
+
+test("a due decision without a rendered exercise target never promises access", () => {
+  const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, rehab_decision: {
+    ...injury.rehab_decision!, outcome: "prescribed_rehab",
+    schedule: { state: "due", reason: "Due." },
+  } }} token="token" onRefresh={async () => {}} />);
+  assert.doesNotMatch(html, /Rehab due today|injury-rehab-action|#today-session/);
+  assert.match(html, /Rehab unavailable/);
 });

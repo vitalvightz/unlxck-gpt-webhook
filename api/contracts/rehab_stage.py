@@ -390,7 +390,10 @@ def _is_urgent_injury(injury: Mapping[str, Any]) -> bool:
     if symptom_type == "swelling":
         from fightcamp.injury_location_registry import canonicalize_location_from_registry
         region = canonicalize_location_from_registry(str(injury.get("canonical_location") or injury.get("body_region") or ""))
-        if region in {"calf", "ankle", "foot", "heel", "shin", "knee", "quads", "hamstring", "glute"} and _lower(injury.get("side")) in {"left", "right"}:
+        from .clinician_clearance import has_reported_clinician_permission
+        if (region in {"calf", "ankle", "foot", "heel", "shin", "knee", "quads", "hamstring", "glute"}
+                and _lower(injury.get("side")) in {"left", "right"}
+                and not has_reported_clinician_permission(injury)):
             # The product has no established cause for a one-sided swelling
             # episode. Do not silently presume benign oedema or a sprain.
             return True
