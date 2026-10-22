@@ -433,6 +433,7 @@ export function TodayScreen() {
           openInjuries={state.open_injuries ?? []}
           effectiveClearance={state.effective_clinician_clearance}
           delayedPrompts={state.delayed_rehab_prompts}
+          todaySafetyNoticeInjuryId={state.today.primary_safety_notice?.injury_id ?? null}
           token={token}
           onRefresh={refresh}
         />

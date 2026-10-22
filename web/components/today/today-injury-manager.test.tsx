@@ -1599,3 +1599,39 @@ test("a failed delayed response cannot block the current worsening report", asyn
     assert.equal(statusButton(container, "Worse").getAttribute("aria-pressed"), "true");
   } finally { globalThis.fetch = original; cleanup(); }
 });
+
+test("a skin injury card shows only skin care, and not twice when Today already leads with it", async () => {
+  const { container, root, cleanup } = mount();
+  const skin = { ...OPEN_BLISTER, rehab_decision: { outcome: "wound_care", summary: "Follow the skin-care guidance for this injury.",
+    reason_codes: ["surface_wound_care"], stage: "calm" as const } };
+  const render = async (todaySafetyNoticeInjuryId: string | null) => {
+    await act(async () => {
+      root.render(<TodayInjuryManager openInjuries={[skin]} todaySafetyNoticeInjuryId={todaySafetyNoticeInjuryId}
+        token="t" onRefresh={async () => {}} />);
+    });
+  };
+  // A higher warning leads Today, so the card carries this injury's skin care.
+  await render("another-injury");
+  const text = container.textContent ?? "";
+  assert.match(text, /Keep contact off it/);
+  assert.doesNotMatch(text, /Stage:|Stage 1 of 5|Recovery monitoring|skin-care guidance for this injury/);
+  // Today's main advice already shows it: the card does not repeat it.
+  await render(skin.id);
+  assert.equal(container.querySelector(".today-injury-guidance"), null);
+  cleanup();
+});
+
+test("an injury without a guided pathway shows no stage and one short line", async () => {
+  const { container, root, cleanup } = mount();
+  const stiffness = { ...SHOULDER, description: "stiffness", label: "Left shoulder stiffness", rehab_decision: {
+    outcome: "unsupported_prescription", summary: "No suitable rehab is available for this injury yet.",
+    reason_codes: ["unsupported_injury_policy"], stage: "calm" as const } };
+  await act(async () => {
+    root.render(<TodayInjuryManager openInjuries={[stiffness]} token="t" onRefresh={async () => {}} />);
+  });
+  const text = container.textContent ?? "";
+  assert.doesNotMatch(text, /Stage:|Stage 1 of 5|Future availability|Recovery monitoring|safety checks still apply/);
+  await act(async () => (container.querySelector(".today-injury-summary-row") as HTMLButtonElement).click());
+  assert.match(container.textContent ?? "", /No guided rehab in UNLXCK yet\./);
+  cleanup();
+});

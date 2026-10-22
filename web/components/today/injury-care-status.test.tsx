@@ -173,8 +173,8 @@ test("unsupported guidance shows a repeated reason only once and keeps schedule 
       outcome: "unsupported_prescription", summary, reason_codes: [],
       schedule: { state: "unsupported", reason },
     } }} token="token" onRefresh={async () => {}} />);
-    assert.match(html, /Recovery monitoring/);
-    assert.match(html, /No guided rehab programme is available/);
+    assert.match(html, /No guided rehab in UNLXCK yet\./);
+    assert.doesNotMatch(html, /Recovery monitoring|safety checks still apply/);
     assert.doesNotMatch(html, /No rehab yet/);
   }
 });
@@ -457,7 +457,7 @@ test("unsupported elbow monitoring does not imply a route to Load, even with per
     }, rehab_decision: { outcome, summary: "Add the injury area and type so your rehab can be matched.", reason_codes: outcome === "missing_information" ? ["missing_injury_identity"] : [], stage: "restore",
       progression: { next_transition: { to_stage: "load", status: "closed", target_stage_live: false, reason_codes: [] } }, schedule: { state: "unsupported", reason: "No matching exercise." },
     } }} token="token" onRefresh={async () => {}} />);
-    assert.match(html, /Recovery monitoring/);
+    assert.match(html, outcome === "unsupported_prescription" ? /No guided rehab in UNLXCK yet\./ : /Review your injury details/);
     assert.match(html, /injury-clearance-value">Contact training</);
     assert.doesNotMatch(html, /Rehabilitation stages|Next:|Progression requirements|unlock rehab|Add injury area/);
   }
