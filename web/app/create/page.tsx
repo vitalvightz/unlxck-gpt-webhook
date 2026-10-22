@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { RequireAuth } from "@/components/auth-guard";
-import styles from "@/components/starting-path-screen.module.css";
+import styles from "./create.module.css";
 
 // The one place to start any kind of plan, reached from + Create. Each option
 // opens its existing flow; this screen only routes, it saves nothing.
@@ -25,20 +25,31 @@ export default function CreatePage() {
   return (
     <RequireAuth>
       <section className={styles.root} aria-labelledby="create-heading">
-        <header className={styles.brand}>
-          <button className={`${styles.accountAction} ${styles.back}`} type="button" onClick={goBack}>‹ Back</button>
-        </header>
-        <div className={styles.intro}>
-          <h1 id="create-heading">What would you like to create?</h1>
+        <div className={styles.top}>
+          <button className={styles.back} type="button" onClick={goBack}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6" /></svg>
+            Back
+          </button>
+          <p className={styles.trail} aria-hidden="true">UNLXCK / <span>Create</span></p>
         </div>
-        <nav className={styles.choices} aria-label="Create options">
-          {OPTIONS.map((option) => (
-            <Link key={option.href} href={option.href} className={styles.choice}>
-              <span className={styles.copy}><strong>{option.title}</strong><span>{option.body}</span></span>
-              <span className={styles.action} aria-hidden="true">›</span>
-            </Link>
+        <header className={styles.intro}>
+          <p className="kicker">Your next move</p>
+          <h1 id="create-heading">What would you like to create?</h1>
+          <p>Choose how you want to build your programme.</p>
+        </header>
+        <ol className={styles.options} aria-label="Create options">
+          {OPTIONS.map((option, index) => (
+            <li key={option.href}>
+              <Link href={option.href} className={styles.option}>
+                <span className={`kicker ${styles.index}`} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                <span className={styles.copy}><strong>{option.title}</strong><span>{option.body}</span></span>
+                <span className={styles.arrow} aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9" /></svg>
+                </span>
+              </Link>
+            </li>
           ))}
-        </nav>
+        </ol>
       </section>
     </RequireAuth>
   );
