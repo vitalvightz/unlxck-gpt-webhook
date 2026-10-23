@@ -11,6 +11,7 @@ import api.app as app_module
 from api import generation_runtime
 from api import worker as worker_module
 from api.generation import persistence, stage1_runner
+from api.generation.stage2_runner import finalize_stage2_with_timeout, retry_structured_card_before_release
 from api.generation_runtime import (
     _invoke_planner,
     _stage1_mp_start_method,
@@ -458,6 +459,53 @@ def test_stage2_timeout_fails_without_publishing_stage1(monkeypatch):
     assert "stage2_drafting" in codes
     assert "stage2_model_call_started" in codes
     assert "stage2_finalizer_timeout" in codes
+
+
+@pytest.mark.parametrize("configured_timeout", ["1500", "0"])
+def test_stage2_hanging_request_uses_remaining_job_budget(monkeypatch, caplog, configured_timeout):
+    monkeypatch.setenv("APP_STAGE2_FINALIZE_TIMEOUT_SECONDS", configured_timeout)
+    cancelled = []
+
+    class HangingStage2:
+        async def finalize(self, **kwargs):
+            try:
+                await asyncio.Event().wait()
+            finally:
+                cancelled.append(True)
+
+    async def scenario():
+        with pytest.raises(asyncio.TimeoutError):
+            await finalize_stage2_with_timeout(
+                stage2=HangingStage2(), stage1_result={},
+                log_context={"job_id": "budget-job"}, remaining_runtime_seconds=0.01,
+            )
+
+    asyncio.run(scenario())
+    assert cancelled == [True]
+    assert "job_id=budget-job" in caplog.text
+    assert "timeout_seconds=0.01" in caplog.text
+
+
+def test_stage2_handoff_is_durable_before_provider_is_awaited(monkeypatch):
+    # Force the normal milestone writes to coalesce: the handoff still must
+    # be visible in storage while the provider request is in flight.
+    monkeypatch.setenv("UNLXCK_PROGRESS_PERSIST_MIN_INTERVAL_SECONDS", "30")
+    store = FakeStore()
+    seed_default_profiles(store)
+    observed = []
+
+    class InspectingStage2:
+        async def finalize(self, *, log_context, **kwargs):
+            durable = store.get_generation_job(log_context["job_id"])
+            handoff = [entry for entry in durable["progress_milestones"] if entry["code"] == "stage2_model_call_started"]
+            observed.extend(handoff)
+            raise Stage2AutomationError("test provider failure")
+
+    saved = _run_stage2_failure_job(store, InspectingStage2(), client_request_id="durable-handoff")
+    assert saved["status"] == "failed"
+    assert len(observed) == 1
+    assert observed[0]["meta"]["attempt_count"] == saved["attempt_count"]
+    assert observed[0]["meta"]["remaining_runtime_seconds"] > 0
 
 
 def test_stage2_provider_error_fails_without_publishing_stage1():
@@ -1850,6 +1898,29 @@ class _CardConvertingStage2(FakeStage2Automator):
             "stage2_estimated_cost_usd": 0.01,
             "stage2_calls": [{"label": "structured_first", "source": source}],
         }]
+
+
+def test_card_retry_cannot_restart_the_job_runtime_budget(monkeypatch):
+    monkeypatch.setenv("APP_STAGE2_FINALIZE_TIMEOUT_SECONDS", "1500")
+    cancelled = []
+
+    class HangingCard(_CardConvertingStage2):
+        async def _attempt_structured_plan(self, **kwargs):
+            try:
+                await asyncio.Event().wait()
+            finally:
+                cancelled.append(True)
+
+    result = finalized_result(
+        structured_plan=None, schema_version=None,
+        stage2_validator_report=dict(_CRASHED_INLINE_CARD_REPORT),
+    )
+    retried = asyncio.run(retry_structured_card_before_release(
+        stage2=HangingCard(), final_result=result, emit_milestone=lambda *args: None,
+        remaining_runtime_seconds=0.01,
+    ))
+    assert retried is result
+    assert cancelled == [True]
 
 
 def _milestone_codes(job):

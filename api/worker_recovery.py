@@ -8,6 +8,7 @@ from .generation.heartbeat import is_stale_job
 from .generation.time_utils import utc_now_iso
 from .store import (
     AppStore,
+    is_generation_job_runtime_exceeded,
     is_job_loaded_stalled_generation_job,
     is_pre_start_stale_generation_job,
     is_stage1_planner_stalled_generation_job,
@@ -21,6 +22,7 @@ WorkerRecoveryCategory = Literal[
     "stage1_stalled",
     "mid_pipeline_stale",
     "persisted_output_recovery",
+    "runtime_exceeded",
 ]
 
 _TERMINAL_OUTPUT_MILESTONES = {
@@ -62,6 +64,8 @@ def classify_worker_recovery_category(
 
     if str(job.get("status") or "") != "running":
         return None
+    if is_generation_job_runtime_exceeded(job):
+        return "persisted_output_recovery" if _has_persisted_output(job) else "runtime_exceeded"
     if is_pre_start_stale_generation_job(
         job,
         stale_after_seconds=stale_after_seconds,
@@ -140,7 +144,11 @@ def _append_recovery_milestone(
     now_iso: str,
 ) -> list[Any]:
     milestones = _milestones(job)
-    code = "stalled_job_recovered" if category == "persisted_output_recovery" else "stale_job_reaped"
+    code = (
+        "generation_runtime_exceeded" if category == "runtime_exceeded"
+        else "stalled_job_recovered" if category == "persisted_output_recovery"
+        else "stale_job_reaped"
+    )
     if not any(
         isinstance(entry, dict) and str(entry.get("code") or "") == code
         for entry in milestones
@@ -148,9 +156,15 @@ def _append_recovery_milestone(
         milestones.append(
             {
                 "code": code,
-                "label": "Stalled job recovered" if code == "stalled_job_recovered" else "Stale job reaped",
+                "label": (
+                    "Generation time limit reached" if category == "runtime_exceeded"
+                    else "Stalled job recovered" if code == "stalled_job_recovered"
+                    else "Stale job reaped"
+                ),
                 "detail": (
-                    "Recovered from durable persisted output."
+                    "This generation attempt exceeded its runtime limit. Please retry generation."
+                    if category == "runtime_exceeded"
+                    else "Recovered from durable persisted output."
                     if category == "persisted_output_recovery"
                     else "The generation job stopped making progress and was resolved by the worker recovery sweep."
                 ),
@@ -192,7 +206,11 @@ def _resolve_mid_pipeline_or_persisted_job(
         job_id,
         expected_status="running",
         expected_attempt_count=attempt_count,
-        error="Generation job stalled mid-pipeline and was failed for recovery.",
+        error=(
+            "Plan generation exceeded its runtime limit. Please retry generation."
+            if category == "runtime_exceeded"
+            else "Generation job stalled mid-pipeline and was failed for recovery."
+        ),
         final_result=job.get("final_result") if isinstance(job.get("final_result"), dict) else None,
         plan_id=plan_id,
         progress_milestones=_append_recovery_milestone(
@@ -227,11 +245,15 @@ async def recover_stale_generation_jobs(
     outcomes: list[dict[str, str]] = []
     for summary in summaries:
         job_id = str(summary.get("id") or "")
-        if not job_id or job_id in active_tasks:
+        if not job_id:
             continue
         try:
             job = await asyncio.to_thread(store.get_generation_job, job_id)
             if not isinstance(job, dict):
+                continue
+            # Local tasks can hang too. Only their absolute deadline permits
+            # recovery while their independent heartbeat remains fresh.
+            if job_id in active_tasks and not is_generation_job_runtime_exceeded(job):
                 continue
             category = classify_worker_recovery_category(
                 job,
@@ -239,11 +261,23 @@ async def recover_stale_generation_jobs(
             )
             if category in {None, "startup_stale"}:
                 continue
+            milestones = _milestones(job)
+            logger.warning(
+                "[worker] generation_recovery_candidate job_id=%s category=%s "
+                "attempt_count=%s local_active=%s started_at=%s heartbeat_at=%s last_milestone=%s",
+                job_id, category, job.get("attempt_count"), job_id in active_tasks,
+                job.get("started_at"), job.get("heartbeat_at"),
+                milestones[-1].get("code") if milestones and isinstance(milestones[-1], dict) else None,
+            )
 
             # Reuse the store's established job-loaded and Stage 1 recovery
             # semantics first. It returns unchanged for mid-pipeline/persisted
             # output jobs, which are resolved explicitly below.
-            recovered = await asyncio.to_thread(store.recover_generation_job_if_stale, job)
+            # An expired attempt must not be requeued by legacy startup/Stage 1
+            # recovery. Apply the absolute ceiling before those stage rules.
+            recovered = job if is_generation_job_runtime_exceeded(job) else await asyncio.to_thread(
+                store.recover_generation_job_if_stale, job
+            )
             recovered_status = str((recovered or {}).get("status") or "")
             if recovered_status and recovered_status != "running":
                 outcomes.append(
@@ -257,8 +291,17 @@ async def recover_stale_generation_jobs(
                 )
                 continue
 
-            if category not in {"mid_pipeline_stale", "persisted_output_recovery"}:
+            if category not in {"mid_pipeline_stale", "persisted_output_recovery", "runtime_exceeded"}:
                 continue
+            # Recovery can race final persistence. Re-read output and classify
+            # again; terminal RPCs also guard running status and attempt count.
+            current = await asyncio.to_thread(store.get_generation_job, job_id)
+            if not isinstance(current, dict) or current.get("attempt_count") != job.get("attempt_count"):
+                continue
+            category = classify_worker_recovery_category(current, stale_after_seconds=stale_after_seconds)
+            if category not in {"mid_pipeline_stale", "persisted_output_recovery", "runtime_exceeded"}:
+                continue
+            job = current
             resolved = await asyncio.to_thread(
                 _resolve_mid_pipeline_or_persisted_job,
                 store,

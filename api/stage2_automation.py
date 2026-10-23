@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import re
 import time
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -46,6 +48,8 @@ from .structured_plan_calendar_spine import reconcile_calendar_spine
 from .structured_plan_models import build_strict_structured_plan_schema
 from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
 from .settings import env_int
+
+_MODEL_WAIT_LOG_INTERVAL_SECONDS = 30.0
 
 # The central policy owns release. Ready/flagged plans are athlete-displayable;
 # review_required retains the rendered text for admins without releasing it.
@@ -1251,17 +1255,34 @@ class OpenAIStage2Automator:
             # Per-request override. Do NOT pass None through: the SDK treats an
             # explicit None as "no timeout at all" rather than the client default.
             request["timeout"] = timeout
+        context = log_context or {}
         logger.info(
-            "[stage2] sending %s prompt to model=%s chars=%s max_output_tokens=%s timeout=%s format=%s",
+            "[stage2] model_request_started attempt=%s model=%s chars=%s max_output_tokens=%s timeout=%s format=%s job_id=%s source=%s",
             attempt_label,
             self.model,
             len(prompt),
             max_output_tokens or "unset",
             timeout if timeout is not None else "client_default",
             (response_format or {}).get("type", "text"),
+            context.get("job_id") or "unknown",
+            source,
         )
         call_cost: dict[str, Any] = {"attempt_label": attempt_label, "source": source}
         started = time.monotonic()
+        request_phase = "opening_stream"
+
+        async def log_waiting() -> None:
+            # This reports where we are waiting, never claims model progress.
+            # It remains useful when the provider sends no response at all.
+            while True:
+                await asyncio.sleep(_MODEL_WAIT_LOG_INTERVAL_SECONDS)
+                logger.info(
+                    "[stage2] model_request_waiting job_id=%s attempt=%s model=%s phase=%s elapsed_seconds=%.3f",
+                    context.get("job_id") or "unknown", attempt_label, self.model,
+                    request_phase, time.monotonic() - started,
+                )
+
+        wait_logger = asyncio.create_task(log_waiting())
         try:
             # Stream instead of a single blocking create: the HTTP read timeout
             # then applies to the gap between events, not the whole generation,
@@ -1269,7 +1290,18 @@ class OpenAIStage2Automator:
             # get_final_response() drains the stream and returns the same
             # Response object create() would have.
             async with self.client.responses.stream(**request) as stream:
+                request_phase = "awaiting_final_response"
+                logger.info(
+                    "[stage2] model_stream_opened job_id=%s attempt=%s model=%s elapsed_seconds=%.3f phase=awaiting_final_response",
+                    context.get("job_id") or "unknown", attempt_label, self.model, time.monotonic() - started,
+                )
                 response = await stream.get_final_response()
+        except asyncio.CancelledError:
+            logger.warning(
+                "[stage2] model_request_cancelled job_id=%s attempt=%s model=%s elapsed_seconds=%.3f",
+                context.get("job_id") or "unknown", attempt_label, self.model, time.monotonic() - started,
+            )
+            raise
         except Exception as exc:  # pragma: no cover - provider failure surfaces via integration
             # No response means no actual usage; record the estimated input cost
             # so a failed attempt still leaves an auditable cost row.
@@ -1287,14 +1319,21 @@ class OpenAIStage2Automator:
                     ),
                     failure_cost,
                 ) from exc
-            # Keep the raw provider exception (which can carry request payloads or
-            # provider internals) out of the stored/visible error; the full detail
-            # is captured in the server log below.
-            logger.exception("[stage2] model_request_failed error_type=%s", type(exc).__name__)
+            # Provider exceptions can carry payloads or credentials. Record only
+            # correlation metadata and the exception type, including in logs.
+            logger.warning(
+                "[stage2] model_request_failed job_id=%s attempt=%s model=%s elapsed_seconds=%.3f error_type=%s",
+                context.get("job_id") or "unknown", attempt_label, self.model,
+                time.monotonic() - started, type(exc).__name__,
+            )
             raise _with_stage2_cost(
                 Stage2AutomationError("Stage 2 model request failed. Check server logs."),
                 failure_cost,
             ) from exc
+        finally:
+            wait_logger.cancel()
+            with suppress(asyncio.CancelledError):
+                await wait_logger
         call_cost["elapsed_seconds"] = time.monotonic() - started
         response_id = getattr(response, "id", None) or "unknown"
         response_incomplete = _response_is_incomplete(response)

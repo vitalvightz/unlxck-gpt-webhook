@@ -41,7 +41,7 @@ from ..stage2_automation import (
     Stage2AutomationUnavailableError,
     Stage2Automator,
 )
-from ..store import AppStore
+from ..store import AppStore, generation_job_remaining_runtime_seconds
 from .admin_linkage import (
     validate_admin_latest_intake_linkage,
     validate_admin_triage_resume_linkage,
@@ -299,6 +299,9 @@ async def run_generation_job(
             logger.warning("[jobs] generation:claim_unavailable job_id=%s", job_id)
             return
         claimed_attempt_count = int(job.get("attempt_count") or 0)
+        # Freeze the remaining wall-clock budget on a monotonic clock so
+        # Stage 1, finalization and the card retry all spend the same budget.
+        runtime_deadline = time.monotonic() + generation_job_remaining_runtime_seconds(job)
         logger.info(
             "[jobs] worker:job_loaded athlete_id=%s job_id=%s source=%s status=%s attempt_count=%s",
             job.get("athlete_id"),
@@ -718,7 +721,13 @@ async def run_generation_job(
                     "stage2_model_call_started",
                     "Stage 2 model call started",
                     "AI finalizer request started.",
+                    attempt_count=claimed_attempt_count,
+                    remaining_runtime_seconds=max(0.0, runtime_deadline - time.monotonic()),
                 )
+                # The throttle can otherwise leave the durable row at Stage 1
+                # throughout a hung provider call. Flush before awaiting it.
+                if progress_flush is not None:
+                    await asyncio.to_thread(progress_flush)
                 stage1_result = {
                     **stage1_result,
                     "_generation_source": str(job.get("source") or ""),
@@ -727,6 +736,7 @@ async def run_generation_job(
                     stage2=stage2,
                     stage1_result=stage1_result,
                     log_context={"job_id": job_id, "athlete_id": athlete_id},
+                    remaining_runtime_seconds=max(0.0, runtime_deadline - time.monotonic()),
                 )
                 await _touch_heartbeat()
                 final_result = {**finalized_result, "full_name": request_body.athlete.full_name}
@@ -808,6 +818,7 @@ async def run_generation_job(
             final_result=final_result,
             emit_milestone=_emit_milestone,
             log_context={"job_id": job_id, "athlete_id": athlete_id},
+            remaining_runtime_seconds=max(0.0, runtime_deadline - time.monotonic()),
         )
         await _touch_heartbeat()
 

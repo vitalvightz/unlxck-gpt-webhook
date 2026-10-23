@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 from typing import TYPE_CHECKING, Any, Callable
 
 from .timeouts import _stage2_finalize_timeout_seconds
@@ -13,6 +14,15 @@ if TYPE_CHECKING:
     from ..stage2_automation import Stage2Automator
 
 logger = logging.getLogger(__name__)
+
+
+def _effective_timeout(remaining_runtime_seconds: float | None) -> float | None:
+    configured = _stage2_finalize_timeout_seconds()
+    if remaining_runtime_seconds is None:
+        return configured
+    remaining = max(0.0, remaining_runtime_seconds)
+    return remaining if configured is None else min(configured, remaining)
+
 
 _OPENAI_QUOTA_ADMIN_ERROR = "OpenAI quota exceeded. Check API billing, credits, project budget, or organization limits."
 _OPENAI_QUOTA_ATHLETE_ERROR = "Generation is temporarily unavailable. Please try again later."
@@ -25,12 +35,31 @@ async def finalize_stage2_with_timeout(
     stage2: Stage2Automator,
     stage1_result: dict[str, Any],
     log_context: dict[str, str] | None = None,
+    remaining_runtime_seconds: float | None = None,
 ) -> dict[str, Any]:
-    finalize = stage2.finalize(stage1_result=stage1_result, log_context=log_context)
-    timeout_seconds = _stage2_finalize_timeout_seconds()
-    if timeout_seconds is None:
-        return await finalize
-    return await asyncio.wait_for(finalize, timeout=timeout_seconds)
+    timeout_seconds = _effective_timeout(remaining_runtime_seconds)
+    started = time.monotonic()
+    context = log_context or {}
+    logger.info(
+        "[jobs] generation:stage2_finalize_started job_id=%s timeout_seconds=%s remaining_runtime_seconds=%s",
+        context.get("job_id"), timeout_seconds, remaining_runtime_seconds,
+    )
+    try:
+        if timeout_seconds is not None and timeout_seconds <= 0:
+            raise asyncio.TimeoutError
+        finalize = stage2.finalize(stage1_result=stage1_result, log_context=log_context)
+        result = await finalize if timeout_seconds is None else await asyncio.wait_for(finalize, timeout=timeout_seconds)
+    except (Exception, asyncio.CancelledError) as exc:
+        logger.warning(
+            "[jobs] generation:stage2_finalize_stopped job_id=%s elapsed_seconds=%.3f timeout_seconds=%s error_type=%s",
+            context.get("job_id"), time.monotonic() - started, timeout_seconds, type(exc).__name__,
+        )
+        raise
+    logger.info(
+        "[jobs] generation:stage2_finalize_finished job_id=%s elapsed_seconds=%.3f status=%s stage2_status=%s",
+        context.get("job_id"), time.monotonic() - started, result.get("status"), result.get("stage2_status"),
+    )
+    return result
 
 
 def _planning_brief(value: Any) -> dict[str, Any]:
@@ -70,6 +99,7 @@ async def retry_structured_card_before_release(
     final_result: dict[str, Any],
     emit_milestone: Callable[..., None],
     log_context: dict[str, str] | None = None,
+    remaining_runtime_seconds: float | None = None,
 ) -> dict[str, Any]:
     """Make sure the enhanced card has been attempted before the job completes.
 
@@ -122,6 +152,9 @@ async def retry_structured_card_before_release(
     report = candidate.get("stage2_validator_report")
     candidate["stage2_validator_report"] = dict(report) if isinstance(report, dict) else {}
     try:
+        timeout_seconds = _effective_timeout(remaining_runtime_seconds)
+        if timeout_seconds is not None and timeout_seconds <= 0:
+            raise asyncio.TimeoutError
         attempt = attempt_structured_plan_for_result(
             candidate,
             planning_brief=_planning_brief(final_result.get("planning_brief")),
@@ -129,7 +162,6 @@ async def retry_structured_card_before_release(
             source="generation_card_retry",
             log_context=log_context,
         )
-        timeout_seconds = _stage2_finalize_timeout_seconds()
         if timeout_seconds is None:
             retried, costs = await attempt
         else:

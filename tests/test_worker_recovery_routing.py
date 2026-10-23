@@ -5,7 +5,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import api.worker as worker
-from api.worker_recovery import classify_worker_recovery_category
+from api.generation.heartbeat import heartbeat_generation_job
+from api.worker_recovery import classify_worker_recovery_category, recover_stale_generation_jobs
 
 
 def _old_iso(minutes: int = 30) -> str:
@@ -44,7 +45,8 @@ def _running_job(
     }
 
 
-def test_worker_recovery_classifier_distinguishes_every_stale_category() -> None:
+def test_worker_recovery_classifier_distinguishes_every_stale_category(monkeypatch) -> None:
+    monkeypatch.setenv("APP_GENERATION_HARD_MAX_RUNTIME_SECONDS", "3600")
     stale_after = 90
     jobs = {
         "startup_stale": _running_job("startup"),
@@ -247,6 +249,7 @@ async def _exercise_tick(monkeypatch) -> tuple[list[str], _RecoveryStore]:
 
 
 def test_every_candidate_is_claimed_or_deliberately_recovered(monkeypatch) -> None:
+    monkeypatch.setenv("APP_GENERATION_HARD_MAX_RUNTIME_SECONDS", "3600")
     claimed, store = asyncio.run(_exercise_tick(monkeypatch))
 
     assert claimed == ["queued", "startup"]
@@ -257,3 +260,124 @@ def test_every_candidate_is_claimed_or_deliberately_recovered(monkeypatch) -> No
     assert store.jobs["stage1"]["status"] == "failed"
     assert store.jobs["mid"]["status"] == "failed"
     assert store.jobs["persisted"]["status"] == "completed"
+
+
+def _heartbeating_stage2_job(**extra: Any) -> dict[str, Any]:
+    return _running_job(
+        "hanging", milestones=[_milestone("stage2_model_call_started")],
+        stage1_result={}, heartbeat_at=_old_iso(0), **extra,
+    )
+
+
+def test_hard_deadline_recovers_local_hanging_request_with_fresh_heartbeat(monkeypatch, caplog):
+    monkeypatch.setenv("APP_GENERATION_HARD_MAX_RUNTIME_SECONDS", "900")
+    job = _heartbeating_stage2_job()
+    store = _RecoveryStore({job["id"]: job})
+    outcomes = asyncio.run(recover_stale_generation_jobs(
+        store=store, active_tasks={job["id"]}, stale_after_seconds=90,
+    ))
+    assert outcomes == [{"job_id": "hanging", "category": "runtime_exceeded", "status": "failed"}]
+    assert store.fail_calls == ["hanging"]
+    assert "local_active=True" in caplog.text
+    assert "last_milestone=stage2_model_call_started" in caplog.text
+
+
+def test_hard_deadline_preserves_persisted_plan(monkeypatch):
+    monkeypatch.setenv("APP_GENERATION_HARD_MAX_RUNTIME_SECONDS", "900")
+    job = _heartbeating_stage2_job(plan_id="plan-1")
+    store = _RecoveryStore({job["id"]: job})
+    asyncio.run(recover_stale_generation_jobs(
+        store=store, active_tasks={job["id"]}, stale_after_seconds=90,
+    ))
+    assert store.complete_calls == ["hanging"]
+    assert store.fail_calls == []
+    assert store.jobs["hanging"]["status"] == "completed"
+    assert store.get_plan("plan-1")["final_plan_text"] == "Persisted plan"
+
+
+def test_recovery_rechecks_job_completed_during_sweep(monkeypatch):
+    monkeypatch.setenv("APP_GENERATION_HARD_MAX_RUNTIME_SECONDS", "900")
+    job = _heartbeating_stage2_job()
+    store = _RecoveryStore({job["id"]: job})
+
+    read_job = store.get_generation_job
+    reads = []
+
+    def finish_during_recovery(job_id):
+        reads.append(job_id)
+        if len(reads) == 2:
+            store.jobs[job_id].update(status="completed", plan_id="plan-1")
+        return read_job(job_id)
+
+    monkeypatch.setattr(store, "get_generation_job", finish_during_recovery)
+    assert asyncio.run(recover_stale_generation_jobs(
+        store=store, active_tasks=set(), stale_after_seconds=90,
+    )) == []
+    assert store.fail_calls == []
+    assert store.complete_calls == []
+    assert store.jobs[job["id"]]["status"] == "completed"
+
+
+def test_local_healthy_job_with_remaining_budget_is_untouched(monkeypatch):
+    monkeypatch.setenv("APP_GENERATION_HARD_MAX_RUNTIME_SECONDS", "3600")
+    job = _heartbeating_stage2_job()
+    store = _RecoveryStore({job["id"]: job})
+    assert asyncio.run(recover_stale_generation_jobs(
+        store=store, active_tasks={job["id"]}, stale_after_seconds=90,
+    )) == []
+    assert store.recover_calls == []
+
+
+def test_expired_startup_attempt_is_failed_instead_of_requeued(monkeypatch):
+    monkeypatch.setenv("APP_GENERATION_HARD_MAX_RUNTIME_SECONDS", "900")
+    job = _running_job("worker-claim", milestones=[_milestone("job_loaded")])
+    store = _RecoveryStore({job["id"]: job})
+    asyncio.run(recover_stale_generation_jobs(
+        store=store, active_tasks=set(), stale_after_seconds=90,
+    ))
+    assert store.jobs[job["id"]]["status"] == "failed"
+    assert store.recover_calls == []
+
+
+def test_hung_local_job_is_reaped_while_heartbeat_keeps_advancing(monkeypatch):
+    monkeypatch.setenv("APP_GENERATION_HARD_MAX_RUNTIME_SECONDS", "900")
+    job = _heartbeating_stage2_job()
+
+    class HeartbeatingStore(_RecoveryStore):
+        writes = 0
+
+        def get_generation_job_status(self, job_id):
+            return self.get_generation_job(job_id)
+
+        def update_generation_job(self, job_id, **changes):
+            changes.pop("refresh", None)
+            self.writes += 1
+            self.jobs[job_id].update(changes)
+
+    store = HeartbeatingStore({job["id"]: job})
+
+    async def scenario():
+        provider = asyncio.create_task(asyncio.Event().wait())
+        heartbeat = asyncio.create_task(heartbeat_generation_job(
+            job["id"], store, asyncio.Event(), interval_seconds=0.001,
+            on_cancelled=provider.cancel,
+        ))
+        try:
+            while store.writes < 2:
+                await asyncio.sleep(0.001)
+            assert not provider.done()
+            await recover_stale_generation_jobs(
+                store=store, active_tasks={job["id"]}, stale_after_seconds=90,
+            )
+            await asyncio.wait_for(heartbeat, timeout=1)
+            writes_after_recovery = store.writes
+            await asyncio.sleep(0.005)
+            assert store.writes == writes_after_recovery
+            assert store.jobs[job["id"]]["status"] == "failed"
+            assert provider.cancelled()
+        finally:
+            provider.cancel()
+            heartbeat.cancel()
+            await asyncio.gather(provider, heartbeat, return_exceptions=True)
+
+    asyncio.run(scenario())
