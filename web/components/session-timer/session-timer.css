@@ -1363,10 +1363,8 @@ html[data-theme="light"] .st-mini[data-tone="warn"] { --st-accent: #c26b00; }
   gap: 8px;
 }
 
-/* Equal-width shortcuts on one line, however many there are. */
+/* Supporting utilities share the borderless action pattern used across the app. */
 .today-action-tools {
-  /* Flex-wrap, not equal grid columns: nowrap labels would otherwise spill
-     past their pill and collide with the neighbour on narrow screens. */
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -1391,7 +1389,6 @@ html[data-theme="light"] .st-mini[data-tone="warn"] { --st-accent: #c26b00; }
   margin-top: -2px;
 }
 
-.today-tool-button,
 .today-tool-link {
   display: inline-flex;
   align-items: center;
@@ -1408,16 +1405,6 @@ html[data-theme="light"] .st-mini[data-tone="warn"] { --st-accent: #c26b00; }
   font-weight: 600;
   cursor: pointer;
   transition: background 160ms ease, border-color 160ms ease;
-}
-
-.today-tool-button:hover {
-  border-color: var(--border-strong, #363d47);
-  background: rgba(255, 255, 255, 0.07);
-}
-
-.today-tool-button[data-accent="true"] {
-  border-color: color-mix(in srgb, var(--brand-red, #b5122b) 45%, transparent);
-  background: var(--brand-red-soft, rgba(181, 18, 43, 0.14));
 }
 
 .today-tool-button[data-accent="true"] .today-tool-icon {
@@ -1451,18 +1438,8 @@ html[data-theme="light"] .st-mini[data-tone="warn"] { --st-accent: #c26b00; }
   color: var(--text-secondary, #a7adb7);
 }
 
-html[data-theme="light"] .today-tool-button {
-  border-color: rgba(80, 81, 84, 0.14);
-  background: rgba(255, 255, 255, 0.7);
-}
-
 html[data-theme="light"] .today-action-tools {
   border-top-color: rgba(80, 81, 84, 0.1);
-}
-
-html[data-theme="light"] .today-tool-button[data-accent="true"] {
-  border-color: color-mix(in srgb, var(--brand-red, #b5122b) 35%, transparent);
-  background: color-mix(in srgb, var(--brand-red, #b5122b) 8%, white);
 }
 
 html[data-theme="light"] .today-tool-button[data-accent="true"] .today-tool-icon {

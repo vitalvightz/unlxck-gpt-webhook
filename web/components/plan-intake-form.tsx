@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ActionLink } from "@/components/action-link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -663,6 +664,16 @@ function MobileStepRail({
   );
 }
 
+function PlanSetupAlternatives() {
+  return (
+    <nav className="action-alternatives" aria-label="Other ways to build a plan">
+      <p className="action-alternatives-label">Other ways to build</p>
+      <ActionLink href="/quick-build">Quick Build</ActionLink>
+      <ActionLink href="/plans/custom">Build your own</ActionLink>
+    </nav>
+  );
+}
+
 function MobileOnboardingHeader({
   currentStep,
   isOpen,
@@ -688,14 +699,7 @@ function MobileOnboardingHeader({
         <p className="kicker">Camp Setup</p>
         <p className="onboarding-mobile-title">Build your camp profile.</p>
         <p className="muted">Saved, resumable athlete intake.</p>
-        <div className="hero-actions">
-          <Link href="/quick-build" className="ghost-button onboarding-quick-build-link">
-            Use Quick Build instead
-          </Link>
-          <Link href="/plans/custom" className="ghost-button onboarding-quick-build-link">
-            Build your own plan
-          </Link>
-        </div>
+        <PlanSetupAlternatives />
       </div>
       <OnboardingProgressStrip
         currentStep={currentStep}
@@ -2444,14 +2448,7 @@ export function PlanIntakeForm() {
             <p className="kicker">{t("eyebrow")}</p>
             <h1>{t("title")}</h1>
             <p className="muted">Saved, resumable athlete intake.</p>
-            <div className="hero-actions">
-              <Link href="/quick-build" className="ghost-button onboarding-quick-build-link">
-                Use Quick Build instead
-              </Link>
-              <Link href="/plans/custom" className="ghost-button onboarding-quick-build-link">
-                Build your own plan
-              </Link>
-            </div>
+            <PlanSetupAlternatives />
           </div>
         </div>
 
@@ -3399,11 +3396,11 @@ export function PlanIntakeForm() {
             <p className="muted">{actionBarSummary}</p>
           </div>
           <div className="onboarding-action-buttons">
-            <button type="button" className="ghost-button onboarding-action-secondary" onClick={handleSaveDraft} disabled={formActionPending}>
+            <button type="button" className="action-link onboarding-action-secondary" onClick={handleSaveDraft} disabled={formActionPending}>
               {isPending ? t("saving") : t("saveDraft")}
             </button>
             {currentStep > 0 ? (
-              <button type="button" className="ghost-button onboarding-action-secondary onboarding-action-back" onClick={handleBack} aria-label={t("back")}>
+              <button type="button" className="action-link onboarding-action-secondary onboarding-action-back" onClick={handleBack} aria-label={t("back")}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6" /></svg>
                 <span className="onboarding-action-label">{t("back")}</span>
               </button>

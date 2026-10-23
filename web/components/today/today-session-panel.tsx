@@ -1021,7 +1021,7 @@ export function TodaySessionPanel({
       <div className="today-action-tools">
         {tools && showContact ? (
           contactTimerAvailable ? (
-            <button type="button" className="today-tool-button" data-accent="true" onClick={() => openTimer("contact")}>
+            <button type="button" className="action-utility today-tool-button" data-accent="true" onClick={() => openTimer("contact")}>
               <ToolIcon name="bell" />
               Sparring rounds
             </button>
@@ -1035,7 +1035,8 @@ export function TodaySessionPanel({
         {tools && showGuided ? (
           <button
             type="button"
-            className="today-tool-button"
+            className="action-utility today-tool-button"
+            aria-label="Guided visualisation"
             data-accent="true"
             disabled={isSubmitting}
             onClick={() => {
@@ -1049,11 +1050,11 @@ export function TodaySessionPanel({
             }}
           >
             <ToolIcon name="voice" />
-            Guided visualisation
+            Visualisation
           </button>
         ) : null}
         {tools && showFreeTimer ? (
-          <button type="button" className="today-tool-button" onClick={roundTimer.open}>
+          <button type="button" className="action-utility today-tool-button" onClick={roundTimer.open}>
             <ToolIcon name="timer" />
             Free timer
           </button>
