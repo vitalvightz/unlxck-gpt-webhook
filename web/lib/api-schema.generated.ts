@@ -2262,7 +2262,6 @@ export type SessionBlock = {
   regression_options: string[];
   progression_rule: string | null;
   deload_rule: string | null;
-  week_prescription: string | null;
   stop_rules: string[];
   substitutions: string[];
   red_flags: RedFlagRule[];
