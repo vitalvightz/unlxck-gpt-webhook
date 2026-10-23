@@ -656,38 +656,15 @@
 }
 
 .st-round-presets {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(100%, 280px);
+  gap: 2px 8px;
 }
 
-/* Compact chips, so the four formats sit on one line on most phones. */
-.st-round-presets button {
-  min-height: 36px;
-  padding: 0 11px;
-  font-size: 13px;
-}
-
-.st-round-presets button,
-.st-presets button {
-  min-height: 40px;
-  padding: 0 14px;
-  border: 1px solid var(--st-line);
-  border-radius: 999px;
-  background: var(--st-surface);
-  color: var(--st-ink-soft);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 160ms ease, color 160ms ease;
-}
-
-.st-round-presets button[aria-pressed="true"] {
-  background: var(--st-ink);
-  border-color: transparent;
-  color: var(--st-on-ink);
+.st-root .action-choice {
+  --choice-ink: var(--st-ink);
+  --choice-muted: var(--st-ink-soft);
 }
 
 .st-presets {
@@ -1126,42 +1103,6 @@
 }
 
 .st-choice-options { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
-
-.st-chips button {
-  min-height: 38px;
-  border: 1px solid var(--st-line);
-  border-radius: 999px;
-  background: none;
-  color: var(--st-ink-soft);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.st-chips button[aria-pressed="true"] {
-  background: var(--st-ink);
-  border-color: transparent;
-  color: var(--st-on-ink);
-}
-
-/* Get ready: a plain segmented row, the pick lifted out. */
-.st-choice-options button {
-  min-height: 38px;
-  border: 0;
-  border-radius: 999px;
-  background: none;
-  color: var(--st-ink-soft);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.st-choice-options button[aria-checked="true"] {
-  background: var(--st-surface-strong);
-  color: var(--st-ink);
-}
 
 .st-advanced { padding: 4px 0; }
 

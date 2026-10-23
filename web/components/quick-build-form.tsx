@@ -835,7 +835,7 @@ function QuickBuildFormInner() {
               <button
                 key={starter.key}
                 type="button"
-                className={`quick-build-starter-card ${active ? "quick-build-starter-card-active" : ""}`.trim()}
+                className="action-choice quick-build-starter-card"
                 aria-pressed={active}
                 onClick={() => handleStarterCardClick(starter)}
               >
