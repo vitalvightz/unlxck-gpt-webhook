@@ -2452,6 +2452,33 @@ class ExerciseLogEffort(BaseModel):
     value: float = Field(ge=1, le=10)
 
 
+class ExerciseSetResult(BaseModel):
+    """One confirmed set. Missing measurements stay unknown."""
+
+    model_config = ConfigDict(extra="forbid")
+    reps: int | None = Field(default=None, strict=True, ge=1, le=1000)
+    load: ExerciseLogMeasure | None = None
+
+    @field_validator("load", mode="before")
+    @classmethod
+    def numeric_load(cls, value):
+        if isinstance(value, dict):
+            number = value.get("value")
+            if isinstance(number, bool) or not isinstance(number, (int, float)):
+                raise ValueError("Set load must be a number.")
+        return value
+
+    @model_validator(mode="after")
+    def valid_load(self):
+        if self.load is not None:
+            limit = {"kg": 1000, "lb": 2200}.get(self.load.unit)
+            if limit is None or not math.isfinite(self.load.value) or self.load.value > limit:
+                raise ValueError("Set load must be a valid weight in kg or lb.")
+            if round(self.load.value, 2) != self.load.value:
+                raise ValueError("Set load allows up to two decimal places.")
+        return self
+
+
 class ExerciseLogActual(BaseModel):
     """What the athlete actually did for one block.
 
@@ -2472,6 +2499,7 @@ class ExerciseLogActual(BaseModel):
     rest: ExerciseLogMeasure | None = None
     distance: ExerciseLogMeasure | None = None
     effort: ExerciseLogEffort | None = None
+    set_entries: list[ExerciseSetResult] | None = Field(default=None, min_length=1, max_length=50)
 
     @model_validator(mode="after")
     def validate_units(self) -> "ExerciseLogActual":
@@ -2479,6 +2507,16 @@ class ExerciseLogActual(BaseModel):
             measure = getattr(self, field_name)
             if measure is not None and measure.unit not in allowed:
                 raise ValueError(f"{field_name}.unit must be one of {sorted(allowed)}")
+        if self.set_entries is not None:
+            # Rows are authoritative. Never flatten varied sets into a fictitious
+            # sets × reps × weight combination for legacy history consumers.
+            units = {entry.load.unit for entry in self.set_entries if entry.load is not None}
+            if len(units) > 1:
+                raise ValueError("Use one load unit for an exercise's sets.")
+            self.sets = len(self.set_entries)
+            first = self.set_entries[0]
+            self.reps = first.reps if all(entry.reps == first.reps for entry in self.set_entries) else None
+            self.load = first.load if all(entry.load == first.load for entry in self.set_entries) else None
         return self
 
 

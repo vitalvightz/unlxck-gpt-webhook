@@ -752,3 +752,17 @@ def test_today_history_scan_is_bounded_however_long_the_history():
     performances, _ = exercise_history_context(store, athlete_id="athlete-1", before_day="2026-10-01")
     assert sum(read["limit"] for read in reads) <= cap
     assert [row["exercise_key"] for row in performances] == ["trap-bar-deadlift"]
+
+
+def test_prescribed_set_entries_keep_each_load_and_leave_plan_unchanged():
+    client, store, _ = _build_client()
+    _seed_plan(store, blocks=[_squat(load={"method": "absolute", "value": 25, "unit": "kg"})])
+    before = copy.deepcopy(store.plans[PLAN_ID])
+    _start(client)
+    sets = [{"reps": 8, "load": {"value": 25, "unit": "kg"}}, {"reps": 6, "load": {"value": 30, "unit": "kg"}}]
+    response = _log(client, status="modified", actual={"set_entries": sets})
+    assert response.status_code == 201, response.text
+    actual = response.json()["log"]["actual"]
+    assert actual["set_entries"] == sets and actual["sets"] == 2
+    assert actual["load"] is None and actual["reps"] is None
+    assert store.plans[PLAN_ID] == before

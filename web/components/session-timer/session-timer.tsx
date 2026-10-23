@@ -9,6 +9,9 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { SetRows } from "@/components/set-rows";
+import { readSets } from "@/lib/set-entries";
+import { timerSetDrafts, completeSetWithResults, endSessionWithResults, finishItemWithResults, finishItemAsPlannedWithResults } from "@/lib/session-timer/sets";
 import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 
 import { useSessionTimer, type SessionTimerController } from "@/components/session-timer/use-session-timer";
@@ -18,9 +21,7 @@ import {
   adjustItem,
   currentItem,
   endRound,
-  endSession,
   finishItem,
-  finishItemAsPlanned,
   isPrep,
   metPlan,
   plannedTarget,
@@ -30,7 +31,6 @@ import {
   skipRest,
   startItem,
   stepDuration,
-  completeSet,
   summarizeRun,
   updateIntervalItem,
   viewAt,
@@ -203,6 +203,20 @@ function doneLabel(item: TimerItem, done: number): string {
     return item.sets ? `${count} · plan ${formatRange(item.sets)}` : count;
   }
   return "Done";
+}
+
+function TimerSetEditor({ timer }: { timer: SessionTimerController }) {
+  const { state } = timer;
+  const item = currentItem(state);
+  const rows = timerSetDrafts(state);
+  if (!rows || item?.kind !== "sets" || !item.setFields) return null;
+  const unit = item.setFields.find(field => field.key === "load")?.apiUnit ?? "kg";
+  const read = readSets(rows, unit);
+  return <div className="st-set-editor"><SetRows rows={rows} unit={unit} compact editableCount={false}
+    active={Math.min(state.unit - 1, rows.length - 1)} completed={state.completed[state.index] ?? 0}
+    showLoad={item.setFields.some(field => field.key === "load")} invalid={read.invalid}
+    repsHint={item.setFields.find(field => field.key === "reps")?.hint}
+    onChange={updated => timer.update(s => ({ ...s, setDrafts: { ...s.setDrafts, [item.id]: updated } }))} /></div>;
 }
 
 function Progress({ state, item }: { state: TimerState; item: TimerItem | null }) {
@@ -824,7 +838,7 @@ function PrimaryAction({
   }
   if (state.phase === "work" && item.kind === "sets") {
     return (
-      <button type="button" className="st-primary" onClick={() => timer.run(completeSet)}>
+      <button type="button" className="st-primary" onClick={() => timer.run(completeSetWithResults)}>
         {item.holdSec ? "End hold" : `${unitWord(item)} ${state.unit} done`}
       </button>
     );
@@ -1231,7 +1245,7 @@ export function SessionTimer({
       {sheet !== null ? <div className="st-scrim" aria-hidden="true" onClick={() => setSheet(null)} /> : null}
 
       {handingOff && visible ? (
-        <main className="st-main st-done st-handoff">
+        <div className="st-main st-done st-handoff">
           <div className="st-done-badge" aria-hidden="true">
             <Icon name="check" />
           </div>
@@ -1242,9 +1256,9 @@ export function SessionTimer({
           <button type="button" className="st-link" onClick={() => void finish()} disabled={finishing}>
             {finishing ? "Saving exercises…" : finishLabel}
           </button>
-        </main>
+        </div>
       ) : state.phase === "done" ? (
-        <main className="st-main st-done">
+        <div className="st-main st-done">
           <div className="st-done-badge" aria-hidden="true">
             <Icon name="check" />
           </div>
@@ -1264,9 +1278,9 @@ export function SessionTimer({
               {finishing ? "Saving exercises…" : finishError ? "Retry save" : finishLabel}
             </button>
           </div>
-        </main>
+        </div>
       ) : (
-        <main className="st-main" data-phase={state.phase}>
+        <div className="st-main" data-phase={state.phase}>
           {state.phase === "ready" && state.items.length === 1 ? null : (
             <p className="st-phase" aria-live="polite">
               <span className="st-phase-dot" aria-hidden="true" />
@@ -1319,6 +1333,7 @@ export function SessionTimer({
               ) : null}
             </>
           )}
+          {item?.kind === "sets" && item.setFields && state.phase !== "ready" ? <TimerSetEditor key={item.id} timer={timer} /> : null}
           {state.phase !== "ready" ? <Progress state={state} item={item} /> : null}
           {item?.kind === "interval" ? (
             <div className="st-audio-status" role="status">
@@ -1334,11 +1349,11 @@ export function SessionTimer({
                 )}
             </div>
           ) : null}
-        </main>
+        </div>
       )}
 
       {state.phase !== "done" ? (
-        <footer className="st-controls">
+        <div className="st-controls" role="group" aria-label="Timer controls">
           {/* One light row of tools above the one main action: ±10s either side,
               pause (or End round during a round) in the middle. */}
           {hasTools ? (
@@ -1388,7 +1403,7 @@ export function SessionTimer({
               type="button"
               className="st-next"
               data-emphasis={canFinishItem ? "true" : undefined}
-              onClick={() => timer.run(finishItem)}
+              onClick={() => timer.run(finishItemWithResults)}
               aria-label={`Next exercise: ${nextItem.title}`}
             >
               <span className="st-next-label">Next</span>
@@ -1405,7 +1420,7 @@ export function SessionTimer({
                 data-danger="true"
                 onClick={() => {
                   setConfirmEnd(false);
-                  timer.update(endSession);
+                  timer.update(endSessionWithResults);
                 }}
               >
                 End
@@ -1417,7 +1432,7 @@ export function SessionTimer({
           ) : (
             <div className="st-links">
               {canMarkPlanned ? (
-                <button type="button" className="st-link" onClick={() => timer.run(finishItemAsPlanned)}>
+                <button type="button" className="st-link" onClick={() => timer.run(finishItemAsPlannedWithResults)}>
                   Done as planned
                 </button>
               ) : null}
@@ -1430,7 +1445,7 @@ export function SessionTimer({
               </button>
             </div>
           )}
-        </footer>
+        </div>
       ) : null}
     </div>
     </ToBody>

@@ -323,6 +323,11 @@ def recent_exercise_loads(
             continue
         actual = row.get("actual") if isinstance(row.get("actual"), Mapping) else {}
         load = actual.get("load")
+        # A varied workout has no single load. Carry only its last measured set
+        # as a suggestion, never as the load for every historical set.
+        if isinstance(actual.get("set_entries"), list):
+            load = next((entry.get("load") for entry in reversed(actual["set_entries"])
+                         if isinstance(entry, Mapping) and entry.get("load") is not None), None)
         # Only a well-formed weight is carried forward; anything else is skipped.
         if (
             not isinstance(load, Mapping)

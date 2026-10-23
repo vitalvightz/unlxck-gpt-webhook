@@ -46,6 +46,8 @@ def to_entry(row: dict, *, health_consent_granted: bool) -> ManualExerciseEntry:
 
 def values_format(values: ExerciseLogActual) -> MeasurementFormat | None:
     """The layout that shows what a past record holds; None when it holds nothing."""
+    if values.set_entries:
+        return "strength" if any(entry.load is not None for entry in values.set_entries) else "bodyweight"
     if values.rounds is not None or values.work is not None:
         return "intervals"
     if values.distance is not None:

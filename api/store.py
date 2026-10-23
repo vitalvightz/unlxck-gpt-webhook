@@ -5740,7 +5740,7 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
             .select("exercise_key,prescribed,actual,training_day")
             .eq("athlete_id", athlete_id)
             .lt("training_day", before_day)
-            .not_.is_("actual->load", "null")
+            .or_("actual->load.not.is.null,actual->set_entries.not.is.null")
             .order("training_day", desc=True)
             .limit(limit)
             .execute()

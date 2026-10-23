@@ -8,6 +8,8 @@ import {
   EXERCISE_LOG_STATUS_LABELS,
   backoffLoadFor,
   buildLogEntry,
+  buildSetLogEntry,
+  setDraftsForFields,
   draftFromLog,
   hasLoggableNumbers,
   isLoggableBlock,
@@ -22,6 +24,8 @@ import {
   type LogDraft,
 } from "@/lib/exercise-log";
 import { cleanText } from "@/lib/structured-plan";
+import { draftsFromActual, type SetDraft } from "@/lib/set-entries";
+import { SetRows, SetResults } from "./set-rows";
 import type {
   ExerciseLogReason,
   ExerciseLogRecord,
@@ -209,6 +213,8 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
   // Re-opens the choices over a saved log, to change its outcome.
   const [choosing, setChoosing] = useState(false);
   const [draft, setDraft] = useState<LogDraft>({});
+  const [setRows, setSetRows] = useState<SetDraft[] | null>(null);
+  const [setUnit, setSetUnit] = useState<string | null>(null);
   const [reason, setReason] = useState<ExerciseLogReason | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -224,7 +230,9 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
   // Easing off is offered at any readiness; it never needs a progression rule.
   const backoff = progression ? null : backoffLoadFor(block, previous);
   const suggested = progression ?? backoff;
-  const entry = buildLogEntry(fields, draft);
+  const loadUnit = setUnit ?? fields.find(field => field.key === "load")?.apiUnit ?? "kg";
+  const entry = setRows ? buildSetLogEntry(fields, setRows, loadUnit, draft) : buildLogEntry(fields, draft);
+  const supportsSets = fields.some(field => field.key === "sets") && fields.some(field => field.key === "reps") && !fields.some(field => field.key === "rounds");
 
   function closeEditor() {
     setEditing(false);
@@ -234,6 +242,8 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
   }
 
   function openEditor() {
+    setSetRows(log?.actual?.set_entries?.length ? draftsFromActual(log.actual) : null);
+    setSetUnit(log?.actual?.set_entries?.find(row => row.load)?.load?.unit ?? null);
     // A fresh entry starts from last time's weight, so only a change is typed.
     setDraft(
       log ? draftFromLog(fields, log) : draftFromLog(fields, suggested
@@ -286,8 +296,13 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
   if (editing) {
     return (
       <div className="ex-log" data-mode="numbers">
+        {setRows ? <SetRows rows={setRows} unit={loadUnit} showLoad={fields.some(field => field.key === "load")}
+          disabled={saving} invalid={entry.invalid.includes("reps") ? setRows.map((_, index) => index) : []}
+          repsHint={fields.find(field => field.key === "reps")?.hint} onChange={rows => { setSetRows(rows); setConfirming(null); }} /> : null}
+        <details className="ex-log-details" open={!setRows || undefined}>
+        <summary hidden={!setRows}>More details</summary>
         <div className="ex-log-fields" data-count={fields.length}>
-          {fields.map((field) => (
+          {fields.filter(field => !setRows || !["sets", "reps", "load"].includes(field.key)).map((field) => (
             <label key={field.key} className="ex-log-field" htmlFor={`${fieldId}-${field.key}`}>
               <span className="ex-log-field-label">
                 {field.label}
@@ -318,6 +333,8 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
             </label>
           ))}
         </div>
+        </details>
+        {supportsSets && !setRows ? <button type="button" className="ex-log-link" disabled={saving} onClick={() => setSetRows(setDraftsForFields(fields, draft))}>Edit sets individually</button> : null}
         {entry.status === "modified" ? (
           <ReasonChips
             selected={reason}
@@ -345,7 +362,7 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
   }
 
   if (log && !choosing) {
-    const values = log.status === "skipped" ? [] : loggedValues(fields, log);
+    const values = log.status === "skipped" || log.actual?.set_entries?.length ? [] : loggedValues(fields, log);
     return (
       <div className="ex-log" data-mode="saved">
         {/* The whole line reopens the log, so it keeps the row's full width. */}
@@ -377,6 +394,7 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
             <path d="m14.5 7.5 3 3" />
           </svg>
         </button>
+        {log.actual?.set_entries?.length ? <SetResults entries={log.actual.set_entries} /> : null}
         {/* A skip saves in one tap; why is a second, optional tap. */}
         {log.status === "skipped" ? (
           <ReasonChips

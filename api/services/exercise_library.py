@@ -38,7 +38,9 @@ def _actual(row: dict) -> ExerciseLogActual | None:
     try:
         if not isinstance(row.get("actual"), dict):
             return None
-        for value in row["actual"].values():
+        for key, value in row["actual"].items():
+            if key == "set_entries":
+                continue
             number = value.get("value") if isinstance(value, dict) else value
             if number is not None and (isinstance(number, bool) or not isinstance(number, (int, float))):
                 return None
@@ -66,6 +68,8 @@ def performed_values(row: dict, actual: ExerciseLogActual) -> ExerciseLogActual:
         return actual
     prescribed = _map(row.get("prescribed"))
     for key in ExerciseLogActual.model_fields:
+        if actual.set_entries is not None and key in {"sets", "reps", "load"}:
+            continue
         if key in values:
             continue
         value = prescribed.get(key)
@@ -119,7 +123,7 @@ def exercise_library(store, athlete_id: str, *, now: datetime | None = None) -> 
                 name=_text(_map(row.get("prescribed")).get("display_name")) or (row.get("exercise_key") or "Legacy exercise record"),
                 source="plan", kind="canonical" if identity.startswith("key:") else "legacy",
                 confirmed=row["status"] == "as_prescribed",
-                basis="reported" if actual.load is not None else "confirmed_prescription")
+                basis="reported" if actual.load is not None or any(entry.load is not None for entry in actual.set_entries or []) else "confirmed_prescription")
         after_id = ids[-1]
     manual_formats: dict[str, tuple[tuple[str, str], str]] = {}
     for row in _manual_index_rows(store, athlete_id, as_of):
@@ -150,8 +154,10 @@ def _record(summaries, latest, identity, order, values, *, name, source, kind, c
         latest[identity] = order
         summary.name, summary.latest_day, summary.latest_values = name, day, values
         summary.latest_confirmed_as_prescribed, summary.latest_source = confirmed, source
-    load = values.load
-    if load is not None and load.value > 0:
+    loads = [entry.load for entry in values.set_entries if entry.load is not None] if values.set_entries else [values.load]
+    for load in loads:
+        if load is None or load.value <= 0:
+            continue
         before = next((entry for entry in summary.best_loads if entry.unit == load.unit), None)
         if before is None or load.value > before.value:
             summary.best_loads = [entry for entry in summary.best_loads if entry.unit != load.unit] + [RecordedExerciseLoad(

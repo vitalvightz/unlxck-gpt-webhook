@@ -337,3 +337,59 @@ test("Cue-only editing preserves an existing RIR prescription after reload", asy
   await edit.locator("summary").click();
   await expect(edit.getByLabel("Cues", { exact: true })).toHaveValue("Brace before moving");
 });
+
+test("strength timer confirms distinct set loads, restores drafts and saves real history", async ({ page, baseURL }) => {
+  test.skip(!api, "Run with EXERCISE_TEST_API pointing at the seeded local API");
+  test.setTimeout(60_000);
+  await page.request.post(`${api}/__e2e/reset`);
+  const headers = { Authorization: "Bearer athlete-token" };
+  const initial = await (await page.request.get(`${api}/api/today`, { headers })).json();
+  const planId = initial.active_plan.id;
+  expect((await page.request.post(`${api}/api/today/checkin`, { headers,
+    data: { plan_id: planId, sleep: "good", body: "normal", pain: "none", phase: "GPP" } })).ok()).toBe(true);
+  const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setup(page, baseURL!);
+  await page.goto("/today");
+  await page.getByRole("button", { name: "Start session", exact: true }).click();
+  const timer = page.locator(".st-root");
+  await timer.getByRole("button", { name: "Start", exact: true }).click();
+  await expect(timer.getByLabel("Load kg, set 1")).toHaveValue("100");
+  await expect(timer.getByLabel("Reps, set 1")).toHaveValue("5");
+  await timer.getByLabel("Load kg, set 1").fill("105");
+  await timer.getByRole("button", { name: "Set 1 done", exact: true }).click();
+  await expect(timer.getByRole("button", { name: "Start set 2", exact: true })).toBeVisible();
+  await timer.getByRole("button", { name: "Start set 2", exact: true }).click();
+  await timer.getByLabel("Load kg, set 2").fill("110");
+  if (shots) await page.screenshot({ path: `${shots}/timer-set-mobile.png` });
+  await timer.getByRole("button", { name: "All 4 sets", exact: true }).click();
+  await expect(timer.getByLabel("Load kg, set 1")).toHaveValue("105");
+  await expect(timer.getByLabel("Load kg, set 3")).toHaveValue("100");
+  // Check the actual column geometry, not only the text in nested history rows.
+  const cells = await timer.getByRole("list", { name: "Set results" }).getByRole("listitem").first().locator("input").all();
+  const boxes = await Promise.all(cells.map(cell => cell.boundingBox()));
+  expect(Math.round(boxes[0]!.y)).toBe(Math.round(boxes[1]!.y));
+  expect((await new AxeBuilder({ page }).include(".st-root").analyze()).violations).toEqual([]);
+  await page.setViewportSize({ width: 1280, height: 844 });
+  if (shots) await page.screenshot({ path: `${shots}/timer-set-desktop.png` });
+  // A reload restores a live run as a mini bar; opening it keeps the edited draft.
+  await page.reload();
+  await page.locator(".st-mini").click();
+  await expect(page.locator(".st-root").getByLabel("Load kg, set 2")).toHaveValue("110");
+  await page.locator(".st-root").getByRole("button", { name: "Set 2 done", exact: true }).click();
+  for (const set of [3, 4]) {
+    await page.locator(".st-root").getByRole("button", { name: `Start set ${set}`, exact: true }).click();
+    await page.locator(".st-root").getByRole("button", { name: `Set ${set} done`, exact: true }).click();
+  }
+  await page.locator(".st-root").getByRole("button", { name: "End session", exact: true }).click();
+  await page.getByRole("alertdialog", { name: "End session", exact: true }).getByRole("button", { name: "End", exact: true }).click();
+  await expect(page.locator(".st-root")).toHaveCount(0);
+  const response = await page.request.get(`${api}/api/today/exercise-logs?plan_id=${planId}`, { headers });
+  expect(response.ok()).toBe(true);
+  const logs = (await response.json()).logs;
+  const squat = logs.find((log: { exercise_key: string }) => log.exercise_key === "back-squat");
+  expect(squat.actual.set_entries.map((entry: { load: { value: number } }) => entry.load.value)).toEqual([105, 110, 100, 100]);
+  expect(squat.status).toBe("modified");
+  expect(squat.actual.load).toBeNull();
+  expect(errors).toEqual([]);
+});

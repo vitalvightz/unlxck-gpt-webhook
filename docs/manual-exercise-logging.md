@@ -100,8 +100,27 @@ did on that session, without creating an UNLXCK programme.
 
 ## Limits
 
-- Max 30 exercises per session; no per-set rows (sets × reps × load per movement).
+- Max 30 exercises per session. Strength/bodyweight entries can optionally hold
+  up to 50 confirmed `actual.set_entries` rows, each with its own reps and load.
+  Common sets/reps/load remain compatibility summaries; varied values are never
+  flattened into one weight. Existing aggregate logs remain valid.
 - Catalogue formats are a suggestion from bank evidence; the athlete can change them.
 - Renaming a personal exercise and merging a personal identity into a catalogue
   movement are not supported; both would need an explicit, reviewed action.
 - The migration has not been applied to any hosted database.
+
+## Per-set logging
+
+- The compact Sets / Reps / Load entry remains the default. “Edit sets
+  individually” expands the shared row editor; an edit changes only that set.
+  “Apply to remaining sets” copies only the edited field to later sets.
+- Planned-session logging seeds each row from exact prescribed values. Ranges
+  stay hints, and missing measurements stay unknown. The S&C timer uses the same
+  editor, shows one active set by default, and confirms it with “Set done”. Its
+  saved run retains drafts; only completed sets are handed off to exercise logs.
+- Session Details and exercise performance history use the shared, collapsed
+  set summary and expand into compact read-only rows. Best-load records and load
+  charts inspect the individual loads; a varied workout never becomes an
+  invented sets × reps × maximum-load result.
+- Both existing JSON columns accept the optional rows; no schema migration is
+  needed. Deploy the API accepting `set_entries` before the frontend sends it.

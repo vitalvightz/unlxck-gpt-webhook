@@ -10,6 +10,12 @@ export type ProgressSeries = { id: string; metric: ProgressMetric; label: string
 
 /** Only the server's eligible performed projection supplies chart evidence. */
 export function performanceValue(record: ExercisePerformance, metric: ProgressMetric): { value: number; unit: string } | null {
+  const entries = record.performed_values?.set_entries;
+  if (entries?.length && metric === "load") {
+    const loads = entries.flatMap(entry => entry.load && entry.load.value > 0 ? [entry.load] : []);
+    if (!loads.length) return null;
+    return loads.reduce((highest, load) => load.value > highest.value ? load : highest);
+  }
   const raw = record.performed_values?.[metric];
   if (raw == null) return null;
   const value = typeof raw === "number" ? raw : raw.value;

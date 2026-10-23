@@ -46,6 +46,7 @@ def build_app():
     @app.post("/__e2e/reset")
     def reset(technical: str = "", rir: bool = False):  # Each browser case starts from the generated plan alone.
         store.session_completions.clear()
+        store.exercise_logs.clear()
         store.today_checkins.clear()
         seed_open(store)
         release_seed()

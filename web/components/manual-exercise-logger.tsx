@@ -13,6 +13,7 @@ import {
 import type { TrainingHistorySession } from "@/lib/training-history";
 import sheet from "./log-training.module.css";
 import styles from "./manual-exercise-logger.module.css";
+import { SetRows } from "./set-rows";
 
 type Picked = { name: string; choice: ExerciseChoice; format: MeasurementFormat | null; reference: string | null };
 /**
@@ -23,7 +24,7 @@ type Picked = { name: string; choice: ExerciseChoice; format: MeasurementFormat 
 type Editor = { entryId: string; revision: number; editing: boolean; picked: Picked | null; draft: Draft; formatMenu: boolean; original: string | null };
 
 const fresh = (unit: "kg" | "lb"): Editor => ({ entryId: crypto.randomUUID(), revision: 0, editing: false, picked: null, draft: blankDraft("strength", unit), formatMenu: false, original: null });
-const snapshot = (format: MeasurementFormat | null, draft: Draft) => JSON.stringify([format, draft.values, draft.units, draft.notes]);
+const snapshot = (format: MeasurementFormat | null, draft: Draft) => JSON.stringify([format, draft.values, draft.units, draft.notes, draft.setRows]);
 const choiceOf = (entry: ManualExerciseEntry): ExerciseChoice => entry.exercise_id.startsWith("custom:")
   ? { personal_exercise_id: entry.exercise_id.slice(7) } : { exercise_key: entry.exercise_id.slice(4) };
 
@@ -277,7 +278,7 @@ export function ManualExerciseLogger({ token, session, reference, onClose }: {
     </div>;
   }
 
-  const extras = format ? EXTRA_FIELDS[format] : [];
+  const extras = format ? EXTRA_FIELDS[format].filter(field => !editor.draft.setRows || field !== "load") : [];
   const extraFilled = extras.some(field => editor.draft.values[field]?.trim()) || Boolean(editor.draft.notes.trim());
 
   return <dialog ref={dialog} className={`${sheet.dialog} ${styles.dialog}`} aria-labelledby={`${fieldId}-title`}
@@ -354,7 +355,21 @@ export function ManualExerciseLogger({ token, session, reference, onClose }: {
           </div> : null}
           {picked.reference ? <p className={styles.reference}>{picked.reference}</p> : null}
           {format ? <>
-            <div className={styles.measures} data-count={PRIMARY_FIELDS[format].length}>{PRIMARY_FIELDS[format].map(measure)}</div>
+            {editor.draft.setRows && (format === "strength" || format === "bodyweight") ? <SetRows
+              rows={editor.draft.setRows} unit={editor.draft.units.load ?? "kg"} onUnitChange={() => cycleUnit("load")}
+              showLoad={format === "strength" || editor.draft.values.load !== undefined || editor.draft.setRows.some(row => row.load.trim())}
+              disabled={busy} invalid={errors.reps ? editor.draft.setRows.map((_, index) => index) : []}
+              onChange={setRows => { setEditor(current => ({ ...current, draft: { ...current.draft, setRows } })); setErrors({}); }} />
+              : <>
+                <div className={styles.measures} data-count={PRIMARY_FIELDS[format].length}>{PRIMARY_FIELDS[format].map(measure)}</div>
+                {format === "strength" || format === "bodyweight" ? <button type="button" className={styles.textButton} disabled={busy} onClick={() => {
+                  const count = Number(editor.draft.values.sets || 1);
+                  if (!Number.isInteger(count) || count < 1 || count > 50) { setErrors({ sets: "Enter 1–50 sets" }); return; }
+                  setEditor(current => ({ ...current, draft: { ...current.draft, setRows: Array.from({ length: count }, () => ({ reps: current.draft.values.reps ?? "", load: current.draft.values.load ?? "" })) } }));
+                }}>Edit sets individually</button> : null}
+              </>}
+            {editor.draft.setRows && format === "bodyweight" && editor.draft.values.load === undefined && !editor.draft.setRows.some(row => row.load.trim())
+              ? <button type="button" className={styles.textButton} disabled={busy} onClick={() => setValue("load", "")}>Add load per set</button> : null}
             <details className={styles.more} open={extraFilled || undefined}>
               <summary>More details</summary>
               <div className={styles.measures} data-count={Math.min(3, extras.length)}>{extras.map(measure)}</div>

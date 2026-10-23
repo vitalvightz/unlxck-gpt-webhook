@@ -1,5 +1,7 @@
 import { formatBlockLoad, formatMeasured } from "./structured-plan";
 import type { LoadPrescription, MeasuredValue } from "./types";
+import type { ExerciseSetResult } from "./types";
+import { setSummary } from "./set-entries";
 
 const LABELS: Record<string, string> = {
   sets: "Sets", reps: "Reps", rounds: "Rounds", load: "Load", work: "Work", rest: "Rest",
@@ -10,7 +12,9 @@ const LABELS: Record<string, string> = {
 
 /** Format only stored fields, preserving their own units. Never fill actuals from prescriptions. */
 export function detailMeasurements(values: Record<string, unknown>): { label: string; value: string }[] {
-  return Object.entries(LABELS).flatMap(([key, label]) => {
+  const sets = Array.isArray(values.set_entries) && values.set_entries.length ? values.set_entries as ExerciseSetResult[] : null;
+  return [...(sets ? [{ label: "Sets", value: setSummary(sets) }] : []), ...Object.entries(LABELS).flatMap(([key, label]) => {
+    if (sets && ["sets", "reps", "load"].includes(key)) return [];
     const raw = values[key];
     if (raw == null || raw === "") return [];
     let value: string | null = null;
@@ -27,5 +31,5 @@ export function detailMeasurements(values: Record<string, unknown>): { label: st
       if (key === "completed_fraction" && typeof raw === "number") value = `${Math.round(raw * 100)}%`;
     }
     return value ? [{ label, value }] : [];
-  });
+  })];
 }

@@ -428,3 +428,38 @@ def test_library_search_for_logging_suggests_a_layout_only_from_catalogue_eviden
     assert next(entry for entry in plank if entry["catalogue_id"] == PLANK)["log_format"] == "isometric"
     plain = client.get("/api/training/library?q=back%20squat&limit=5", headers=AUTH).json()["entries"]
     assert all(entry["log_format"] is None for entry in plain)
+
+
+def test_varied_sets_round_trip_through_manual_history_and_best_load(api):
+    client, store = api
+    row = session(client)
+    sets = [{"reps": 8, "load": {"value": 25, "unit": "kg"}},
+            {"reps": 6, "load": {"value": 30, "unit": "kg"}}]
+    saved = add(client, row["id"], actual={"set_entries": sets})
+    assert saved["actual"]["set_entries"] == sets
+    assert saved["actual"]["sets"] == 2
+    assert saved["actual"]["reps"] is None and saved["actual"]["load"] is None
+    assert details(client, row["id"]).json()["blocks"][0]["actual"]["set_entries"] == sets
+    result = library(store)["key:back-squat"]
+    assert result.best_loads[0].value == 30
+    assert result.latest_values.set_entries[0].load.value == 25
+    assert result.latest_values.load is None
+
+
+@pytest.mark.parametrize("sets", [[], [{"reps": True}], [{"reps": "8"}], [{"reps": 1.5}],
+    [{"load": {"value": "25", "unit": "kg"}}], [{"load": {"value": 25, "unit": "percent"}}],
+    [{"load": {"value": 25, "unit": "kg"}}, {"load": {"value": 55, "unit": "lb"}}]])
+def test_invalid_set_entries_are_rejected(api, sets):
+    client, _ = api
+    row = session(client)
+    assert put(client, row["id"], actual={"set_entries": sets}).status_code == 422
+
+
+def test_uniform_sets_have_truthful_legacy_summary_and_other_formats_refuse_rows(api):
+    client, _ = api
+    row = session(client)
+    sets = [{"reps": 8, "load": {"value": 25, "unit": "kg"}}] * 3
+    saved = add(client, row["id"], actual={"set_entries": sets, "sets": 50, "reps": 99})
+    assert saved["actual"]["sets"] == 3 and saved["actual"]["reps"] == 8
+    assert saved["actual"]["load"]["value"] == 25
+    assert put(client, row["id"], format="intervals", actual={"set_entries": sets}).status_code == 422

@@ -1,4 +1,5 @@
 import { countNoun, type IntervalItem, type SetsItem, type TimerItem } from "./plan";
+import type { SetDraft } from "../set-entries";
 
 /**
  * Session timer state machine.
@@ -27,6 +28,8 @@ export type TimerState = {
   unit: number;
   /** Rounds / sets completed per item. */
   completed: number[];
+  /** Set drafts survive minimising, refresh and the final handoff. */
+  setDrafts?: Record<string, SetDraft[]>;
   phaseStartedAt: number | null;
   /** Length of a timed phase; null for an untimed one. */
   phaseMs: number | null;

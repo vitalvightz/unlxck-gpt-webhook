@@ -42,6 +42,7 @@ export function ExerciseProgress({ records, exercise, hasMore, onInspect }: {
   const format = (value: number) => `${Number(value.toFixed(2))} ${series?.unit}`;
   const best = series?.metric === "load" ? exercise.best_loads.find(load => load.unit === series.unit)?.value : undefined;
   return <section className={styles.exerciseChart} aria-label="Exercise progress">
+    {series?.metric === "load" && records.some(record => record.performed_values?.set_entries?.length) ? <p className={styles.note}>Load shows the heaviest recorded set in each session.</p> : null}
     <div className={styles.sectionHead}><h3>Recorded performance</h3>
       {options.length > 1 ? <label className={styles.selectLabel}>Measurement<select aria-label="Progress measurement" value={series.id} onChange={event => { setSeriesId(event.target.value); setSelectedId(null); }}>
         {options.map(option => <option key={option.id} value={option.id}>{option.label}{option.unit !== option.metric ? ` · ${option.unit}` : ""}</option>)}

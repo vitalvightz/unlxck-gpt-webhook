@@ -13,16 +13,19 @@ import { NO_MEASUREMENTS, summarise } from "@/lib/manual-exercises";
 import { sessionTypes, sportLabel } from "@/lib/training-disciplines";
 import type { TrainingHistorySession } from "@/lib/training-history";
 import styles from "./session-details.module.css";
+import { SetResults } from "./set-rows";
+import type { ExerciseSetResult } from "@/lib/types";
 
 export type SessionDetailsCache = Map<string, Promise<Details>>;
 const OUTCOMES = { as_prescribed: "Completed as prescribed", modified: "Modified", skipped: "Skipped",
   done_as_shown: "Done as shown", changed: "Changed", stopped: "Stopped" };
 
 function Measurements({ values }: { values: Record<string, unknown> }) {
-  const items = detailMeasurements(values);
-  return items.length ? <dl className={styles.measurements}>{items.map(item => <div key={item.label}>
+  const sets = Array.isArray(values.set_entries) ? values.set_entries as ExerciseSetResult[] : null;
+  const items = detailMeasurements(values).filter(item => !sets || item.label !== "Sets");
+  return <>{sets?.length ? <SetResults entries={sets} /> : null}{items.length ? <dl className={styles.measurements}>{items.map(item => <div key={item.label}>
     <dt>{item.label}</dt><dd>{item.value}</dd>
-  </div>)}</dl> : <p className={styles.quiet}>No values recorded.</p>;
+  </div>)}</dl> : !sets?.length ? <p className={styles.quiet}>No values recorded.</p> : null}</>;
 }
 
 export function TrainingBlock({ block, index, heading, recordId }: { block: SessionDetailBlock; index: number; heading?: string; recordId?: string }) {
@@ -119,18 +122,17 @@ export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = tr
           {record.duration_minutes != null ? <span>{record.duration_minutes} min recorded</span> : null}
           {record.session_rpe != null ? <span>RPE {record.session_rpe}/10</span> : null}
           {record.effort ? <span>Effort: {record.effort}</span> : null}</div>
-        {record.source === "external" ? <section className={styles.section}><h3>Training recorded</h3>
-          <dl className={styles.measurements}>
-            {record.activity ? <div><dt>Activity</dt><dd>{record.activity}</dd></div> : null}
+        {record.source === "external" ? <section className={styles.section}>
+          {record.sport || record.session_type ? <dl className={styles.measurements}>
             {record.sport ? <div><dt>Sport</dt><dd>{sportLabel(record.sport)}</dd></div> : null}
             {record.session_type ? <div><dt>Session type</dt><dd>{sessionTypes(record.sport).find(item => item.id === record.session_type)?.label || record.session_type.replaceAll("_", " ")}</dd></div> : null}
-          </dl>
+          </dl> : null}
           <div className={styles.manualHead}><h3>Exercises</h3>
             {onEditExercises && record.activity !== "sparring" ? <button type="button" className={styles.manualAction} aria-haspopup="dialog"
               onClick={() => onEditExercises({ ...row, ...record })}>{details.blocks.length ? "Edit exercises" : "Add exercises"}</button> : null}</div>
           {details.blocks.length ? <ol className={styles.manualList}>{details.blocks.map((block, index) => <li key={index}>
             <span className={styles.manualName}>{block.name}</span>
-            <span className={styles.manualValues}>{summarise(block.actual, block.format) || NO_MEASUREMENTS}</span>
+            {block.actual.set_entries?.length ? <SetResults entries={block.actual.set_entries} /> : <span className={styles.manualValues}>{summarise(block.actual, block.format) || NO_MEASUREMENTS}</span>}
             {block.notes ? <p className={styles.note}>{block.notes}</p> : null}
           </li>)}</ol> : <p className={styles.quiet}>No exercises recorded. Only the session’s activity, duration and effort were logged.</p>}
           {details.sparring ? <><h3>Sparring report</h3><p>{details.sparring.rounds_completed} rounds{details.sparring.round_seconds != null ? ` · ${details.sparring.round_seconds} sec` : ""} · {details.sparring.intensity}</p>

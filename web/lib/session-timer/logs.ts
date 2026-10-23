@@ -1,5 +1,6 @@
 import type { ExerciseLogRecord, ExerciseLogRequest } from "../types";
 import type { TimerState } from "./engine";
+import { buildSetLogEntry } from "../exercise-log";
 
 export type TimerLogEntry = Omit<ExerciseLogRequest, "plan_id">;
 
@@ -36,6 +37,19 @@ export function timerExerciseLogs(
       return;
     }
     const planned = item.planned ?? null;
+    if (item.kind === "sets" && item.setFields && state.setDrafts?.[item.id]) {
+      const rows = state.setDrafts[item.id].slice(0, done);
+      // Pending rows are never history. Keep the original partial-count path
+      // for old runs and for work explicitly completed without measurements.
+      if (rows.length === done) {
+        const unit = item.setFields.find(field => field.key === "load")?.apiUnit ?? "kg";
+        const result = buildSetLogEntry(item.setFields, rows, unit);
+        if (!result.invalid.length) {
+          entries.push({ block_id: blockId, status: result.status, actual: result.actual });
+          return;
+        }
+      }
+    }
     if (!planned || done >= planned.min) {
       entries.push({ block_id: blockId, status: "as_prescribed" });
       return;

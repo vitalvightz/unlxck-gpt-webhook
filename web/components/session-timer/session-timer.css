@@ -1498,3 +1498,7 @@ html[data-theme="light"] .today-tool-button[data-accent="true"] .today-tool-icon
   color: var(--st-ink-faint);
   font-size: 12px;
 }
+
+/* Same set rows as session logging; inherit the timer's established phase ink. */
+.st-set-editor { width: min(100%, 360px); margin: 4px auto 0; flex-shrink: 0; }
+.st-main:has(.st-set-editor) .st-ring { --st-ring: clamp(140px, 27vh, 230px); }

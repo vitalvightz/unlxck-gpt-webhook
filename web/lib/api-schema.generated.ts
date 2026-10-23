@@ -764,6 +764,7 @@ export type ExerciseLogActual = {
   rest: ExerciseLogMeasure | null;
   distance: ExerciseLogMeasure | null;
   effort: ExerciseLogEffort | null;
+  set_entries: ExerciseSetResult[] | null;
 };
 
 /**
@@ -784,6 +785,7 @@ export type ExerciseLogActualRequest = {
   rest?: ExerciseLogMeasureRequest | null;
   distance?: ExerciseLogMeasureRequest | null;
   effort?: ExerciseLogEffortRequest | null;
+  set_entries?: ExerciseSetResultRequest[] | null;
 };
 
 /**
@@ -919,6 +921,18 @@ export type ExerciseRecentLoad = {
   display_name: string;
   load: ExerciseLogMeasure;
   training_day: string;
+};
+
+/** One confirmed set. Missing measurements stay unknown. */
+export type ExerciseSetResult = {
+  reps: number | null;
+  load: ExerciseLogMeasure | null;
+};
+
+/** One confirmed set. Missing measurements stay unknown. */
+export type ExerciseSetResultRequest = {
+  reps?: number | null;
+  load?: ExerciseLogMeasureRequest | null;
 };
 
 export type ExerciseUndoRequest = {

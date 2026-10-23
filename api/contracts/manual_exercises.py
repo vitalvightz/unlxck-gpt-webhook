@@ -22,8 +22,8 @@ _KEY = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
 # The measurements each format records. Anything else in a request is refused
 # rather than stored where no screen would show it.
 FORMAT_FIELDS: dict[str, frozenset[str]] = {
-    "strength": frozenset({"sets", "reps", "load", "rest", "effort"}),
-    "bodyweight": frozenset({"sets", "reps", "load", "rest", "effort"}),
+    "strength": frozenset({"sets", "reps", "load", "rest", "effort", "set_entries"}),
+    "bodyweight": frozenset({"sets", "reps", "load", "rest", "effort", "set_entries"}),
     "isometric": frozenset({"sets", "duration", "load", "rest", "effort"}),
     "intervals": frozenset({"rounds", "work", "rest", "distance", "effort"}),
     "distance": frozenset({"distance", "duration", "sets", "load", "rest", "effort"}),
@@ -89,6 +89,8 @@ class PerformedExerciseInput(BaseModel):
         # "3" and true are not measurements; never coerce them into one.
         if isinstance(value, dict):
             for key, item in value.items():
+                if key == "set_entries":
+                    continue  # Strictly validated by ExerciseSetResult.
                 number = item.get("value") if isinstance(item, dict) else item
                 if number is None:
                     continue

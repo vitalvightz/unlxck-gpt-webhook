@@ -1,4 +1,5 @@
 import { cleanText, finitePositiveNumber, isModeLikeReps, isTimeLikeReps } from "@/lib/structured-plan";
+import { readSets, setSummary, type SetDraft } from "./set-entries";
 import type {
   ExerciseLogActual,
   ExerciseLogReason,
@@ -290,6 +291,35 @@ export function buildLogEntry(fields: LogField[], draft: LogDraft): LogEntryResu
   return { status: modified ? "modified" : "as_prescribed", actual, invalid, outliers };
 }
 
+/** Seed every set from the current draft or an exact prescription. */
+export function setDraftsForFields(fields: LogField[], draft: LogDraft = {}, count?: number): SetDraft[] {
+  const value = (key: LogFieldKey) => {
+    if (draft[key]?.trim()) return draft[key]!;
+    const prescribed = fields.find(field => field.key === key)?.prescribed;
+    return prescribed && prescribed[0] === prescribed[1] ? String(prescribed[0]) : "";
+  };
+  const sets = count ?? Number(value("sets") || 1);
+  return Array.from({ length: Math.min(50, Math.max(1, Number.isFinite(sets) ? Math.floor(sets) : 1)) }, () => ({ reps: value("reps"), load: value("load") }));
+}
+
+export function buildSetLogEntry(fields: LogField[], rows: SetDraft[], unit: string, draft: LogDraft = {}): LogEntryResult {
+  const entry = buildLogEntry(fields.filter(field => !["sets", "reps", "load"].includes(field.key)), draft);
+  const read = readSets(rows, unit);
+  const count = buildLogEntry(fields.filter(field => field.key === "sets"), { sets: String(rows.length) });
+  const loadField = fields.find(field => field.key === "load");
+  const differentUnit = Boolean(loadField?.prescribed && loadField.apiUnit !== unit && rows.some(row => row.load.trim()));
+  let changed = entry.status === "modified" || count.status === "modified" || differentUnit;
+  const invalid = [...entry.invalid, ...(read.invalid.length ? ["reps" as const] : [])];
+  const outliers = [...entry.outliers, ...count.outliers];
+  for (const [index, row] of rows.entries()) {
+    const result = buildLogEntry(fields.filter(field => field.key === "reps" || field.key === "load")
+      .map(field => field.key === "load" && field.apiUnit !== unit ? { ...field, prescribed: null, unit, apiUnit: unit } : field), row);
+    changed ||= result.status === "modified";
+    outliers.push(...result.outliers.map(message => `Set ${index + 1}: ${message}`));
+  }
+  return { actual: { ...entry.actual, ...read.actual }, status: changed ? "modified" : "as_prescribed", invalid, outliers };
+}
+
 function actualNumber(actual: ExerciseLogActual | null | undefined, key: LogFieldKey): number | null {
   const value = key === "effort" ? actual?.effort?.value : actual?.[key];
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
@@ -349,6 +379,7 @@ export function logSummary(fields: LogField[], log: ExerciseLogRecord): string {
   if (log.status === "skipped") {
     return label;
   }
+  if (log.actual?.set_entries?.length) return `${label} · ${setSummary(log.actual.set_entries)}`;
   const parts = fields.flatMap((field) => {
     const value = actualNumber(log.actual, field.key);
     return value === null ? [] : [formatLogValue(field, value)];
@@ -455,7 +486,7 @@ export function withLastLoad<T extends Omit<ExerciseLogRequest, "plan_id" | "blo
   if (block.prescription_source === "athlete") return request;
   const previous = lastPerformanceFor(block, history);
   if (previous?.status === "skipped" || previous?.reason === "pain") return request;
-  if (request.status === "skipped" || request.actual?.load) return request;
+  if (request.status === "skipped" || request.actual?.load || request.actual?.set_entries) return request;
   // After a struggle the row offers an eased weight, so "done" records that one.
   const load = backoffLoadFor(block, previous) ?? lastLoadFor(block, recentLoads);
   return load ? { ...request, actual: { ...(request.actual ?? {}), load } } : request;
@@ -498,6 +529,7 @@ export function lastPerformanceFor(block: StructuredBlock, history?: readonly Ex
 
 export function performanceSummary(log: ExerciseLogRecord): string {
   if (log.status === "skipped") return "Skipped";
+  if (log.actual?.set_entries?.length) return setSummary(log.actual.set_entries);
   const block: StructuredBlock = {
     ...log.prescribed,
     ...Object.fromEntries((["load", "duration", "work", "distance"] as const)
