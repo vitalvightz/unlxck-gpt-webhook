@@ -446,28 +446,27 @@ def _stage2_structured_json_mode() -> bool:
 def _stage2_structured_schema_mode() -> bool:
     """Whether the structured-card calls use strict json_schema (vs json_object).
 
-    Opt-in until live acceptance is verified for the configured model/endpoint.
-    The calls send the strict json_schema built
+    Enabled by default. The calls send the strict json_schema built
     from ``StructuredTrainingPlan`` (via
     :func:`build_strict_structured_plan_schema`) instead of plain JSON object
     mode, so the provider guarantees the response *conforms to the schema* - which
     in turn makes the repair retry unnecessary (disable it with
     ``UNLXCK_STAGE2_STRUCTURED_REPAIR=0`` once schema mode is validated).
 
-    Set UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE=1 only after a live staging smoke
-    test. Content/faithfulness validation still runs in JSON-object mode.
+    Set UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE=0 to use JSON-object mode instead.
+    Content/faithfulness validation still runs in JSON-object mode.
     """
 
     raw = os.getenv("UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE")
     if raw is None:
-        return False
+        return True
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _structured_response_format() -> dict[str, Any] | None:
     """Pick the Responses-API output-format for the structured-card calls.
 
-    Strict json_schema when opted in; otherwise JSON object mode
+    Strict json_schema by default; otherwise JSON object mode
     when enabled; otherwise ``None`` (free-form). Never applied to the plan-text
     pass. A schema-build failure fails closed rather than weakening the contract.
     """
