@@ -6,7 +6,7 @@ import { readSets } from "@/lib/set-entries";
 import { leaveRemainingUnreported, leaveSetUnreported, confirmAllSetLogs, confirmSetLog, timerSetDrafts, pendingSetLogs } from "@/lib/session-timer/sets";
 import type { SessionTimerController } from "./use-session-timer";
 
-/** A non-modal sheet: typing and confirming never pause or restart the clock. */
+/** A contextual non-modal sheet: typing and confirming never pause or restart the clock. */
 export function RestSetLogger({ timer, target }: { timer: SessionTimerController; target: { itemId: string; set: number } }) {
   const { state } = timer;
   const item = state.items.find(entry => entry.id === target.itemId);
@@ -20,13 +20,15 @@ export function RestSetLogger({ timer, target }: { timer: SessionTimerController
   const unreported = state.unreportedSetLogs?.[item.id]?.includes(target.set) ?? false;
   const read = readSets([row], unit);
   const prescribed = (key: "reps" | "load") => item.setFields?.find(field => field.key === key)?.hint;
+  const transition = state.phase !== "rest";
+  const timingNote = state.phase === "rest" ? "Rest continues" : state.phase === "ready" ? "Next exercise is ready" : "Session complete";
   const targetText = [weighed && prescribed("load") ? `${prescribed("load")} ${unit}` : null, prescribed("reps")].filter(Boolean).join(" × ");
   if (confirmed || unreported) return <div className="st-log-confirmed" role="status">
-    <span>{unreported ? `Set ${target.set} · measurements unreported` : <><span aria-hidden="true">✓</span> Set {target.set} logged <span className="st-log-result">· {weighed && row.load ? `${row.load} ${unit} × ` : ""}{row.reps || "–"}{row.rpe ? ` · RPE ${row.rpe}` : ""}</span></>}</span>
+    <span>{unreported ? `${transition ? `${item.title} · ` : ""}Set ${target.set} · measurements unreported` : <><span aria-hidden="true">✓</span> {transition ? `${item.title} · ` : ""}Set {target.set} logged <span className="st-log-result">· {weighed && row.load ? `${row.load} ${unit} × ` : ""}{row.reps || "–"}{row.rpe ? ` · RPE ${row.rpe}` : ""}</span></>}</span>
     <button type="button" className="st-link" aria-label={`Edit set ${target.set}`} onClick={() => timer.update(s => ({ ...s, unreportedSetLogs: { ...s.unreportedSetLogs, [item.id]: (s.unreportedSetLogs?.[item.id] ?? []).filter(set => set !== target.set) }, confirmedSetLogs: { ...s.confirmedSetLogs, [item.id]: (s.confirmedSetLogs?.[item.id] ?? []).filter(set => set !== target.set) } }))}>Edit</button>
   </div>;
   return <section className="st-rest-sheet" aria-label="Log completed set">
-    <div className="st-rest-sheet-head"><h3>Log completed set</h3><span>{targetText ? `Target: ${targetText}` : `Set ${target.set}`}</span></div>
+    <div className="st-rest-sheet-head"><h3>{transition ? `${item.title} · set ${target.set}` : "Log completed set"}</h3><span>{targetText ? `Target: ${targetText}` : `Set ${target.set}`}</span></div>
     <div className="st-rest-fields" data-count={weighed ? 3 : 2}>
       {([...(weighed ? ["load" as const] : []), "reps" as const, "rpe" as const]).map(field => <label key={field}>
         <span>{field === "load" ? unit : field === "rpe" ? "RPE" : "Reps"}</span>
@@ -44,7 +46,7 @@ export function RestSetLogger({ timer, target }: { timer: SessionTimerController
     {read.invalid.length ? <p className="st-log-error" role="alert">Check the values. RPE is 1–10 in whole or half steps.</p> : null}
     <button type="button" className="st-primary st-confirm-set" disabled={read.invalid.length > 0}
       onClick={() => { timer.update(s => confirmSetLog(s, target.itemId, target.set)); }}>✓ Confirm set</button>
-    <p className="st-rest-help">Edit values if different · Rest continues</p>
+    <p className="st-rest-help">Edit values if different · {timingNote}</p>
   </section>;
 }
 

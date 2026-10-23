@@ -44,6 +44,21 @@ export function pendingSetLogs(state: TimerState): { itemId: string; set: number
       .filter(set => !state.confirmedSetLogs?.[item.id]?.includes(set) && !state.unreportedSetLogs?.[item.id]?.includes(set)).map(set => ({ itemId: item.id, set })));
 }
 
+/** The same logger follows the completed set through its exercise transition.
+ * Starting the next exercise hides it, including that exercise's prep/rest.
+ */
+export function visibleSetLogTarget(state: TimerState): { itemId: string; set: number } | null {
+  const target = state.pendingSetLog;
+  if (!target || state.prep || state.phase === "work") return null;
+  const index = state.items.findIndex(item => item.id === target.itemId);
+  const item = state.items[index];
+  if (item?.kind !== "sets" || !item.setFields || target.set > (state.completed[index] ?? 0)) return null;
+  if (state.phase === "rest") return index === state.index ? target : null;
+  if (state.phase === "ready") return index === state.index - 1 ? target : null;
+  if (state.phase === "done") return pendingSetLogs(state).some(entry => entry.itemId === target.itemId && entry.set === target.set) ? target : null;
+  return null;
+}
+
 export function confirmAllSetLogs(state: TimerState): TimerState {
   let next = state;
   for (const target of pendingSetLogs(state)) next = confirmSetLog(next, target.itemId, target.set);

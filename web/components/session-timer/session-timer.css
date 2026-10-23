@@ -1575,3 +1575,5 @@ html[data-theme="light"] .today-tool-button[data-accent="true"] .today-tool-icon
   .st-root[data-rest-log="confirmed"] .st-ring { --st-ring: 180px; }
   .st-root[data-rest-log="open"] .st-clock-caption { font-size: 11px; }
 }
+
+.st-root[data-set-log-context="complete"] .st-links { grid-column: 1 / -1; justify-content: center; }

@@ -44,7 +44,7 @@ def build_app():
     )
 
     @app.post("/__e2e/reset")
-    def reset(technical: str = "", rir: bool = False):  # Each browser case starts from the generated plan alone.
+    def reset(technical: str = "", rir: bool = False, strength_only: bool = False):  # Each browser case starts from the generated plan alone.
         store.session_completions.clear()
         store.exercise_logs.clear()
         store.today_checkins.clear()
@@ -58,6 +58,13 @@ def build_app():
                     for block in session.get("blocks", []):
                         if block.get("exercise_key") == "back-squat":
                             block["effort"] = {"method": "RIR", "value": 3}
+        if strength_only:
+            for plan in store.plans.values():
+                for week in plan.get("structured_plan", {}).get("weeks", []):
+                    for day in week.get("days", []):
+                        for session in day.get("sessions", []):
+                            session["blocks"] = [block for block in session.get("blocks", [])
+                                                 if block.get("exercise_key") == "back-squat"]
         if technical:
             from datetime import date
             from api.services.today_service import resolve_training_day

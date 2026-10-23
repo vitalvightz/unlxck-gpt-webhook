@@ -4,7 +4,7 @@ import { actualFromSets, draftsFromActual, readSets, setDrafts, setSummary } fro
 import { buildSetLogEntry, logFieldsForBlock, setDraftsForFields } from "./exercise-log";
 import { buildTimerItems } from "./session-timer/plan";
 import { createTimerState, startItem, skipRest, advance } from "./session-timer/engine";
-import { completeSetWithResults, timerSetDrafts, endSessionWithResults, leaveRemainingUnreported, leaveSetUnreported, confirmSetLog, confirmAllSetLogs, pendingSetLogs } from "./session-timer/sets";
+import { completeSetWithResults, timerSetDrafts, endSessionWithResults, leaveRemainingUnreported, leaveSetUnreported, confirmSetLog, confirmAllSetLogs, pendingSetLogs, visibleSetLogTarget } from "./session-timer/sets";
 import { timerExerciseLogs } from "./session-timer/logs";
 
 const block = { block_id: "press", display_name: "Bench Press", block_type: "strength", sets: 3, reps: 8, load: { method: "absolute", value: 25, unit: "kg" } };
@@ -158,4 +158,41 @@ test("restored drafts with missing confirmation metadata are never treated as me
   delete state.confirmedSetLogs;
   assert.equal(timerExerciseLogs(state)[0].actual?.set_entries, undefined);
   assert.deepEqual(pendingSetLogs(state), [{ itemId: "press", set: 1 }]);
+});
+
+test("a final exercise set is logged at transition without delaying the next exercise or its countdown", () => {
+  const items = buildTimerItems([{ blocks: [{ ...block, sets: 1 }, { block_id: "hold", display_name: "Plank", block_type: "accessory", sets: 2, duration: { value: 30, unit: "seconds" }, rest: { value: 30, unit: "seconds" } }] }]);
+  let state = startItem(createTimerState(items), 0).state;
+  state = completeSetWithResults(state, 1000).state;
+  assert.equal(state.index, 1); assert.equal(state.phase, "ready");
+  assert.deepEqual(visibleSetLogTarget(state), { itemId: "press", set: 1 });
+  const confirmed = confirmSetLog(state, "press", 1);
+  assert.equal(confirmed.phaseStartedAt, state.phaseStartedAt);
+  assert.equal(confirmed.index, state.index);
+  assert.deepEqual(visibleSetLogTarget(confirmed), { itemId: "press", set: 1 });
+  // Starting the next exercise works even when the previous measurement was not confirmed.
+  state = startItem(state, 2000).state;
+  assert.equal(state.prep, true); assert.equal(visibleSetLogTarget(state), null);
+  state = advance(state, 7000).state;
+  assert.equal(state.phase, "work"); assert.equal(visibleSetLogTarget(state), null);
+  state = advance(state, 37000).state;
+  assert.equal(state.phase, "rest"); assert.equal(visibleSetLogTarget(state), null, "a prior set must not reopen in a later exercise's rest");
+  assert.deepEqual(pendingSetLogs(state), [{ itemId: "press", set: 1 }]);
+});
+
+test("the session's final set uses the compact logger without extending workout time", () => {
+  const items = buildTimerItems([{ blocks: [{ ...block, sets: 1 }] }]);
+  let state = startItem(createTimerState(items), 0).state;
+  state = completeSetWithResults(state, 1000).state;
+  assert.equal(state.phase, "done"); assert.equal(state.endedAt, 1000);
+  const restored = JSON.parse(JSON.stringify(state));
+  assert.deepEqual(visibleSetLogTarget(restored), { itemId: "press", set: 1 });
+  state = confirmSetLog(restored, "press", 1);
+  assert.equal(state.endedAt, 1000); assert.equal(state.phaseStartedAt, null);
+  assert.equal(visibleSetLogTarget(state), null);
+  assert.deepEqual(pendingSetLogs(state), []);
+  assert.equal(timerExerciseLogs(state)[0].actual?.set_entries?.[0].load?.value, 25);
+  const unreported = leaveSetUnreported(restored, "press", 1);
+  assert.equal(unreported.endedAt, 1000); assert.equal(visibleSetLogTarget(unreported), null);
+  assert.equal(timerExerciseLogs(unreported)[0].actual?.set_entries, undefined);
 });

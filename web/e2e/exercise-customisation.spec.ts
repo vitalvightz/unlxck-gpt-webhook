@@ -358,7 +358,7 @@ test("strength timer logs during rest, restores drafts and reviews actual histor
       await page.setViewportSize({ width, height });
       await expect(timer.getByRole("button", { name: action, exact: true })).toBeInViewport({ ratio: 1 });
       expect(await timer.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
-      if (state !== "review") {
+      if (["work", "rest", "confirmed"].includes(state)) {
         await expect(timer.getByRole("timer")).toBeInViewport({ ratio: 1 });
         await expect(timer.getByRole("heading", { name: "Back Squat", exact: true })).toBeInViewport({ ratio: 1 });
         await expect(timer.locator(".st-phase")).toBeInViewport({ ratio: 1 });
@@ -407,16 +407,19 @@ test("strength timer logs during rest, restores drafts and reviews actual histor
   await timer.getByRole("button", { name: "✓ Confirm set", exact: true }).click();
   await timer.getByRole("button", { name: "Start set 4", exact: true }).click();
   await timer.getByRole("button", { name: "Set 4 done", exact: true }).click();
+  await expect(timer.getByRole("heading", { name: "Front Plank", exact: true })).toBeVisible();
+  await expect(timer.getByLabel("Load kg, set 4")).toHaveValue("100");
+  await timer.getByLabel("Load kg, set 4").fill("102.5");
+  await capture("transition", "✓ Confirm set");
+  expect((await new AxeBuilder({ page }).include(".st-root").analyze()).violations).toEqual([]);
+  await timer.getByRole("button", { name: "✓ Confirm set", exact: true }).click();
+  await expect(timer.getByRole("status")).toContainText("Back Squat");
+  await timer.getByRole("button", { name: "Start", exact: true }).click();
+  await expect(timer.getByRole("region", { name: "Log completed set" })).toHaveCount(0);
+  await expect(timer.getByRole("timer")).toBeVisible();
   await timer.getByRole("button", { name: "End session", exact: true }).click();
   await page.getByRole("alertdialog", { name: "End session", exact: true }).getByRole("button", { name: "End", exact: true }).click();
-  await expect(timer.getByRole("heading", { name: "Review your sets" })).toBeVisible();
-  await timer.getByLabel("Load kg, set 4").fill("102.5");
-  await capture("review", "Save sets & continue");
-  const cells = await timer.getByRole("list", { name: "Set results" }).getByRole("listitem").first().locator("input").all();
-  const boxes = await Promise.all(cells.map(cell => cell.boundingBox()));
-  expect(new Set(boxes.map(box => Math.round(box!.y))).size).toBe(1);
-  expect((await new AxeBuilder({ page }).include(".st-root").analyze()).violations).toEqual([]);
-  await timer.getByRole("button", { name: "Save sets & continue", exact: true }).click();
+  await expect(timer.getByRole("heading", { name: "Review your sets" })).toHaveCount(0);
   await expect(timer).toHaveCount(0);
   const response = await page.request.get(`${api}/api/today/exercise-logs?plan_id=${planId}`, { headers });
   expect(response.ok()).toBe(true);
@@ -458,12 +461,11 @@ for (const width of [390, 1280]) for (const partial of [false, true]) {
     }
     await timer.getByRole("button", { name: "End session", exact: true }).click();
     await page.getByRole("alertdialog", { name: "End session", exact: true }).getByRole("button", { name: "End", exact: true }).click();
+    await expect(timer.getByRole("region", { name: "Log completed set" })).toBeVisible();
+    await timer.getByRole("button", { name: "Leave unreported", exact: true }).click();
     await expect(timer.getByRole("button", { name: "Leave remaining unreported", exact: true })).toBeInViewport({ ratio: 1 });
-    if (partial) {
-      await timer.getByRole("button", { name: "Leave set 2 unreported", exact: true }).click();
-      for (const field of ["Load kg", "Reps", "RPE"]) await timer.getByLabel(`${field}, set 4`).fill("");
-      await timer.getByRole("button", { name: "Save sets & continue", exact: true }).click();
-    } else await timer.getByRole("button", { name: "Leave remaining unreported", exact: true }).click();
+    if (partial) await timer.getByRole("button", { name: "Leave set 2 unreported", exact: true }).click();
+    else await timer.getByRole("button", { name: "Leave remaining unreported", exact: true }).click();
     await expect(timer).toHaveCount(0);
     // These reads use the real API/store, then render the same records in History.
     const logs = await (await page.request.get(`${api}/api/today/exercise-logs?plan_id=${planId}`, { headers })).json();
@@ -494,5 +496,62 @@ for (const width of [390, 1280]) for (const partial of [false, true]) {
       await expect(history.getByRole("list", { name: "Recorded sets" })).toHaveCount(0);
     }
     if (shots) await page.screenshot({ path: `${shots}/history-unreported-${width}-${partial ? "partial" : "all"}.png` });
+  });
+}
+
+for (const width of [390, 1280]) for (const reportFinal of [true, false]) {
+  test(`session-final set logs inline without a review page (${width}px, report=${reportFinal})`, async ({ page, baseURL }) => {
+    test.skip(!api, "Run with EXERCISE_TEST_API pointing at the seeded local API");
+    test.setTimeout(60_000);
+    await page.request.post(`${api}/__e2e/reset?strength_only=true`);
+    const headers = { Authorization: "Bearer athlete-token" };
+    const initial = await (await page.request.get(`${api}/api/today`, { headers })).json();
+    const planId = initial.active_plan.id;
+    await page.request.post(`${api}/api/today/checkin`, { headers,
+      data: { plan_id: planId, sleep: "good", body: "normal", pain: "none", phase: "GPP" } });
+    await page.setViewportSize({ width, height: 844 });
+    await setup(page, baseURL!);
+    await page.goto("/today");
+    await page.getByRole("button", { name: "Start session", exact: true }).click();
+    const timer = page.locator(".st-root");
+    await timer.getByRole("button", { name: "Start", exact: true }).click();
+    for (const set of [1, 2, 3, 4]) {
+      await timer.getByRole("button", { name: `Set ${set} done`, exact: true }).click();
+      if (set < 4) {
+        await timer.getByRole("button", { name: "✓ Confirm set", exact: true }).click();
+        await timer.getByRole("button", { name: `Start set ${set + 1}`, exact: true }).click();
+      }
+    }
+    await expect(timer).toHaveAttribute("data-set-log-context", "complete");
+    await expect(timer.getByRole("region", { name: "Log completed set" })).toBeVisible();
+    await expect(timer.getByRole("heading", { name: "Review your sets" })).toHaveCount(0);
+    await expect(timer.getByLabel("Load kg, set 4")).toHaveValue("100");
+    if (reportFinal) {
+      await timer.getByLabel("Load kg, set 4").fill("107.5");
+      await timer.getByLabel("RPE, set 4").fill("8.5");
+      // Even after the usual auto-save handoff delay, the final draft remains available.
+      await page.reload();
+      await page.waitForTimeout(1100);
+      await page.locator(".st-mini").click();
+      await expect(timer.getByLabel("Load kg, set 4")).toHaveValue("107.5");
+      await expect(timer.getByLabel("RPE, set 4")).toHaveValue("8.5");
+      if (width === 390) for (const [w, h] of [[320, 568], [390, 844], [430, 932], [1280, 800], [1440, 900]]) {
+        await page.setViewportSize({ width: w, height: h });
+        await expect(timer.getByRole("button", { name: "✓ Confirm set", exact: true })).toBeInViewport({ ratio: 1 });
+        await expect(timer.getByRole("button", { name: "Leave unreported", exact: true })).toBeInViewport({ ratio: 1 });
+        expect(await timer.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+        if (shots) { await settle(page); await page.screenshot({ path: `${shots}/timer-final-set-${w}.png` }); }
+      }
+      await page.setViewportSize({ width, height: 844 });
+      expect((await new AxeBuilder({ page }).include(".st-root").analyze()).violations).toEqual([]);
+      await timer.getByRole("button", { name: "✓ Confirm set", exact: true }).click();
+    } else await timer.getByRole("button", { name: "Leave unreported", exact: true }).click();
+    await expect(timer).toHaveCount(0);
+    const response = await page.request.get(`${api}/api/today/exercise-logs?plan_id=${planId}`, { headers });
+    const squat = (await response.json()).logs.find((log: { exercise_key: string }) => log.exercise_key === "back-squat");
+    expect(squat.actual.sets).toBe(4);
+    expect(squat.actual.set_entries.map((entry: { set_number: number }) => entry.set_number)).toEqual(reportFinal ? [1, 2, 3, 4] : [1, 2, 3]);
+    if (reportFinal) expect(squat.actual.set_entries[3]).toMatchObject({ load: { value: 107.5, unit: "kg" }, rpe: 8.5 });
+    else expect(squat.actual.load).toBeNull();
   });
 }
