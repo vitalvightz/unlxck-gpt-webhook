@@ -157,6 +157,37 @@ def test_primary_strength_cap_scales_with_composition_pressure(athlete, expected
     assert len(role["selected_exercise_assignments"]) <= expected_cap
 
 
+@pytest.mark.parametrize(
+    ("athlete", "expected_count_pressure", "expected_cap"),
+    [
+        ({"fatigue": "low", "cut_severity_bucket": "none"}, 0, 6),
+        ({"fatigue": "moderate", "cut_severity_bucket": "none"}, 1, 3),
+        ({"fatigue": "low", "cut_severity_bucket": "moderate"}, 1, 3),
+        ({"fatigue": "moderate", "cut_severity_bucket": "moderate"}, 2, 2),
+    ],
+)
+def test_injury_does_not_blanket_reduce_strength_exercise_count(
+    athlete, expected_count_pressure, expected_cap
+):
+    athlete = {
+        **athlete,
+        "injuries": [{"type": "muscle_strain", "severity": "moderate"}],
+        "readiness_flags": ["injury_management"],
+    }
+    _, role = _compose(athlete)
+    policy = role["strength_composition_policy"]
+
+    # Injury remains visible to dose, movement and recovery guards.
+    assert policy["injury_restricted"] is True
+    assert policy["injury_pressure"] == 1
+    assert policy["pressure"] >= expected_count_pressure
+
+    # It no longer independently cuts session breadth or movement families.
+    assert policy["exercise_count_pressure"] == expected_count_pressure
+    assert policy["effective_exercise_cap"] == expected_cap
+    assert policy["major_family_limit"] == (2 if expected_count_pressure == 0 else 1)
+
+
 def test_full_primary_strength_can_use_six_diverse_exercises_without_forcing_six():
     _, role = _compose({"fatigue": "low", "cut_severity_bucket": "none"})
     names = [member["name"] for member in role["selected_exercise_assignments"]]
