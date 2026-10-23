@@ -419,7 +419,7 @@ def test_source_owned_conversion_never_fills_in_missing_open_prescriptions():
     row = _reference_row()
     brief = copy.deepcopy(row["planning_brief"])
     decisions = brief["open_plan_spec"]["weekly_session_plan"]["weeks"]
-    decisions[0]["sessions"][-2]["exercises"][0]["prescription"] = "2 sets x 6 reps"
+    next(s for s in decisions[0]["sessions"] if s["label"] == "Strength")["exercises"][0]["prescription"] = "2 sets x 6 reps"
     card = build_authoritative_open_plan(brief, "# Approved training programme")
     assert card is not None
     saturday = next(day for day in card["weeks"][0]["days"] if day["weekday"] == "Sat")
