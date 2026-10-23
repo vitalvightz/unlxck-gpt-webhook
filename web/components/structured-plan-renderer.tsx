@@ -85,7 +85,6 @@ import {
 import { GlossaryTooltip } from "@/components/glossary-tooltip";
 import { glossaryEntry } from "@/lib/glossary";
 import { WhyTooltip } from "@/components/why-tooltip";
-import { prescriptionRemainder } from "@/lib/prescription-remainder";
 import { ExerciseDemo, ExerciseMediaProvider, useExerciseMedia } from "@/components/exercise-demo";
 import { RehabExerciseGuide, RehabExerciseLimits, RehabPrescription } from "@/components/rehab-prescription";
 import { PrivateExerciseMediaProvider, PrescribedPrivateVideo, PrescribedPrivateVideoThumbnail } from "@/components/private-exercise-video";
@@ -453,11 +452,13 @@ export function BlockCard({
   const effortMethod = cleanText(block.effort?.method);
   const execution = getBlockExecutionDisplay(block);
   const { cues: allCues, regressions, substitutions } = execution;
+  const prescriptionText = cleanText(block.prescription_text)
+    || (metrics.length === 0 ? execution.prescription : null);
   // The demo can pin the lead cue; every remaining authored detail still belongs here.
   const visibleCues = hideCues ? [] : allCues.slice(hideLeadCue ? 1 : 0).map(compactCoachLine);
   const directive = openBlockWeekDirective(openWeekIntent, block);
-  // The red notice owns authored week changes; missing legacy dose details
-  // stay in prescriptionText above, without repeating the complete dose.
+  // Keep the week's exact prescription visible in red. Older cards can carry
+  // the authored progression instead; show it once under the same week label.
   const weekDirective = hideAdjustments ? null : directive;
   const adjustmentRules = [
     ...(progression && !directive?.usesProgressionRule && openWeekIntent?.key !== "deload" ? [{ label: "Progress" as const, text: progression }] : []),
@@ -476,14 +477,6 @@ export function BlockCard({
     && typeof block.athlete_dose?.mode === "string"
     && ["reps", "duration", "intervals", "distance"].includes(block.athlete_dose.mode);
   const showMetricTiles = statCount > 0 && (!block.prescription_text || hasAthleteMetrics);
-  const legacyPrescription = prescriptionRemainder(
-    cleanText(block.week_prescription) || execution.prescription,
-    showMetricTiles ? [...metrics, ...(blockLoad ? [{ label: "Load", value: blockLoad }] : []),
-      ...(rest ? [{ label: "Rest", value: rest }] : []), ...(effort ? [{ label: "Effort", value: effort }] : [])] : [],
-    [...(hideCues ? [] : allCues), ...(hideInstructions ? [] : getVisibleExecutionInstructions(block)),
-      ...[cleanText(block.prescription_text), cleanText(block.notes)].filter((text): text is string => Boolean(text))],
-  );
-  const prescriptionText = [cleanText(block.prescription_text), legacyPrescription].filter(Boolean).join("; ") || null;
   const asides = hideAdjustments ? [] : [
     ...(substitutions.length > 0 ? [{ label: "Swaps", text: substitutions[0], glossary: false }] : []),
     ...regressions.map(text => ({ label: "Easier", text: compactCoachLine(text), glossary: false })),
@@ -622,9 +615,7 @@ function exerciseRowSummary(
       .filter(Boolean).join(" · ") || "See prescription";
   }
   const metrics = prescription.metrics.map(metric => metric.label === "Rounds"
-    ? `${metric.value} rounds` : metric.label === "Work" ? `${metric.value} work`
-      : metric.label === "Blocks" ? `${metric.value} blocks`
-        : metric.label === "Between blocks" ? `rest between blocks ${metric.value}` : metric.value);
+    ? `${metric.value} rounds` : metric.label === "Work" ? `${metric.value} work` : metric.value);
   const headline = metrics.length > 0 ? metrics.join(" · ")
     : getBlockExecutionDisplay(block).prescription || formatMeasured(block.duration);
   // The collapsed row is the prescription athletes scan before opening a
@@ -642,21 +633,19 @@ function compactCoachLine(value: string): string {
 // A "How" line that only restates the dose ("6 x 20 sec work", "1x5s with
 // 120s rest", "30min continuous") repeats the stats; it explains nothing.
 const DOSE_ONLY_WORD_RE =
-  /^(?:\d+(?:\.\d+)?(?:x\d+(?:\.\d+)?)?(?:s|secs?|seconds?|mins?|minutes?|m|kg|lbs?|reps?|sets?|%)?|x|×|@|rpe|rir|sets?|reps?|rounds?|blocks?|work|rest|reset|recovery|between|with|of|and|per|each|side|technical|continuous|easy|low|max|total|s|secs?|seconds?|mins?|minutes?|complete|after|the|single|before|next|item|for|at|all-out)$/i;
+  /^(?:\d+(?:\.\d+)?(?:x\d+(?:\.\d+)?)?(?:s|secs?|seconds?|mins?|minutes?|m|kg|lbs?|reps?|sets?|%)?|x|×|@|rpe|rir|sets?|reps?|rounds?|work|rest|reset|recovery|between|with|of|and|per|each|side|technical|continuous|easy|low|max|total|s|secs?|seconds?|mins?|minutes?)$/i;
 
 function isDoseOnlyInstruction(text: string): boolean {
   const words = text.toLowerCase().split(/[\s,;|/()+.:]+/).filter(Boolean);
   return words.length > 0 && words.some(word => /\d/.test(word)) && words.every(word => DOSE_ONLY_WORD_RE.test(word));
 }
 
-function getVisibleExecutionInstructions(block: StructuredBlock): string[] {
+function ExecutionInstructions({ block }: { block: StructuredBlock }) {
   const raw = cleanText(block.execution_instructions);
   // Keep only lines that describe the movement, not a restated dose.
-  return raw ? raw.split(/\n+/).map(line => line.trim()).filter(line => line && !isDoseOnlyInstruction(line)) : [];
-}
-
-function ExecutionInstructions({ block }: { block: StructuredBlock }) {
-  const instructions = getVisibleExecutionInstructions(block).join(" ") || null;
+  const instructions = raw
+    ? raw.split(/\n+/).map(line => line.trim()).filter(line => line && !isDoseOnlyInstruction(line)).join(" ") || null
+    : null;
   return instructions ? (
     <p className="sp-block-purpose ex-execution-instructions">
       <span className="sp-stat-label">How</span>{instructions}
@@ -775,7 +764,7 @@ export function ExerciseRow({
                 </span>
               ) : null}
               {summary ? (
-                <span className="ex-row-summary" hidden={!rowCollapsed}>
+                <span className="ex-row-summary">
                   {/* Each part stays whole ("RPE 7", never "RPE / 7"); lines
                       break only at the separators. */}
                   {summary.split(" · ").map((part, index) => (
