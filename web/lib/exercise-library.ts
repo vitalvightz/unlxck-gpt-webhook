@@ -1,4 +1,5 @@
 import type { PersonalExercise } from "./api-schema.generated";
+import { countOnlySetSummary } from "./set-entries";
 import { detailMeasurements } from "./session-details";
 import { compactTimeUnits } from "./structured-plan";
 
@@ -8,6 +9,8 @@ export function exerciseResult(exercise: PersonalExercise): { label: string; val
     value: exercise.best_loads.map(load => `${load.value} ${load.unit}`).join(" · "),
   };
   const values = exercise.latest_values;
+  const unreported = countOnlySetSummary(values);
+  if (unreported) return { label: "Measurements unreported", value: `${values.sets} ${values.sets === 1 ? "set" : "sets"} completed` };
   const parts: string[] = [];
   if (values.sets != null && values.reps != null) parts.push(`${values.sets} × ${values.reps}`);
   for (const item of detailMeasurements(values)) {

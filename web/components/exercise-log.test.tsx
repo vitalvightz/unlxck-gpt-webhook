@@ -419,3 +419,14 @@ test("last performance stays inside the open row and the suggested load is edita
   assert.deepEqual(view.saved[0].actual?.load, { value: 80, unit: "kg" });
   view.unmount();
 });
+
+test("planned per-set editor exposes optional RPE and keeps it separate from aggregate controls", async () => {
+  const view = mount(deadlift);
+  await view.click("Log numbers");
+  await view.click("Edit sets individually");
+  const inputs = view.container.querySelectorAll<HTMLInputElement>('input[aria-label^="RPE, set"]');
+  assert.equal(inputs.length, 4);
+  assert.ok([...inputs].every(input => input.value === "7"));
+  assert.equal(view.container.querySelector('.ex-log-field input[id$="-effort"]'), null);
+  view.unmount();
+});

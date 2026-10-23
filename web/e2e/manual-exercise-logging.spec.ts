@@ -249,3 +249,49 @@ for (const width of [390, 1280]) {
     expect(errors).toEqual([]);
   });
 }
+
+for (const width of [390, 1280]) {
+  test(`different loads per set stay compact and reopen in history (${width}px)`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
+    const { puts } = await setup(page, baseURL!);
+    await page.goto("/history");
+    await expect(page).toHaveTitle(/UNLXCK/i);
+    await page.getByRole("button", { name: /View Strength details/ }).click();
+    await page.getByRole("button", { name: "Edit exercises", exact: true }).click();
+    const sheet = page.getByRole("dialog", { name: "Add exercises" });
+    await sheet.getByRole("button", { name: "Edit Back Squat", exact: true }).click();
+    await sheet.getByRole("button", { name: "Edit sets individually" }).click();
+    await expect(sheet.getByLabel("Load kg, set 1", { exact: true })).toHaveValue("75");
+    await sheet.getByLabel("Load kg, set 2", { exact: true }).fill("80");
+    await expect(sheet.getByLabel("Load kg, set 1", { exact: true })).toHaveValue("75");
+    await expect(sheet.getByLabel("Load kg, set 3", { exact: true })).toHaveValue("75");
+    await sheet.getByRole("button", { name: "Apply to remaining sets" }).click();
+    await expect(sheet.getByLabel("Load kg, set 3", { exact: true })).toHaveValue("80");
+    await expect(sheet.getByLabel("RPE, set 1")).toHaveValue("");
+    await sheet.getByLabel("RPE, set 1").fill("7");
+    await sheet.getByLabel("RPE, set 2").fill("8.5");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    expect((await new AxeBuilder({ page }).include("dialog").analyze()).violations).toEqual([]);
+    await shoot(page, "per-set-editor", width);
+    await sheet.getByRole("button", { name: "Save changes", exact: true }).click();
+    const actual = puts.at(-1)!.actual as { set_entries: { load: { value: number } }[] };
+    expect(actual.set_entries.map(row => row.load.value)).toEqual([75, 80, 80]);
+    expect((actual.set_entries as { rpe?: number }[]).map(row => row.rpe ?? null)).toEqual([7, 8.5, null]);
+    await sheet.getByRole("button", { name: "Done", exact: true }).click();
+    const details = page.getByRole("dialog", { name: "Strength", exact: true });
+    const results = details.locator("details").filter({ hasText: "3 × 5 · 75–80 kg" });
+    await expect(results).toBeVisible();
+    await results.locator("summary").click();
+    await expect(results.getByRole("listitem")).toHaveCount(3);
+    await expect(results.getByRole("listitem").nth(1)).toContainText("80");
+    const cells = results.getByRole("listitem").first().locator(":scope > span");
+    const boxes = await Promise.all((await cells.all()).map(cell => cell.boundingBox()));
+    const centers = boxes.map(box => box!.y + box!.height / 2);
+    expect(Math.abs(centers[0] - centers[1])).toBeLessThan(2);
+    expect(Math.abs(centers[1] - centers[2])).toBeLessThan(2);
+    expect((await results.getByRole("listitem").first().boundingBox())!.height).toBeLessThanOrEqual(44);
+    await shoot(page, "per-set-history", width);
+    expect(errors).toEqual([]);
+  });
+}

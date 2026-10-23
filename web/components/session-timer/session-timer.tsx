@@ -9,6 +9,8 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { RestSetLogger, TimerSetReview } from "./rest-set-logger";
+import { leaveSetUnreported, visibleSetLogTarget, pendingSetLogs, completeSetWithResults, endSessionWithResults, finishItemWithResults, finishItemAsPlannedWithResults } from "@/lib/session-timer/sets";
 import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 
 import { useSessionTimer, type SessionTimerController } from "@/components/session-timer/use-session-timer";
@@ -18,9 +20,7 @@ import {
   adjustItem,
   currentItem,
   endRound,
-  endSession,
   finishItem,
-  finishItemAsPlanned,
   isPrep,
   metPlan,
   plannedTarget,
@@ -30,7 +30,6 @@ import {
   skipRest,
   startItem,
   stepDuration,
-  completeSet,
   summarizeRun,
   updateIntervalItem,
   viewAt,
@@ -824,7 +823,7 @@ function PrimaryAction({
   }
   if (state.phase === "work" && item.kind === "sets") {
     return (
-      <button type="button" className="st-primary" onClick={() => timer.run(completeSet)}>
+      <button type="button" className="st-primary" onClick={() => timer.run(completeSetWithResults)}>
         {item.holdSec ? "End hold" : `${unitWord(item)} ${state.unit} done`}
       </button>
     );
@@ -1074,7 +1073,7 @@ export function SessionTimer({
 
   // While the mini bar floats, reserve room under the page so it never sits on
   // top of the last thing the athlete needs to tap (see .has-timer-mini).
-  const showsMini = !visible && (state.phase !== "done" || handOffWhenDone);
+  const showsMini = !visible && (state.phase !== "done" || handOffWhenDone || pendingSetLogs(state).length > 0);
   useEffect(() => {
     if (!showsMini) return;
     return reserveMiniSpace();
@@ -1101,7 +1100,12 @@ export function SessionTimer({
   });
   // Also when the run comes back already finished (the app closed between the
   // last set and the hand-off): it is handed on, never left hidden.
-  const handingOff = handOffWhenDone && state.phase === "done" && !finishError;
+  const restLogTarget = visibleSetLogTarget(state);
+  const finalSetLog = state.phase === "done" && restLogTarget !== null;
+  const needsSetReview = state.phase === "done" && !finalSetLog && pendingSetLogs(state).length > 0;
+  const restLogConfirmed = restLogTarget ? (state.confirmedSetLogs?.[restLogTarget.itemId]?.includes(restLogTarget.set) || state.unreportedSetLogs?.[restLogTarget.itemId]?.includes(restLogTarget.set)) : false;
+  const strengthLogging = Boolean((item?.kind === "sets" && item.setFields) || restLogTarget || needsSetReview);
+  const handingOff = handOffWhenDone && state.phase === "done" && !needsSetReview && !finalSetLog && !finishError;
   useEffect(() => {
     if (!handingOff || autoFinishAttempted.current) return;
     const timeout = window.setTimeout(() => {
@@ -1114,7 +1118,7 @@ export function SessionTimer({
   }, [handingOff, visible]);
 
   if (!visible) {
-    if (state.phase === "done" && !handOffWhenDone) return null;
+    if (!showsMini) return null;
     return (
       <ToBody>
         <button type="button" className="st-mini" data-tone={tone} {...miniDrag}>
@@ -1172,6 +1176,9 @@ export function SessionTimer({
       ref={dialogRef}
       className="st-root"
       data-tone={tone}
+      data-strength-logging={strengthLogging || undefined}
+      data-set-log-context={restLogTarget ? finalSetLog ? "complete" : state.phase === "ready" ? "transition" : "rest" : undefined}
+      data-rest-log={restLogTarget ? restLogConfirmed ? "confirmed" : "open" : undefined}
       role="dialog"
       aria-modal="true"
       aria-label={`${sessionTitle} timer`}
@@ -1230,8 +1237,8 @@ export function SessionTimer({
       {/* Tapping anywhere off an open sheet closes it. */}
       {sheet !== null ? <div className="st-scrim" aria-hidden="true" onClick={() => setSheet(null)} /> : null}
 
-      {handingOff && visible ? (
-        <main className="st-main st-done st-handoff">
+      {needsSetReview ? <TimerSetReview timer={timer} /> : (handingOff || finalSetLog) && visible ? (
+        <div className="st-main st-done st-handoff">
           <div className="st-done-badge" aria-hidden="true">
             <Icon name="check" />
           </div>
@@ -1239,12 +1246,12 @@ export function SessionTimer({
             {metPlan(state) ? "Session complete" : "Session ended"}
           </p>
           {sessionElapsed ? <p className="st-done-time">{sessionElapsed} total</p> : null}
-          <button type="button" className="st-link" onClick={() => void finish()} disabled={finishing}>
+          {!finalSetLog ? <button type="button" className="st-link" onClick={() => void finish()} disabled={finishing}>
             {finishing ? "Saving exercises…" : finishLabel}
-          </button>
-        </main>
+          </button> : null}
+        </div>
       ) : state.phase === "done" ? (
-        <main className="st-main st-done">
+        <div className="st-main st-done">
           <div className="st-done-badge" aria-hidden="true">
             <Icon name="check" />
           </div>
@@ -1264,9 +1271,9 @@ export function SessionTimer({
               {finishing ? "Saving exercises…" : finishError ? "Retry save" : finishLabel}
             </button>
           </div>
-        </main>
+        </div>
       ) : (
-        <main className="st-main" data-phase={state.phase}>
+        <div className="st-main" data-phase={state.phase}>
           {state.phase === "ready" && state.items.length === 1 ? null : (
             <p className="st-phase" aria-live="polite">
               <span className="st-phase-dot" aria-hidden="true" />
@@ -1334,11 +1341,12 @@ export function SessionTimer({
                 )}
             </div>
           ) : null}
-        </main>
+        </div>
       )}
 
-      {state.phase !== "done" ? (
-        <footer className="st-controls">
+      {state.phase !== "done" || finalSetLog ? (
+        <div className="st-controls" role="group" aria-label="Timer controls">
+          {restLogTarget ? <RestSetLogger key={`${restLogTarget.itemId}:${restLogTarget.set}`} timer={timer} target={restLogTarget} /> : null}
           {/* One light row of tools above the one main action: ±10s either side,
               pause (or End round during a round) in the middle. */}
           {hasTools ? (
@@ -1388,7 +1396,7 @@ export function SessionTimer({
               type="button"
               className="st-next"
               data-emphasis={canFinishItem ? "true" : undefined}
-              onClick={() => timer.run(finishItem)}
+              onClick={() => timer.run(finishItemWithResults)}
               aria-label={`Next exercise: ${nextItem.title}`}
             >
               <span className="st-next-label">Next</span>
@@ -1397,7 +1405,9 @@ export function SessionTimer({
               <span className="st-next-arrow" aria-hidden="true"><Icon name="next" /></span>
             </button>
           ) : null}
-          {confirmEnd ? (
+          {finalSetLog && restLogTarget ? (
+            <div className="st-links"><button type="button" className="st-link" onClick={() => timer.update(s => leaveSetUnreported(s, restLogTarget.itemId, restLogTarget.set))}>Leave unreported</button></div>
+          ) : confirmEnd ? (
             <div className="st-confirm" role="alertdialog" aria-label="End session">
               <span>End the session now?</span>
               <button
@@ -1405,7 +1415,7 @@ export function SessionTimer({
                 data-danger="true"
                 onClick={() => {
                   setConfirmEnd(false);
-                  timer.update(endSession);
+                  timer.update(endSessionWithResults);
                 }}
               >
                 End
@@ -1416,8 +1426,8 @@ export function SessionTimer({
             </div>
           ) : (
             <div className="st-links">
-              {canMarkPlanned ? (
-                <button type="button" className="st-link" onClick={() => timer.run(finishItemAsPlanned)}>
+              {canMarkPlanned && !restLogTarget ? (
+                <button type="button" className="st-link" onClick={() => timer.run(finishItemAsPlannedWithResults)}>
                   Done as planned
                 </button>
               ) : null}
@@ -1430,7 +1440,7 @@ export function SessionTimer({
               </button>
             </div>
           )}
-        </footer>
+        </div>
       ) : null}
     </div>
     </ToBody>

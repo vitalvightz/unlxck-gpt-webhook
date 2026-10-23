@@ -100,8 +100,55 @@ did on that session, without creating an UNLXCK programme.
 
 ## Limits
 
-- Max 30 exercises per session; no per-set rows (sets × reps × load per movement).
+- Max 30 exercises per session. Strength/bodyweight entries can optionally hold
+  up to 50 confirmed `actual.set_entries` rows, each with its own reps, load and optional RPE (whole or half steps).
+  Common sets/reps/load/RPE remain compatibility summaries; varied values are never
+  flattened into one weight. Existing aggregate logs remain valid.
 - Catalogue formats are a suggestion from bank evidence; the athlete can change them.
 - Renaming a personal exercise and merging a personal identity into a catalogue
   movement are not supported; both would need an explicit, reviewed action.
-- The migration has not been applied to any hosted database.
+- The hosted JSON size constraint is verified at 8 KiB; see the applied migration below.
+
+## Per-set logging
+
+- The compact Sets / Reps / Load entry remains the default. “Edit sets
+  individually” expands the shared row editor; an edit changes only that set.
+  “Apply to remaining sets” copies only the edited field to later sets.
+- Planned-session logging seeds each row from exact prescribed values. Ranges
+  stay hints, and missing measurements stay unknown.
+- The S&C timer shows prescription chips during work. “Set done” starts rest
+  immediately and opens a non-modal sheet with load, reps and RPE. Confirming
+  collapses it to one editable confirmation line; starting the next set hides
+  it automatically. Editing and confirming preserve the countdown timestamps.
+  While the logger is open, Confirm is the single prominent action; starting
+  the next set and ending the session stay as quiet footer actions. Duplicate
+  dose chips, next-exercise teasers and rest adjustment tools stay out of this
+  logging view; the clock and header adjustment remain available.
+- Saved timer runs retain drafts and confirmations. Unconfirmed measurements
+  stay out of actual history. At session end, missed confirmations open a
+  compact row review where athletes can correct and save their completed sets.
+  The final set opens the same sheet at the exercise transition, while the
+  next exercise is already queued. Starting the next exercise hides it without
+  blocking work or reopening it during that exercise's prep/rest. The session's
+  final set uses the same compact sheet inside the existing completion screen;
+  older unconfirmed sets use review only if they still need attention.
+- Session Details and exercise performance history use the shared, collapsed
+  set summary and expand into compact read-only rows. Best-load records and load
+  charts inspect the individual loads; a varied workout never becomes an
+  invented sets × reps × maximum-load result.
+- The rows retain their original `set_number` when only some sets were
+  reported. `actual.sets` retains the completed count independently. Empty rows
+  normalize to unreported work; history never manufactures measurements from
+  them. Partial logs never supply a common reps/load/RPE for all completed sets.
+- Review offers “Leave remaining unreported” and a per-row control. Confirmed
+  measurements remain saved; unknown entries stay out of `set_entries`. A fully
+  unreported exercise saves its completed count with modified status, preventing
+  prescription values from becoming actual results or best loads.
+- All per-set editors show optional RPE by default; the aggregate RPE control is
+  hidden while editing individual sets to avoid conflicting values.
+- Migration `20261023073352_allow_numbered_manual_set_results.sql` raises the
+  manual-entry JSON bound from 4 KiB to 8 KiB, matching exercise logs. This keeps
+  the supported 50 numbered sets with RPE within the storage limit. It has now
+  been applied by the owner to hosted Supabase: the constraint was verified
+  at 8192 bytes on 2026-10-23. Deploy the API before the frontend sends
+  numbered results.

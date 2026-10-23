@@ -10,6 +10,12 @@ export type ProgressSeries = { id: string; metric: ProgressMetric; label: string
 
 /** Only the server's eligible performed projection supplies chart evidence. */
 export function performanceValue(record: ExercisePerformance, metric: ProgressMetric): { value: number; unit: string } | null {
+  const entries = record.performed_values?.set_entries;
+  if (entries?.length && metric === "load") {
+    const loads = entries.flatMap(entry => entry.load && entry.load.value > 0 ? [entry.load] : []);
+    if (!loads.length) return null;
+    return loads.reduce((highest, load) => load.value > highest.value ? load : highest);
+  }
   const raw = record.performed_values?.[metric];
   if (raw == null) return null;
   const value = typeof raw === "number" ? raw : raw.value;
@@ -49,4 +55,10 @@ export function progressPoints(records: readonly ExercisePerformance[], series: 
 export function measurementCount(count: number, metric: ProgressMetric): string {
   const [one, many] = PROGRESS_METRICS.find(item => item.key === metric)!.count;
   return `${count} recorded ${count === 1 ? one : many}`;
+}
+
+/** A sparse actual set is reported evidence even when its aggregate load is unknown. */
+export function measurementBasis(record: ExercisePerformance, metric: ProgressMetric): string {
+  return record.block.actual[metric] != null || (metric === "load" && record.block.actual.set_entries?.some(entry => entry.load != null))
+    ? "Reported" : "Confirmed as prescribed";
 }

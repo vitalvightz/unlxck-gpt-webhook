@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ExercisePerformance, PersonalExercise } from "@/lib/api-schema.generated";
 import { formatAppDate } from "@/lib/date-format";
 import { detailMeasurements } from "@/lib/session-details";
-import { measurementCount, progressPoints, progressSeries } from "@/lib/exercise-progress";
+import { measurementBasis, measurementCount, progressPoints, progressSeries } from "@/lib/exercise-progress";
 import styles from "./training-progress.module.css";
 
 export function ExerciseProgress({ records, exercise, hasMore, onInspect }: {
@@ -42,6 +42,7 @@ export function ExerciseProgress({ records, exercise, hasMore, onInspect }: {
   const format = (value: number) => `${Number(value.toFixed(2))} ${series?.unit}`;
   const best = series?.metric === "load" ? exercise.best_loads.find(load => load.unit === series.unit)?.value : undefined;
   return <section className={styles.exerciseChart} aria-label="Exercise progress">
+    {series?.metric === "load" && records.some(record => record.performed_values?.set_entries?.length) ? <p className={styles.note}>Load shows the heaviest recorded set in each session.</p> : null}
     <div className={styles.sectionHead}><h3>Recorded performance</h3>
       {options.length > 1 ? <label className={styles.selectLabel}>Measurement<select aria-label="Progress measurement" value={series.id} onChange={event => { setSeriesId(event.target.value); setSelectedId(null); }}>
         {options.map(option => <option key={option.id} value={option.id}>{option.label}{option.unit !== option.metric ? ` · ${option.unit}` : ""}</option>)}
@@ -89,7 +90,7 @@ export function ExerciseProgress({ records, exercise, hasMore, onInspect }: {
         <span>{formatAppDate(point.record.training_day)}</span><strong>{format(point.value)}</strong><span>Inspect performance</span>
       </button>)}</div> : null}
       <div className={styles.selectedRecord} aria-live="polite" aria-label="Selected performance">
-        <strong>{format(selected.value)}</strong><p className={styles.note}>{formatAppDate(selected.record.training_day)} · {selected.record.block.actual[series.metric] != null ? "Reported" : "Confirmed as prescribed"}</p>
+        <strong>{format(selected.value)}</strong><p className={styles.note}>{formatAppDate(selected.record.training_day)} · {measurementBasis(selected.record, series.metric)}</p>
         <p className={styles.note}>{detailMeasurements(selected.record.performed_values as Record<string, unknown>).map(item => `${item.label}: ${item.value}`).join(" · ")}</p>
         <button type="button" className={styles.textButton} onClick={() => onInspect(selected.record.id)}>View original performance <span aria-hidden="true">↓</span></button>
       </div>

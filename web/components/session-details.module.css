@@ -10,7 +10,7 @@
 .body:focus-visible { outline: 2px solid var(--brand-red); outline-offset: -3px; }
 .meta { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--text-muted); font-size: 13px; }
 .meta span:first-child { color: var(--text-primary); font-weight: 700; }
-.section { margin-top: 28px; }
+.section { margin-top: 20px; }
 .section h3 { margin: 0 0 16px; font-size: 16px; }
 .blocks { list-style: none; margin: 0; padding: 0; }
 .block { padding: 24px 0; border-top: 1px solid var(--border-subtle); }
@@ -29,12 +29,14 @@
 .measurements + .quiet { margin-top: 10px; }
 .note { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.6; }
 /* Exercises on a manual session: name, then exactly what was recorded. */
-.manualHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; }
+.manualHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.measurements + .manualHead { margin-top: 16px; }
 .manualHead h3 { margin: 0; }
 .manualAction { min-height: 44px; padding: 0 2px; border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .manualAction:hover { color: var(--text-primary); }
 .manualList { display: grid; margin: 8px 0 0; padding: 0; list-style: none; }
-.manualList li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; align-items: baseline; padding: 12px 0; border-top: 1px solid var(--border-subtle); }
+.manualList > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; align-items: baseline; padding: 12px 0; border-top: 1px solid var(--border-subtle); }
+.manualList > li > details { grid-column: 1 / -1; }
 .manualName { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
 .manualValues { color: var(--text-secondary); font-size: 14px; font-variant-numeric: tabular-nums; text-align: right; }
 .manualList .note { grid-column: 1 / -1; margin: 0; color: var(--text-muted); font-size: 13px; }
@@ -47,6 +49,6 @@
   .header { padding: 20px; }
   .body { padding-left: 20px; padding-right: 20px; }
   .comparison { grid-template-columns: 1fr; gap: 18px; }
-  .manualList li { grid-template-columns: 1fr; }
+  .manualList > li { grid-template-columns: 1fr; }
   .manualValues { text-align: left; }
 }

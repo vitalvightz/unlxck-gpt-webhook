@@ -1,5 +1,7 @@
 import type { ExerciseLogRecord, ExerciseLogRequest } from "../types";
 import type { TimerState } from "./engine";
+import { buildSetLogEntry } from "../exercise-log";
+import { actualFromSets, readSets } from "../set-entries";
 
 export type TimerLogEntry = Omit<ExerciseLogRequest, "plan_id">;
 
@@ -36,6 +38,21 @@ export function timerExerciseLogs(
       return;
     }
     const planned = item.planned ?? null;
+    if (item.kind === "sets" && item.setFields && state.setDrafts?.[item.id]) {
+      const unit = item.setFields.find(field => field.key === "load")?.apiUnit ?? "kg";
+      const reported = state.setDrafts[item.id].slice(0, done).flatMap((row, at) => {
+        if (!state.confirmedSetLogs?.[item.id]?.includes(at + 1)) return [];
+        const read = readSets([row], unit);
+        if (read.invalid.length || !read.actual.set_entries?.length) return [];
+        return [{ row, entry: { ...read.actual.set_entries[0], set_number: at + 1 } }];
+      });
+      const result = reported.length ? buildSetLogEntry(item.setFields, reported.map(({ row }) => row), unit) : null;
+      entries.push({ block_id: blockId,
+        status: reported.length === done && result ? result.status : "modified",
+        actual: actualFromSets(reported.map(({ entry }) => entry), done),
+      });
+      return;
+    }
     if (!planned || done >= planned.min) {
       entries.push({ block_id: blockId, status: "as_prescribed" });
       return;

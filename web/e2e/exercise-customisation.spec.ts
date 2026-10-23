@@ -337,3 +337,221 @@ test("Cue-only editing preserves an existing RIR prescription after reload", asy
   await edit.locator("summary").click();
   await expect(edit.getByLabel("Cues", { exact: true })).toHaveValue("Brace before moving");
 });
+
+test("strength timer logs during rest, restores drafts and reviews actual history", async ({ page, baseURL }) => {
+  test.skip(!api, "Run with EXERCISE_TEST_API pointing at the seeded local API");
+  test.setTimeout(120_000);
+  await page.request.post(`${api}/__e2e/reset`);
+  const headers = { Authorization: "Bearer athlete-token" };
+  const initial = await (await page.request.get(`${api}/api/today`, { headers })).json();
+  const planId = initial.active_plan.id;
+  expect((await page.request.post(`${api}/api/today/checkin`, { headers,
+    data: { plan_id: planId, sleep: "good", body: "normal", pain: "none", phase: "GPP" } })).ok()).toBe(true);
+  const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setup(page, baseURL!);
+  await page.goto("/today");
+  await page.getByRole("button", { name: "Start session", exact: true }).click();
+  const timer = page.locator(".st-root");
+  const capture = async (state: string, action: string) => {
+    for (const [width, height] of [[320, 568], [390, 844], [430, 932], [1280, 800], [1440, 900]]) {
+      await page.setViewportSize({ width, height });
+      await expect(timer.getByRole("button", { name: action, exact: true })).toBeInViewport({ ratio: 1 });
+      expect(await timer.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      if (["work", "rest", "confirmed"].includes(state)) {
+        await expect(timer.getByRole("timer")).toBeInViewport({ ratio: 1 });
+        await expect(timer.getByRole("heading", { name: "Back Squat", exact: true })).toBeInViewport({ ratio: 1 });
+        await expect(timer.locator(".st-phase")).toBeInViewport({ ratio: 1 });
+      }
+      if (shots) { await settle(page); await page.screenshot({ path: `${shots}/timer-${state}-${width}.png` }); }
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+  };
+  await timer.getByRole("button", { name: "Start", exact: true }).click();
+  await timer.locator(".st-hint").click();
+  await expect(timer.getByLabel("Load kg, set 1")).toHaveCount(0);
+  await expect(timer).toContainText("100 kg");
+  await expect(timer).toContainText("RPE 7");
+  await capture("work", "Set 1 done");
+  await timer.getByRole("button", { name: "Set 1 done", exact: true }).click();
+  await expect(timer.getByLabel("Load kg, set 1")).toHaveValue("100");
+  await expect(timer.getByLabel("Reps, set 1")).toHaveValue("5");
+  await expect(timer.getByLabel("RPE, set 1")).toHaveValue("7");
+  await capture("rest", "✓ Confirm set");
+  expect((await new AxeBuilder({ page }).include(".st-root").analyze()).violations).toEqual([]);
+  await timer.getByLabel("Load kg, set 1").fill("105");
+  await timer.getByLabel("RPE, set 1").fill("8");
+  const clock = await timer.getByRole("timer").textContent();
+  await expect.poll(() => timer.getByRole("timer").textContent()).not.toBe(clock);
+  await timer.getByRole("button", { name: "✓ Confirm set", exact: true }).click();
+  await expect(timer.getByRole("status")).toContainText("Set 1 logged");
+  await capture("confirmed", "Start set 2");
+  await timer.getByRole("button", { name: "Edit set 1", exact: true }).click();
+  await expect(timer).toHaveAttribute("data-rest-log", "open");
+  await expect(timer.getByLabel("Load kg, set 1")).toHaveValue("105");
+  await timer.getByRole("button", { name: "✓ Confirm set", exact: true }).click();
+  await timer.getByRole("button", { name: "Start set 2", exact: true }).click();
+  await expect(timer.getByRole("region", { name: "Log completed set" })).toHaveCount(0);
+  await expect(timer.getByLabel("Load kg, set 1")).toHaveCount(0);
+  await timer.getByRole("button", { name: "Set 2 done", exact: true }).click();
+  await timer.getByLabel("Load kg, set 2").fill("110");
+  await timer.getByLabel("RPE, set 2").fill("8.5");
+  // Reloading preserves a running rest countdown and the unconfirmed draft.
+  await page.reload();
+  await page.locator(".st-mini").click();
+  await expect(timer.getByLabel("Load kg, set 2")).toHaveValue("110");
+  await expect(timer.getByLabel("RPE, set 2")).toHaveValue("8.5");
+  await timer.getByRole("button", { name: "✓ Confirm set", exact: true }).click();
+  await timer.getByRole("button", { name: "Start set 3", exact: true }).click();
+  await timer.getByRole("button", { name: "Set 3 done", exact: true }).click();
+  await timer.getByRole("button", { name: "✓ Confirm set", exact: true }).click();
+  await timer.getByRole("button", { name: "Start set 4", exact: true }).click();
+  await timer.getByRole("button", { name: "Set 4 done", exact: true }).click();
+  await expect(timer.getByRole("heading", { name: "Front Plank", exact: true })).toBeVisible();
+  await expect(timer.getByLabel("Load kg, set 4")).toHaveValue("100");
+  await timer.getByLabel("Load kg, set 4").fill("102.5");
+  await capture("transition", "✓ Confirm set");
+  expect((await new AxeBuilder({ page }).include(".st-root").analyze()).violations).toEqual([]);
+  await timer.getByRole("button", { name: "✓ Confirm set", exact: true }).click();
+  await expect(timer.getByRole("status")).toContainText("Back Squat");
+  await timer.getByRole("button", { name: "Start", exact: true }).click();
+  await expect(timer.getByRole("region", { name: "Log completed set" })).toHaveCount(0);
+  await expect(timer.getByRole("timer")).toBeVisible();
+  await timer.getByRole("button", { name: "End session", exact: true }).click();
+  await page.getByRole("alertdialog", { name: "End session", exact: true }).getByRole("button", { name: "End", exact: true }).click();
+  await expect(timer.getByRole("heading", { name: "Review your sets" })).toHaveCount(0);
+  await expect(timer).toHaveCount(0);
+  const response = await page.request.get(`${api}/api/today/exercise-logs?plan_id=${planId}`, { headers });
+  expect(response.ok()).toBe(true);
+  const logs = (await response.json()).logs;
+  const squat = logs.find((log: { exercise_key: string }) => log.exercise_key === "back-squat");
+  expect(squat.actual.set_entries.map((entry: { load: { value: number } }) => entry.load.value)).toEqual([105, 110, 100, 102.5]);
+  expect(squat.actual.set_entries.map((entry: { rpe: number }) => entry.rpe)).toEqual([8, 8.5, 7, 7]);
+  expect(squat.actual.effort).toBeNull();
+  expect(squat.status).toBe("modified");
+  expect(squat.actual.load).toBeNull();
+  expect(errors).toEqual([]);
+});
+
+for (const width of [390, 1280]) for (const partial of [false, true]) {
+  test(`timer leaves unknown measurements unreported through real history (${width}px, partial=${partial})`, async ({ page, baseURL }) => {
+    test.skip(!api, "Run with EXERCISE_TEST_API pointing at the seeded local API");
+    test.setTimeout(60_000);
+    await page.request.post(`${api}/__e2e/reset`);
+    const headers = { Authorization: "Bearer athlete-token" };
+    const initial = await (await page.request.get(`${api}/api/today`, { headers })).json();
+    const planId = initial.active_plan.id;
+    await page.request.post(`${api}/api/today/checkin`, { headers,
+      data: { plan_id: planId, sleep: "good", body: "normal", pain: "none", phase: "GPP" } });
+    await page.setViewportSize({ width, height: 844 });
+    await setup(page, baseURL!);
+    await page.goto("/today");
+    await page.getByRole("button", { name: "Start session", exact: true }).click();
+    const timer = page.locator(".st-root");
+    await timer.getByRole("button", { name: "Start", exact: true }).click();
+    for (const set of [1, 2, 3, 4]) {
+      await timer.getByRole("button", { name: `Set ${set} done`, exact: true }).click();
+      if (set < 4) {
+        if (partial && set !== 2) {
+          await timer.getByLabel(`Load kg, set ${set}`).fill(set === 1 ? "105" : "110");
+          await timer.getByRole("button", { name: "✓ Confirm set", exact: true }).click();
+        } else if (set === 2) await timer.getByLabel("Load kg, set 2").fill("invalid");
+        await timer.getByRole("button", { name: `Start set ${set + 1}`, exact: true }).click();
+      }
+    }
+    await timer.getByRole("button", { name: "End session", exact: true }).click();
+    await page.getByRole("alertdialog", { name: "End session", exact: true }).getByRole("button", { name: "End", exact: true }).click();
+    await expect(timer.getByRole("region", { name: "Log completed set" })).toBeVisible();
+    await timer.getByRole("button", { name: "Leave unreported", exact: true }).click();
+    await expect(timer.getByRole("button", { name: "Leave remaining unreported", exact: true })).toBeInViewport({ ratio: 1 });
+    if (partial) await timer.getByRole("button", { name: "Leave set 2 unreported", exact: true }).click();
+    else await timer.getByRole("button", { name: "Leave remaining unreported", exact: true }).click();
+    await expect(timer).toHaveCount(0);
+    // These reads use the real API/store, then render the same records in History.
+    const logs = await (await page.request.get(`${api}/api/today/exercise-logs?plan_id=${planId}`, { headers })).json();
+    const squat = logs.logs.find((log: { exercise_key: string }) => log.exercise_key === "back-squat");
+    expect(squat.status).toBe("modified");
+    expect(squat.actual.sets).toBe(4);
+    expect(squat.actual.reps).toBeNull(); expect(squat.actual.load).toBeNull(); expect(squat.actual.effort).toBeNull();
+    expect((squat.actual.set_entries ?? []).map((entry: { set_number: number }) => entry.set_number)).toEqual(partial ? [1, 3] : []);
+    const library = await (await page.request.get(`${api}/api/history/exercise-library`, { headers })).json();
+    const record = library.exercises.find((entry: { id: string }) => entry.id === "key:back-squat");
+    expect(record.best_loads.map((load: { value: number }) => load.value)).toEqual(partial ? [110] : []);
+    await page.goto("/history");
+    await page.getByRole("tab", { name: "Exercises", exact: true }).click();
+    await page.getByRole("button", { name: "View Back Squat performance history", exact: true }).click();
+    const history = page.getByRole("dialog", { name: "Back Squat", exact: true });
+    if (partial) {
+      await expect(history.getByLabel("Selected performance")).toContainText("Reported");
+      await expect(history.getByLabel("Selected performance")).not.toContainText("Confirmed as prescribed");
+      const summary = history.locator("details").filter({ hasText: "2 logged · 2 unreported" });
+      await summary.locator("summary").click();
+      const rows = summary.getByRole("list", { name: "Recorded sets" }).getByRole("listitem");
+      await expect(rows).toHaveCount(2);
+      await expect(rows.nth(0).locator(":scope > span").first()).toHaveText("1");
+      await expect(rows.nth(1).locator(":scope > span").first()).toHaveText("3");
+      await expect(summary).toContainText("105"); await expect(summary).toContainText("110");
+    } else {
+      await expect(history).toContainText("4 sets completed · measurements unreported");
+      await expect(history.getByRole("list", { name: "Recorded sets" })).toHaveCount(0);
+    }
+    if (shots) await page.screenshot({ path: `${shots}/history-unreported-${width}-${partial ? "partial" : "all"}.png` });
+  });
+}
+
+for (const width of [390, 1280]) for (const reportFinal of [true, false]) {
+  test(`session-final set logs inline without a review page (${width}px, report=${reportFinal})`, async ({ page, baseURL }) => {
+    test.skip(!api, "Run with EXERCISE_TEST_API pointing at the seeded local API");
+    test.setTimeout(60_000);
+    await page.request.post(`${api}/__e2e/reset?strength_only=true`);
+    const headers = { Authorization: "Bearer athlete-token" };
+    const initial = await (await page.request.get(`${api}/api/today`, { headers })).json();
+    const planId = initial.active_plan.id;
+    await page.request.post(`${api}/api/today/checkin`, { headers,
+      data: { plan_id: planId, sleep: "good", body: "normal", pain: "none", phase: "GPP" } });
+    await page.setViewportSize({ width, height: 844 });
+    await setup(page, baseURL!);
+    await page.goto("/today");
+    await page.getByRole("button", { name: "Start session", exact: true }).click();
+    const timer = page.locator(".st-root");
+    await timer.getByRole("button", { name: "Start", exact: true }).click();
+    for (const set of [1, 2, 3, 4]) {
+      await timer.getByRole("button", { name: `Set ${set} done`, exact: true }).click();
+      if (set < 4) {
+        await timer.getByRole("button", { name: "✓ Confirm set", exact: true }).click();
+        await timer.getByRole("button", { name: `Start set ${set + 1}`, exact: true }).click();
+      }
+    }
+    await expect(timer).toHaveAttribute("data-set-log-context", "complete");
+    await expect(timer.getByRole("region", { name: "Log completed set" })).toBeVisible();
+    await expect(timer.getByRole("heading", { name: "Review your sets" })).toHaveCount(0);
+    await expect(timer.getByLabel("Load kg, set 4")).toHaveValue("100");
+    if (reportFinal) {
+      await timer.getByLabel("Load kg, set 4").fill("107.5");
+      await timer.getByLabel("RPE, set 4").fill("8.5");
+      // Even after the usual auto-save handoff delay, the final draft remains available.
+      await page.reload();
+      await page.waitForTimeout(1100);
+      await page.locator(".st-mini").click();
+      await expect(timer.getByLabel("Load kg, set 4")).toHaveValue("107.5");
+      await expect(timer.getByLabel("RPE, set 4")).toHaveValue("8.5");
+      if (width === 390) for (const [w, h] of [[320, 568], [390, 844], [430, 932], [1280, 800], [1440, 900]]) {
+        await page.setViewportSize({ width: w, height: h });
+        await expect(timer.getByRole("button", { name: "✓ Confirm set", exact: true })).toBeInViewport({ ratio: 1 });
+        await expect(timer.getByRole("button", { name: "Leave unreported", exact: true })).toBeInViewport({ ratio: 1 });
+        expect(await timer.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+        if (shots) { await settle(page); await page.screenshot({ path: `${shots}/timer-final-set-${w}.png` }); }
+      }
+      await page.setViewportSize({ width, height: 844 });
+      expect((await new AxeBuilder({ page }).include(".st-root").analyze()).violations).toEqual([]);
+      await timer.getByRole("button", { name: "✓ Confirm set", exact: true }).click();
+    } else await timer.getByRole("button", { name: "Leave unreported", exact: true }).click();
+    await expect(timer).toHaveCount(0);
+    const response = await page.request.get(`${api}/api/today/exercise-logs?plan_id=${planId}`, { headers });
+    const squat = (await response.json()).logs.find((log: { exercise_key: string }) => log.exercise_key === "back-squat");
+    expect(squat.actual.sets).toBe(4);
+    expect(squat.actual.set_entries.map((entry: { set_number: number }) => entry.set_number)).toEqual(reportFinal ? [1, 2, 3, 4] : [1, 2, 3]);
+    if (reportFinal) expect(squat.actual.set_entries[3]).toMatchObject({ load: { value: 107.5, unit: "kg" }, rpe: 8.5 });
+    else expect(squat.actual.load).toBeNull();
+  });
+}

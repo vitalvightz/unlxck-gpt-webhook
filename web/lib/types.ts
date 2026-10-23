@@ -1378,10 +1378,12 @@ export type SparringLogHistoryResponse = {
 export type ExerciseLogStatus = "as_prescribed" | "modified" | "skipped";
 export type ExerciseLogReason = "equipment" | "fatigue" | "pain" | "felt_strong";
 export type ExerciseLogMeasure = { value: number; unit: string };
+export type ExerciseSetResult = { set_number?: number | null; reps?: number | null; load?: ExerciseLogMeasure | null; rpe?: number | null };
 
 /** What the athlete did, in the block's own prescription shape. Only the
  * fields that apply to the exercise are sent. */
 export type ExerciseLogActual = {
+  set_entries?: ExerciseSetResult[] | null;
   sets?: number | null;
   reps?: number | null;
   rounds?: number | null;

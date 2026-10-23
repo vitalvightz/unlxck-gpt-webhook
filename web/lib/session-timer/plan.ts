@@ -1,4 +1,5 @@
 import { getSourcePrescriptionRangeOverrides } from "../block-display-guardrails";
+import { logFieldsForBlock, type LogField } from "../exercise-log";
 import {
   cleanText,
   finitePositiveNumber,
@@ -77,6 +78,8 @@ export type SetsItem = TimerItemBase & {
   sets: DoseRange | null;
   holdSec: number | null;
   restSec: DoseRange | null;
+  /** Numeric targets for optional per-set strength logging; no display parsing. */
+  setFields?: LogField[];
   /**
    * "round" for rounds the athlete ends by tapping (e.g. 6 × 200 m with no
    * time in the plan): counted like sets, but called rounds. Default "set".
@@ -374,6 +377,10 @@ export function blockToTimerItem(
       sets: setRange,
       holdSec,
       restSec: restRange,
+      ...(!holdSec && countReps && !distance && !duration && blockType !== "rehab" ? {
+        setFields: logFieldsForBlock(block).map(field => field.key === "sets" && setRange
+          ? { ...field, prescribed: [setRange.min, setRange.max] as [number, number] } : field),
+      } : {}),
     };
   }
 

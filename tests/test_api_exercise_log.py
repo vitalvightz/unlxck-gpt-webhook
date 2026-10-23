@@ -752,3 +752,67 @@ def test_today_history_scan_is_bounded_however_long_the_history():
     performances, _ = exercise_history_context(store, athlete_id="athlete-1", before_day="2026-10-01")
     assert sum(read["limit"] for read in reads) <= cap
     assert [row["exercise_key"] for row in performances] == ["trap-bar-deadlift"]
+
+
+def test_prescribed_set_entries_keep_each_load_and_leave_plan_unchanged():
+    client, store, _ = _build_client()
+    _seed_plan(store, blocks=[_squat(load={"method": "absolute", "value": 25, "unit": "kg"})])
+    before = copy.deepcopy(store.plans[PLAN_ID])
+    _start(client)
+    sets = [{"reps": 8, "load": {"value": 25, "unit": "kg"}}, {"reps": 6, "load": {"value": 30, "unit": "kg"}}]
+    response = _log(client, status="modified", actual={"set_entries": sets})
+    assert response.status_code == 201, response.text
+    actual = response.json()["log"]["actual"]
+    assert actual["set_entries"] == [{**entry, "rpe": None, "set_number": None} for entry in sets] and actual["sets"] == 2
+    assert actual["load"] is None and actual["reps"] is None
+    assert store.plans[PLAN_ID] == before
+
+
+@pytest.mark.parametrize("reported", [[], [1, 3]])
+def test_timer_count_and_only_reported_measurements_reach_history(reported):
+    client, store, _ = _build_client()
+    _seed_plan(store, blocks=[_squat(load={"method": "absolute", "value": 100, "unit": "kg"})])
+    _start(client)
+    actual = {"sets": 4}
+    if reported:
+        actual["set_entries"] = [{"set_number": number, "reps": 5,
+                                  "load": {"value": 105 + number, "unit": "kg"}, "rpe": 8} for number in reported]
+    response = _log(client, status="modified", actual=actual)
+    assert response.status_code == 201, response.text
+    saved = response.json()["log"]["actual"]
+    assert saved["sets"] == 4
+    assert saved["reps"] is None and saved["load"] is None and saved["effort"] is None
+    assert [entry["set_number"] for entry in saved["set_entries"] or []] == reported
+    performances = client.get("/api/history/exercise-performances?exercise=key:trap-bar-deadlift", headers=ATHLETE)
+    assert performances.status_code == 200, performances.text
+    history = performances.json()["performances"][0]
+    assert history["block"]["actual"] == saved
+    assert history["performed_values"] == saved
+    library = client.get("/api/history/exercise-library", headers=ATHLETE).json()["exercises"]
+    exercise = next(entry for entry in library if entry["id"] == "key:trap-bar-deadlift")
+    assert exercise["latest_confirmed_as_prescribed"] is False
+    assert [load["value"] for load in exercise["best_loads"]] == ([108] if reported else [])
+
+
+def test_empty_legacy_rows_normalize_to_unreported_measurements_and_never_persist_as_rows():
+    from api.models import ExerciseLogActual
+
+    actual = ExerciseLogActual.model_validate({"set_entries": [
+        {"reps": 5, "load": {"value": 100, "unit": "kg"}}, {},
+        {"reps": 5, "load": {"value": 105, "unit": "kg"}}, {}]})
+    assert actual.sets == 4
+    assert [entry.set_number for entry in actual.set_entries] == [1, 3]
+    assert actual.load is None and actual.reps is None
+    assert ExerciseLogActual.model_validate(actual.model_dump()).model_dump() == actual.model_dump()
+    empty = ExerciseLogActual.model_validate({"set_entries": [{}, {"rpe": None}]})
+    assert empty.sets == 2 and empty.set_entries is None
+
+
+@pytest.mark.parametrize("numbers,completed", [([1, 1], 4), ([3, 1], 4), ([1, None], 4), ([1, 5], 4), ([0], 4), ([True], 4)])
+def test_reported_set_numbers_are_validated(numbers, completed):
+    client, store, _ = _build_client()
+    _seed_plan(store, blocks=[_squat()])
+    _start(client)
+    response = _log(client, status="modified", actual={"sets": completed,
+        "set_entries": [{"set_number": number, "reps": 5} for number in numbers]})
+    assert response.status_code == 422, response.text

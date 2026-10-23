@@ -2452,6 +2452,42 @@ class ExerciseLogEffort(BaseModel):
     value: float = Field(ge=1, le=10)
 
 
+class ExerciseSetResult(BaseModel):
+    """One confirmed set. Missing measurements stay unknown."""
+
+    model_config = ConfigDict(extra="forbid")
+    set_number: int | None = Field(default=None, strict=True, ge=1, le=50)
+    reps: int | None = Field(default=None, strict=True, ge=1, le=1000)
+    load: ExerciseLogMeasure | None = None
+    rpe: float | None = Field(default=None, strict=True, ge=1, le=10)
+
+    @field_validator("rpe")
+    @classmethod
+    def half_step_rpe(cls, value):
+        if value is not None and value * 2 != int(value * 2):
+            raise ValueError("RPE must be a whole or half number.")
+        return value
+
+    @field_validator("load", mode="before")
+    @classmethod
+    def numeric_load(cls, value):
+        if isinstance(value, dict):
+            number = value.get("value")
+            if isinstance(number, bool) or not isinstance(number, (int, float)):
+                raise ValueError("Set load must be a number.")
+        return value
+
+    @model_validator(mode="after")
+    def valid_load(self):
+        if self.load is not None:
+            limit = {"kg": 1000, "lb": 2200}.get(self.load.unit)
+            if limit is None or not math.isfinite(self.load.value) or self.load.value > limit:
+                raise ValueError("Set load must be a valid weight in kg or lb.")
+            if round(self.load.value, 2) != self.load.value:
+                raise ValueError("Set load allows up to two decimal places.")
+        return self
+
+
 class ExerciseLogActual(BaseModel):
     """What the athlete actually did for one block.
 
@@ -2472,6 +2508,7 @@ class ExerciseLogActual(BaseModel):
     rest: ExerciseLogMeasure | None = None
     distance: ExerciseLogMeasure | None = None
     effort: ExerciseLogEffort | None = None
+    set_entries: list[ExerciseSetResult] | None = Field(default=None, min_length=1, max_length=50)
 
     @model_validator(mode="after")
     def validate_units(self) -> "ExerciseLogActual":
@@ -2479,6 +2516,32 @@ class ExerciseLogActual(BaseModel):
             measure = getattr(self, field_name)
             if measure is not None and measure.unit not in allowed:
                 raise ValueError(f"{field_name}.unit must be one of {sorted(allowed)}")
+        if self.set_entries is not None:
+            # Rows are authoritative. Never flatten varied sets into a fictitious
+            # sets × reps × weight combination for legacy history consumers.
+            units = {entry.load.unit for entry in self.set_entries if entry.load is not None}
+            if len(units) > 1:
+                raise ValueError("Use one load unit for an exercise's sets.")
+            rows = self.set_entries
+            numbered = any(entry.set_number is not None for entry in rows)
+            numbers = [entry.set_number for entry in rows] if numbered else list(range(1, len(rows) + 1))
+            if numbered and (None in numbers or numbers != sorted(set(numbers))):
+                raise ValueError("Set numbers must be unique and increasing on every row.")
+            completed = (self.sets if self.sets is not None else numbers[-1]) if numbered else len(rows)
+            if completed < numbers[-1]:
+                raise ValueError("Reported set numbers cannot exceed the completed set count.")
+            measured = [(number, entry) for number, entry in zip(numbers, rows)
+                        if entry.reps is not None or entry.load is not None or entry.rpe is not None]
+            # Empty legacy/input rows are unreported work, never measurement records.
+            self.sets = completed
+            self.set_entries = [entry.model_copy(update={"set_number": number})
+                                if numbered or len(measured) != completed else entry for number, entry in measured] or None
+            full = len(measured) == completed
+            first = measured[0][1] if measured else None
+            self.reps = first.reps if full and all(entry.reps == first.reps for _, entry in measured) else None
+            self.load = first.load if full and all(entry.load == first.load for _, entry in measured) else None
+            if not full or any(entry.rpe is not None for _, entry in measured):
+                self.effort = ExerciseLogEffort(value=first.rpe) if full and first.rpe is not None and all(entry.rpe == first.rpe for _, entry in measured) else None
         return self
 
 

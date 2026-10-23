@@ -1,6 +1,7 @@
 import type {
   ExerciseLogActual, LibraryEntry, ManualExerciseEntry, PerformedExerciseInput, PersonalExercise,
 } from "./api-schema.generated";
+import { countOnlySetSummary, draftsFromActual, readSets, setSummary, type SetDraft } from "./set-entries";
 
 export type MeasurementFormat = PerformedExerciseInput["format"];
 export type ExerciseChoice = PerformedExerciseInput["exercise"];
@@ -44,7 +45,7 @@ export function fieldLabel(field: FieldId, format: MeasurementFormat): string {
   return field.charAt(0).toUpperCase() + field.slice(1);
 }
 
-export type Draft = { values: Partial<Record<FieldId, string>>; units: Partial<Record<FieldId, Unit>>; notes: string };
+export type Draft = { values: Partial<Record<FieldId, string>>; units: Partial<Record<FieldId, Unit>>; notes: string; setRows?: SetDraft[] };
 
 export function defaultUnits(format: MeasurementFormat, preferredLoad: "kg" | "lb" = "kg"): Draft["units"] {
   return { load: preferredLoad, duration: format === "distance" ? "minutes" : "seconds", work: "seconds", rest: "seconds",
@@ -57,7 +58,8 @@ export function blankDraft(format: MeasurementFormat, preferredLoad: "kg" | "lb"
 
 /** Edit an entry exactly as stored, units included. */
 export function draftFromEntry(entry: Pick<ManualExerciseEntry, "format" | "actual" | "notes">): Draft {
-  const draft = blankDraft(entry.format, entry.actual.load?.unit === "lb" ? "lb" : "kg");
+  const storedUnit = entry.actual.load?.unit ?? entry.actual.set_entries?.find(row => row.load)?.load?.unit;
+  const draft = blankDraft(entry.format, storedUnit === "lb" ? "lb" : "kg");
   for (const field of Object.keys(MAX) as FieldId[]) {
     const raw = entry.actual[field];
     if (raw == null) continue;
@@ -68,6 +70,7 @@ export function draftFromEntry(entry: Pick<ManualExerciseEntry, "format" | "actu
     }
   }
   draft.notes = entry.notes ?? "";
+  if (entry.actual.set_entries?.length) draft.setRows = draftsFromActual(entry.actual);
   return draft;
 }
 
@@ -79,7 +82,9 @@ export function hasInput(draft: Draft): boolean {
 export function readDraft(format: MeasurementFormat, draft: Draft): { actual: Partial<ExerciseLogActual>; errors: Partial<Record<FieldId, string>> } {
   const actual: Record<string, unknown> = {};
   const errors: Partial<Record<FieldId, string>> = {};
+  const individual = draft.setRows && (format === "strength" || format === "bodyweight");
   for (const field of [...PRIMARY_FIELDS[format], ...EXTRA_FIELDS[format]]) {
+    if (individual && ["sets", "reps", "load", "effort"].includes(field)) continue;
     const text = draft.values[field]?.trim();
     if (!text) continue;
     const value = Number(text.replace(",", "."));
@@ -94,6 +99,11 @@ export function readDraft(format: MeasurementFormat, draft: Draft): { actual: Pa
     else if (Math.round(value * 100) / 100 !== value) errors[field] = "2 decimals max";
     else actual[field] = COUNTS.has(field) ? value : field === "effort" ? { method: "RPE", value } : { value, unit };
   }
+  if (draft.setRows && (format === "strength" || format === "bodyweight")) {
+    const sets = readSets(draft.setRows, draft.units.load ?? "kg");
+    if (sets.invalid.length) errors.reps = "Check each set’s reps and load";
+    else Object.assign(actual, sets.actual);
+  }
   return { actual: actual as Partial<ExerciseLogActual>, errors };
 }
 
@@ -103,6 +113,9 @@ const amount = (measure: { value: number; unit: string }) => `${measure.value} $
 /** "3 × 5 · 80 kg". Empty when nothing was recorded; never invents a value. */
 export function summarise(actual: Partial<ExerciseLogActual> | null | undefined, format?: MeasurementFormat | null): string {
   if (!actual) return "";
+  if (actual.set_entries?.length) return [setSummary(actual.set_entries, actual.sets ?? undefined),
+    actual.rest ? `${time(actual.rest)} rest` : "", actual.effort ? `RPE ${actual.effort.value}` : ""].filter(Boolean).join(" · ");
+  if (countOnlySetSummary(actual)) return countOnlySetSummary(actual)!;
   const parts: string[] = [];
   const used = new Set<string>();
   if (actual.sets != null && actual.reps != null) { parts.push(`${actual.sets} × ${actual.reps}`); used.add("sets").add("reps"); }
