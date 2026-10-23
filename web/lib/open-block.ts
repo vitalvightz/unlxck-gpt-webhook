@@ -90,8 +90,8 @@ function progressionRuleText(block: StructuredBlock): string | null {
 }
 
 /**
- * The week notice shows an authored progression or deload change only.
- * The current week's dose is already represented by the prescription stats.
+ * The week's deterministic prescription stays visible in every block week.
+ * Older cards fall back to their own authored progression or deload rule.
  *
  * A block with no such rule returns null rather than a generic directive: the
  * old "add one set or a small load bump" / "cut working sets roughly in half"
@@ -105,6 +105,10 @@ export function openBlockWeekDirective(
 ): OpenBlockWeekDirective | null {
   if (!intent) {
     return null;
+  }
+  const prescription = cleanText(block.week_prescription);
+  if (prescription) {
+    return { label: "This week", text: prescription, usesProgressionRule: false };
   }
   if (intent.key === "progress" || intent.key === "peak") {
     const rule = progressionRuleText(block);
