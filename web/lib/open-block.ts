@@ -10,7 +10,7 @@
 // and no wording is invented here — the per-block progression/deload text is
 // authored in the validated final-session source and preserved by conversion.
 
-import { cleanText, getBlockAdjustmentDisplay } from "@/lib/structured-plan";
+import { cleanText, progressionRuleLabel } from "@/lib/structured-plan";
 import type { StructuredBlock } from "@/lib/types";
 
 export type OpenBlockWeekKey = "baseline" | "progress" | "peak" | "deload";
@@ -86,12 +86,18 @@ export type OpenBlockWeekDirective = {
 
 /** True when the block carries a genuine progression rule (not a stop rule). */
 function progressionRuleText(block: StructuredBlock): string | null {
-  return getBlockAdjustmentDisplay(block).progression;
+  const rule = cleanText(block.progression_rule);
+  if (!rule || progressionRuleLabel(rule) !== "Progress") {
+    return null;
+  }
+  return rule;
 }
 
 /**
- * The week's deterministic prescription stays visible in every block week.
- * Older cards fall back to their own authored progression or deload rule.
+ * The week-directed instruction for one block card. Baseline weeks return null
+ * (the dose is already the instruction); progression weeks surface the block's
+ * own progression rule and the deload week its own deload rule, both written
+ * per exercise by the final-session AI.
  *
  * A block with no such rule returns null rather than a generic directive: the
  * old "add one set or a small load bump" / "cut working sets roughly in half"
@@ -105,10 +111,6 @@ export function openBlockWeekDirective(
 ): OpenBlockWeekDirective | null {
   if (!intent) {
     return null;
-  }
-  const prescription = cleanText(block.week_prescription);
-  if (prescription) {
-    return { label: "This week", text: prescription, usesProgressionRule: false };
   }
   if (intent.key === "progress" || intent.key === "peak") {
     const rule = progressionRuleText(block);

@@ -172,7 +172,6 @@ def test_reference_keeps_each_weeks_actual_sessions_exercises_doses_and_flexible
                 else:
                     assert [b["display_name"] for b in session["blocks"]] == [e["name"] for e in exercises]
                     for block, exercise in zip(session["blocks"], exercises, strict=True):
-                        assert block["week_prescription"] == _exact_working_dose(exercise["prescription"])
                         dose, _ = _lift_dose_fields(_exact_working_dose(exercise["prescription"]))
                         assert all(block.get(key) == value for key, value in dose.items())
                         assert {key: block.get(key) for key in original_guidance[exercise["name"]]} == original_guidance[exercise["name"]]
