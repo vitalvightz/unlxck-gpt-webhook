@@ -446,3 +446,21 @@ def test_open_structured_generation_does_not_make_a_second_model_request():
     assert len(outcome.structured_plan["weeks"]) == 4
     assert costs == []
     assert client.responses.calls == []
+
+
+def test_direct_open_watch_rotation_uses_distinct_week_session_ids():
+    from api.structured_plan_generation import build_authoritative_open_plan
+
+    card = build_authoritative_open_plan(
+        _reference_row()["planning_brief"], "# Approved training programme"
+    )
+    assert card is not None
+    watches = [
+        (week["week_index"], session["session_id"], session["blocks"][0]["display_name"])
+        for week in card["weeks"] for day in week["days"]
+        for session in day["sessions"]
+        if any(block.get("block_type") == "mindset" for block in session.get("blocks") or [])
+        and str(session.get("session_id") or "").startswith("open-tactical")
+    ]
+    assert [week for week, _, _ in watches] == [1, 3]
+    assert len({session_id for _, session_id, _ in watches}) == len(watches)
