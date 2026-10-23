@@ -1839,6 +1839,8 @@ export function PlanViewer({
   const [archiveMessage, setArchiveMessage] = useState<string | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const [planOperationalState, setPlanOperationalState] = useState<PlanOperationalState | null>(null);
+  const [activePlanLookupFailed, setActivePlanLookupFailed] = useState(false);
+  const [activePlanLookupRetry, setActivePlanLookupRetry] = useState(0);
   const currentOperationalState =
     planOperationalState?.planId === plan.plan_id ? planOperationalState : null;
   // `undefined` means the active-plan sources are still resolving. Keeping that
@@ -1966,65 +1968,108 @@ export function PlanViewer({
     setManualPlanText(plan.admin_outputs?.final_plan_text || "");
   }, [plan.plan_id, plan.admin_outputs?.final_plan_text]);
 
-  // Resolve active state, Today and completion rows in parallel. Today is the
-  // server-authoritative operating view, so it can confirm the active plan when
-  // the dedicated endpoint is transiently unavailable. We only apply the daily
-  // focus when the command view reports that THIS plan is active; admins viewing
-  // another athlete's plan get no override.
+  // Active-plan status must not wait for Today or session completions. Those
+  // responses can involve much slower reads/retries, while the lightweight
+  // active-plan endpoint is already sufficient to show Active / Set active.
+  // Today remains the fallback when that endpoint is unavailable. If neither
+  // request succeeds, offer an explicit retry instead of an endless spinner.
   useEffect(() => {
     if (!accessToken || !canManagePlan) {
       return;
     }
     let cancelled = false;
+    setActivePlanLookupFailed(false);
+
+    const active = { settled: false, resolved: false, planId: null as string | null };
+    const today = {
+      settled: false,
+      resolved: false,
+      planId: null as string | null,
+      view: null as TodayCommandView | null,
+    };
+
+    const applyActivePlanState = () => {
+      if (cancelled) return;
+      const resolvedPlanId = resolvePlanActiveState({
+        todayResolved: today.resolved,
+        todayActivePlanId: today.planId,
+        activeEndpointResolved: active.resolved,
+        activeEndpointPlanId: active.planId,
+      });
+      if (resolvedPlanId === undefined) {
+        if (active.settled && today.settled) {
+          setActivePlanLookupFailed(true);
+        }
+        return;
+      }
+      setActivePlanLookupFailed(false);
+      const next = today.view?.today?.next_session;
+      const isThisActivePlan = today.view?.active_plan?.id === plan.plan_id;
+      const iso =
+        isThisActivePlan && next?.session_relation === "next"
+          ? (next.calendar_date || "").slice(0, 10)
+          : "";
+      const parsed = iso ? new Date(`${iso}T12:00:00`) : null;
+      setPlanOperationalState((previous) => ({
+        planId: plan.plan_id,
+        activePlanId: resolvedPlanId,
+        nextSessionAction: isThisActivePlan && next ? next : null,
+        nextSessionFocusDate:
+          parsed && !Number.isNaN(parsed.getTime()) ? parsed : undefined,
+        planCompletions:
+          previous?.planId === plan.plan_id ? previous.planCompletions : null,
+      }));
+    };
+
+    void getActivePlan(accessToken)
+      .then((current) => {
+        active.resolved = true;
+        active.planId = current?.plan_id || null;
+      })
+      .catch(() => {
+        // Today can independently establish the active plan.
+      })
+      .finally(() => {
+        active.settled = true;
+        applyActivePlanState();
+      });
+
+    void getToday(accessToken)
+      .then((view) => {
+        today.resolved = true;
+        today.view = view;
+        today.planId = view.active_plan?.id || null;
+      })
+      .catch(() => {
+        // A successful active-plan response remains sufficient.
+      })
+      .finally(() => {
+        today.settled = true;
+        applyActivePlanState();
+      });
+
     const canLoadAthleteCompletions =
       viewerRole === "athlete" && viewerProfileId === plan.athlete_id;
-    const completionsRequest = canLoadAthleteCompletions
-      ? getPlanCompletions(accessToken, plan.plan_id)
-      : Promise.resolve(null);
-
-    Promise.allSettled([
-      getActivePlan(accessToken),
-      getToday(accessToken),
-      completionsRequest,
-    ]).then(([activeResult, todayResult, completionsResult]) => {
-        if (cancelled) {
-          return;
-        }
-
-        const activeFromToday =
-          todayResult.status === "fulfilled" ? todayResult.value.active_plan?.id || null : null;
-        const activeFromEndpoint =
-          activeResult.status === "fulfilled" ? activeResult.value?.plan_id || null : null;
-        const state = todayResult.status === "fulfilled" ? todayResult.value : null;
-        const next = state?.today?.next_session;
-        const isThisActivePlan = state?.active_plan?.id === plan.plan_id;
-        const iso =
-          isThisActivePlan && next?.session_relation === "next"
-            ? (next.calendar_date || "").slice(0, 10)
-            : "";
-        // Parse at local noon to dodge any timezone date-shift; an unusable date
-        // (undated plans) leaves the calendar "Today" highlight untouched.
-        const parsed = iso ? new Date(`${iso}T12:00:00`) : null;
-        setPlanOperationalState({
-          planId: plan.plan_id,
-          activePlanId: resolvePlanActiveState({
-            todayResolved: todayResult.status === "fulfilled",
-            todayActivePlanId: activeFromToday,
-            activeEndpointResolved: activeResult.status === "fulfilled",
-            activeEndpointPlanId: activeFromEndpoint,
-          }),
-          nextSessionAction: isThisActivePlan && next ? next : null,
-          nextSessionFocusDate:
-            parsed && !Number.isNaN(parsed.getTime()) ? parsed : undefined,
-          planCompletions:
-            completionsResult.status === "fulfilled" ? completionsResult.value : null,
+    if (canLoadAthleteCompletions) {
+      void getPlanCompletions(accessToken, plan.plan_id)
+        .then((completions) => {
+          if (cancelled) return;
+          setPlanOperationalState((previous) => previous?.planId === plan.plan_id
+            ? { ...previous, planCompletions: completions }
+            : previous
+          );
+        })
+        .catch(() => {
+          // Completion progress does not determine whether the plan is active.
         });
-      });
+    }
+
     return () => {
       cancelled = true;
     };
   }, [
     accessToken,
+    activePlanLookupRetry,
     canManagePlan,
     plan.athlete_id,
     plan.plan_id,
@@ -2690,7 +2735,7 @@ export function PlanViewer({
               {statusLabel}
               {isCurrentActivePlan ? (
                 <span className="badge status-badge-success cm-active-badge">ACTIVE</span>
-              ) : canManagePlan && !activePlanStateResolved ? (
+              ) : canManagePlan && !activePlanStateResolved && !activePlanLookupFailed ? (
                 <span className="badge status-badge-neutral cm-active-badge">SYNCING</span>
               ) : null}
             </h2>
@@ -2734,9 +2779,14 @@ export function PlanViewer({
         ) : null}
 
         <div className={`plan-summary-actions plan-detail-actions${plan.custom_plan_id && plan.athlete_id === viewerProfileId ? " plan-detail-actions-custom" : ""}`}>
-          {canManagePlan && !completedFightCamp && !activePlanStateResolved ? (
+          {canManagePlan && !completedFightCamp && !activePlanStateResolved && !activePlanLookupFailed ? (
             <button type="button" className="cta" disabled>
               Checking plan state…
+            </button>
+          ) : null}
+          {canManagePlan && !completedFightCamp && !activePlanStateResolved && activePlanLookupFailed ? (
+            <button type="button" className="cta" onClick={() => setActivePlanLookupRetry((attempt) => attempt + 1)}>
+              Could not check plan status · Retry
             </button>
           ) : null}
           {canManagePlan && isCurrentActivePlan && !nextSessionAction ? (
