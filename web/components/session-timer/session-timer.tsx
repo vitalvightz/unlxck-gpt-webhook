@@ -571,6 +571,7 @@ function ReadyPanel({
               <button
                 key={preset.label}
                 type="button"
+                className="action-choice"
                 aria-pressed={active}
                 onClick={() => {
                   rememberRoundFormat(item.formatMemoryKey, {
@@ -739,6 +740,7 @@ function SettingsSheet({ timer, onClose }: { timer: SessionTimerController; onCl
             <button
               key={alert.key}
               type="button"
+              className="action-choice"
               aria-pressed={settings[alert.key]}
               aria-label={alert.aria}
               onClick={() => setSettings({ ...settings, [alert.key]: !settings[alert.key] })}
@@ -755,6 +757,7 @@ function SettingsSheet({ timer, onClose }: { timer: SessionTimerController; onCl
             <button
               key={seconds}
               type="button"
+              className="action-choice"
               role="radio"
               aria-checked={settings.prepSec === seconds}
               onClick={() => setSettings({ ...settings, prepSec: seconds })}
@@ -1334,6 +1337,7 @@ export function SessionTimer({
                     <button
                       key={seconds}
                       type="button"
+                      className="action-choice"
                       onClick={() => timer.update((s, at) => setRestLength(s, seconds, at))}
                     >
                       {formatShortDuration(seconds)}

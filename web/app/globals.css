@@ -1034,6 +1034,49 @@ html[data-theme="light"] .cta:disabled {
 
 .action-utility { padding-inline: 8px; font-size: var(--type-body-sm); }
 
+/* Presets are supporting choices, not competing calls to action. */
+.action-choice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--choice-muted, var(--text-secondary));
+  font: inherit;
+  font-size: var(--type-body-sm);
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: center;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.action-choice:hover:not(:disabled) {
+  color: var(--choice-ink, var(--text-primary));
+  background: color-mix(in srgb, var(--choice-ink, var(--text-primary)) 5%, transparent);
+}
+
+.action-choice[aria-pressed="true"],
+.action-choice[aria-checked="true"] {
+  color: var(--choice-ink, var(--text-primary));
+  background: color-mix(in srgb, var(--choice-ink, var(--text-primary)) 5%, transparent);
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--choice-ink, var(--text-primary)) 60%, transparent);
+  font-weight: 600;
+}
+
+.action-choice:focus-visible {
+  outline: 2px solid var(--choice-ink, var(--text-primary));
+  outline-offset: 2px;
+}
+
+.action-choice:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .action-stack {
   display: grid;
   justify-items: center;
@@ -1360,11 +1403,7 @@ html[data-theme="light"] .cta:disabled {
 .quick-build-starters {
   display: grid;
   gap: 10px;
-  padding: 14px 16px;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: linear-gradient(180deg, rgba(18, 20, 24, 0.9), rgba(13, 15, 18, 0.88));
-  box-shadow: var(--shadow-support);
+  padding: 14px 0;
 }
 
 .quick-build-starters .field {
@@ -1384,42 +1423,22 @@ html[data-theme="light"] .cta:disabled {
 .quick-build-starter-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
+  gap: 6px;
 }
 
 .quick-build-starter-card {
   display: grid;
   gap: 4px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  font: inherit;
+  justify-content: stretch;
+  align-content: center;
+  padding: 8px 10px;
   text-align: left;
-  cursor: pointer;
-  transition: border-color var(--transition-base), background var(--transition-base), transform var(--transition-base);
-}
-
-.quick-build-starter-card:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
-}
-
-.quick-build-starter-card:focus-visible {
-  outline: 2px solid var(--progress-gold);
-  outline-offset: 2px;
-}
-
-.quick-build-starter-card-active {
-  border-color: rgba(181, 18, 43, 0.5);
-  background: var(--brand-red-soft);
-  box-shadow: inset 0 0 0 1px rgba(181, 18, 43, 0.35);
 }
 
 .quick-build-starter-card-label {
-  color: var(--text-primary);
+  color: inherit;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.25;
 }
 
@@ -10487,8 +10506,7 @@ html[data-theme="light"] .today-injury-other-warning {
   }
 
   .quick-build-starters {
-    padding: 12px;
-    border-radius: 18px;
+    padding: 12px 0;
   }
 
   .quick-build-starter-grid {
@@ -18019,26 +18037,6 @@ html[data-theme="light"] .quick-build-guide {
     radial-gradient(circle at top right, var(--progress-gold-soft), transparent 36%),
     linear-gradient(180deg, rgba(250, 252, 255, 0.98), rgba(244, 246, 249, 0.98));
   box-shadow: var(--shadow-support);
-}
-
-html[data-theme="light"] .quick-build-starters {
-  border-color: rgba(80, 81, 84, 0.08);
-  background: linear-gradient(180deg, rgba(250, 252, 255, 0.96), rgba(243, 245, 248, 0.96));
-}
-
-html[data-theme="light"] .quick-build-starter-card {
-  border-color: rgba(80, 81, 84, 0.14);
-  background: rgba(255, 255, 255, 0.72);
-}
-
-html[data-theme="light"] .quick-build-starter-card:hover {
-  border-color: rgba(80, 81, 84, 0.28);
-}
-
-html[data-theme="light"] .quick-build-starter-card-active {
-  border-color: rgba(189, 16, 32, 0.45);
-  background: var(--brand-red-soft);
-  box-shadow: inset 0 0 0 1px rgba(189, 16, 32, 0.3);
 }
 
 html[data-theme="light"] .quick-build-guide-track {
