@@ -4141,6 +4141,56 @@ def build_authoritative_open_plan(
         }
         for weekday in training_days
     ]
+    from fightcamp.weekly_schedule_view import normalize_weekday
+    by_day = {day["weekday"]: day for day in day_template}
+    # Coach-owned contact is never an executable S&C session, but its day
+    # identity must survive when the deterministic development block is laid
+    # onto the template. Carry the approved label from the planner.
+    for session in decisions[0]["sessions"]:
+        if not isinstance(session, dict):
+            return None
+        weekday = normalize_weekday(session.get("weekday"))
+        day = by_day.get(weekday)
+        if day is None:
+            return None
+        if session.get("coach_owned") or session.get("category") == "sparring":
+            label = str(session.get("label") or "").strip()
+            if label:
+                day["today_card"]["coach_led_contact"] = label
+                day["today_card"]["headline"] = label
+
+    # The locked bank owns tactical steps, but the open rotation owns the
+    # selected weeks. Seed a single template watch so the existing projection
+    # can place and restore it in those exact weeks without another model.
+    rotation = (spec.get("tactical_watch") or {}).get("weekly_rotation") or []
+    if rotation:
+        if not isinstance(rotation, list) or any(not isinstance(entry, dict) for entry in rotation):
+            return None
+        template = spec.get("weekly_template") or {}
+        template = template if isinstance(template, dict) else {}
+        support_days = template.get("support_work_days") or []
+        support_days = support_days if isinstance(support_days, list) else []
+        requested = normalize_weekday((spec.get("tactical_watch") or {}).get("weekday"))
+        anchor = next(
+            (weekday for weekday in [requested, *[normalize_weekday(day) for day in support_days], *training_days]
+             if weekday in by_day and weekday), None
+        )
+        if anchor is None:
+            return None
+        first = rotation[0]
+        name = str(first.get("name") or "").strip()
+        if not name:
+            return None
+        by_day[anchor]["sessions"].append({
+            "session_id": "open-tactical-template",
+            "session_type": "skill", "title": str(first.get("label") or "Tactical Focus"),
+            "objective": "", "completion_status": "not_started",
+            "mindset_anchor": dict(empty_mindset),
+            "blocks": [{
+                "block_id": "open-tactical-block", "block_type": "mindset",
+                "display_name": name, "coaching_cues": [],
+            }],
+        })
     base_week = {
         "week_id": "open-template", "week_index": 1, "phase_label": "GPP",
         "week_goal": str(development.get("week_1") or "Training"),
