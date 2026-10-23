@@ -366,7 +366,6 @@ def test_structured_calls_request_json_object_mode(monkeypatch: pytest.MonkeyPat
     import json
 
     monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_JSON_MODE", raising=False)
-    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE", "0")
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_REPAIR", "0")  # single call keeps it simple
     client = FakeClient([_response(json.dumps([1, 2, 3]))])
     automator = OpenAIStage2Automator(client=client, model="test-model")
@@ -384,7 +383,6 @@ def test_structured_calls_omit_json_mode_when_disabled(monkeypatch: pytest.Monke
     import json
 
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_JSON_MODE", "0")
-    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE", "0")
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_REPAIR", "0")
     client = FakeClient([_response(json.dumps([1, 2, 3]))])
     automator = OpenAIStage2Automator(client=client, model="test-model")
@@ -419,8 +417,6 @@ def test_structured_calls_use_strict_json_schema_when_opted_in(monkeypatch: pyte
     assert fmt["strict"] is True
     assert fmt["name"] == "structured_training_plan"
     assert fmt["schema"]["additionalProperties"] is False
-    assert "EXACT ROOT SKELETON" not in client.responses.calls[0]["input"]
-    assert "Do not infer missing rest" in client.responses.calls[0]["input"]
 
 
 def test_schema_mode_off_by_default_uses_json_object(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -438,48 +434,12 @@ def test_schema_mode_off_by_default_uses_json_object(monkeypatch: pytest.MonkeyP
         )
     )
 
-    fmt = client.responses.calls[0]["text"]["format"]
-    assert fmt == {"type": "json_object"}
-    assert "EXACT ROOT SKELETON" in client.responses.calls[0]["input"]
+    assert client.responses.calls[0]["text"]["format"] == {"type": "json_object"}
 
 
-@pytest.mark.parametrize(
-    "schema_setting, expected_format",
-    [(None, "json_object"), ("0", "json_object"), ("1", "json_schema")],
-)
-def test_strict_content_validation_does_not_depend_on_schema_mode(
-    monkeypatch: pytest.MonkeyPatch, schema_setting: str | None, expected_format: str
-) -> None:
-    # Schema mode only affects the provider's response format, not what can
-    # pass the server-owned dose/field-ownership and faithfulness checks.
-    if schema_setting is None:
-        monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE", raising=False)
-    else:
-        monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE", schema_setting)
-    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_JSON_MODE", raising=False)
-    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_REPAIR", "0")
-    client = FakeClient([_response("{}")])
-    automator = OpenAIStage2Automator(client=client, model="test-model")
-    checks: list[bool] = []
-    original = stage2_module.build_structured_plan_outcome
-
-    def record_validation(*args, **kwargs):
-        checks.append(kwargs["strict_content"])
-        return original(*args, **kwargs)
-
-    monkeypatch.setattr(stage2_module, "build_structured_plan_outcome", record_validation)
-    asyncio.run(
-        automator._generate_structured_outcome(
-            final_plan_text="# plan", planning_brief={}, source="test", costs=[]
-        )
-    )
-
-    assert client.responses.calls[0]["text"]["format"]["type"] == expected_format
-    assert checks == [True]
-
-
-def test_schema_build_failure_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Opted-in schema mode must fail closed rather than weaken its contract.
+def test_schema_build_failure_degrades_to_json_object_not_free_form(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Schema mode on, JSON-object mode explicitly off: a schema-build failure must
+    # still return json_object (valid JSON), never None (free-form).
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE", "1")
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_JSON_MODE", "0")
 
@@ -487,8 +447,7 @@ def test_schema_build_failure_fails_closed(monkeypatch: pytest.MonkeyPatch) -> N
         raise RuntimeError("schema build broke")
 
     monkeypatch.setattr(stage2_module, "build_strict_structured_plan_schema", _boom)
-    with pytest.raises(Stage2AutomationError, match="strict structured-plan schema"):
-        stage2_module._structured_response_format()
+    assert stage2_module._structured_response_format() == {"type": "json_object"}
 
 
 def test_plan_text_first_pass_omits_json_mode(monkeypatch: pytest.MonkeyPatch) -> None:

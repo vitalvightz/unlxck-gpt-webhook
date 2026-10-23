@@ -151,31 +151,11 @@ Structured-card call behaviour is controlled by three further flags:
 | Env var | Default | Effect |
 |---|---|---|
 | `UNLXCK_STAGE2_STRUCTURED_REPAIR` | **off** (opt-in) | One repair call after a failed first structured pass. Off because production telemetry (40 jobs, 2026-10-05 to 2026-10-14) showed it rescuing about 1 in 12 failed cards at 150–200 s each. |
-| `UNLXCK_STAGE2_STRUCTURED_JSON_MODE` | on | `json_object` mode unless schema mode is explicitly enabled. |
-| `UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE` | **off** (opt-in) | Use standard `json_object` provider output by default; set to `1` only after live endpoint verification to request strict `json_schema`. All server-side structural, source-faithfulness, field-ownership and safety validation stays enabled in either mode. |
+| `UNLXCK_STAGE2_STRUCTURED_JSON_MODE` | on | Request `json_object` output mode, removing the "not valid JSON" failure class. |
+| `UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE` | **off** (opt-in) | Send the strict `json_schema` built from `StructuredTrainingPlan` instead. Validated in-repo for structural compliance only; confirm against the live endpoint in staging before enabling, then the repair retry can be dropped. |
 
 These apply only to the structured-card calls. The markdown plan-text pass never
 uses an output-format parameter.
-
-The final-session writer uses `EXERCISE OUTPUT CONTRACT v1` from
-`fightcamp/exercise_output_contract.py`: one dose bullet followed by distinct
-How/Cue/Easier/Progress/Deload/Stop fields. Strict conversion uses the compact
-field-ownership contract plus the provider schema, rather than repeating the
-schema as a prose skeleton. Conversion transcribes source fields; it cannot
-author missing rest, effort or cues. Round rest and between-block rest are separate.
-The renderer keeps the full collapsed summary, shows stats on expansion, and
-uses the red week notice only for an authored change, not today's full dose.
-On legacy cards, only source fragments already visibly represented are hidden;
-missing per-side instructions, tempo, loading, intervals and safety qualifiers
-remain visible alongside the available metrics.
-
-Sampling is temperature 0 on supported GPT-4.1/GPT-4o families. The configured
-`gpt-5-mini` reasoning model does not accept temperature, so no unsupported
-sampling parameter is sent. Shape constraints and content validation apply
-independently of sampling and output format. Strict content validation remains
-active even with `json_object` mode. Provider `json_schema` mode is opt-in
-until the live `gpt-5-mini` endpoint has been verified; in-repo model calls
-are mocked.
 
 Result fields added to the Stage 2 return contract (all optional):
 
