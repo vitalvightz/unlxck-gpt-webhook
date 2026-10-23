@@ -352,7 +352,7 @@ def test_all_banned_keys_are_lowercase_and_stripped_case_insensitively():
 # --- G + format. prompt contract -------------------------------------------
 
 
-def test_prompt_carries_extraction_schema_and_safety_contract():
+def test_prompt_carries_compact_conversion_and_safe_gap_completion_contract():
     prompt = build_structured_plan_prompt(
         plan_markdown="# Fight Camp\n- squat",
         planning_brief={"main_limiter": "conditioning"}, event_date="2026-06-13",
@@ -362,10 +362,12 @@ def test_prompt_carries_extraction_schema_and_safety_contract():
                    "weight_cut_warning", "coach_gated", "safety trigger",
                    "completion_status", "mindset_anchor", "# Fight Camp", "2026-06-13",
                    "ROOT SHAPE EXAMPLE", "Do not select exercises", "source of truth",
-                   "Missing source fields", "no word limit", "Ignore exercise Progress"):
+                   "missing presentation", "no word limit", "Preserve source Progress/Progression"):
         assert marker in prompt, marker
-    assert "author missing" in prompt
-    assert "infer only those missing presentation fields" not in prompt
+    assert "infer only those missing presentation" in prompt
+    assert "Never infer sparring/contact prescriptions" in prompt
+    assert "volume, load, dates, safety rules" in prompt
+    assert "Ignore exercise Progress" not in prompt
     assert len(prompt) < 11_000
 
 
@@ -1836,7 +1838,7 @@ def test_prompt_requires_block_detail_and_day_mindset():
         '"coaching_cues"',
         '"regression_options"',
         '"substitutions"',
-        "progression_rule to null",
+        '"progression_rule"',
         "confidence_anchor",
         "today_card.mindset_anchor",
     ):
@@ -1905,8 +1907,8 @@ def test_open_plan_conversion_prompt_projects_authored_adjustments_only():
 
     assert "OPEN-PLAN DELOAD" in prompt
     assert '"deload_rule"' in prompt
-    assert 'Preserve each explicit source "deload_rule" verbatim' in prompt
-    assert "Missing source fields stay empty" in prompt
+    assert 'Preserve each source "progression_rule" and "deload_rule" verbatim' in prompt
+    assert "Missing source adjustment fields stay empty" in prompt
     assert "Never create a progression or Easier note" in " ".join(prompt.split())
 
 
@@ -2032,8 +2034,8 @@ def test_open_plan_conversion_prompt_forbids_authoring_missing_progress():
         planning_brief=_open_plan_brief("Monday", "Tuesday"),
     )
 
-    assert "Never invent a number the plan does not have" in prompt
-    assert "Missing source fields stay empty" in prompt
+    assert "Preserve any explicit value or bound" in prompt
+    assert "Missing source adjustment fields stay empty" in prompt
     assert "not authoring adjustments" in prompt
     assert "You own the Progress" not in prompt
     assert "author a useful short note" not in prompt

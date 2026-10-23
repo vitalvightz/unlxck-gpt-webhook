@@ -69,10 +69,7 @@ def test_profiles_fill_gaps_without_replacing_structured_bank_instructions():
     assignment = role(1)["selected_exercise_assignments"][0]
     assert exercise_coaching(assignment, {}, d_day=32) == execution_fields("Session 1")
     rendered = authoritative_render_for_role(role(1), d_day=32)
-    assert not any("Progress:" in line for line in rendered["body_lines"])
     for key, value in execution_fields("Session 1").items():
-        if key == "progression_rule":
-            continue
         for text in [value] if isinstance(value, str) else value:
             assert any(text in line for line in rendered["body_lines"]), key
 
@@ -169,8 +166,7 @@ def test_source_fallback_reads_duplicate_exercises_from_their_own_session():
         i = r["session_index"]
         assert block["sets"] == i
         assert [cue.removeprefix("Cue: ") for cue in block["coaching_cues"]] == execution_fields(f"Session {i}")["coaching_cues"]
-        assert not block.get("progression_rule")
-        for field in ("regression_options", "stop_rules"):
+        for field in FIELDS[1:]:
             assert block.get(field) == execution_fields(f"Session {i}").get(field)
     card = {"weeks": [{"days": [{"countdown_label": "D-32", "sessions": converted}]}]}
     assert _explicit_prescription_violations(card, "\n".join(raw)) == []

@@ -289,7 +289,7 @@ def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list
                         continue
                     expected = _source_block(scoped, name) if scoped else None
                     if expected:
-                        for key in ("coaching_cues", "regression_options", "stop_rules"):
+                        for key in ("coaching_cues", "regression_options", "progression_rule", "stop_rules"):
                             if key == "coaching_cues" and not _SOURCE_CUE_RE.search(
                                 segment
                             ):

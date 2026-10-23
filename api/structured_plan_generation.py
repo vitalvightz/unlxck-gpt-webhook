@@ -3624,8 +3624,8 @@ def _strip_fallback_from_broken_json(broken_json: str) -> str:
     return _RAW_FALLBACK_VALUE_RE.sub(r'\1""', broken_json)
 
 
-# One extraction contract. Programming and source-coaching ownership belong to
-# the finalizer; reconciliation, identifiers and validation belong to the server.
+# One conversion contract. The finalizer owns programming and adjustments;
+# conversion may complete missing rest, effort and one execution cue only.
 _STRUCTURED_PLAN_RULES = f"""\
 Convert the approved plan below into ONE StructuredTrainingPlan JSON object.
 Output ONLY JSON, with no wrapper, markdown or commentary.
@@ -3633,11 +3633,19 @@ Output ONLY JSON, with no wrapper, markdown or commentary.
 AUTHORITY
 - The plan is the source of truth. Preserve every exercise, session, assigned
   day, fixed dose, rest period, effort method, restriction and safety trigger.
-  Do not select exercises, rewrite coaching, invent dates or author missing
-  rest, effort, cues, Easier options or future workouts. Missing source fields
-  stay empty. Never invent a number the plan does not have.
-- Ignore exercise Progress/Progression lines; set progression_rule to null.
-  Weekly development and an explicit open-plan deload remain separate.
+  Do not select exercises, rewrite supplied coaching, invent dates, Easier
+  options, progression or future workouts. Preserve source Progress/Progression
+  verbatim in progression_rule, separate from weekly development and deload.
+- For an EXISTING physical exercise only, infer only those missing presentation
+  fields: rest, effort and one concise execution cue. Use the supplied athlete
+  context, goals and weaknesses, session purpose, sport, phase/fight proximity,
+  fatigue, injury restrictions, equipment and movement demands. Use conservative
+  current evidence-based sport-science: adequate recovery for quality/power,
+  density only when intended, effort within every supplied safety/dose cap.
+  Preserve any explicit value or bound; never replace max intent with RPE.
+  Never infer sparring/contact prescriptions or fill locked mental drills.
+  This completion cannot change membership, volume, load, dates, safety rules
+  or adjustments. Other missing source fields stay empty.
 - Server-owned locked sessions are restored in code. Do not recreate omitted
   locked drills. The server also assigns identifiers and execution order;
   use a source id when available, otherwise omit ids and execution_order.
@@ -3692,6 +3700,7 @@ PRESCRIPTION SHAPES
 - Route labelled source text verbatim: How -> execution_instructions;
   Cue -> coaching_cues; Purpose -> purpose; Why today -> why_today;
   Easier/Regression -> regression_options; Swap -> substitutions;
+  Progress/Progression -> progression_rule;
   Stop/Stop rule -> stop_rules. You are not authoring adjustments. Never put
   a conditional swap there in progression_rule. Preserve all conditions and
   safety detail; no word limit may shorten an approved instruction.
@@ -3718,7 +3727,8 @@ SAFETY AND SUPPORT
   training_day_guidance and fight_week_guidance empty. Preserve only the
   computed weight_cut_warning when applicable.
 - Use short source-backed titles/objectives in plain language. Do not duplicate
-  coaching across fields. Omit unsupported optional detail rather than invent it.
+  coaching across fields. Except for the three permitted missing presentation
+  fields above, omit unsupported optional detail rather than invent it.
 """
 
 
@@ -3756,7 +3766,7 @@ ROOT SHAPE EXAMPLE (replace example values; omit unsupported optional detail):
                   "rest": {{"value": 180, "unit": "seconds"}}, "duration": null,
                   "purpose": "...", "why_today": "...", "coaching_cues": ["..."],
                   "regression_options": ["..."], "substitutions": ["..."],
-                  "execution_instructions": "...", "stop_rules": ["..."]
+                  "execution_instructions": "...", "progression_rule": "...", "stop_rules": ["..."]
                 }}
               ]
             }}
@@ -3860,9 +3870,10 @@ values in the generic root skeleton):
   labels as open-plan headings.
 
 OPEN-PLAN DELOAD
-- Preserve each explicit source "deload_rule" verbatim. Never create a
+- Preserve each source "progression_rule" and "deload_rule" verbatim. Never create a
   progression or Easier note from exercise type or a generic week policy.
-- Ignore exercise Progress lines. Missing source fields stay empty.
+- Missing source adjustment fields stay empty. Rest, effort and execution-cue
+  completion still follow the same physical-exercise limits above.
 
 AUTHORITATIVE open_plan_spec:
 {spec_json}"""

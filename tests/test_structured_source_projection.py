@@ -1,12 +1,16 @@
 """Regression coverage for source fields lost by the second model pass."""
 from copy import deepcopy
+import asyncio
 import json
+from types import SimpleNamespace
 
 import pytest
 
 from api.structured_plan_coaching import recover_selected_coaching
 from api.structured_plan_faithfulness import project_source_adjustments
 from api.structured_plan_generation import build_structured_plan_outcome, build_structured_plan_prompt
+from api.stage2_automation import OpenAIStage2Automator
+from support import FakeOpenAIClient
 from test_structured_plan_models import _valid_plan
 
 
@@ -91,12 +95,13 @@ def test_projection_never_overwrites_athlete_prescriptions_or_hides_changed_dose
     assert recover_selected_coaching(edited, {"custom_plan": True}, source_text=source) == edited
 
 
-def test_absent_exercise_progress_never_rejects_a_technical_card():
+def test_dropped_exercise_progress_is_recovered_without_rejecting_the_card():
     candidate = _valid_plan()
     candidate["weeks"][0]["days"][0]["sessions"] = card()["weeks"][0]["days"][0]["sessions"]
     source = "## Week 1 (D-19 to D-13)\nD-15 (Tuesday) — Technical work\n" + DETAILS + "  Progress: Keep the same pace and clean exits.\n"
     outcome = build_structured_plan_outcome(candidate, raw_markdown=source)
     assert outcome.structured_plan is not None, outcome.errors
+    assert block(outcome.structured_plan)["progression_rule"] == "Keep the same pace and clean exits."
 
 
 def test_open_conversion_has_one_programme_source_and_a_small_calendar_contract():
@@ -121,3 +126,56 @@ def test_large_soft_context_remains_valid_json_and_does_not_cut_the_programme():
     context = prompt.split("verbatim):\n")[1].split("\n\n")[0]
     assert json.loads(context) == {"main_limiter": "conditioning"}
     assert source in prompt
+
+
+@pytest.mark.parametrize("has_source_cue", [False, True])
+@pytest.mark.parametrize("name,kind,effort,cue", [
+    ("Box Jump", "plyometric_power", {"method": "intent", "value": "max"}, "Explode upwards."),
+    ("Goblet Squat", "strength", {"method": "RPE", "value": 7, "scale": "1-10"}, "Brace before squatting."),
+])
+def test_converter_completes_missing_rest_effort_and_cue(has_source_cue, name, kind, effort, cue):
+    source = f"## Week 1 (D-19 to D-13)\nD-15 (Tuesday) — Power Transfer Touch\n- {name}: 3 x 5 reps.\n"
+    if has_source_cue:
+        source += f"  Cue: {cue}\n"
+    candidate = _valid_plan()
+    candidate["weeks"][0]["days"][0]["sessions"][0]["blocks"] = [{
+        "block_type": kind, "display_name": name, "sets": 3, "reps": 5,
+        "rest": {"value": 180, "unit": "seconds"},
+        "effort": effort,
+        "coaching_cues": [cue],
+    }]
+    client = FakeOpenAIClient([SimpleNamespace(
+        id="offline-conversion", output_text=json.dumps(candidate),
+        usage=SimpleNamespace(input_tokens=1, output_tokens=1, total_tokens=2),
+    )])
+    automator = OpenAIStage2Automator(client=client, model="offline")
+    outcome, _ = asyncio.run(automator._generate_structured_outcome(
+        final_plan_text=source,
+        planning_brief={"athlete_snapshot": {"sport": "boxing", "goals": ["power"]}},
+        source="test", costs=[],
+    ))
+    assert outcome.structured_plan is not None, outcome.errors
+    published = block(outcome.structured_plan)
+    assert published["sets"] == 3 and published["reps"] == 5
+    assert published["rest"] == {"value": 180, "unit": "seconds"}
+    assert published["effort"]["method"] == effort["method"]
+    assert published["effort"]["value"] == effort["value"]
+    assert published["coaching_cues"] == candidate["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]["coaching_cues"]
+    assert len(client.responses.calls) == 1  # No third completion/repair call.
+    prompt = client.responses.calls[0]["input"]
+    assert "rest, effort and one concise execution cue" in prompt
+    assert "Preserve any explicit value or bound" in prompt
+
+
+@pytest.mark.parametrize("field,value", [("sets", 4), ("rest", {"value": 30, "unit": "seconds"}),
+                                        ("effort", {"method": "RPE", "value": 9})])
+def test_completion_cannot_change_an_explicit_source_prescription(field, value):
+    source = "## Week 1 (D-19 to D-13)\nD-15 (Tuesday) — Power Transfer Touch\n- Box Jump: 3 x 5 reps; rest 120 sec; RPE 6.\n"
+    candidate = _valid_plan()
+    jump = {"block_type": "plyometric_power", "display_name": "Box Jump", "sets": 3, "reps": 5,
+            "rest": {"value": 120, "unit": "seconds"}, "effort": {"method": "RPE", "value": 6}}
+    jump[field] = value
+    candidate["weeks"][0]["days"][0]["sessions"][0]["blocks"] = [jump]
+    outcome = build_structured_plan_outcome(candidate, raw_markdown=source)
+    assert outcome.structured_plan is None
+    assert any("PRESCRIPTION_CHANGED" in error and field in error for error in outcome.errors)

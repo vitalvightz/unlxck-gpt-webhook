@@ -217,6 +217,8 @@ def coaching_lines(fields: dict[str, Any]) -> list[str]:
     lines = [f"  How: {fields['execution_instructions']}"] if fields.get("execution_instructions") else []
     lines.extend(f"  Cue: {cue}" for cue in fields.get("coaching_cues") or [])
     lines.extend(f"  Easier: {text}" for text in fields.get("regression_options") or [])
+    if fields.get("progression_rule"):
+        lines.append(f"  Progress: {fields['progression_rule']}")
     for text in fields.get("stop_rules") or []:
         trigger = re.sub(r"^Stop(?: rule)?:\s*", "", text, flags=re.I)
         lines.append(f"  Stop: {trigger}")

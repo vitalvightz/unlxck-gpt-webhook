@@ -22,7 +22,7 @@ test("Band-Resisted Punch does not label taper safety text as Progress", () => {
   assert.equal(html.includes("any sharp ankle pain, new swelling, or loss of balance."), true);
 });
 
-test("exercise Progress is hidden while the separate stop rule remains visible", () => {
+test("authored Progress and the separate stop rule remain visible", () => {
   const html = renderToStaticMarkup(
     <BlockCard
       block={{
@@ -35,8 +35,8 @@ test("exercise Progress is hidden while the separate stop rule remains visible",
     />,
   );
 
-  assert.equal(html.includes(">Progress</span>"), false);
-  assert.equal(html.includes("Increase band resistance when punch speed stays high."), false);
+  assert.equal(html.includes(">Progress</span>"), true);
+  assert.equal(html.includes("Increase band resistance when punch speed stays high."), true);
   assert.equal(html.includes(">Stop rule</span>"), true);
   assert.equal(html.includes("Sharp shoulder pain or a clear drop in punch mechanics."), true);
 });
@@ -95,7 +95,7 @@ test("exercise card renders every stored stop criterion in one row", () => {
 });
 
 
-test("enhanced block exposes Easier and Stop while hiding saved AI Progress", () => {
+test("enhanced block exposes the saved AI Progress, Easier and Stop", () => {
   const html = renderToStaticMarkup(
     <BlockCard block={{
       block_id: "strength-push", block_type: "strength",
@@ -113,7 +113,7 @@ test("enhanced block exposes Easier and Stop while hiding saved AI Progress", ()
   assert.equal(html.includes("Brace the trunk and drive smoothly."), false);
   assert.equal(html.includes("Coaching cues"), false);
   assert.match(html, />Easier<\/span>/);
-  assert.doesNotMatch(html, />Progress<\/span>/);
+  assert.match(html, />Progress<\/span>/);
   assert.match(html, />Stop rule<\/span>/);
-  assert.doesNotMatch(html, /Next D-28: add 1 rep\/set if controlled and recovered/);
+  assert.match(html, /Next D-28: add 1 rep\/set if controlled and recovered/);
 });

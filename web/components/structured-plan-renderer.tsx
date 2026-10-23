@@ -399,7 +399,7 @@ function useBlockPrescription(block: StructuredBlock, sourceCountdown?: string |
     || formatRestNote(block);
   const rest = restText ? compactTimeUnits(restText) : null;
   const effort = sourceOverrides.effort || formatEffort(block);
-  const { stopRules } = getBlockAdjustmentDisplay(block);
+  const { progression, stopRules } = getBlockAdjustmentDisplay(block);
   const sourceStopRule = getSourceStopRuleOverride(sourceText, title, sourceCountdown);
   // Drop stop-rule criteria that only restate injury-safety escalation the
   // Safety Priority card already owns, so the block keeps its own criterion
@@ -419,7 +419,7 @@ function useBlockPrescription(block: StructuredBlock, sourceCountdown?: string |
       .map((rule) => rule.trim().replace(/^stop(?:\s+rule)?\s*:\s*/i, "").trim())
       .filter(Boolean)
       .join("; ") || null;
-  return { title, load, metrics, rest, effort, compactStopRule, sourceVolume };
+  return { title, load, metrics, rest, effort, compactStopRule, progression, sourceVolume };
 }
 
 export function BlockCard({
@@ -445,12 +445,12 @@ export function BlockCard({
   /** The exercise sheet shows cues and the stop rule in their own places. */
   hideCues?: boolean;
   hideStopRule?: boolean;
-  /** The detail sheet already displays Swaps/Easier/Stop. */
+  /** The detail sheet already displays Swaps/Easier/Progress/Stop. */
   hideAdjustments?: boolean;
   hideInstructions?: boolean;
 }) {
   const rehabLabelPolicy = useContext(RehabLabelContext);
-  const { title, load, metrics, rest, effort, compactStopRule, sourceVolume } = useBlockPrescription(
+  const { title, load, metrics, rest, effort, compactStopRule, progression, sourceVolume } = useBlockPrescription(
     block,
     sourceCountdown,
   );
@@ -473,6 +473,7 @@ export function BlockCard({
   // Display the validated AI instruction once; deload retains its own directive.
   const weekDirective = directive?.usesProgressionRule ? null : directive;
   const adjustmentRules = [
+    ...(progression && openWeekIntent?.key !== "deload" ? [{ label: "Progress" as const, text: progression }] : []),
     ...(compactStopRule && !hideStopRule
       ? [{ label: "Stop rule" as const, text: compactStopRule }]
       : []),
@@ -895,7 +896,7 @@ function ExerciseDetail({
 }) {
   const rehabLabelPolicy = useContext(RehabLabelContext);
   const prescription = useBlockPrescription(block, sourceCountdown);
-  const { title, compactStopRule } = prescription;
+  const { title, compactStopRule, progression } = prescription;
   const blockType = cleanText(block.block_type);
   const tagLabel = blockType ? blockTagLabel(block, rehabLabelPolicy) : null;
   const resolvedMedia = useExerciseMedia(block.display_name, block.exercise_key);
@@ -1007,6 +1008,7 @@ function ExerciseDetail({
       {cues.map(cue => <p className="sp-block-aside" key={cue}><span className="sp-stat-label">Cue</span>{cue}</p>)}
       {swap ? <p className="sp-block-aside"><span className="sp-stat-label">Swaps</span>{swap}</p> : null}
       {easier.map(text => <p className="sp-block-aside" key={text}><span className="sp-stat-label">Easier</span>{text}</p>)}
+      {progression && openWeekIntent?.key !== "deload" ? <p className="sp-block-aside"><span className="sp-stat-label">Progress</span>{progression}</p> : null}
       <details className="ex-detail-section" open={block.block_type === "rehab" || undefined}>
         <summary>Full prescription</summary>
         <BlockCard block={block} openWeekIntent={openWeekIntent}
