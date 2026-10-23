@@ -156,6 +156,8 @@ def _stage2_structured_timeout_seconds() -> float:
     # pass, so it gets a wider budget than the client default above. Raising this
     # is only effective while APP_STAGE2_FINALIZE_TIMEOUT_SECONDS (the whole-finalize
     # budget in api/generation/timeouts.py) leaves room for it.
+    # Legacy/custom conversions retain their established provider budget.
+    # This is a true wall-clock deadline when a model call is necessary.
     default_timeout = 600.0
     raw_value = os.getenv("UNLXCK_STAGE2_STRUCTURED_TIMEOUT_SECONDS", str(default_timeout)).strip()
     try:
@@ -580,6 +582,59 @@ def _recover_coverage_failed_card(
             *[f"faithfulness: {item}" for item in unfaithful],
             *[str(item) for item in advisory],
         ],
+    )
+
+
+def _build_source_owned_structured_card(
+    *, planning_brief: Any, plan_text: str, computed_support: Any = None,
+) -> StructuredPlanOutcome | None:
+    """Prefer already-approved planning facts over a second generative pass.
+
+    A successful structured card is only returned after full schema, planner
+    membership and safety checks. The normal model path remains available when
+    the deterministic planner cannot cover a legacy/custom plan.
+    """
+    if not isinstance(planning_brief, dict) or not plan_text.strip():
+        return None
+    from .structured_plan_generation import (
+        build_authoritative_open_plan, planner_sc_coverage_losses,
+    )
+    from .structured_plan_models import safe_parse_structured_plan, SCHEMA_VERSION
+    from .structured_plan_safety import audit_structured_plan, split_findings
+
+    is_open = isinstance(planning_brief.get("open_plan_spec"), dict) and (
+        planning_brief["open_plan_spec"].get("plan_type") == "open_ongoing_system"
+    )
+    if is_open:
+        candidate = build_authoritative_open_plan(planning_brief, plan_text)
+    else:
+        from .structured_plan_deterministic_fallback import build_deterministic_structured_plan
+        candidate = build_deterministic_structured_plan(planning_brief, plan_text)
+    if not isinstance(candidate, dict):
+        return None
+    parsed = safe_parse_structured_plan(candidate, raw_markdown=plan_text)
+    if not parsed.ok or parsed.plan is None:
+        return None
+    if planner_sc_coverage_losses(candidate, planning_brief, plan_text):
+        return None
+
+    warnings: list[str] = []
+    if not is_open:
+        from .structured_plan_faithfulness import check_structured_faithfulness
+        unfaithful = check_structured_faithfulness(candidate, plan_text, planning_brief)
+        # Direct cards must not silently lose even one authored dose/rest.
+        # Unlike the generic model fallback, this fast path is only eligible
+        # when the exact source passes every faithfulness check.
+        if unfaithful:
+            return None
+    # Open-plan source-of-truth is the four-week deterministic development block,
+    # not the prose rendering, which may omit individual selected exercises.
+    blocking, advisory = split_findings(audit_structured_plan(candidate, computed_support))
+    if blocking:
+        return None
+    return StructuredPlanOutcome(
+        status="valid", structured_plan=candidate, schema_version=SCHEMA_VERSION,
+        warnings=["source_owned_conversion: no additional model request", *warnings, *advisory],
     )
 
 
@@ -1270,6 +1325,10 @@ class OpenAIStage2Automator:
         call_cost: dict[str, Any] = {"attempt_label": attempt_label, "source": source}
         started = time.monotonic()
         request_phase = "opening_stream"
+        events_seen = 0
+        output_delta_chars = 0
+        last_event_at: float | None = None
+        provider_response_id = "unknown"
 
         async def log_waiting() -> None:
             # This reports where we are waiting, never claims model progress.
@@ -1277,25 +1336,66 @@ class OpenAIStage2Automator:
             while True:
                 await asyncio.sleep(_MODEL_WAIT_LOG_INTERVAL_SECONDS)
                 logger.info(
-                    "[stage2] model_request_waiting job_id=%s attempt=%s model=%s phase=%s elapsed_seconds=%.3f",
+                    "[stage2] model_request_waiting job_id=%s attempt=%s model=%s phase=%s elapsed_seconds=%.3f "
+                    "events_seen=%d output_delta_chars=%d last_event_gap_seconds=%s response_id=%s",
                     context.get("job_id") or "unknown", attempt_label, self.model,
-                    request_phase, time.monotonic() - started,
+                    request_phase, time.monotonic() - started, events_seen, output_delta_chars,
+                    round(time.monotonic() - last_event_at, 3) if last_event_at is not None else "none",
+                    provider_response_id,
                 )
 
         wait_logger = asyncio.create_task(log_waiting())
         try:
-            # Stream instead of a single blocking create: the HTTP read timeout
-            # then applies to the gap between events, not the whole generation,
-            # so long responses stop tripping idle-connection timeouts.
-            # get_final_response() drains the stream and returns the same
-            # Response object create() would have.
-            async with self.client.responses.stream(**request) as stream:
-                request_phase = "awaiting_final_response"
-                logger.info(
-                    "[stage2] model_stream_opened job_id=%s attempt=%s model=%s elapsed_seconds=%.3f phase=awaiting_final_response",
-                    context.get("job_id") or "unknown", attempt_label, self.model, time.monotonic() - started,
-                )
-                response = await stream.get_final_response()
+            # The SDK's HTTP timeout limits gaps between network reads, not
+            # total time spent streaming. Apply a separate, absolute asyncio
+            # deadline to structured calls so heartbeats cannot keep them alive
+            # indefinitely and exhaust the whole generation's runtime budget.
+            async def read_response() -> Any:
+                nonlocal request_phase, events_seen, output_delta_chars
+                nonlocal last_event_at, provider_response_id
+                async with self.client.responses.stream(**request) as stream:
+                    request_phase = "awaiting_final_response"
+                    logger.info(
+                        "[stage2] model_stream_opened job_id=%s attempt=%s model=%s elapsed_seconds=%.3f phase=awaiting_final_response",
+                        context.get("job_id") or "unknown", attempt_label, self.model, time.monotonic() - started,
+                    )
+                    # Production SDK streams are iterable. Read event metadata
+                    # without logging user content; compatibility fakes expose
+                    # only get_final_response().
+                    if hasattr(stream, "__aiter__"):
+                        async for event in stream:
+                            events_seen += 1
+                            last_event_at = time.monotonic()
+                            event_type = str(getattr(event, "type", ""))
+                            if event_type == "response.output_text.delta":
+                                output_delta_chars += len(str(getattr(event, "delta", "") or ""))
+                            if event_type in {"response.created", "response.in_progress", "response.completed"}:
+                                event_response = getattr(event, "response", None)
+                                provider_response_id = str(getattr(event_response, "id", None) or provider_response_id)
+                    request_phase = "finalizing_response"
+                    return await stream.get_final_response()
+
+            if timeout is not None and attempt_label.startswith("structured_"):
+                async with asyncio.timeout(timeout):
+                    response = await read_response()
+            else:
+                response = await read_response()
+        except TimeoutError as exc:
+            elapsed = time.monotonic() - started
+            logger.error(
+                "[stage2] model_request_deadline_exceeded job_id=%s attempt=%s model=%s "
+                "elapsed_seconds=%.3f events_seen=%d output_delta_chars=%d response_id=%s",
+                context.get("job_id") or "unknown", attempt_label, self.model,
+                elapsed, events_seen, output_delta_chars, provider_response_id,
+            )
+            failure_cost = _build_stage2_cost(
+                self.model, prompt=prompt, response=None,
+                elapsed_seconds=elapsed, **call_cost,
+            )
+            raise _with_stage2_cost(
+                Stage2AutomationError("Stage 2 structured conversion exceeded its request deadline."),
+                failure_cost,
+            ) from exc
         except asyncio.CancelledError:
             logger.warning(
                 "[stage2] model_request_cancelled job_id=%s attempt=%s model=%s elapsed_seconds=%.3f",
@@ -1736,12 +1836,30 @@ class OpenAIStage2Automator:
                 log_context=log_context,
                 costs=costs,
             )
-        except Exception:  # never block the raw plan on structured failure
-            logger.exception("[stage2] structured_plan attempt failed; using raw fallback")
-            # Preserve costs from any calls that did complete before the failure.
+        except Stage2AutomationError as exc:
+            # Unlike the main plan-text pass, structured conversion is optional.
+            # Keep the complete reviewed plan, record the failed request's
+            # estimated usage and surface an explicit failed-card status.
+            failed_cost = getattr(exc, "stage2_cost", None)
+            if isinstance(failed_cost, dict):
+                costs.append(failed_cost)
+            logger.warning(
+                "[stage2] structured_plan request failed; preserving reviewed plan_text "
+                "source=%s job_id=%s error_type=%s",
+                source, (log_context or {}).get("job_id") or "unknown", type(exc).__name__,
+            )
             return (
                 StructuredPlanOutcome(
-                    status="not_attempted",
+                    status="invalid_fallback_used",
+                    errors=["structured conversion request failed; reviewed plan_text preserved"],
+                ),
+                costs,
+            )
+        except Exception:  # never block the raw plan on structured failure
+            logger.exception("[stage2] structured_plan attempt failed; using raw fallback")
+            return (
+                StructuredPlanOutcome(
+                    status="invalid_fallback_used",
                     errors=["structured generation error (see server logs)"],
                 ),
                 costs,
@@ -1822,6 +1940,26 @@ class OpenAIStage2Automator:
         event_date = ""
         if planning_brief:
             event_date = str(planning_brief.get("fight_date") or "")
+
+        # Do not regenerate a completed programme merely to serialize it.
+        # The open four-week development block already contains exercises and
+        # prescriptions; for dated camps the calendar/role map supplies them.
+        # Only legacy/custom cases without a safe source-owned card need AI.
+        computed_support = (
+            planning_brief.get("computed_support")
+            if isinstance(planning_brief, dict) else None
+        )
+        source_owned = _build_source_owned_structured_card(
+            planning_brief=planning_brief, plan_text=final_plan_text,
+            computed_support=computed_support,
+        )
+        if source_owned is not None:
+            logger.info(
+                "[stage2] structured_source_owned job_id=%s source=%s weeks=%s model_calls=0",
+                (log_context or {}).get("job_id") or "unknown", source,
+                len(source_owned.structured_plan.get("weeks") or []),
+            )
+            return self._reconcile_structured_calendar(source_owned, planning_brief), costs
 
         json_format = _structured_response_format()
 

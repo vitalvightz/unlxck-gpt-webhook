@@ -379,3 +379,88 @@ def test_repeated_open_exercise_keeps_its_appointment_coaching_when_order_change
         assert all(block.get("progression_rule") == "At the same dose, refine movement control." for block in first["blocks"])
         assert all(block.get("progression_rule") == "At the same dose, refine balance in this appointment." for block in second["blocks"])
         assert all(block["regression_options"] == ["Use a smaller pain-free movement."] for block in second["blocks"])
+
+
+def test_source_owned_conversion_preserves_full_open_strength_week_without_model():
+    """Six source exercises cannot collapse into a three-exercise JSON card."""
+    from api.structured_plan_generation import build_authoritative_open_plan
+    from api.stage2_automation import _build_source_owned_structured_card
+
+    row = _reference_row()
+    brief = row["planning_brief"]
+    card = build_authoritative_open_plan(brief, "# Approved training programme")
+    assert card is not None
+    assert safe_parse_structured_plan(card).ok
+    assert len(card["weeks"]) == 4
+
+    for week in card["weeks"]:
+        saturday = next(day for day in week["days"] if day["weekday"] == "Sat")
+        strength = next(session for session in saturday["sessions"] if session["title"] == "Strength")
+        assert len(strength["blocks"]) == 6
+        assert [block["display_name"] for block in strength["blocks"]] == [
+            "Barbell Thruster", "Med-Ball Rotational Slam", "Trap Bar Jump",
+            "Single-Leg Depth Drop (Stick Landing)", "Landmine Anti-Rotation Press",
+            "Single-Leg Romanian Deadlift Hold",
+        ]
+        assert strength["blocks"][0]["sets"] == 4
+        assert strength["blocks"][0]["reps"] == 2
+
+    outcome = _build_source_owned_structured_card(
+        planning_brief=brief, plan_text="# Approved training programme"
+    )
+    assert outcome is not None
+    assert outcome.status == "valid"
+    assert len(outcome.structured_plan["weeks"]) == 4
+
+
+def test_source_owned_conversion_never_fills_in_missing_open_prescriptions():
+    from api.structured_plan_generation import build_authoritative_open_plan
+
+    row = _reference_row()
+    brief = copy.deepcopy(row["planning_brief"])
+    decisions = brief["open_plan_spec"]["weekly_session_plan"]["weeks"]
+    next(s for s in decisions[0]["sessions"] if s["label"] == "Strength")["exercises"][0]["prescription"] = "2 sets x 6 reps"
+    card = build_authoritative_open_plan(brief, "# Approved training programme")
+    assert card is not None
+    saturday = next(day for day in card["weeks"][0]["days"] if day["weekday"] == "Sat")
+    strength = next(session for session in saturday["sessions"] if session["title"] == "Strength")
+    assert strength["blocks"][0]["sets"] == 2
+    assert strength["blocks"][0]["reps"] == 6
+
+
+def test_open_structured_generation_does_not_make_a_second_model_request():
+    import asyncio
+    from api.stage2_automation import OpenAIStage2Automator
+    from tests.support import FakeOpenAIClient
+
+    brief = _reference_row()["planning_brief"]
+    client = FakeOpenAIClient([])
+    automator = OpenAIStage2Automator(client=client, model="gpt-5-mini")
+    outcome, costs = asyncio.run(automator._generate_structured_outcome(
+        final_plan_text="# Approved training programme",
+        planning_brief=brief,
+        source="quick_build",
+        costs=[],
+    ))
+    assert outcome.status == "valid"
+    assert len(outcome.structured_plan["weeks"]) == 4
+    assert costs == []
+    assert client.responses.calls == []
+
+
+def test_direct_open_watch_rotation_uses_distinct_week_session_ids():
+    from api.structured_plan_generation import build_authoritative_open_plan
+
+    card = build_authoritative_open_plan(
+        _reference_row()["planning_brief"], "# Approved training programme"
+    )
+    assert card is not None
+    watches = [
+        (week["week_index"], session["session_id"], session["blocks"][0]["display_name"])
+        for week in card["weeks"] for day in week["days"]
+        for session in day["sessions"]
+        if any(block.get("block_type") == "mindset" for block in session.get("blocks") or [])
+        and str(session.get("session_id") or "").startswith("open-tactical")
+    ]
+    assert [week for week, _, _ in watches] == [1, 3]
+    assert len({session_id for _, session_id, _ in watches}) == len(watches)
