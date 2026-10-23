@@ -144,9 +144,9 @@ def test_composition_pressure_uses_existing_buckets_and_interactions(athlete, ex
     ("athlete", "expected_cap"),
     [
         ({"fatigue": "low", "cut_severity_bucket": "none"}, 6),
-        ({"fatigue": "moderate", "cut_severity_bucket": "none"}, 3),
-        ({"fatigue": "high", "cut_severity_bucket": "none"}, 2),
-        ({"fatigue": "high", "cut_severity_bucket": "moderate"}, 2),
+        ({"fatigue": "moderate", "cut_severity_bucket": "none"}, 5),
+        ({"fatigue": "high", "cut_severity_bucket": "none"}, 4),
+        ({"fatigue": "high", "cut_severity_bucket": "moderate"}, 3),
     ],
 )
 def test_primary_strength_cap_scales_with_composition_pressure(athlete, expected_cap):
@@ -155,6 +155,37 @@ def test_primary_strength_cap_scales_with_composition_pressure(athlete, expected
     assert policy["base_exercise_cap"] == 6
     assert policy["effective_exercise_cap"] == expected_cap
     assert len(role["selected_exercise_assignments"]) <= expected_cap
+
+
+@pytest.mark.parametrize(
+    ("athlete", "expected_count_pressure", "expected_cap"),
+    [
+        ({"fatigue": "low", "cut_severity_bucket": "none"}, 0, 6),
+        ({"fatigue": "moderate", "cut_severity_bucket": "none"}, 1, 5),
+        ({"fatigue": "low", "cut_severity_bucket": "moderate"}, 1, 5),
+        ({"fatigue": "moderate", "cut_severity_bucket": "moderate"}, 2, 4),
+    ],
+)
+def test_injury_does_not_blanket_reduce_strength_exercise_count(
+    athlete, expected_count_pressure, expected_cap
+):
+    athlete = {
+        **athlete,
+        "injuries": [{"type": "muscle_strain", "severity": "moderate"}],
+        "readiness_flags": ["injury_management"],
+    }
+    _, role = _compose(athlete)
+    policy = role["strength_composition_policy"]
+
+    # Injury remains visible to dose, movement and recovery guards.
+    assert policy["injury_restricted"] is True
+    assert policy["injury_pressure"] == 1
+    assert policy["pressure"] >= expected_count_pressure
+
+    # It no longer independently cuts session breadth or movement families.
+    assert policy["exercise_count_pressure"] == expected_count_pressure
+    assert policy["effective_exercise_cap"] == expected_cap
+    assert policy["major_family_limit"] == (2 if expected_count_pressure == 0 else 1)
 
 
 def test_full_primary_strength_can_use_six_diverse_exercises_without_forcing_six():
@@ -172,8 +203,8 @@ def test_full_primary_strength_can_use_six_diverse_exercises_without_forcing_six
 def test_full_strength_six_ceiling_preserves_pressure_reductions(role_key):
     for athlete, expected in [
         ({"fatigue": "low", "cut_severity_bucket": "none"}, 6),
-        ({"fatigue": "moderate", "cut_severity_bucket": "none"}, 3),
-        ({"fatigue": "high", "cut_severity_bucket": "none"}, 2),
+        ({"fatigue": "moderate", "cut_severity_bucket": "none"}, 5),
+        ({"fatigue": "high", "cut_severity_bucket": "none"}, 4),
     ]:
         _, role = _compose(athlete, role_key=role_key)
         policy = role["strength_composition_policy"]
@@ -281,7 +312,7 @@ def test_current_fatigue_only_tightens_first_active_week():
     future_policy = role_map["weeks"][1]["session_roles"][0]["strength_composition_policy"]
     assert first_policy["fatigue_applied"] is True
     assert first_policy["pressure"] == 2
-    assert first_policy["effective_exercise_cap"] == 2
+    assert first_policy["effective_exercise_cap"] == 4
     assert future_policy["fatigue_applied"] is False
     assert future_policy["fatigue_pressure"] == 0
     assert future_policy["pressure"] == 0
@@ -335,10 +366,10 @@ def test_weight_cut_pressure_recalculates_from_each_roles_d_day():
     late_policy = role_map["weeks"][1]["session_roles"][0]["strength_composition_policy"]
     assert early_policy["role_days_until_fight"] == 35
     assert early_policy["cut_severity_bucket"] == "moderate"
-    assert early_policy["effective_exercise_cap"] == 3
+    assert early_policy["effective_exercise_cap"] == 5
     assert late_policy["role_days_until_fight"] == 7
     assert late_policy["cut_severity_bucket"] == "high"
-    assert late_policy["effective_exercise_cap"] == 2
+    assert late_policy["effective_exercise_cap"] == 4
 
 
 def test_composition_context_persists_for_recomposition_after_build_context_resets():
@@ -416,7 +447,7 @@ def test_current_fatigue_applies_to_first_week_with_normal_strength():
     first = role_map["weeks"][1]["session_roles"][0]["strength_composition_policy"]
     later = role_map["weeks"][2]["session_roles"][0]["strength_composition_policy"]
     assert first["fatigue_applied"] is True
-    assert first["effective_exercise_cap"] == 2
+    assert first["effective_exercise_cap"] == 4
     assert later["fatigue_applied"] is False
     assert later["effective_exercise_cap"] == 6
 
@@ -424,7 +455,7 @@ def test_current_fatigue_applies_to_first_week_with_normal_strength():
 @pytest.mark.parametrize(
     ("role_key", "d_day", "expected_cap"),
     [
-        ("primary_strength_day", 26, 3),
+        ("primary_strength_day", 26, 5),
         ("neural_plus_strength_day", 19, 2),
     ],
 )

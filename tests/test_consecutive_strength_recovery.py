@@ -244,7 +244,7 @@ def test_low_cost_maintenance_overlap_is_not_treated_as_substantial_loading():
     ] == "compatible"
 
 
-def test_injury_recovery_pressure_still_tightens_composition():
+def test_injury_recovery_pressure_preserves_count_cap_and_recovery_guards():
     slots = [
         _slot("Upper Pull", 1, 1, tags=["mech_upper_pull"], low_cost=True),
         _slot("Upper Press", 2, 1, tags=["mech_upper_press"], low_cost=True),
@@ -264,8 +264,10 @@ def test_injury_recovery_pressure_still_tightens_composition():
 
     second = role_map["weeks"][0]["session_roles"][1]
     assert second["strength_composition_policy"]["injury_restricted"] is True
-    assert second["strength_composition_policy"]["effective_exercise_cap"] == 2
-    assert len(second["selected_exercise_assignments"]) == 2
+    assert second["strength_composition_policy"]["pressure"] >= 1
+    assert second["strength_composition_policy"]["exercise_count_pressure"] == 0
+    assert second["strength_composition_policy"]["effective_exercise_cap"] == 3
+    assert 0 < len(second["selected_exercise_assignments"]) <= 3
 
 
 def test_session_moves_when_no_compatible_closed_membership_workload_exists():

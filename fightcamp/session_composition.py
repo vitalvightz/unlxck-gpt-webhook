@@ -287,8 +287,16 @@ def _pressure_state_from_components(
         pressure += 1
     pressure = min(3, pressure)
 
+    # An injury still informs dose, recovery and movement safety, but must not
+    # shrink every strength session's exercise count or movement-family budget.
+    # Only fatigue and weight-cut strain govern that generic exercise budget.
+    exercise_count_pressure = max(fatigue_pressure, cut_pressure)
+    if fatigue_pressure > 0 and cut_pressure > 0:
+        exercise_count_pressure = min(3, exercise_count_pressure + 1)
+
     return {
         "pressure": pressure,
+        "exercise_count_pressure": exercise_count_pressure,
         "fatigue": fatigue,
         "fatigue_pressure": fatigue_pressure,
         "cut_severity_bucket": cut_bucket,
@@ -370,10 +378,9 @@ def _effective_role_cap(role_key: str, pressure: int) -> tuple[int, int]:
     if pressure <= 0:
         return base_cap, base_cap
     if role_key in {"primary_strength_day", "structural_strength_day"}:
-        # Raise the unrestricted exercise ceiling, NOT the number of exercises
-        # allowed under fatigue, injury or weight-cut pressure. Those limits
-        # remain exactly as they were when the base ceiling was four.
-        return base_cap, max(2, 4 - pressure)
+        # A six-exercise ceiling tapers gradually with fatigue and cut strain.
+        # Authoritative dose, injury and calendar safety rules remain in place.
+        return base_cap, max(3, base_cap - pressure)
     if pressure == 1:
         return base_cap, max(2, base_cap - 1)
     if pressure == 2:
@@ -793,7 +800,6 @@ def _select_bounded_records(
 _PRESSURE_SOURCE_REASONS = (
     ("fatigue_pressure", "high_fatigue"),
     ("cut_pressure", "weight_cut_pressure"),
-    ("injury_pressure", "injury_constraint"),
 )
 
 
@@ -1490,6 +1496,7 @@ def compose_normal_strength_assignments(
                 fatigue_applied=week_position == first_strength_week_position,
             )
             pressure = int(pressure_state["pressure"])
+            exercise_count_pressure = int(pressure_state["exercise_count_pressure"])
 
             session_index = role.get("strength_session_index") or strength_index
             owned_slots = [
@@ -1540,7 +1547,7 @@ def compose_normal_strength_assignments(
                     if promoted:
                         break
             role_key = str(role.get("role_key") or "").strip()
-            base_cap, effective_cap = _effective_role_cap(role_key, pressure)
+            base_cap, effective_cap = _effective_role_cap(role_key, exercise_count_pressure)
             prior_policy = role.get("strength_composition_policy") or {}
             priced_names = {p.get("name") for p in [*(role.get("effective_strength_prescriptions") or []),
                                                     *(role.get("selected_exercise_assignments") or [])]
@@ -1580,7 +1587,7 @@ def compose_normal_strength_assignments(
                 records,
                 role_key=role_key,
                 cap=effective_cap,
-                pressure=pressure,
+                pressure=exercise_count_pressure,
                 preserve_trunk_support=trunk_strength_selected,
                 preserve_adaptation=primary_adaptation,
                 preserve_weakness=primary_weakness,
@@ -1605,7 +1612,7 @@ def compose_normal_strength_assignments(
                 # The day this membership was chosen for. Any later move must
                 # recompose the role; the final calendar is checked against it.
                 "composed_for_d_day": role_d_day(week, role),
-                "major_family_limit": 2 if pressure == 0 else 1,
+                "major_family_limit": 2 if exercise_count_pressure == 0 else 1,
                 "selected_count": len(assignments),
                 "selected_names": [item["name"] for item in assignments],
                 "dropped": [
@@ -1627,7 +1634,7 @@ def compose_normal_strength_assignments(
                     "selected_records": selected_records,
                     "role_key": role_key,
                     "effective_cap": effective_cap,
-                    "pressure": pressure,
+                    "pressure": exercise_count_pressure,
                     "preserve_trunk_support": trunk_strength_selected,
                     "preserve_adaptation": primary_adaptation,
                     "preserve_weakness": primary_weakness,
