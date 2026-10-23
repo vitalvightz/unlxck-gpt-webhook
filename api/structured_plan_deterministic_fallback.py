@@ -430,23 +430,6 @@ def _lift_dose_fields(dose: str, name: str | None = None) -> tuple[dict[str, Any
     elif lead := re.match(r"\s*" + _NUMBER + r"\s*" + _TIME_UNIT + r"\b(?!\s*(?:rest|recovery|between|[x×]))", dose, re.I):
         # One continuous bout: "30min continuous", "6 minutes, RPE 4 max."
         fields["duration"] = _measured(lead)
-    # A Tabata block has rounds inside blocks, with distinct rest between each.
-    # Preserve both levels instead of losing work time or replacing 10s rest
-    # with the two-minute recovery before another block.
-    nested = re.match(r"\s*(\d+)\s+rounds?\s+of\s+(\d+(?:\.\d+)?)\s*"
-                      r"(s|secs?|seconds?|mins?|minutes?)\s+(?:all[- ]out\s+)?work\s*/\s*"
-                      r"(\d+(?:\.\d+)?)\s*(s|secs?|seconds?|mins?|minutes?)\s+rest", dose, re.I)
-    if nested:
-        fields.update(rounds=int(nested[1]),
-                      work={"value": _number(nested[2]), "unit": _UNIT_NAMES[nested[3].lower()]},
-                      rest={"value": _number(nested[4]), "unit": _UNIT_NAMES[nested[5].lower()]})
-    if count := re.search(r"\b(\d+)\s+blocks?\b", dose, re.I):
-        fields["interval_blocks"] = int(count[1])
-    for pattern in (rf"between[- ]block\s+rest\s*:?\s*{_NUMBER}\s*{_TIME_UNIT}",
-                    rf"{_NUMBER}\s*{_TIME_UNIT}\s+between\s+blocks?\b"):
-        if between := re.search(pattern, dose, re.I):
-            fields["between_block_rest"] = _measured(between)
-            break
     kept: list[str] = []
     for raw_clause in re.split(r"\s*;\s*", dose.strip().rstrip(".").strip()):
         clause = raw_clause.strip().rstrip(".").strip()
@@ -759,6 +742,9 @@ def _blocks(
             coaching.pop("progression_rule", None)
             coaching["regression_options"] = []
             block["coaching_cues"].extend(coaching.pop("coaching_cues"))
+            if prescription and not block.get("components"):
+                # A cluster's dose is fully shown as rounds + component rows.
+                block["coaching_cues"].append(prescription)
             block.update(coaching)
             block["execution_instructions"] = _preserve_unrepresented_dose(
                 prescription, block.get("execution_instructions"), name)
@@ -1170,7 +1156,7 @@ def reconcile_open_development_sessions(
         for week in weeks for day in week["days"] for session in day.get("sessions") or []
         if any(block.get("display_name") in watch_names for block in session.get("blocks") or [])
     ]
-    dose_fields = ("sets", "reps", "rounds", "work", "rest", "rest_note", "interval_blocks", "between_block_rest", "duration", "distance", "load",
+    dose_fields = ("sets", "reps", "rounds", "work", "rest", "rest_note", "duration", "distance", "load",
                    "tempo", "effort", "intensity", "components")
     for position, (week, decision) in enumerate(zip(weeks, decisions, strict=True), start=1):
         if not isinstance(decision, dict) or not isinstance(decision.get("sessions"), list):
@@ -1232,9 +1218,8 @@ def reconcile_open_development_sessions(
                         # sentence form is not repeated as a coaching cue.
                         block["coaching_cues"] = [cue for cue in block.get("coaching_cues") or []
                                                   if cue != prescription]
-                    else:
-                        block["coaching_cues"] = [cue for cue in block.get("coaching_cues") or []
-                                                  if cue.strip().rstrip(".") != prescription.strip().rstrip(".")]
+                    elif prescription and prescription not in (block.get("coaching_cues") or []):
+                        block["coaching_cues"] = [*(block.get("coaching_cues") or []), prescription]
                 # Write after merging converter content: only this week's own
                 # programme may supply the full dose, including side/tempo/load.
                 block["week_prescription"] = _exact_working_dose(prescription) or None
