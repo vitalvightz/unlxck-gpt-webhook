@@ -315,16 +315,9 @@ export function selectBlockMetric(block: StructuredBlock | null | undefined): Bl
   if (finitePositiveNumber(block.rounds)) {
     metrics.push({ label: "Rounds", value: String(block.rounds) });
   }
-  if (finitePositiveNumber(block.interval_blocks)) {
-    metrics.push({ label: "Blocks", value: String(block.interval_blocks) });
-  }
 
   if (work) {
     metrics.push({ label: "Work", value: workTakesSets ? `${pendingSets} × ${work}` : work });
-  }
-  if (shouldShowRest(block.between_block_rest)) {
-    const between = formatMeasured(block.between_block_rest);
-    if (between) metrics.push({ label: "Between blocks", value: between });
   }
 
   return metrics;
@@ -995,8 +988,7 @@ export function getBlockExecutionDisplay(
       stopRules.push(embeddedStop[2].trim());
       return;
     }
-    if ((cleanText(block?.week_prescription) && normalizeForDedupe(text) === normalizeForDedupe(block?.week_prescription ?? ""))
-      || /^\d+(?:[–-]\d+|\.\d+)?\s*(?:sets?\s*[x×]|[x×]\s*\d|rounds?\s+(?:of|[x×])|(?:s|sec|seconds)\s+work\b|(?:min|minutes)\b)/i.test(text)) {
+    if (/^\d+(?:[–-]\d+|\.\d+)?\s*(?:sets?\s*[x×]|[x×]\s*\d|(?:s|sec|seconds)\s+work\b|(?:min|minutes)\b)/i.test(text)) {
       prescriptions.push(text);
       return;
     }
