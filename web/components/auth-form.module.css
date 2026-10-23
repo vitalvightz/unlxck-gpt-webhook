@@ -18,6 +18,7 @@
 
 .brand { color: var(--text-secondary); letter-spacing: .22em; }
 .layout .title { margin: 10px 0 0; font-size: clamp(30px, 5vw, 40px); line-height: 1.1; letter-spacing: -.04em; }
+.signupIntro { display: grid; gap: 12px; margin-top: 16px; }
 .choices { display: grid; gap: 12px; }
 .google, .email {
   display: flex;
