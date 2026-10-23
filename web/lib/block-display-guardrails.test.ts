@@ -214,13 +214,13 @@ test("recovers the live missing Pallof card volume from the final written plan",
 test("exact recovery refuses planning ranges and ambiguous duplicate source rows", () => {
   assert.equal(getSourceExactVolumeOverride("- Cable Pallof Press: 1-2 controlled sets x 3-5 slow reps", "Cable Pallof Press"), null);
   assert.equal(getSourceExactVolumeOverride(
-    "- Cable Pallof Press: 2 sets x 3 reps; rest 90 sec.\\n- Cable Pallof Press: 3 sets x 4 reps; rest 90 sec.",
+    "- Cable Pallof Press: 2 sets x 3 reps; rest 90 sec.\n- Cable Pallof Press: 3 sets x 4 reps; rest 90 sec.",
     "Cable Pallof Press",
   ), null);
 });
 
 test("exact recovery does not borrow from a wrong exercise or countdown", () => {
-  const source = "D-13 (Monday): Strength\\n- Cable Pallof Press: 2 sets x 3 reps each side.";
+  const source = "D-13 (Monday): Strength\n- Cable Pallof Press: 2 sets x 3 reps each side.";
   assert.equal(getSourceExactVolumeOverride(source, "Cable Pallof Press Plus", "D-13"), null);
   assert.equal(getSourceExactVolumeOverride(source, "Cable Pallof Press", "D-6"), null);
 });
