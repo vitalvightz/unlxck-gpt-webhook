@@ -400,6 +400,7 @@ export type BlockComponent = {
 };
 
 export type StructuredBlock = {
+  week_prescription?: string | null;
   prescription_source?: "athlete" | null;
   prescription_text?: string | null;
   athlete_dose?: Record<string, unknown> | null;

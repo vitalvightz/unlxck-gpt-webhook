@@ -244,7 +244,7 @@ _DOSE_RANGE_RE = re.compile(
     r"(?P<low>\d+(?:\.\d+)?)\s*[-–—]\s*(?P<high>\d+(?:\.\d+)?)(?![\d.])"
 )
 _DOSE_UNIT_AFTER_RE = re.compile(
-    r"^\s*(?:[x×]|/\s*10\b|%|sets?\b|reps?\b|rounds?\b|holds?\b|bursts?\b|"
+    r"^\s*(?:(?:controlled|slow)\s+)?(?:[x×]|/\s*10\b|%|sets?\b|reps?\b|rounds?\b|holds?\b|bursts?\b|"
     r"kg\b|kgs\b|lbs?\b|s\b|sec\b|secs\b|seconds?\b|min\b|mins\b|minutes?\b|m\b)",
     re.IGNORECASE,
 )
@@ -315,7 +315,7 @@ _SUBCLAUSE_REST_RES = (
     re.compile(rf"(?:[,;/]|\bwith)\s*rest\s*:?\s*{_NUMBER}\s*{_TIME_UNIT}\b", re.IGNORECASE),
 )
 _EFFORT_CLAUSE_RE = re.compile(
-    r"(?P<method>RPE|RIR)\s*(?P<value>\d+(?:\.\d+)?(?:\s*[-–—]\s*\d+(?:\.\d+)?)?)",
+    r"(?P<method>RPE|RIR)\s*[~≈]?\s*(?P<value>\d+(?:\.\d+)?(?:\s*[-–—]\s*\d+(?:\.\d+)?)?)",
     re.IGNORECASE,
 )
 _SETS_REPS_CLAUSE_RE = re.compile(
@@ -412,14 +412,14 @@ def _lift_dose_fields(dose: str, name: str | None = None) -> tuple[dict[str, Any
     fields: dict[str, Any] = {}
     # The deterministic programme uses compact lifting and interval notation.
     # Lift its exact numbers without discarding the accompanying intent/cues.
-    reps = re.match(r"\s*(\d+)\s*(?:sets?\s*)?[x×]\s*(\d+)\b(?!\s*(?:s|secs?|seconds?|mins?|minutes?)\b)", dose, re.I)
-    timed = re.match(r"\s*(\d+)\s*(?:sets?|holds?)?\s*[x×]\s*" + _NUMBER + r"\s*" + _TIME_UNIT + r"\b", dose, re.I)
+    reps = re.match(r"\s*(\d+)\s*(?:(?:controlled\s+)?sets?\s*)?[x×]\s*(\d+)\b(?!\s*(?:s|secs?|seconds?|mins?|minutes?)\b)", dose, re.I)
+    timed = re.match(r"\s*(\d+)\s*(?:sets?|holds?|rounds?)?\s*[x×]\s*" + _NUMBER + r"\s*" + _TIME_UNIT + r"\b", dose, re.I)
     interval = re.match(r"\s*(\d+(?:\.\d+)?)\s*(s|secs?|seconds?|mins?|minutes?)\s+(?:work|effort)\s*[,/]\s*"
                         r"(\d+(?:\.\d+)?)\s*(s|secs?|seconds?|mins?|minutes?)\s+rest\s*[x×]\s*(\d+)\s+rounds?", dose, re.I)
     if reps:
         fields.update(sets=int(reps[1]), reps=int(reps[2]))
     elif timed:
-        if re.search(r"\brounds?\b", dose, re.I):
+        if re.search(r"\brounds?\b|\b(?:work|effort)\s*[/,]", dose, re.I):
             fields.update(rounds=int(timed[1]), work=_measured(timed))
         else:
             fields.update(sets=int(timed[1]), duration=_measured(timed))
@@ -1203,6 +1203,8 @@ def reconcile_open_development_sessions(
             session["title"] = item.get("label") or session["title"]
             session["execution_order"] = item.get("execution_order")
             for block in session["blocks"]:
+                prescription = next((exercise.get("prescription") for exercise in exercises
+                                     if exercise.get("name") == block["display_name"]), "")
                 original = next((source for source in (old or {}).get("blocks") or []
                                  if source.get("display_name") == block["display_name"]), None)
                 if original is not None:
@@ -1211,8 +1213,6 @@ def reconcile_open_development_sessions(
                     dose = {key: block.get(key) for key in dose_fields}
                     block.update(copy.deepcopy(original))
                     block.update(dose)
-                    prescription = next((exercise.get("prescription") for exercise in exercises
-                                         if exercise.get("name") == block["display_name"]), "")
                     if block.get("components"):
                         # A cluster's dose is its rounds + component rows; the
                         # sentence form is not repeated as a coaching cue.
@@ -1220,6 +1220,9 @@ def reconcile_open_development_sessions(
                                                   if cue != prescription]
                     elif prescription and prescription not in (block.get("coaching_cues") or []):
                         block["coaching_cues"] = [*(block.get("coaching_cues") or []), prescription]
+                # Write after merging converter content: only this week's own
+                # programme may supply the full dose, including side/tempo/load.
+                block["week_prescription"] = _exact_working_dose(prescription) or None
             by_day[weekday]["sessions"].append(session)
         for entry in rotation:
             if entry.get("week") != position or not watch_templates:
