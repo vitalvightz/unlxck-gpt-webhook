@@ -97,6 +97,7 @@ import { PLAN_SAFETY_NOTE } from "@/lib/safety-copy";
 import {
   applySourceSetRange,
   getSourcePrescriptionRangeOverrides,
+  getSourceExactVolumeOverride,
   getSourceStopRuleOverride,
   stripSafetyOwnedClause,
   stripSafetyOwnedStopRules,
@@ -380,7 +381,17 @@ function useBlockPrescription(block: StructuredBlock, sourceCountdown?: string |
   const load = loadText ? loadText.charAt(0).toUpperCase() + loadText.slice(1) : null;
   // Times read short ("2 min", "90 sec") so a row of stats fits a phone; the
   // value itself never changes (see compactTimeUnits).
-  const metrics = applySourceSetRange(selectBlockMetric(block), sourceOverrides.sets).map((metric) => ({
+  // An AI card can omit the quantitative dose even when its saved final text
+  // states it exactly. Recover only a uniquely matched scalar source line.
+  // Do not replace authored metrics or athlete-edited prescriptions.
+  const sourceVolume = block.prescription_source !== "athlete"
+    && !block.athlete_change
+    && block.sets == null && block.reps == null
+    && block.rounds == null && block.work == null && block.duration == null
+    && block.distance == null
+    ? getSourceExactVolumeOverride(sourceText, title, sourceCountdown)
+    : null;
+  const metrics = applySourceSetRange(selectBlockMetric(sourceVolume ? { ...block, ...sourceVolume } : block), sourceOverrides.sets).map((metric) => ({
     ...metric,
     value: compactTimeUnits(metric.value),
   }));
@@ -408,7 +419,7 @@ function useBlockPrescription(block: StructuredBlock, sourceCountdown?: string |
       .map((rule) => rule.trim().replace(/^stop(?:\s+rule)?\s*:\s*/i, "").trim())
       .filter(Boolean)
       .join("; ") || null;
-  return { title, load, metrics, rest, effort, compactStopRule, progression };
+  return { title, load, metrics, rest, effort, compactStopRule, progression, sourceVolume };
 }
 
 export function BlockCard({
@@ -439,7 +450,7 @@ export function BlockCard({
   hideInstructions?: boolean;
 }) {
   const rehabLabelPolicy = useContext(RehabLabelContext);
-  const { title, load, metrics, rest, effort, compactStopRule, progression } = useBlockPrescription(
+  const { title, load, metrics, rest, effort, compactStopRule, progression, sourceVolume } = useBlockPrescription(
     block,
     sourceCountdown,
   );
@@ -455,7 +466,9 @@ export function BlockCard({
   const prescriptionText = cleanText(block.prescription_text)
     || (metrics.length === 0 ? execution.prescription : null);
   // The demo can pin the lead cue; every remaining authored detail still belongs here.
-  const visibleCues = hideCues ? [] : allCues.slice(hideLeadCue ? 1 : 0).map(compactCoachLine);
+  const visibleCues = hideCues ? [] : allCues.slice(hideLeadCue ? 1 : 0)
+    .filter(cue => !sourceVolume || !/^\s*\d+\s*[-–—]\s*\d+\s+(?:controlled\s+)?sets?\b/i.test(cue))
+    .map(compactCoachLine);
   const directive = openBlockWeekDirective(openWeekIntent, block);
   // Display the validated AI instruction once; deload retains its own directive.
   const weekDirective = directive?.usesProgressionRule ? null : directive;
@@ -1135,7 +1148,11 @@ export function SessionCard({
 
   const mentalCategory = mentalSessionCategory(session);
   if (mentalCategory) {
-    const mentalDuration = duration || formatMeasured(blocks.find((block) => block.duration)?.duration);
+    // Tactical analysis and reflection are prompt-driven, not timed workouts.
+    // Ignore synthetic durations in legacy saved cards as well as new plans.
+    const mentalDuration = mentalCategory === "Analyse" || mentalCategory === "Reflect"
+      ? null
+      : duration || formatMeasured(blocks.find((block) => block.duration)?.duration);
     const summary = mentalSessionSummary(session) || (mentalCategory === "Reflect"
       ? "What worked? What needs adjusting next time?"
       : mentalCategory === "Analyse"
