@@ -4220,6 +4220,18 @@ def build_authoritative_open_plan(
         # The locked merge calls the same production open-week projection used
         # when reading saved plans, so all four weeks retain planner membership.
         merged = _merge_locked_content(draft, planning_brief, plan_markdown)
+        # Tactical rotation copies a source template into its selected weeks.
+        # Give those week occurrences distinct identities so training logs and
+        # completion events cannot accidentally point at another week.
+        for week in merged.get("weeks") or []:
+            week_index = week.get("week_index")
+            for day in week.get("days") or []:
+                for session in day.get("sessions") or []:
+                    if session.get("session_id") != "open-tactical-template":
+                        continue
+                    session["session_id"] = f"open-tactical-week-{week_index}"
+                    for block_index, block in enumerate(session.get("blocks") or [], start=1):
+                        block["block_id"] = f"open-tactical-w{week_index}-b{block_index}"
         if _open_plan_contract_errors(merged, planning_brief):
             return None
         from collections import Counter
