@@ -585,6 +585,57 @@ def _recover_coverage_failed_card(
     )
 
 
+def _build_source_owned_structured_card(
+    *, planning_brief: Any, plan_text: str, computed_support: Any = None,
+) -> StructuredPlanOutcome | None:
+    """Prefer already-approved planning facts over a second generative pass.
+
+    A successful structured card is only returned after full schema, planner
+    membership and safety checks. The normal model path remains available when
+    the deterministic planner cannot cover a legacy/custom plan.
+    """
+    if not isinstance(planning_brief, dict) or not plan_text.strip():
+        return None
+    from .structured_plan_generation import (
+        build_authoritative_open_plan, planner_sc_coverage_losses,
+    )
+    from .structured_plan_models import safe_parse_structured_plan, SCHEMA_VERSION
+    from .structured_plan_safety import audit_structured_plan, split_findings
+
+    is_open = isinstance(planning_brief.get("open_plan_spec"), dict) and (
+        planning_brief["open_plan_spec"].get("plan_type") == "open_ongoing_system"
+    )
+    if is_open:
+        candidate = build_authoritative_open_plan(planning_brief, plan_text)
+    else:
+        from .structured_plan_deterministic_fallback import build_deterministic_structured_plan
+        candidate = build_deterministic_structured_plan(planning_brief, plan_text)
+    if not isinstance(candidate, dict):
+        return None
+    parsed = safe_parse_structured_plan(candidate, raw_markdown=plan_text)
+    if not parsed.ok or parsed.plan is None:
+        return None
+    if planner_sc_coverage_losses(candidate, planning_brief, plan_text):
+        return None
+
+    warnings: list[str] = []
+    if not is_open:
+        from .structured_plan_faithfulness import check_structured_faithfulness, PRESCRIPTION
+        unfaithful = check_structured_faithfulness(candidate, plan_text, planning_brief)
+        if any(not str(finding).startswith(f"{PRESCRIPTION}:") for finding in unfaithful):
+            return None
+        warnings = [f"faithfulness: {item}" for item in unfaithful]
+    # Open-plan source-of-truth is the four-week deterministic development block,
+    # not the prose rendering, which may omit individual selected exercises.
+    blocking, advisory = split_findings(audit_structured_plan(candidate, computed_support))
+    if blocking:
+        return None
+    return StructuredPlanOutcome(
+        status="valid", structured_plan=candidate, schema_version=SCHEMA_VERSION,
+        warnings=["source_owned_conversion: no additional model request", *warnings, *advisory],
+    )
+
+
 async def attempt_structured_plan_for_result(
     result: dict[str, Any],
     *,
@@ -1887,6 +1938,26 @@ class OpenAIStage2Automator:
         event_date = ""
         if planning_brief:
             event_date = str(planning_brief.get("fight_date") or "")
+
+        # Do not regenerate a completed programme merely to serialize it.
+        # The open four-week development block already contains exercises and
+        # prescriptions; for dated camps the calendar/role map supplies them.
+        # Only legacy/custom cases without a safe source-owned card need AI.
+        computed_support = (
+            planning_brief.get("computed_support")
+            if isinstance(planning_brief, dict) else None
+        )
+        source_owned = _build_source_owned_structured_card(
+            planning_brief=planning_brief, plan_text=final_plan_text,
+            computed_support=computed_support,
+        )
+        if source_owned is not None:
+            logger.info(
+                "[stage2] structured_source_owned job_id=%s source=%s weeks=%s model_calls=0",
+                (log_context or {}).get("job_id") or "unknown", source,
+                len(source_owned.structured_plan.get("weeks") or []),
+            )
+            return self._reconcile_structured_calendar(source_owned, planning_brief), costs
 
         json_format = _structured_response_format()
 
