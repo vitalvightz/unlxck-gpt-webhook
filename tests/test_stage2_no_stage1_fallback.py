@@ -41,6 +41,33 @@ class _Client:
         self.responses = _Responses(response)
 
 
+def test_provider_logs_correlate_start_stream_and_cancellation_without_prompt(caplog, monkeypatch):
+    monkeypatch.setattr(stage2_module, "_MODEL_WAIT_LOG_INTERVAL_SECONDS", 0.001)
+    class HangingStream(_Stream):
+        async def get_final_response(self):
+            await asyncio.Event().wait()
+
+    client = _Client(None)
+    client.responses.stream = lambda **kwargs: HangingStream(None)
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    async def scenario():
+        with pytest.raises(asyncio.TimeoutError):
+            await asyncio.wait_for(automator._generate_text(
+                "private athlete prompt", attempt_label="first_pass", source="self_serve",
+                log_context={"job_id": "job-logging"},
+            ), timeout=0.01)
+
+    with caplog.at_level("INFO"):
+        asyncio.run(scenario())
+    assert "model_request_started" in caplog.text
+    assert "model_stream_opened job_id=job-logging" in caplog.text
+    assert "model_request_waiting job_id=job-logging" in caplog.text
+    assert "phase=awaiting_final_response" in caplog.text
+    assert "model_request_cancelled job_id=job-logging" in caplog.text
+    assert "private athlete prompt" not in caplog.text
+
+
 def _incomplete_response(text: str):
     return SimpleNamespace(
         id="resp_incomplete",

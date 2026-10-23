@@ -610,9 +610,23 @@ def _generation_hard_max_runtime_seconds() -> int:
     raw_value = os.getenv("APP_GENERATION_HARD_MAX_RUNTIME_SECONDS", "900").strip()
     try:
         parsed = int(float(raw_value))
-    except ValueError:
+    except (ValueError, OverflowError):
         return 900
     return max(300, parsed)
+
+
+def generation_job_remaining_runtime_seconds(job: dict[str, Any]) -> float:
+    """Wall-clock budget; heartbeat freshness never extends a running attempt."""
+    started_at = _parse_datetime(job.get("started_at"))
+    age = (datetime.now(timezone.utc) - started_at).total_seconds() if started_at else 0.0
+    return max(0.0, _generation_hard_max_runtime_seconds() - max(0.0, age))
+
+
+def is_generation_job_runtime_exceeded(job: dict[str, Any]) -> bool:
+    return (
+        str(job.get("status") or "") == "running"
+        and generation_job_remaining_runtime_seconds(job) <= 0
+    )
 
 
 DEFAULT_PROFILE_CACHE_TTL_SECONDS = 10.0
@@ -814,7 +828,7 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
             return "stage1_planner_stalled"
         started_at = _parse_datetime(job.get("started_at"))
         now = datetime.now(timezone.utc)
-        if started_at is not None and (now - started_at).total_seconds() >= _generation_hard_max_runtime_seconds():
+        if is_generation_job_runtime_exceeded(job):
             # A healthy heartbeat only proves the heartbeat loop is alive, not
             # that the generation work itself is progressing. Past the hard
             # ceiling we recover the job regardless of heartbeat freshness.
