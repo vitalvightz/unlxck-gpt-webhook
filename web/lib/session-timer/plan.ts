@@ -19,7 +19,7 @@ import type {
 export type DoseRange = { min: number; max: number };
 
 /**
- * One part of an exercise's dose, shown as a chip under its name. `target` is
+ * One part of an exercise's dose, shown in the stats row under its name. `target` is
  * what each set or round asks for (reps, distance, time, or a mode such as
  * AMRAP); `load` and `effort` are how heavy and how hard.
  */
@@ -39,7 +39,7 @@ type TimerItemBase = {
   title: string;
   /** Reps / distance / load / effort as one line (notes, and runs saved before `stats`). */
   detail: string | null;
-  /** The same dose as separate chips. Absent on runs saved by an older timer. */
+  /** The same dose as separate stats. Absent on runs saved by an older timer. */
   stats?: TimerStat[];
   blockType: string | null;
 };
@@ -205,7 +205,7 @@ function part(kind: TimerStat["kind"], value: string | null): DosePart | null {
   return value ? { kind, value, text: value } : null;
 }
 
-/** The dose as chips and as one line; parts in display order, nulls skipped. */
+/** The dose as stats and as one line; parts in display order, nulls skipped. */
 function describeDose(parts: Array<DosePart | null>): Pick<TimerItemBase, "detail" | "stats"> {
   const shown = parts.filter((entry): entry is DosePart => entry !== null);
   return {

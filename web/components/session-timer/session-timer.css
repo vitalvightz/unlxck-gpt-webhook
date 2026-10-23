@@ -236,38 +236,53 @@
   font-size: clamp(20px, 5.4vw, 32px);
 }
 
-/* The dose under the exercise name: what each set asks for reads first and
-   brightest (it is what the athlete checks between reps), then load and
-   effort as quieter chips. Wraps, never scrolls. */
+/* A supporting stats row, with one surface and no individual button shapes. */
 .st-stats {
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  gap: 6px;
-  max-width: 34ch;
-  margin: 4px 0 0;
-  padding: 0;
-  list-style: none;
+  width: min(100%, 340px);
+  margin: 6px 0 2px;
+  padding: 10px 0;
+  border-radius: 16px;
+  background: var(--st-surface);
 }
 
-.st-stats li {
-  padding: 5px 11px;
-  border: 1px solid var(--st-line);
-  border-radius: 999px;
-  background: var(--st-surface);
+.st-stats > div {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 10px;
+  overflow-wrap: anywhere;
+}
+
+.st-stats > div + div { border-left: 1px solid var(--st-line); }
+
+.st-stats dt {
   color: var(--st-ink-soft);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.st-stats dd {
+  order: -1;
+  margin: 0;
+  color: var(--st-ink);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
 
-.st-stats li[data-kind="target"] {
-  border-color: color-mix(in srgb, var(--st-ink) 22%, transparent);
-  background: var(--st-surface-strong);
-  color: var(--st-ink);
-  font-size: 16px;
-  font-weight: 700;
+@media (max-height: 700px) {
+  .st-stats { margin: 2px 0; padding: 7px 0; }
+  .st-stats dd { font-size: 20px; }
 }
 
 .st-detail,
@@ -786,7 +801,7 @@
 .st-next-plan {
   grid-area: plan;
   font-size: 12px;
-  color: var(--st-ink-faint);
+  color: var(--st-ink-soft);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1558,8 +1573,7 @@ html[data-theme="light"] .today-tool-button[data-accent="true"] .today-tool-icon
 
 /* One task at a time: confirm while resting, then return to the next-set action. */
 .st-root[data-rest-log] .st-tools,
-.st-root[data-rest-log] .st-next,
-.st-root[data-rest-log] .st-stats { display: none; }
+.st-root[data-rest-log] .st-next { display: none; }
 .st-rest-sheet { border: 0; background: var(--st-surface); }
 .st-rest-sheet-head h3 { font-size: 16px; }
 .st-root[data-rest-log="open"] .st-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; }
