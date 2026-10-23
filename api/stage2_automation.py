@@ -455,8 +455,8 @@ def _stage2_structured_schema_mode() -> bool:
 
     Set UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE=1 after live provider acceptance
     has been verified. The default stays on JSON-object mode, retaining
-    normal shape, source-faithfulness and safety checks without opt-in
-    field-ownership rejection.
+    all shape, source-faithfulness, safety and strict field-ownership
+    validation independently of provider response format.
     """
 
     raw = os.getenv("UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE")
@@ -1825,7 +1825,7 @@ class OpenAIStage2Automator:
             computed_support=computed_support,
             planning_brief=planning_brief,
             allow_salvage=not _structured_repair_enabled(),
-            strict_content=(json_format or {}).get("type") == "json_schema",
+            strict_content=True,  # Validation is independent of the provider's JSON format.
         )
         _annotate_call(first_cost, outcome=first_outcome.status)
         # A safety-blocked card is terminal: it was schema-valid, so the repair
@@ -1870,7 +1870,7 @@ class OpenAIStage2Automator:
             repair_fn=lambda _data, _errors: repaired_json,
             computed_support=computed_support,
             planning_brief=planning_brief,
-            strict_content=(json_format or {}).get("type") == "json_schema",
+            strict_content=True,  # Validation is independent of the provider's JSON format.
         )
         _annotate_call(repair_cost, outcome=repaired_outcome.status, reason=first_outcome.status)
         # Telemetry for the repair lever: did the second call actually rescue a
