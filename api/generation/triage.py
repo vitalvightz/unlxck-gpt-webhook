@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from fightcamp.injury_triage import injury_triage_blocking_enabled
+
 from ..models import PROFILE_REFRESH_FAILED_WHY_LOG_KEY
 
 _TRIAGE_FINAL_RESULT_STATUSES = frozenset(
@@ -69,6 +71,8 @@ def _is_truthy_flag(value: Any) -> bool:
 
 
 def should_skip_stage2(stage1_result: dict[str, Any], *, allow_triage_resume_override: bool = False) -> bool:
+    if not injury_triage_blocking_enabled():
+        allow_triage_resume_override = True
     status_value = str(stage1_result.get("status") or "").strip().lower()
     if status_value == "triage_blocked":
         return not allow_triage_resume_override

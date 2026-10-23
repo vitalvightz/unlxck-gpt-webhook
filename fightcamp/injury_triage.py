@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from collections.abc import Mapping
 from functools import lru_cache
+import os
 import re
 from typing import Any
 
@@ -12,6 +13,17 @@ from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .sparring_advisories import summarize_sparring_injury_risk
 from .triage_features import build_triage_features, parse_guided_note_tags
 from .injury_location import get_injury_location
+
+
+def injury_triage_blocking_enabled() -> bool:
+    """Whether a non-full-plan triage outcome may hold generation at Stage 1.
+
+    Off by default so beta athletes are never left waiting on an admin
+    review. Triage still runs and is recorded; generation continues as an
+    approved resume. Reserved for coach-supervised deployments.
+    """
+    raw = os.getenv("UNLXCK_INJURY_TRIAGE_BLOCKING", "0").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
 
 
 FULL_PLAN = "full_plan"

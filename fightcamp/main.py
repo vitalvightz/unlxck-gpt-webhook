@@ -7,7 +7,12 @@ from typing import Any, Callable
 from pydantic import BaseModel, ConfigDict, model_validator
 
 from .input_parsing import PlanInput
-from .injury_triage import FULL_PLAN, blocked_mode_output, triage_injuries
+from .injury_triage import (
+    FULL_PLAN,
+    blocked_mode_output,
+    injury_triage_blocking_enabled,
+    triage_injuries,
+)
 from .logging_utils import configure_logging
 from .plan_pipeline import (
     _filter_mindset_blocks,
@@ -278,7 +283,8 @@ def generate_plan_sync(
         parsed_injury_count=parsed_injury_count,
     )
     triage_mode = str(triage_result.mode or "").strip().lower()
-    triage_resume_override_applied = _triage_resume_override_allows_continuation(
+    triage_blocking_disabled = triage_result.mode != FULL_PLAN and not injury_triage_blocking_enabled()
+    triage_resume_override_applied = triage_blocking_disabled or _triage_resume_override_allows_continuation(
         data,
         triage_mode=triage_mode,
     )
@@ -466,6 +472,7 @@ def generate_plan_sync(
                 "triage_mode": triage_mode,
                 "runtime_triage_mode": FULL_PLAN,
                 "override_key": _TRIAGE_RESUME_OVERRIDE_KEY,
+                "blocking_disabled": triage_blocking_disabled,
             }
             why_log["injury_triage_original"] = triage_result.to_dict()
     return _validate_stage1_result(result)

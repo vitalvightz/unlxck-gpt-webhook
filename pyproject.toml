@@ -5,6 +5,7 @@ testpaths = ["tests"]
 addopts = "-ra --strict-markers"
 markers = [
   "spacy: test exercises the spaCy/negspacy injury-parsing path (loads en_core_web_sm)",
+  "triage_blocking_default: run with the production default (injury triage never holds generation)",
 ]
 
 [tool.ruff]

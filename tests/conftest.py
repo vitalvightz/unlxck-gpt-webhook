@@ -65,3 +65,16 @@ def nlp():
     if nlp_obj is None:
         pytest.skip("spaCy or the en_core_web_sm model is not available")
     return nlp_obj
+
+
+@pytest.fixture(autouse=True)
+def _injury_triage_blocking_on(request, monkeypatch):
+    """Existing triage tests cover the coach-supervised blocking mode.
+
+    Production defaults to non-blocking; tests that exercise that default opt
+    out with the ``triage_blocking_default`` marker.
+    """
+    if request.node.get_closest_marker("triage_blocking_default"):
+        monkeypatch.delenv("UNLXCK_INJURY_TRIAGE_BLOCKING", raising=False)
+    else:
+        monkeypatch.setenv("UNLXCK_INJURY_TRIAGE_BLOCKING", "1")
