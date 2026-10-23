@@ -236,38 +236,47 @@
   font-size: clamp(20px, 5.4vw, 32px);
 }
 
-/* The dose under the exercise name: what each set asks for reads first and
-   brightest (it is what the athlete checks between reps), then load and
-   effort as quieter chips. Wraps, never scrolls. */
+/* A small supporting line: no card surface or individual button shapes. */
 .st-stats {
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  gap: 6px;
-  max-width: 34ch;
-  margin: 4px 0 0;
-  padding: 0;
-  list-style: none;
+  width: fit-content;
+  max-width: 100%;
+  margin: 2px 0;
+  padding: 2px 0;
 }
 
-.st-stats li {
-  padding: 5px 11px;
-  border: 1px solid var(--st-line);
-  border-radius: 999px;
-  background: var(--st-surface);
+.st-stats > div {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  padding: 0 16px;
+  overflow-wrap: anywhere;
+}
+
+.st-stats > div + div { border-left: 1px solid var(--st-line); }
+
+.st-stats dt {
   color: var(--st-ink-soft);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.3;
-  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
-.st-stats li[data-kind="target"] {
-  border-color: color-mix(in srgb, var(--st-ink) 22%, transparent);
-  background: var(--st-surface-strong);
+.st-stats dd {
+  order: -1;
+  margin: 0;
   color: var(--st-ink);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
 }
 
 .st-detail,
@@ -786,7 +795,7 @@
 .st-next-plan {
   grid-area: plan;
   font-size: 12px;
-  color: var(--st-ink-faint);
+  color: var(--st-ink-soft);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1558,8 +1567,7 @@ html[data-theme="light"] .today-tool-button[data-accent="true"] .today-tool-icon
 
 /* One task at a time: confirm while resting, then return to the next-set action. */
 .st-root[data-rest-log] .st-tools,
-.st-root[data-rest-log] .st-next,
-.st-root[data-rest-log] .st-stats { display: none; }
+.st-root[data-rest-log] .st-next { display: none; }
 .st-rest-sheet { border: 0; background: var(--st-surface); }
 .st-rest-sheet-head h3 { font-size: 16px; }
 .st-root[data-rest-log="open"] .st-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; }

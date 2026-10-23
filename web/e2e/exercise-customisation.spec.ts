@@ -363,6 +363,12 @@ test("strength timer logs during rest, restores drafts and reviews actual histor
         await expect(timer.getByRole("heading", { name: "Back Squat", exact: true })).toBeInViewport({ ratio: 1 });
         await expect(timer.locator(".st-phase")).toBeInViewport({ ratio: 1 });
       }
+      if (["work", "confirmed"].includes(state)) {
+        const stats = timer.locator(".st-stats");
+        await expect(stats).toBeInViewport({ ratio: 1 });
+        const cells = await stats.locator(":scope > div").evaluateAll(elements => elements.map(el => el.getBoundingClientRect().y));
+        expect(new Set(cells.map(Math.round)).size).toBe(1);
+      }
       if (shots) { await settle(page); await page.screenshot({ path: `${shots}/timer-${state}-${width}.png` }); }
     }
     await page.setViewportSize({ width: 390, height: 844 });
@@ -371,8 +377,10 @@ test("strength timer logs during rest, restores drafts and reviews actual histor
   await timer.locator(".st-hint").click();
   await expect(timer.getByLabel("Load kg, set 1")).toHaveCount(0);
   await expect(timer).toContainText("100 kg");
-  await expect(timer).toContainText("RPE 7");
+  await expect(timer.locator('.st-stats [data-kind="effort"] dt')).toHaveText("RPE");
+  await expect(timer.locator('.st-stats [data-kind="effort"] dd')).toHaveText("7");
   await capture("work", "Set 1 done");
+  expect((await new AxeBuilder({ page }).include(".st-root").analyze()).violations).toEqual([]);
   await timer.getByRole("button", { name: "Set 1 done", exact: true }).click();
   await expect(timer.getByLabel("Load kg, set 1")).toHaveValue("100");
   await expect(timer.getByLabel("Reps, set 1")).toHaveValue("5");

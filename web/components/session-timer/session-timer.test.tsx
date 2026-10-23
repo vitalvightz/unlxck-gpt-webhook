@@ -122,16 +122,27 @@ const SHUTTLE: TimerItem = {
   unit: "round",
 };
 
-test("the dose shows as chips, and tapped rounds are summarised as rounds", () => {
+test("the prescription separates distance and effort labels without losing their units", () => {
   const html = render([SHUTTLE, ITEMS[0]]);
-  assert.match(html, /<ul class="st-stats" aria-label="Prescription"><li data-kind="target">200 m<\/li><li data-kind="effort">RPE 8<\/li><\/ul>/);
+  assert.match(html, /<dl class="st-stats" aria-label="Prescription"><div data-kind="target"><dt>Distance<\/dt><dd>200 m<\/dd><\/div><div data-kind="effort"><dt>RPE<\/dt><dd>8<\/dd><\/div><\/dl>/);
   assert.match(html, /aria-label="Edit rounds and rest"><span>6<\/span>\u00a0rounds · <span>1:30<\/span>\u00a0rest/);
   // What comes after carries its own dose too.
   const before = render([ITEMS[0], SHUTTLE]);
   assert.match(before, /st-next-plan">6 × 200 m · 90s rest</);
 });
 
-test("a run saved before chips existed still shows its one-line detail", () => {
+test("prescription stats preserve rep ranges, percentage loads and RIR", () => {
+  const html = render([{ ...SHUTTLE, stats: [
+    { kind: "target", value: "5–8 reps" },
+    { kind: "load", value: "80% 1RM" },
+    { kind: "effort", value: "RIR 3" },
+  ] }]);
+  assert.match(html, /<dt>Reps<\/dt><dd>5–8<\/dd>/);
+  assert.match(html, /<dt>Load<\/dt><dd>80% 1RM<\/dd>/);
+  assert.match(html, /<dt>RIR<\/dt><dd>3<\/dd>/);
+});
+
+test("a run saved before stats existed still shows its one-line detail", () => {
   const html = render([ITEMS[1]]);
   assert.match(html, /<p class="st-detail">5 reps · RPE 7<\/p>/);
   assert.doesNotMatch(html, /st-stats/);

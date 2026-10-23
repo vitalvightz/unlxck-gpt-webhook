@@ -46,6 +46,7 @@ import {
   formatShortDuration,
   type SetsItem,
   type TimerItem,
+  type TimerStat,
 } from "@/lib/session-timer/plan";
 
 export type SessionTimerSummary = {
@@ -142,23 +143,39 @@ function describeItem(item: TimerItem): string {
   return "Tap done when finished";
 }
 
-/**
- * The exercise's dose as chips under its name: the per-set target first and
- * brightest, then load and effort. A run saved before chips existed falls back
- * to its one-line detail.
- */
-function DoseChips({ item }: { item: TimerItem }) {
+/** Keep saved prescriptions intact; separate familiar units only for display. */
+function doseStatDisplay(stat: TimerStat): { label: string; value: string } {
+  if (stat.kind === "effort") {
+    const effort = /^(RPE|RIR)\s+(.+)$/i.exec(stat.value);
+    return effort ? { label: effort[1].toUpperCase(), value: effort[2] } : { label: "Effort", value: stat.value };
+  }
+  if (stat.kind === "load") {
+    return { label: /\b(?:kg|lbs?)\b/i.test(stat.value) ? "Weight" : "Load", value: stat.value };
+  }
+  const reps = /^(.+?)\s+reps?$/i.exec(stat.value);
+  if (reps) return { label: "Reps", value: reps[1] };
+  const label = /\s(?:m|km|mi|yd)\b/i.test(stat.value) ? "Distance"
+    : /\s(?:s|sec|min)\b/i.test(stat.value) ? "Time" : "Target";
+  return { label, value: stat.value };
+}
+
+/** One quiet prescription row; older saved runs retain their one-line detail. */
+function DoseStats({ item }: { item: TimerItem }) {
   if (!item.stats) return item.detail ? <p className="st-detail">{item.detail}</p> : null;
   // A hold's time is on the clock; everything else stays in view.
   if (item.stats.length === 0) return null;
   return (
-    <ul className="st-stats" aria-label="Prescription">
-      {item.stats.map((stat, index) => (
-        <li key={`${stat.kind}-${index}`} data-kind={stat.kind}>
-          {stat.value}
-        </li>
-      ))}
-    </ul>
+    <dl className="st-stats" aria-label="Prescription">
+      {item.stats.map((stat, index) => {
+        const { label, value } = doseStatDisplay(stat);
+        return (
+          <div key={`${stat.kind}-${index}`} data-kind={stat.kind}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        );
+      })}
+    </dl>
   );
 }
 
@@ -1281,7 +1298,7 @@ export function SessionTimer({
             </p>
           )}
           <h2 className="st-title">{item?.title}</h2>
-          {item ? <DoseChips item={item} /> : null}
+          {item ? <DoseStats item={item} /> : null}
 
           {state.phase === "ready" && item ? (
             <ReadyPanel
