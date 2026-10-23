@@ -151,8 +151,8 @@ Structured-card call behaviour is controlled by three further flags:
 | Env var | Default | Effect |
 |---|---|---|
 | `UNLXCK_STAGE2_STRUCTURED_REPAIR` | **off** (opt-in) | One repair call after a failed first structured pass. Off because production telemetry (40 jobs, 2026-10-05 to 2026-10-14) showed it rescuing about 1 in 12 failed cards at 150–200 s each. |
-| `UNLXCK_STAGE2_STRUCTURED_JSON_MODE` | on | Legacy `json_object` mode when schema mode is explicitly disabled. |
-| `UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE` | **on** | Send the strict `json_schema` built from `StructuredTrainingPlan`. Missing source prescriptions and dose text in execution fields fail content validation. Schema construction failure never silently falls back to free-form output. Explicitly disable only for an endpoint without structured outputs support. |
+| `UNLXCK_STAGE2_STRUCTURED_JSON_MODE` | on | `json_object` mode unless schema mode is explicitly enabled. |
+| `UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE` | **off** (opt-in) | After verifying live acceptance for the configured model/endpoint, enable the strict `json_schema` built from `StructuredTrainingPlan`. Missing source prescriptions and dose text in execution fields fail content validation. Schema construction failure never silently falls back to free-form output. |
 
 These apply only to the structured-card calls. The markdown plan-text pass never
 uses an output-format parameter.
@@ -165,12 +165,17 @@ schema as a prose skeleton. Conversion transcribes source fields; it cannot
 author missing rest, effort or cues. Round rest and between-block rest are separate.
 The renderer keeps the full collapsed summary, shows stats on expansion, and
 uses the red week notice only for an authored change, not today's full dose.
+On legacy cards, only source fragments already visibly represented are hidden;
+missing per-side instructions, tempo, loading, intervals and safety qualifiers
+remain visible alongside the available metrics.
 
 Sampling is temperature 0 on supported GPT-4.1/GPT-4o families. The configured
 `gpt-5-mini` reasoning model does not accept temperature, so no unsupported
 sampling parameter is sent. Shape constraints and content validation apply
 independently of sampling. Endpoint acceptance still needs a live staging smoke
-test when changing the model or endpoint; in-repo model calls are mocked.
+test before enabling schema mode or changing the model/endpoint; in-repo model
+calls are mocked. Schema mode remains opt-in because live `gpt-5-mini` acceptance
+has not been verified in this workspace.
 
 Result fields added to the Stage 2 return contract (all optional):
 
