@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ExerciseRow } from "../components/structured-plan-renderer";
-import { getBlockAdjustmentDisplay, getBlockExecutionDisplay } from "../lib/structured-plan";
+import { getBlockExecutionDisplay } from "../lib/structured-plan";
 import type { StructuredBlock, StructuredPlan } from "../lib/types";
 
 const { plan, expected } = JSON.parse(readFileSync(0, "utf8")) as {
@@ -36,9 +36,7 @@ for (const row of expected) {
       assert.ok(visible.includes(expectedCopy), `${row.id}: lost ${field}: ${copy}`);
     }
   }
-  const displayedProgress = getBlockAdjustmentDisplay(row.fields).progression;
-  assert.equal(/>Progress<\/span>/.test(html), Boolean(displayedProgress), `${row.id}: Progress visibility`);
-  if (displayedProgress) assert.ok(visible.includes(displayedProgress), `${row.id}: lost Progress wording`);
+  assert.equal(/>Progress<\/span>/.test(html), false, `${row.id}: Progress must stay hidden`);
   assert.equal(block.progression_rule ?? null, row.fields.progression_rule ?? null, `${row.id}: saved guidance changed`);
   if (row.fields.progression_rule) progress++;
   if (row.fields.regression_options?.length) easier++;

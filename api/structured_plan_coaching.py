@@ -100,6 +100,8 @@ def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any],
         progression_context = build_progression_context(brief)
     # Never mutate the persisted object, which other services may still hold.
     recovered = deepcopy(plan)
+    from .structured_plan_faithfulness import project_source_adjustments
+    recovered = project_source_adjustments(recovered, validated_text)
     for week in recovered.get("weeks") or []:
         for day in week.get("days") or []:
             label = str(day.get("countdown_label") or "")

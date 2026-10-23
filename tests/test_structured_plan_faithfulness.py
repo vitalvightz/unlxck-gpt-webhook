@@ -621,7 +621,7 @@ def test_open_plan_accepts_preserved_explicit_prescription_fields():
     assert check_structured_faithfulness(plan, source) == []
 
 
-def test_prescription_omission_warns_without_discarding_source_backed_card():
+def test_missing_prescription_is_recovered_without_discarding_source_backed_card():
     from test_structured_plan_models import _valid_plan
 
     plan = _valid_plan()
@@ -647,8 +647,11 @@ def test_prescription_omission_warns_without_discarding_source_backed_card():
     assert outcome.status == "valid"
     assert outcome.structured_plan is not None
     assert outcome.errors == []
-    assert any("dropped explicit source rest" in warning for warning in outcome.warnings)
-    assert any("dropped explicit source effort" in warning for warning in outcome.warnings)
+    assert not any("dropped explicit source rest" in warning for warning in outcome.warnings)
+    published = outcome.structured_plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+    assert published["effort"]["value"] == 7
+    assert published["rest_note"] == "Rest 2-3 minutes"
+    assert not any("dropped explicit source effort" in warning for warning in outcome.warnings)
     assert not any("dropped explicit source cue" in warning for warning in outcome.warnings)
 
 

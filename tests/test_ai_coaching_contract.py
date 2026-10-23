@@ -264,9 +264,9 @@ def test_duplicate_sessions_keep_distinct_coaching_through_save_and_react():
         assert b["sets"] == index and b["reps"] == 2
         prefix = "Session A" if index == 1 else "Session B"
         assert b["regression_options"][0].startswith(prefix)
-        assert b["progression_rule"].startswith(prefix)
+        assert not b.get("progression_rule")  # New source renderers omit Progress lines.
         other = next(other["blocks"][0] for other in sessions(actual) if other is not session)
-        expected.append({"id": b["block_id"], "fields": {k: b[k] for k in (
+        expected.append({"id": b["block_id"], "fields": {k: b.get(k) for k in (
             "coaching_cues", "progression_rule", "regression_options", "stop_rules")},
             "forbidden": other["coaching_cues"]})
     assert resolve_effective_structured_plan(row) == actual

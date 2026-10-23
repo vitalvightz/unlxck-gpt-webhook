@@ -299,11 +299,10 @@ def test_audit_crash_is_blocking_not_silently_clean(monkeypatch):
 
 
 def test_prompt_keeps_valid_session_anchor_instead_of_omitting():
-    # A session anchor must stay valid (schema requires it); the converter varies
-    # phrasing rather than omitting an identical anchor.
+    # Preserve source anchors without asking the converter to author variations.
     prompt = build_structured_plan_prompt(plan_markdown="PLAN")
-    assert "vary phrasing while" in prompt
-    assert "keeping a valid session-level mindset_anchor" in prompt
+    assert "session.mindset_anchor" in prompt
+    assert "Do not invent anchors" in prompt
     assert "vary it or omit it" not in prompt
 
 

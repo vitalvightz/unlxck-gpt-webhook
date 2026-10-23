@@ -152,43 +152,90 @@ def _source_block_segment(source: str, display_name: str) -> str:
         return "\n".join(segment)
 
     for pattern in (exact_pattern, choice_pattern):
-        for index, line in enumerate(lines):
-            if pattern.match(line):
-                return _segment_at(index)
+        matches = [index for index, line in enumerate(lines) if pattern.match(line)]
+        if matches:
+            return _segment_at(matches[0]) if len(matches) == 1 else ""
     return ""
 
 
-def project_source_adjustments(plan: dict[str, Any], source: str) -> dict[str, Any]:
-    """Copy each exact source block's Progress/Easier onto its card, verbatim.
+def _open_source_sessions(source: str) -> dict[tuple, list[list[str]]]:
+    """Index weekday session cards without borrowing from repeated weeks."""
+    from fightcamp.structured_session_identity import identity_tokens
+    from fightcamp.weekly_schedule_view import normalize_weekday
 
-    Those fields are projections of the final-session text, never conversion
-    authorship. Projecting them in code means a converter that paraphrased,
-    dropped or wrote out "none this block" cannot cost the athlete the whole
-    converted card. Blocks without a provable source occurrence are untouched
-    (the faithfulness gate and coaching recovery still judge them).
+    sections: dict[tuple, list[list[str]]] = {}
+    current = None
+    week = None
+    for line in source.splitlines():
+        heading = re.sub(r"^\s*#{1,6}\s*", "", line).strip()
+        if match := re.match(r"Week\s+(\d+)\b", heading, re.I):
+            week, current = int(match[1]), None
+        elif match := re.match(r"([A-Za-z]+)\s*(?:[—–]|\s-\s)\s*(.+)$", heading):
+            weekday = normalize_weekday(match[1])
+            if weekday:
+                current = [line]
+                key = (week, weekday, tuple(sorted(identity_tokens(match[2]))))
+                sections.setdefault(key, []).append(current)
+            else:
+                current = None
+        elif _SOURCE_HEADING_RE.match(line):
+            current = None
+        elif current is not None:
+            current.append(line)
+    return sections
+
+
+def project_source_adjustments(plan: dict[str, Any], source: str) -> dict[str, Any]:
+    """Project source coaching and recover missing prescription fields.
+
+    Day, session and exact exercise identity must all match. Existing measured
+    values remain subject to faithfulness validation; missing values come only
+    from the approved source, never from another occurrence or a guessed dose.
+    The same projection runs on generation and reads of older stored cards.
     """
     from .structured_plan_deterministic_fallback import _source_block, _source_lines_for_session
+    from fightcamp.structured_session_identity import identity_tokens
+    from fightcamp.weekly_schedule_view import normalize_weekday
+
     source_days = _source_day_section_lines(str(source or ""))
-    for week in plan.get("weeks") or []:
+    open_sessions = _open_source_sessions(str(source or "")) if not source_days else {}
+    for week_position, week in enumerate(plan.get("weeks") or [], 1):
         for day in (week.get("days") or []) if isinstance(week, dict) else []:
             if not isinstance(day, dict):
                 continue
             day_lines = source_days.get(_dday_num(day.get("countdown_label")), [])
-            if not day_lines:
-                continue
             for session in day.get("sessions") or []:
                 if not isinstance(session, dict):
                     continue
                 scoped = _source_lines_for_session(day_lines, str(session.get("title") or ""))
-                if scoped is None:
-                    continue
+                candidates = []
+                if not source_days:
+                    identity = (normalize_weekday(day.get("weekday")), tuple(sorted(identity_tokens(session.get("title")))))
+                    matches = open_sessions.get((week.get("week_index") or week_position, *identity))
+                    if matches is None:
+                        matches = open_sessions.get((None, *identity), [])
+                    scoped = matches[0] if len(matches) == 1 else None
+                    if not matches:
+                        weekday = identity[0]
+                        week_number = week.get("week_index") or week_position
+                        candidates = [section for (source_week, source_weekday, _), sections in open_sessions.items()
+                                      if source_week in (None, week_number) and source_weekday == weekday
+                                      for section in sections]
                 for block in session.get("blocks") or []:
-                    if not isinstance(block, dict) or str(block.get("block_type")) not in _EXERCISE_BLOCK_TYPES:
+                    if not isinstance(block, dict) or block.get("athlete_change") or block.get("prescription_source") == "athlete":
+                        continue
+                    if str(block.get("block_type")) not in _EXERCISE_BLOCK_TYPES | {"skill", "preparation", "mobility_activation", "cooldown_recovery"}:
                         continue
                     name = str(block.get("display_name") or "").strip()
-                    if not _source_block_segment("\n".join(scoped), name):
+                    block_lines = scoped
+                    if not block_lines and source_days:
+                        block_lines = _source_lines_for_session(day_lines, str(session.get("title") or ""), block_name=name)
+                    elif not block_lines and candidates:
+                        exact = [section for section in candidates if _source_block_segment("\n".join(section), name)]
+                        block_lines = exact[0] if len(exact) == 1 else None
+                    if not block_lines or not _source_block_segment("\n".join(block_lines), name):
                         continue
-                    expected = _source_block(scoped, name)
+                    expected = _source_block(block_lines, name)
                     if not expected:
                         continue
                     block["regression_options"] = list(expected.get("regression_options") or [])
@@ -196,6 +243,9 @@ def project_source_adjustments(plan: dict[str, Any], source: str) -> dict[str, A
                         block["progression_rule"] = expected["progression_rule"]
                     else:
                         block.pop("progression_rule", None)
+                    for key in ("sets", "reps", "rounds", "duration", "work", "rest", "distance", "effort", "load", "execution_instructions", "coaching_cues", "stop_rules"):
+                        if expected.get(key) and not block.get(key):
+                            block[key] = copy.deepcopy(expected[key])
                     # Cluster rows and qualitative rest are structure the
                     # conversion has no field for; the exact source line owns
                     # them, so they are projected here rather than authored.
@@ -239,7 +289,7 @@ def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list
                         continue
                     expected = _source_block(scoped, name) if scoped else None
                     if expected:
-                        for key in ("coaching_cues", "regression_options", "progression_rule", "stop_rules"):
+                        for key in ("coaching_cues", "regression_options", "stop_rules"):
                             if key == "coaching_cues" and not _SOURCE_CUE_RE.search(
                                 segment
                             ):
@@ -261,7 +311,7 @@ def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list
                     if str(block.get("block_type")) not in _EXERCISE_BLOCK_TYPES:
                         continue
                     checks = (
-                        (_SOURCE_REST_RE.search(segment), bool(block.get("rest")), "rest"),
+                        (_SOURCE_REST_RE.search(segment), bool(block.get("rest") or block.get("rest_note")), "rest"),
                         (_SOURCE_EFFORT_RE.search(segment), bool(block.get("effort")), "effort"),
                         (_SOURCE_CUE_RE.search(segment), bool(block.get("coaching_cues")), "cue"),
                     )

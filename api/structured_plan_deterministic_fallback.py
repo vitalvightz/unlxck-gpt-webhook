@@ -310,10 +310,6 @@ _REST_CLAUSE_RES = (
     re.compile(rf"(?:full\s+)?rest\s*:?\s*{_NUMBER}\s*{_TIME_UNIT}", re.IGNORECASE),
     re.compile(rf"{_NUMBER}\s*{_TIME_UNIT}\s+rest", re.IGNORECASE),
 )
-_SUBCLAUSE_REST_RES = (
-    re.compile(rf"(?:[,;/]|\bwith)\s*{_NUMBER}\s*{_TIME_UNIT}\s+rest\b", re.IGNORECASE),
-    re.compile(rf"(?:[,;/]|\bwith)\s*rest\s*:?\s*{_NUMBER}\s*{_TIME_UNIT}\b", re.IGNORECASE),
-)
 _EFFORT_CLAUSE_RE = re.compile(
     r"(?P<method>RPE|RIR)\s*(?P<value>\d+(?:\.\d+)?(?:\s*[-–—]\s*\d+(?:\.\d+)?)?)",
     re.IGNORECASE,
@@ -413,7 +409,7 @@ def _lift_dose_fields(dose: str, name: str | None = None) -> tuple[dict[str, Any
     # The deterministic programme uses compact lifting and interval notation.
     # Lift its exact numbers without discarding the accompanying intent/cues.
     reps = re.match(r"\s*(\d+)\s*(?:sets?\s*)?[x×]\s*(\d+)\b(?!\s*(?:s|secs?|seconds?|mins?|minutes?)\b)", dose, re.I)
-    timed = re.match(r"\s*(\d+)\s*(?:sets?|holds?)?\s*[x×]\s*" + _NUMBER + r"\s*" + _TIME_UNIT + r"\b", dose, re.I)
+    timed = re.match(r"\s*(\d+)\s*(?:sets?|holds?|rounds?)?\s*[x×]\s*" + _NUMBER + r"\s*" + _TIME_UNIT + r"\b", dose, re.I)
     interval = re.match(r"\s*(\d+(?:\.\d+)?)\s*(s|secs?|seconds?|mins?|minutes?)\s+(?:work|effort)\s*[,/]\s*"
                         r"(\d+(?:\.\d+)?)\s*(s|secs?|seconds?|mins?|minutes?)\s+rest\s*[x×]\s*(\d+)\s+rounds?", dose, re.I)
     if reps:
@@ -467,9 +463,19 @@ def _lift_dose_fields(dose: str, name: str | None = None) -> tuple[dict[str, Any
         # Compact planner notation writes rest as a sub-clause of the work:
         # "6x3 reps, 2min rest", "1x5s with 120s rest". Lift it only when the
         # dose states exactly one rest, so the card never guesses between two.
-        rests = [match for pattern in _SUBCLAUSE_REST_RES for match in pattern.finditer(dose)]
+        rests = [match for pattern in _REST_CLAUSE_RES for match in pattern.finditer(dose)]
         if len(rests) == 1 and len(re.findall(r"\brest\b", dose, re.IGNORECASE)) == 1:
             fields["rest"] = _measured(rests[0])
+    if "rest" not in fields and not fields.get("rest_note"):
+        # Preserve an explicit rest range as text; never lose it because the
+        # scalar schema cannot express it. Recovery instructions stay intact.
+        ranged_rest = re.search(
+            r"\brest\s*:?\s*\d+(?:\.\d+)?\s*[-–—]\s*\d+(?:\.\d+)?\s*(?:seconds?|secs?|s|minutes?|mins?)\b"
+            r"|\b\d+(?:\.\d+)?\s*[-–—]\s*\d+(?:\.\d+)?\s*(?:seconds?|secs?|s|minutes?|mins?)\s+rest\b",
+            dose, re.I,
+        )
+        if ranged_rest and len(re.findall(r"\brest\b", dose, re.I)) == 1:
+            fields["rest_note"] = ranged_rest[0]
     if "effort" not in fields and (effort := _EFFORT_CLAUSE_RE.search(dose)):
         value = re.sub(r"\s*[-–—]\s*", "-", effort.group("value"))
         fields["effort"] = {"method": effort.group("method").upper(),
@@ -993,6 +999,7 @@ def _insert_movement_block(
 
 def _source_lines_for_session(
     lines: list[str] | None, title: str, *, require_title: bool = False,
+    block_name: str | None = None,
 ) -> list[str] | None:
     """Scope repeated D-day exercise names to their own source session."""
     if not lines:
@@ -1005,6 +1012,11 @@ def _source_lines_for_session(
     wanted = identity_tokens(title)
     matched = [section for section in sections
                if wanted and identity_tokens(re.split(r"[—–]|\s-\s", section[0], maxsplit=1)[-1]) == wanted]
+    if not matched and block_name and not require_title:
+        # Canonical session titles may differ from finalizer wording. An exact
+        # exercise occurring in just one session on this day is still provable.
+        matched = [section for section in sections
+                   if _source_block_segment("\n".join(section), block_name)]
     return matched[0] if len(matched) == 1 else None
 
 
