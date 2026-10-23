@@ -379,3 +379,50 @@ def test_repeated_open_exercise_keeps_its_appointment_coaching_when_order_change
         assert all(block.get("progression_rule") == "At the same dose, refine movement control." for block in first["blocks"])
         assert all(block.get("progression_rule") == "At the same dose, refine balance in this appointment." for block in second["blocks"])
         assert all(block["regression_options"] == ["Use a smaller pain-free movement."] for block in second["blocks"])
+
+
+def test_source_owned_conversion_preserves_full_open_strength_week_without_model():
+    """Six source exercises cannot collapse into a three-exercise JSON card."""
+    from api.structured_plan_generation import build_authoritative_open_plan
+    from api.stage2_automation import _build_source_owned_structured_card
+
+    row = _reference_row()
+    brief = row["planning_brief"]
+    card = build_authoritative_open_plan(brief, "# Approved training programme")
+    assert card is not None
+    assert safe_parse_structured_plan(card).ok
+    assert len(card["weeks"]) == 4
+
+    for week in card["weeks"]:
+        saturday = next(day for day in week["days"] if day["weekday"] == "Sat")
+        strength = next(session for session in saturday["sessions"] if session["title"] == "Strength")
+        assert len(strength["blocks"]) == 6
+        assert [block["display_name"] for block in strength["blocks"]] == [
+            "Barbell Thruster", "Med-Ball Rotational Slam", "Trap Bar Jump",
+            "Single-Leg Depth Drop (Stick Landing)", "Landmine Anti-Rotation Press",
+            "Single-Leg Romanian Deadlift Hold",
+        ]
+        assert strength["blocks"][0]["sets"] == 4
+        assert strength["blocks"][0]["reps"] == 2
+
+    outcome = _build_source_owned_structured_card(
+        planning_brief=brief, plan_text="# Approved training programme"
+    )
+    assert outcome is not None
+    assert outcome.status == "valid"
+    assert len(outcome.structured_plan["weeks"]) == 4
+
+
+def test_source_owned_conversion_never_fills_in_missing_open_prescriptions():
+    from api.structured_plan_generation import build_authoritative_open_plan
+
+    row = _reference_row()
+    brief = copy.deepcopy(row["planning_brief"])
+    decisions = brief["open_plan_spec"]["weekly_session_plan"]["weeks"]
+    decisions[0]["sessions"][-2]["exercises"][0]["prescription"] = "2 sets x 6 reps"
+    card = build_authoritative_open_plan(brief, "# Approved training programme")
+    assert card is not None
+    saturday = next(day for day in card["weeks"][0]["days"] if day["weekday"] == "Sat")
+    strength = next(session for session in saturday["sessions"] if session["title"] == "Strength")
+    assert strength["blocks"][0]["sets"] == 2
+    assert strength["blocks"][0]["reps"] == 6
