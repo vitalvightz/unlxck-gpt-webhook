@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { ExercisePerformance } from "./api-schema.generated";
-import { measurementCount, performanceValue, progressPoints, progressSeries, type ProgressSeries } from "./exercise-progress";
+import { measurementBasis, measurementCount, performanceValue, progressPoints, progressSeries, type ProgressSeries } from "./exercise-progress";
 
 const record = (id: string, day: string, performed_values: object | null): ExercisePerformance => ({
   id, training_day: day, performed_values, block: { name: "Squat", kind: "exercise", status: "as_prescribed", actual: {}, prescribed: { load: { value: 999, unit: "kg" } }, reason: null, notes: null, completed_dose: null, responses: [] },
@@ -79,4 +79,15 @@ test("counts are metric-specific", () => {
   assert.equal(measurementCount(2, "duration"), "2 recorded durations");
   assert.equal(measurementCount(1, "reps"), "1 recorded rep count");
   assert.equal(measurementCount(4, "distance"), "4 recorded distances");
+});
+
+test("sparse set loads are labeled reported and unreported work never creates a chart point", () => {
+  const partial = record("partial", "2026-10-23", { sets: 4, set_entries: [{ set_number: 3, reps: 5, load: { value: 110, unit: "kg" } }] });
+  partial.block.actual = partial.performed_values!;
+  partial.block.status = "modified";
+  assert.equal(measurementBasis(partial, "load"), "Reported");
+  assert.deepEqual(plot([partial]), [["partial", 110]]);
+  const unknown = record("unknown", "2026-10-23", { sets: 4 });
+  assert.deepEqual(plot([unknown]), []);
+  assert.equal(measurementBasis(record("prescribed", "2026-10-23", { load: { value: 100, unit: "kg" } }), "load"), "Confirmed as prescribed");
 });

@@ -13,7 +13,7 @@ const LABELS: Record<string, string> = {
 /** Format only stored fields, preserving their own units. Never fill actuals from prescriptions. */
 export function detailMeasurements(values: Record<string, unknown>): { label: string; value: string }[] {
   const sets = Array.isArray(values.set_entries) && values.set_entries.length ? values.set_entries as ExerciseSetResult[] : null;
-  return [...(sets ? [{ label: "Sets", value: setSummary(sets) }] : []), ...Object.entries(LABELS).flatMap(([key, label]) => {
+  return [...(sets ? [{ label: "Sets", value: setSummary(sets, typeof values.sets === "number" ? values.sets : undefined) }] : []), ...Object.entries(LABELS).flatMap(([key, label]) => {
     if (sets && ["sets", "reps", "load"].includes(key)) return [];
     const raw = values[key];
     if (raw == null || raw === "") return [];

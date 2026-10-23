@@ -1553,3 +1553,25 @@ html[data-theme="light"] .today-tool-button[data-accent="true"] .today-tool-icon
   .st-rest-help { margin-top: 6px; }
 }
 @media (prefers-reduced-motion: reduce) { .st-rest-sheet { animation: none; } }
+
+.st-set-review > .st-leave-unreported { flex-shrink: 0; min-height: 44px; margin: 0; color: var(--st-ink-soft); }
+
+/* One task at a time: confirm while resting, then return to the next-set action. */
+.st-root[data-rest-log] .st-tools,
+.st-root[data-rest-log] .st-next,
+.st-root[data-rest-log] .st-stats { display: none; }
+.st-rest-sheet { border: 0; background: var(--st-surface); }
+.st-rest-sheet-head h3 { font-size: 16px; }
+.st-root[data-rest-log="open"] .st-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; }
+.st-root[data-rest-log="open"] .st-rest-sheet { grid-column: 1 / -1; }
+.st-root[data-rest-log="open"] .st-controls > .st-primary { min-height: 44px; padding: 0 4px; border: 0; border-radius: 12px; background: transparent; color: var(--st-ink-soft); box-shadow: none; text-align: left; font-size: 14px; font-weight: 500; }
+.st-root[data-rest-log="open"] .st-links { grid-column: 2; grid-row: 2; align-items: center; }
+.st-root[data-rest-log="open"] .st-confirm { grid-column: 1 / -1; }
+.st-log-confirmed { border: 0; background: transparent; padding: 0 4px; }
+.st-root[data-rest-log="confirmed"] .st-controls > .st-primary { background: var(--st-ink); color: var(--st-on-ink); box-shadow: none; }
+.st-root[data-rest-log="confirmed"] .st-ring { --st-ring: min(70vw, 36vh, 300px); }
+@media (max-height: 700px) {
+  .st-root[data-rest-log="open"] .st-ring { --st-ring: 130px; }
+  .st-root[data-rest-log="confirmed"] .st-ring { --st-ring: 180px; }
+  .st-root[data-rest-log="open"] .st-clock-caption { font-size: 11px; }
+}

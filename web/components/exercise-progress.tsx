@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ExercisePerformance, PersonalExercise } from "@/lib/api-schema.generated";
 import { formatAppDate } from "@/lib/date-format";
 import { detailMeasurements } from "@/lib/session-details";
-import { measurementCount, progressPoints, progressSeries } from "@/lib/exercise-progress";
+import { measurementBasis, measurementCount, progressPoints, progressSeries } from "@/lib/exercise-progress";
 import styles from "./training-progress.module.css";
 
 export function ExerciseProgress({ records, exercise, hasMore, onInspect }: {
@@ -90,7 +90,7 @@ export function ExerciseProgress({ records, exercise, hasMore, onInspect }: {
         <span>{formatAppDate(point.record.training_day)}</span><strong>{format(point.value)}</strong><span>Inspect performance</span>
       </button>)}</div> : null}
       <div className={styles.selectedRecord} aria-live="polite" aria-label="Selected performance">
-        <strong>{format(selected.value)}</strong><p className={styles.note}>{formatAppDate(selected.record.training_day)} · {selected.record.block.actual[series.metric] != null ? "Reported" : "Confirmed as prescribed"}</p>
+        <strong>{format(selected.value)}</strong><p className={styles.note}>{formatAppDate(selected.record.training_day)} · {measurementBasis(selected.record, series.metric)}</p>
         <p className={styles.note}>{detailMeasurements(selected.record.performed_values as Record<string, unknown>).map(item => `${item.label}: ${item.value}`).join(" · ")}</p>
         <button type="button" className={styles.textButton} onClick={() => onInspect(selected.record.id)}>View original performance <span aria-hidden="true">↓</span></button>
       </div>

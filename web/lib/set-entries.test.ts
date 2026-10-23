@@ -4,7 +4,7 @@ import { actualFromSets, draftsFromActual, readSets, setDrafts, setSummary } fro
 import { buildSetLogEntry, logFieldsForBlock, setDraftsForFields } from "./exercise-log";
 import { buildTimerItems } from "./session-timer/plan";
 import { createTimerState, startItem, skipRest, advance } from "./session-timer/engine";
-import { completeSetWithResults, timerSetDrafts, endSessionWithResults, confirmSetLog, confirmAllSetLogs, unconfirmedSets } from "./session-timer/sets";
+import { completeSetWithResults, timerSetDrafts, endSessionWithResults, leaveRemainingUnreported, leaveSetUnreported, confirmSetLog, confirmAllSetLogs, pendingSetLogs } from "./session-timer/sets";
 import { timerExerciseLogs } from "./session-timer/logs";
 
 const block = { block_id: "press", display_name: "Bench Press", block_type: "strength", sets: 3, reps: 8, load: { method: "absolute", value: 25, unit: "kg" } };
@@ -22,7 +22,7 @@ test("exact prescriptions prefill every set without sharing mutable rows", () =>
 });
 
 test("unknowns stay blank and invalid input never becomes zero", () => {
-  assert.equal(readSets([{ reps: "", load: "" }], "kg").actual.set_entries?.[0].load, null);
+  assert.equal(readSets([{ reps: "", load: "" }], "kg").actual.set_entries, undefined);
   for (const row of [{ reps: "8.5", load: "25" }, { reps: "8", load: "abc" }, { reps: "8", load: "-1" }]) {
     assert.deepEqual(readSets([row], "kg").invalid, [0]);
   }
@@ -46,7 +46,7 @@ test("timer records only confirmed sets and keeps edits through JSON resume", ()
   state = { ...state, setDrafts: { press: rows } };
   state = completeSetWithResults(state, 1000).state;
   assert.equal(state.phase, "rest"); assert.equal(state.completed[0], 1);
-  assert.equal(timerExerciseLogs(state)[0].actual?.set_entries?.[0].load, null);
+  assert.equal(timerExerciseLogs(state)[0].actual?.set_entries, undefined);
   state = confirmSetLog(state, "press", 1);
   const restored = JSON.parse(JSON.stringify(state));
   const logs = timerExerciseLogs(restored);
@@ -73,7 +73,7 @@ test("invalid drafts never block rest or reset its clock, and cannot be confirme
   assert.equal(confirmed.phaseStartedAt, state.phaseStartedAt);
   assert.equal(confirmed.phaseMs, state.phaseMs);
   assert.equal(confirmed.pausedAt, null);
-  assert.deepEqual(unconfirmedSets(confirmed), []);
+  assert.deepEqual(pendingSetLogs(confirmed), []);
   assert.equal(timerExerciseLogs(confirmed)[0].actual?.set_entries?.[0].rpe, 8.5);
 });
 
@@ -83,10 +83,10 @@ test("end review retains missed and invalid entries until corrected and confirme
   state.setDrafts!.press[0].load = "invalid";
   state = endSessionWithResults(state, 2000);
   assert.equal(state.phase, "done");
-  assert.deepEqual(unconfirmedSets(confirmAllSetLogs(state)), [{ itemId: "press", set: 1 }]);
+  assert.deepEqual(pendingSetLogs(confirmAllSetLogs(state)), [{ itemId: "press", set: 1 }]);
   state.setDrafts!.press[0].load = "27.5";
   const reviewed = confirmAllSetLogs(state);
-  assert.deepEqual(unconfirmedSets(reviewed), []);
+  assert.deepEqual(pendingSetLogs(reviewed), []);
   assert.equal(timerExerciseLogs(reviewed)[0].actual?.set_entries?.[0].load?.value, 27.5);
 });
 
@@ -109,6 +109,53 @@ test("rest expiry starts the next set with pending measurements safely retained"
   assert.equal(state.phase, "work");
   assert.equal(state.unit, 2);
   assert.equal(state.setDrafts!.press[0].load, "27.5");
-  assert.deepEqual(unconfirmedSets(state), [{ itemId: "press", set: 1 }]);
-  assert.equal(timerExerciseLogs(state)[0].actual?.set_entries?.[0].load, null);
+  assert.deepEqual(pendingSetLogs(state), [{ itemId: "press", set: 1 }]);
+  assert.equal(timerExerciseLogs(state)[0].actual?.set_entries, undefined);
+});
+
+test("partial confirmations preserve completed count and original set numbers without placeholder rows", () => {
+  let state = startItem(createTimerState(buildTimerItems([{ blocks: [block] }])), 0).state;
+  for (const set of [1, 2, 3]) {
+    state = completeSetWithResults(state, set * 1000).state;
+    if (set !== 2) state = confirmSetLog(state, "press", set);
+    if (set < 3) state = skipRest(state, set * 1000 + 1).state;
+  }
+  const restored = JSON.parse(JSON.stringify(state));
+  const log = timerExerciseLogs(restored)[0];
+  assert.equal(log.status, "modified");
+  assert.equal(log.actual?.sets, 3);
+  assert.deepEqual(log.actual?.set_entries?.map(entry => entry.set_number), [1, 3]);
+  assert.equal(log.actual?.load, null); assert.equal(log.actual?.reps, null);
+  const skipped = leaveRemainingUnreported(restored);
+  assert.deepEqual(pendingSetLogs(skipped), []);
+  assert.deepEqual(timerExerciseLogs(skipped), [log]);
+  const drafts = draftsFromActual(log.actual!);
+  assert.equal(drafts[0].load, "25"); assert.equal(drafts[1].load, ""); assert.equal(drafts[2].load, "25");
+  assert.match(setSummary(log.actual!.set_entries!, 3), /2 logged · 1 unreported/);
+});
+
+test("all unreported work is count-only and blank confirmations never create measurement rows", () => {
+  let state = startItem(createTimerState(buildTimerItems([{ blocks: [block] }])), 0).state;
+  state = completeSetWithResults(state, 1000).state;
+  state = leaveSetUnreported(state, "press", 1);
+  state = confirmSetLog(state, "press", 1);
+  assert.deepEqual(timerExerciseLogs(state), [{ block_id: "press", status: "modified", actual: { sets: 1, reps: null, load: null, effort: null } }]);
+  assert.deepEqual(pendingSetLogs(state), []);
+});
+
+test("a planned set editor seeds optional RPE consistently with the timer", () => {
+  const prescribed = { ...block, effort: { method: "RPE", value: 7 } };
+  const fields = logFieldsForBlock(prescribed);
+  assert.ok(setDraftsForFields(fields).every(row => row.rpe === "7"));
+  assert.ok(setDraftsForFields(fields, { effort: "8.5" }).every(row => row.rpe === "8.5"));
+  const state = startItem(createTimerState(buildTimerItems([{ blocks: [prescribed] }])), 0).state;
+  assert.deepEqual(timerSetDrafts(state), setDraftsForFields(fields));
+});
+
+test("restored drafts with missing confirmation metadata are never treated as measurements", () => {
+  let state = startItem(createTimerState(buildTimerItems([{ blocks: [block] }])), 0).state;
+  state = completeSetWithResults(state, 1000).state;
+  delete state.confirmedSetLogs;
+  assert.equal(timerExerciseLogs(state)[0].actual?.set_entries, undefined);
+  assert.deepEqual(pendingSetLogs(state), [{ itemId: "press", set: 1 }]);
 });

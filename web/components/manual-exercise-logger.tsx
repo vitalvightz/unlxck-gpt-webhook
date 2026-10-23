@@ -278,7 +278,8 @@ export function ManualExerciseLogger({ token, session, reference, onClose }: {
     </div>;
   }
 
-  const extras = format ? EXTRA_FIELDS[format].filter(field => !editor.draft.setRows || field !== "load") : [];
+  const individualSets = Boolean(editor.draft.setRows && (format === "strength" || format === "bodyweight"));
+  const extras = format ? EXTRA_FIELDS[format].filter(field => !individualSets || !["load", "effort"].includes(field)) : [];
   const extraFilled = extras.some(field => editor.draft.values[field]?.trim()) || Boolean(editor.draft.notes.trim());
 
   return <dialog ref={dialog} className={`${sheet.dialog} ${styles.dialog}`} aria-labelledby={`${fieldId}-title`}
@@ -365,7 +366,7 @@ export function ManualExerciseLogger({ token, session, reference, onClose }: {
                 {format === "strength" || format === "bodyweight" ? <button type="button" className={styles.textButton} disabled={busy} onClick={() => {
                   const count = Number(editor.draft.values.sets || 1);
                   if (!Number.isInteger(count) || count < 1 || count > 50) { setErrors({ sets: "Enter 1–50 sets" }); return; }
-                  setEditor(current => ({ ...current, draft: { ...current.draft, setRows: Array.from({ length: count }, () => ({ reps: current.draft.values.reps ?? "", load: current.draft.values.load ?? "" })) } }));
+                  setEditor(current => ({ ...current, draft: { ...current.draft, setRows: Array.from({ length: count }, () => ({ reps: current.draft.values.reps ?? "", load: current.draft.values.load ?? "", ...(current.draft.values.effort ? { rpe: current.draft.values.effort } : {}) })) } }));
                 }}>Edit sets individually</button> : null}
               </>}
             {editor.draft.setRows && format === "bodyweight" && editor.draft.values.load === undefined && !editor.draft.setRows.some(row => row.load.trim())

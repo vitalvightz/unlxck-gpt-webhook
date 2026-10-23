@@ -8,8 +8,8 @@
 }
 .head, .row { display: grid; grid-template-columns: 36px minmax(0, 1fr) minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
 .head[data-load="false"], .row[data-load="false"] { grid-template-columns: 36px minmax(0, 1fr) 44px; }
-.head[data-rpe="true"], .row[data-rpe="true"] { grid-template-columns: 32px repeat(3, minmax(0, 1fr)) 36px; gap: 4px; }
-.head[data-rpe="true"][data-load="false"], .row[data-rpe="true"][data-load="false"] { grid-template-columns: 32px repeat(2, minmax(0, 1fr)) 36px; }
+.head[data-rpe="true"], .row[data-rpe="true"] { grid-template-columns: 32px repeat(3, minmax(0, 1fr)) 44px; gap: 4px; }
+.head[data-rpe="true"][data-load="false"], .row[data-rpe="true"][data-load="false"] { grid-template-columns: 32px repeat(2, minmax(0, 1fr)) 44px; }
 .head { min-height: 32px; color: var(--set-muted); font-size: 11px; font-weight: 500; text-align: center; text-transform: uppercase; letter-spacing: .06em; }
 .head button { border: 0; background: transparent; color: inherit; font: inherit; text-transform: inherit; min-height: 44px; cursor: pointer; }
 .rows { margin: 0; padding: 0; list-style: none; }
@@ -34,3 +34,6 @@
 .value { padding: 8px 0; font-size: 14px; font-variant-numeric: tabular-nums; text-align: center; }
 .results .row { min-height: 36px; border-radius: 0; }
 .results .value { padding: 6px 0; }
+
+.unreported { width: 44px; height: 44px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--set-muted); font: inherit; font-size: 20px; cursor: pointer; }
+.unreported:hover { background: color-mix(in srgb, var(--set-ink) 6%, transparent); color: var(--set-ink); }

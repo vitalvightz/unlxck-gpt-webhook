@@ -436,10 +436,10 @@ def test_varied_sets_round_trip_through_manual_history_and_best_load(api):
     sets = [{"reps": 8, "load": {"value": 25, "unit": "kg"}},
             {"reps": 6, "load": {"value": 30, "unit": "kg"}}]
     saved = add(client, row["id"], actual={"set_entries": sets})
-    assert saved["actual"]["set_entries"] == [{**entry, "rpe": None} for entry in sets]
+    assert saved["actual"]["set_entries"] == [{**entry, "rpe": None, "set_number": None} for entry in sets]
     assert saved["actual"]["sets"] == 2
     assert saved["actual"]["reps"] is None and saved["actual"]["load"] is None
-    assert details(client, row["id"]).json()["blocks"][0]["actual"]["set_entries"] == [{**entry, "rpe": None} for entry in sets]
+    assert details(client, row["id"]).json()["blocks"][0]["actual"]["set_entries"] == [{**entry, "rpe": None, "set_number": None} for entry in sets]
     result = library(store)["key:back-squat"]
     assert result.best_loads[0].value == 30
     assert result.latest_values.set_entries[0].load.value == 25
@@ -471,9 +471,9 @@ def test_per_set_rpe_is_preserved_in_history_and_common_effort_is_truthful(api):
     sets = [{"reps": 5, "load": {"value": 100, "unit": "kg"}, "rpe": 7},
             {"reps": 5, "load": {"value": 105, "unit": "kg"}, "rpe": 8.5}]
     saved = add(client, row["id"], actual={"set_entries": sets})
-    assert saved["actual"]["set_entries"] == sets
+    assert saved["actual"]["set_entries"] == [{**entry, "set_number": None} for entry in sets]
     assert saved["actual"]["effort"] is None
-    assert details(client, row["id"]).json()["blocks"][0]["actual"]["set_entries"] == sets
+    assert details(client, row["id"]).json()["blocks"][0]["actual"]["set_entries"] == [{**entry, "set_number": None} for entry in sets]
     uniform = add(client, row["id"], actual={"set_entries": [sets[0], sets[0]]})
     assert uniform["actual"]["effort"] == {"method": "RPE", "value": 7}
 
@@ -483,3 +483,17 @@ def test_invalid_per_set_rpe_is_rejected(api, rpe):
     client, _ = api
     row = session(client)
     assert put(client, row["id"], actual={"set_entries": [{"reps": 5, "rpe": rpe}]}).status_code == 422
+
+
+def test_manual_sparse_set_results_preserve_positions_and_fit_the_bounded_storage(api):
+    import json
+
+    client, _ = api
+    row = session(client)
+    sets = [{"set_number": number, "reps": 1000, "load": {"value": 1000, "unit": "kg"}, "rpe": 10}
+            for number in range(1, 51) if number != 2]
+    saved = add(client, row["id"], actual={"sets": 50, "set_entries": sets})
+    assert saved["actual"]["sets"] == 50
+    assert [entry["set_number"] for entry in saved["actual"]["set_entries"]] == [entry["set_number"] for entry in sets]
+    assert saved["actual"]["load"] is None and saved["actual"]["reps"] is None
+    assert len(json.dumps(saved["actual"]).encode()) < 8192

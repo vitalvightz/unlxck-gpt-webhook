@@ -18,3 +18,9 @@ test("bodyweight, duration and interval results do not require a weight or fabri
   assert.equal(exerciseResult(exercise({ latest_values: { rounds: 6 } as PersonalExercise["latest_values"] })).value, "6 rounds");
   assert.deepEqual(exerciseResult(exercise({ latest_confirmed_as_prescribed: true })), { label: "Latest confirmed", value: "Completed as prescribed" });
 });
+
+test("unreported completed work has a compact label without claiming a load record", () => {
+  assert.deepEqual(exerciseResult(exercise({ latest_values: { sets: 4 } as PersonalExercise["latest_values"] })), {
+    label: "Measurements unreported", value: "4 sets completed",
+  });
+});

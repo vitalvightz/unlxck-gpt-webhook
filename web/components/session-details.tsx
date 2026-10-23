@@ -13,6 +13,7 @@ import { NO_MEASUREMENTS, summarise } from "@/lib/manual-exercises";
 import { sessionTypes, sportLabel } from "@/lib/training-disciplines";
 import type { TrainingHistorySession } from "@/lib/training-history";
 import styles from "./session-details.module.css";
+import { countOnlySetSummary } from "@/lib/set-entries";
 import { SetResults } from "./set-rows";
 import type { ExerciseSetResult } from "@/lib/types";
 
@@ -20,10 +21,12 @@ export type SessionDetailsCache = Map<string, Promise<Details>>;
 const OUTCOMES = { as_prescribed: "Completed as prescribed", modified: "Modified", skipped: "Skipped",
   done_as_shown: "Done as shown", changed: "Changed", stopped: "Stopped" };
 
-function Measurements({ values }: { values: Record<string, unknown> }) {
+function Measurements({ values, reported = false }: { values: Record<string, unknown>; reported?: boolean }) {
   const sets = Array.isArray(values.set_entries) ? values.set_entries as ExerciseSetResult[] : null;
+  const unreported = reported ? countOnlySetSummary(values) : null;
+  if (unreported) return <p className={styles.quiet}>{unreported}</p>;
   const items = detailMeasurements(values).filter(item => !sets || item.label !== "Sets");
-  return <>{sets?.length ? <SetResults entries={sets} /> : null}{items.length ? <dl className={styles.measurements}>{items.map(item => <div key={item.label}>
+  return <>{sets?.length ? <SetResults entries={sets} completed={typeof values.sets === "number" ? values.sets : undefined} /> : null}{items.length ? <dl className={styles.measurements}>{items.map(item => <div key={item.label}>
     <dt>{item.label}</dt><dd>{item.value}</dd>
   </div>)}</dl> : !sets?.length ? <p className={styles.quiet}>No values recorded.</p> : null}</>;
 }
@@ -35,7 +38,7 @@ export function TrainingBlock({ block, index, heading, recordId }: { block: Sess
       <h4>{heading || block.name}</h4></div>
     <p className={styles.outcome}>Logged training · added by you</p>
     <section aria-label={`Recorded: ${heading ? `${block.name} · ${heading} · Record ${index + 1}` : block.name}`}><h5 className={styles.recordedHeading}>Recorded</h5>
-      {detailMeasurements(block.actual).length ? <Measurements values={block.actual} /> : <p className={styles.quiet}>No measurements recorded.</p>}</section>
+      {detailMeasurements(block.actual).length ? <Measurements values={block.actual} reported /> : <p className={styles.quiet}>No measurements recorded.</p>}</section>
     {block.notes ? <p className={styles.note}>{block.notes}</p> : null}
   </li>;
   const rehab = block.kind !== "exercise";
@@ -50,7 +53,7 @@ export function TrainingBlock({ block, index, heading, recordId }: { block: Sess
       <section aria-label={`Prescribed: ${context}`}><h5>{block.kind === "guidance" ? "Saved guidance" : "Prescribed"}</h5><Measurements values={block.prescribed} /></section>
       {block.kind !== "guidance" ? <section aria-label={`Performance: ${context}`}><h5>{rehab ? "Confirmed completed dose" : "Reported"}</h5>
         {rehab ? quantified ? <Measurements values={block.completed_dose!} /> : <p className={styles.quiet}>{block.status === "skipped" ? "Skipped. No completed dose recorded." : "Completed amount unknown."}</p>
-          : actuals ? <><Measurements values={block.actual} /><p className={styles.quiet}>{block.status === "as_prescribed" ? "Other prescribed values confirmed as completed." : "Other performed values are unknown."}</p></>
+          : actuals ? <><Measurements values={block.actual} reported /><p className={styles.quiet}>{block.status === "as_prescribed" ? "Other prescribed values confirmed as completed." : "Other performed values are unknown."}</p></>
           : <p className={styles.quiet}>{block.status === "as_prescribed" ? "Confirmed completed as prescribed. No separate values logged." : block.status === "skipped" ? "Skipped. No performance values logged." : "Performed values unknown."}</p>}
       </section> : null}
     </div>
@@ -132,7 +135,7 @@ export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = tr
               onClick={() => onEditExercises({ ...row, ...record })}>{details.blocks.length ? "Edit exercises" : "Add exercises"}</button> : null}</div>
           {details.blocks.length ? <ol className={styles.manualList}>{details.blocks.map((block, index) => <li key={index}>
             <span className={styles.manualName}>{block.name}</span>
-            {block.actual.set_entries?.length ? <SetResults entries={block.actual.set_entries} /> : <span className={styles.manualValues}>{summarise(block.actual, block.format) || NO_MEASUREMENTS}</span>}
+            {block.actual.set_entries?.length ? <SetResults entries={block.actual.set_entries} completed={block.actual.sets} /> : <span className={styles.manualValues}>{summarise(block.actual, block.format) || NO_MEASUREMENTS}</span>}
             {block.notes ? <p className={styles.note}>{block.notes}</p> : null}
           </li>)}</ol> : <p className={styles.quiet}>No exercises recorded. Only the session’s activity, duration and effort were logged.</p>}
           {details.sparring ? <><h3>Sparring report</h3><p>{details.sparring.rounds_completed} rounds{details.sparring.round_seconds != null ? ` · ${details.sparring.round_seconds} sec` : ""} · {details.sparring.intensity}</p>

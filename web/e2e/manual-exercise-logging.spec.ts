@@ -268,12 +268,16 @@ for (const width of [390, 1280]) {
     await expect(sheet.getByLabel("Load kg, set 3", { exact: true })).toHaveValue("75");
     await sheet.getByRole("button", { name: "Apply to remaining sets" }).click();
     await expect(sheet.getByLabel("Load kg, set 3", { exact: true })).toHaveValue("80");
+    await expect(sheet.getByLabel("RPE, set 1")).toHaveValue("");
+    await sheet.getByLabel("RPE, set 1").fill("7");
+    await sheet.getByLabel("RPE, set 2").fill("8.5");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     expect((await new AxeBuilder({ page }).include("dialog").analyze()).violations).toEqual([]);
     await shoot(page, "per-set-editor", width);
     await sheet.getByRole("button", { name: "Save changes", exact: true }).click();
     const actual = puts.at(-1)!.actual as { set_entries: { load: { value: number } }[] };
     expect(actual.set_entries.map(row => row.load.value)).toEqual([75, 80, 80]);
+    expect((actual.set_entries as { rpe?: number }[]).map(row => row.rpe ?? null)).toEqual([7, 8.5, null]);
     await sheet.getByRole("button", { name: "Done", exact: true }).click();
     const details = page.getByRole("dialog", { name: "Strength", exact: true });
     const results = details.locator("details").filter({ hasText: "3 × 5 · 75–80 kg" });

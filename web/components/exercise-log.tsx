@@ -299,10 +299,10 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
         {setRows ? <SetRows rows={setRows} unit={loadUnit} showLoad={fields.some(field => field.key === "load")}
           disabled={saving} invalid={entry.invalid.includes("reps") ? setRows.map((_, index) => index) : []}
           repsHint={fields.find(field => field.key === "reps")?.hint} onChange={rows => { setSetRows(rows); setConfirming(null); }} /> : null}
-        <details className="ex-log-details" open={!setRows || undefined}>
+        {(!setRows || fields.some(field => !["sets", "reps", "load", "effort"].includes(field.key))) ? <details className="ex-log-details" open={!setRows || undefined}>
         <summary hidden={!setRows}>More details</summary>
         <div className="ex-log-fields" data-count={fields.length}>
-          {fields.filter(field => !setRows || !["sets", "reps", "load"].includes(field.key)).map((field) => (
+          {fields.filter(field => !setRows || !["sets", "reps", "load", "effort"].includes(field.key)).map((field) => (
             <label key={field.key} className="ex-log-field" htmlFor={`${fieldId}-${field.key}`}>
               <span className="ex-log-field-label">
                 {field.label}
@@ -333,7 +333,7 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
             </label>
           ))}
         </div>
-        </details>
+        </details> : null}
         {supportsSets && !setRows ? <button type="button" className="ex-log-link" disabled={saving} onClick={() => setSetRows(setDraftsForFields(fields, draft))}>Edit sets individually</button> : null}
         {entry.status === "modified" ? (
           <ReasonChips
@@ -394,7 +394,7 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
             <path d="m14.5 7.5 3 3" />
           </svg>
         </button>
-        {log.actual?.set_entries?.length ? <SetResults entries={log.actual.set_entries} /> : null}
+        {log.actual?.set_entries?.length ? <SetResults entries={log.actual.set_entries} completed={log.actual.sets} /> : null}
         {/* A skip saves in one tap; why is a second, optional tap. */}
         {log.status === "skipped" ? (
           <ReasonChips

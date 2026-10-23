@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { SetRows } from "@/components/set-rows";
 import { readSets } from "@/lib/set-entries";
-import { confirmAllSetLogs, confirmSetLog, timerSetDrafts, unconfirmedSets } from "@/lib/session-timer/sets";
+import { leaveRemainingUnreported, leaveSetUnreported, confirmAllSetLogs, confirmSetLog, timerSetDrafts, pendingSetLogs } from "@/lib/session-timer/sets";
 import type { SessionTimerController } from "./use-session-timer";
 
 /** A non-modal sheet: typing and confirming never pause or restart the clock. */
@@ -17,12 +17,13 @@ export function RestSetLogger({ timer, target }: { timer: SessionTimerController
   const unit = item.setFields.find(field => field.key === "load")?.apiUnit ?? "kg";
   const weighed = item.setFields.some(field => field.key === "load");
   const confirmed = state.confirmedSetLogs?.[item.id]?.includes(target.set) ?? false;
+  const unreported = state.unreportedSetLogs?.[item.id]?.includes(target.set) ?? false;
   const read = readSets([row], unit);
   const prescribed = (key: "reps" | "load") => item.setFields?.find(field => field.key === key)?.hint;
   const targetText = [weighed && prescribed("load") ? `${prescribed("load")} ${unit}` : null, prescribed("reps")].filter(Boolean).join(" × ");
-  if (confirmed) return <div className="st-log-confirmed" role="status">
-    <span><span aria-hidden="true">✓</span> Set {target.set} logged <span className="st-log-result">· {weighed && row.load ? `${row.load} ${unit} × ` : ""}{row.reps || "–"}{row.rpe ? ` · RPE ${row.rpe}` : ""}</span></span>
-    <button type="button" className="st-link" aria-label={`Edit set ${target.set}`} onClick={() => timer.update(s => ({ ...s, confirmedSetLogs: { ...s.confirmedSetLogs, [item.id]: (s.confirmedSetLogs?.[item.id] ?? []).filter(set => set !== target.set) } }))}>Edit</button>
+  if (confirmed || unreported) return <div className="st-log-confirmed" role="status">
+    <span>{unreported ? `Set ${target.set} · measurements unreported` : <><span aria-hidden="true">✓</span> Set {target.set} logged <span className="st-log-result">· {weighed && row.load ? `${row.load} ${unit} × ` : ""}{row.reps || "–"}{row.rpe ? ` · RPE ${row.rpe}` : ""}</span></>}</span>
+    <button type="button" className="st-link" aria-label={`Edit set ${target.set}`} onClick={() => timer.update(s => ({ ...s, unreportedSetLogs: { ...s.unreportedSetLogs, [item.id]: (s.unreportedSetLogs?.[item.id] ?? []).filter(set => set !== target.set) }, confirmedSetLogs: { ...s.confirmedSetLogs, [item.id]: (s.confirmedSetLogs?.[item.id] ?? []).filter(set => set !== target.set) } }))}>Edit</button>
   </div>;
   return <section className="st-rest-sheet" aria-label="Log completed set">
     <div className="st-rest-sheet-head"><h3>Log completed set</h3><span>{targetText ? `Target: ${targetText}` : `Set ${target.set}`}</span></div>
@@ -52,7 +53,7 @@ export function TimerSetReview({ timer }: { timer: SessionTimerController }) {
   const { state } = timer;
   const [error, setError] = useState(false);
   return <div className="st-set-review">
-    <h2>Review your sets</h2><p className="st-note">Confirm or correct your completed work.</p>
+    <h2>Review your sets</h2><p className="st-note">Unknown values can stay unreported.</p>
     <div className="st-set-review-list">{state.items.map((item, index) => {
       const count = state.completed[index] ?? 0;
       const rows = timerSetDrafts(state, item.id);
@@ -61,15 +62,23 @@ export function TimerSetReview({ timer }: { timer: SessionTimerController }) {
       const doneRows = rows.slice(0, count);
       const read = readSets(doneRows, unit);
       return <details key={item.id} open><summary>{item.title} <span>{count} sets</span></summary>
-        <SetRows rows={doneRows} unit={unit} editableCount={false} showRpe showLoad={item.setFields.some(field => field.key === "load")} invalid={read.invalid}
-          onChange={updated => timer.update(s => ({ ...s, setDrafts: { ...s.setDrafts, [item.id]: [...updated, ...rows.slice(count)] }, confirmedSetLogs: { ...s.confirmedSetLogs, [item.id]: [] } }))} />
+        <SetRows rows={doneRows} unit={unit} editableCount={false} showRpe unreported={state.unreportedSetLogs?.[item.id]}
+          onLeaveUnreported={at => timer.update(s => leaveSetUnreported(s, item.id, at + 1))} showLoad={item.setFields.some(field => field.key === "load")} invalid={read.invalid}
+          onChange={updated => timer.update(s => {
+            const changed = updated.flatMap((row, at) => row.reps !== rows[at].reps || row.load !== rows[at].load || row.rpe !== rows[at].rpe ? [at + 1] : []);
+            return { ...s, setDrafts: { ...s.setDrafts, [item.id]: [...updated, ...rows.slice(count)] },
+              confirmedSetLogs: { ...s.confirmedSetLogs, [item.id]: (s.confirmedSetLogs?.[item.id] ?? []).filter(set => !changed.includes(set)) },
+              unreportedSetLogs: { ...s.unreportedSetLogs, [item.id]: (s.unreportedSetLogs?.[item.id] ?? []).filter(set => !changed.includes(set)) },
+            };
+          })} />
       </details>;
     })}</div>
     {error ? <p className="st-log-error" role="alert">Check the highlighted set values before continuing.</p> : null}
     <button type="button" className="st-primary" onClick={() => {
       const next = confirmAllSetLogs(timer.state);
-      setError(unconfirmedSets(next).length > 0);
+      setError(pendingSetLogs(next).length > 0);
       timer.update(() => next);
     }}>Save sets & continue</button>
+    <button type="button" className="st-link st-leave-unreported" onClick={() => timer.update(leaveRemainingUnreported)}>Leave remaining unreported</button>
   </div>;
 }

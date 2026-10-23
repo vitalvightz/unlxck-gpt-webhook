@@ -2456,6 +2456,7 @@ class ExerciseSetResult(BaseModel):
     """One confirmed set. Missing measurements stay unknown."""
 
     model_config = ConfigDict(extra="forbid")
+    set_number: int | None = Field(default=None, strict=True, ge=1, le=50)
     reps: int | None = Field(default=None, strict=True, ge=1, le=1000)
     load: ExerciseLogMeasure | None = None
     rpe: float | None = Field(default=None, strict=True, ge=1, le=10)
@@ -2521,12 +2522,26 @@ class ExerciseLogActual(BaseModel):
             units = {entry.load.unit for entry in self.set_entries if entry.load is not None}
             if len(units) > 1:
                 raise ValueError("Use one load unit for an exercise's sets.")
-            self.sets = len(self.set_entries)
-            first = self.set_entries[0]
-            self.reps = first.reps if all(entry.reps == first.reps for entry in self.set_entries) else None
-            self.load = first.load if all(entry.load == first.load for entry in self.set_entries) else None
-            if any(entry.rpe is not None for entry in self.set_entries):
-                self.effort = ExerciseLogEffort(value=first.rpe) if first.rpe is not None and all(entry.rpe == first.rpe for entry in self.set_entries) else None
+            rows = self.set_entries
+            numbered = any(entry.set_number is not None for entry in rows)
+            numbers = [entry.set_number for entry in rows] if numbered else list(range(1, len(rows) + 1))
+            if numbered and (None in numbers or numbers != sorted(set(numbers))):
+                raise ValueError("Set numbers must be unique and increasing on every row.")
+            completed = (self.sets if self.sets is not None else numbers[-1]) if numbered else len(rows)
+            if completed < numbers[-1]:
+                raise ValueError("Reported set numbers cannot exceed the completed set count.")
+            measured = [(number, entry) for number, entry in zip(numbers, rows)
+                        if entry.reps is not None or entry.load is not None or entry.rpe is not None]
+            # Empty legacy/input rows are unreported work, never measurement records.
+            self.sets = completed
+            self.set_entries = [entry.model_copy(update={"set_number": number})
+                                if numbered or len(measured) != completed else entry for number, entry in measured] or None
+            full = len(measured) == completed
+            first = measured[0][1] if measured else None
+            self.reps = first.reps if full and all(entry.reps == first.reps for _, entry in measured) else None
+            self.load = first.load if full and all(entry.load == first.load for _, entry in measured) else None
+            if not full or any(entry.rpe is not None for _, entry in measured):
+                self.effort = ExerciseLogEffort(value=first.rpe) if full and first.rpe is not None and all(entry.rpe == first.rpe for _, entry in measured) else None
         return self
 
 

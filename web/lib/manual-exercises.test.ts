@@ -17,7 +17,7 @@ test("summaries read like a training log and never invent values", () => {
   assert.equal(summarise({ sets: 3, reps: 8, load: { value: 10, unit: "kg" } }, "bodyweight"), "3 × 8 · +10 kg");
   assert.equal(summarise({ rounds: 6, work: { value: 3, unit: "minutes" }, rest: { value: 60, unit: "seconds" } }, "intervals"), "6 × 3 min · 60 sec rest");
   assert.equal(summarise({ distance: { value: 5, unit: "km" }, duration: { value: 28, unit: "minutes" } }, "distance"), "5 km · 28 min");
-  assert.equal(summarise({ sets: 3 }, "strength"), "3 sets");
+  assert.equal(summarise({ sets: 3 }, "strength"), "3 sets completed · measurements unreported");
   assert.equal(summarise({ load: { value: 200, unit: "lb" }, effort: { method: "RPE", value: 8.5 } }, "strength"), "200 lb · RPE 8.5");
   assert.equal(summarise({}, "strength"), "");
 });

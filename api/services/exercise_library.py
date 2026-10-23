@@ -68,7 +68,7 @@ def performed_values(row: dict, actual: ExerciseLogActual) -> ExerciseLogActual:
         return actual
     prescribed = _map(row.get("prescribed"))
     for key in ExerciseLogActual.model_fields:
-        if actual.set_entries is not None and key in {"sets", "reps", "load"}:
+        if actual.set_entries is not None and key in {"sets", "reps", "load", "effort"}:
             continue
         if key in values:
             continue

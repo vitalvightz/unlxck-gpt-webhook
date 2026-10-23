@@ -429,3 +429,70 @@ test("strength timer logs during rest, restores drafts and reviews actual histor
   expect(squat.actual.load).toBeNull();
   expect(errors).toEqual([]);
 });
+
+for (const width of [390, 1280]) for (const partial of [false, true]) {
+  test(`timer leaves unknown measurements unreported through real history (${width}px, partial=${partial})`, async ({ page, baseURL }) => {
+    test.skip(!api, "Run with EXERCISE_TEST_API pointing at the seeded local API");
+    test.setTimeout(60_000);
+    await page.request.post(`${api}/__e2e/reset`);
+    const headers = { Authorization: "Bearer athlete-token" };
+    const initial = await (await page.request.get(`${api}/api/today`, { headers })).json();
+    const planId = initial.active_plan.id;
+    await page.request.post(`${api}/api/today/checkin`, { headers,
+      data: { plan_id: planId, sleep: "good", body: "normal", pain: "none", phase: "GPP" } });
+    await page.setViewportSize({ width, height: 844 });
+    await setup(page, baseURL!);
+    await page.goto("/today");
+    await page.getByRole("button", { name: "Start session", exact: true }).click();
+    const timer = page.locator(".st-root");
+    await timer.getByRole("button", { name: "Start", exact: true }).click();
+    for (const set of [1, 2, 3, 4]) {
+      await timer.getByRole("button", { name: `Set ${set} done`, exact: true }).click();
+      if (set < 4) {
+        if (partial && set !== 2) {
+          await timer.getByLabel(`Load kg, set ${set}`).fill(set === 1 ? "105" : "110");
+          await timer.getByRole("button", { name: "✓ Confirm set", exact: true }).click();
+        } else if (set === 2) await timer.getByLabel("Load kg, set 2").fill("invalid");
+        await timer.getByRole("button", { name: `Start set ${set + 1}`, exact: true }).click();
+      }
+    }
+    await timer.getByRole("button", { name: "End session", exact: true }).click();
+    await page.getByRole("alertdialog", { name: "End session", exact: true }).getByRole("button", { name: "End", exact: true }).click();
+    await expect(timer.getByRole("button", { name: "Leave remaining unreported", exact: true })).toBeInViewport({ ratio: 1 });
+    if (partial) {
+      await timer.getByRole("button", { name: "Leave set 2 unreported", exact: true }).click();
+      for (const field of ["Load kg", "Reps", "RPE"]) await timer.getByLabel(`${field}, set 4`).fill("");
+      await timer.getByRole("button", { name: "Save sets & continue", exact: true }).click();
+    } else await timer.getByRole("button", { name: "Leave remaining unreported", exact: true }).click();
+    await expect(timer).toHaveCount(0);
+    // These reads use the real API/store, then render the same records in History.
+    const logs = await (await page.request.get(`${api}/api/today/exercise-logs?plan_id=${planId}`, { headers })).json();
+    const squat = logs.logs.find((log: { exercise_key: string }) => log.exercise_key === "back-squat");
+    expect(squat.status).toBe("modified");
+    expect(squat.actual.sets).toBe(4);
+    expect(squat.actual.reps).toBeNull(); expect(squat.actual.load).toBeNull(); expect(squat.actual.effort).toBeNull();
+    expect((squat.actual.set_entries ?? []).map((entry: { set_number: number }) => entry.set_number)).toEqual(partial ? [1, 3] : []);
+    const library = await (await page.request.get(`${api}/api/history/exercise-library`, { headers })).json();
+    const record = library.exercises.find((entry: { id: string }) => entry.id === "key:back-squat");
+    expect(record.best_loads.map((load: { value: number }) => load.value)).toEqual(partial ? [110] : []);
+    await page.goto("/history");
+    await page.getByRole("tab", { name: "Exercises", exact: true }).click();
+    await page.getByRole("button", { name: "View Back Squat performance history", exact: true }).click();
+    const history = page.getByRole("dialog", { name: "Back Squat", exact: true });
+    if (partial) {
+      await expect(history.getByLabel("Selected performance")).toContainText("Reported");
+      await expect(history.getByLabel("Selected performance")).not.toContainText("Confirmed as prescribed");
+      const summary = history.locator("details").filter({ hasText: "2 logged · 2 unreported" });
+      await summary.locator("summary").click();
+      const rows = summary.getByRole("list", { name: "Recorded sets" }).getByRole("listitem");
+      await expect(rows).toHaveCount(2);
+      await expect(rows.nth(0).locator(":scope > span").first()).toHaveText("1");
+      await expect(rows.nth(1).locator(":scope > span").first()).toHaveText("3");
+      await expect(summary).toContainText("105"); await expect(summary).toContainText("110");
+    } else {
+      await expect(history).toContainText("4 sets completed · measurements unreported");
+      await expect(history.getByRole("list", { name: "Recorded sets" })).toHaveCount(0);
+    }
+    if (shots) await page.screenshot({ path: `${shots}/history-unreported-${width}-${partial ? "partial" : "all"}.png` });
+  });
+}

@@ -1,7 +1,7 @@
 import type { ExerciseLogRecord, ExerciseLogRequest } from "../types";
 import type { TimerState } from "./engine";
 import { buildSetLogEntry } from "../exercise-log";
-import { blankSet } from "../set-entries";
+import { actualFromSets, readSets } from "../set-entries";
 
 export type TimerLogEntry = Omit<ExerciseLogRequest, "plan_id">;
 
@@ -39,18 +39,19 @@ export function timerExerciseLogs(
     }
     const planned = item.planned ?? null;
     if (item.kind === "sets" && item.setFields && state.setDrafts?.[item.id]) {
-      const rows = state.setDrafts[item.id].slice(0, done).map((row, at) =>
-        state.confirmedSetLogs === undefined || state.confirmedSetLogs[item.id]?.includes(at + 1) ? row : blankSet());
-      // Pending rows are never history. Keep the original partial-count path
-      // for old runs and for work explicitly completed without measurements.
-      if (rows.length === done) {
-        const unit = item.setFields.find(field => field.key === "load")?.apiUnit ?? "kg";
-        const result = buildSetLogEntry(item.setFields, rows, unit);
-        if (!result.invalid.length) {
-          entries.push({ block_id: blockId, status: result.status, actual: result.actual });
-          return;
-        }
-      }
+      const unit = item.setFields.find(field => field.key === "load")?.apiUnit ?? "kg";
+      const reported = state.setDrafts[item.id].slice(0, done).flatMap((row, at) => {
+        if (!state.confirmedSetLogs?.[item.id]?.includes(at + 1)) return [];
+        const read = readSets([row], unit);
+        if (read.invalid.length || !read.actual.set_entries?.length) return [];
+        return [{ row, entry: { ...read.actual.set_entries[0], set_number: at + 1 } }];
+      });
+      const result = reported.length ? buildSetLogEntry(item.setFields, reported.map(({ row }) => row), unit) : null;
+      entries.push({ block_id: blockId,
+        status: reported.length === done && result ? result.status : "modified",
+        actual: actualFromSets(reported.map(({ entry }) => entry), done),
+      });
+      return;
     }
     if (!planned || done >= planned.min) {
       entries.push({ block_id: blockId, status: "as_prescribed" });

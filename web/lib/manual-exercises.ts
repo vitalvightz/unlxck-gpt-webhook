@@ -1,7 +1,7 @@
 import type {
   ExerciseLogActual, LibraryEntry, ManualExerciseEntry, PerformedExerciseInput, PersonalExercise,
 } from "./api-schema.generated";
-import { draftsFromActual, readSets, setSummary, type SetDraft } from "./set-entries";
+import { countOnlySetSummary, draftsFromActual, readSets, setSummary, type SetDraft } from "./set-entries";
 
 export type MeasurementFormat = PerformedExerciseInput["format"];
 export type ExerciseChoice = PerformedExerciseInput["exercise"];
@@ -84,7 +84,7 @@ export function readDraft(format: MeasurementFormat, draft: Draft): { actual: Pa
   const errors: Partial<Record<FieldId, string>> = {};
   const individual = draft.setRows && (format === "strength" || format === "bodyweight");
   for (const field of [...PRIMARY_FIELDS[format], ...EXTRA_FIELDS[format]]) {
-    if (individual && ["sets", "reps", "load"].includes(field)) continue;
+    if (individual && ["sets", "reps", "load", "effort"].includes(field)) continue;
     const text = draft.values[field]?.trim();
     if (!text) continue;
     const value = Number(text.replace(",", "."));
@@ -113,8 +113,9 @@ const amount = (measure: { value: number; unit: string }) => `${measure.value} $
 /** "3 × 5 · 80 kg". Empty when nothing was recorded; never invents a value. */
 export function summarise(actual: Partial<ExerciseLogActual> | null | undefined, format?: MeasurementFormat | null): string {
   if (!actual) return "";
-  if (actual.set_entries?.length) return [setSummary(actual.set_entries),
+  if (actual.set_entries?.length) return [setSummary(actual.set_entries, actual.sets ?? undefined),
     actual.rest ? `${time(actual.rest)} rest` : "", actual.effort ? `RPE ${actual.effort.value}` : ""].filter(Boolean).join(" · ");
+  if (countOnlySetSummary(actual)) return countOnlySetSummary(actual)!;
   const parts: string[] = [];
   const used = new Set<string>();
   if (actual.sets != null && actual.reps != null) { parts.push(`${actual.sets} × ${actual.reps}`); used.add("sets").add("reps"); }

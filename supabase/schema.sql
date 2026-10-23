@@ -2885,7 +2885,7 @@ create table if not exists public.manual_exercise_entries (
     check (measurement_format in ('strength', 'bodyweight', 'isometric', 'intervals', 'distance')),
   -- Only the values the athlete entered, in exercise_logs.actual's shape.
   actual jsonb not null default '{}'::jsonb
-    check (jsonb_typeof(actual) = 'object' and octet_length(actual::text) <= 4096),
+    check (jsonb_typeof(actual) = 'object' and octet_length(actual::text) <= 8192),
   notes text not null default '' check (char_length(notes) <= 500),
   revision integer not null default 1 check (revision >= 1),
   deleted_at timestamptz,

@@ -925,6 +925,7 @@ export type ExerciseRecentLoad = {
 
 /** One confirmed set. Missing measurements stay unknown. */
 export type ExerciseSetResult = {
+  set_number: number | null;
   reps: number | null;
   load: ExerciseLogMeasure | null;
   rpe: number | null;
@@ -932,6 +933,7 @@ export type ExerciseSetResult = {
 
 /** One confirmed set. Missing measurements stay unknown. */
 export type ExerciseSetResultRequest = {
+  set_number?: number | null;
   reps?: number | null;
   load?: ExerciseLogMeasureRequest | null;
   rpe?: number | null;

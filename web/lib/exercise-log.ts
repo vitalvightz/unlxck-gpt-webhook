@@ -1,5 +1,5 @@
 import { cleanText, finitePositiveNumber, isModeLikeReps, isTimeLikeReps } from "@/lib/structured-plan";
-import { readSets, setSummary, type SetDraft } from "./set-entries";
+import { countOnlySetSummary, readSets, setSummary, type SetDraft } from "./set-entries";
 import type {
   ExerciseLogActual,
   ExerciseLogReason,
@@ -299,16 +299,16 @@ export function setDraftsForFields(fields: LogField[], draft: LogDraft = {}, cou
     return prescribed && prescribed[0] === prescribed[1] ? String(prescribed[0]) : "";
   };
   const sets = count ?? Number(value("sets") || 1);
-  return Array.from({ length: Math.min(50, Math.max(1, Number.isFinite(sets) ? Math.floor(sets) : 1)) }, () => ({ reps: value("reps"), load: value("load") }));
+  return Array.from({ length: Math.min(50, Math.max(1, Number.isFinite(sets) ? Math.floor(sets) : 1)) }, () => ({ reps: value("reps"), load: value("load"), ...(value("effort") ? { rpe: value("effort") } : {}) }));
 }
 
 export function buildSetLogEntry(fields: LogField[], rows: SetDraft[], unit: string, draft: LogDraft = {}): LogEntryResult {
-  const entry = buildLogEntry(fields.filter(field => !["sets", "reps", "load"].includes(field.key)), draft);
+  const entry = buildLogEntry(fields.filter(field => !["sets", "reps", "load", "effort"].includes(field.key)), draft);
   const read = readSets(rows, unit);
   const count = buildLogEntry(fields.filter(field => field.key === "sets"), { sets: String(rows.length) });
   const loadField = fields.find(field => field.key === "load");
   const differentUnit = Boolean(loadField?.prescribed && loadField.apiUnit !== unit && rows.some(row => row.load.trim()));
-  let changed = entry.status === "modified" || count.status === "modified" || differentUnit;
+  let changed = (read.actual.set_entries?.length ?? 0) < rows.length || entry.status === "modified" || count.status === "modified" || differentUnit;
   const invalid = [...entry.invalid, ...(read.invalid.length ? ["reps" as const] : [])];
   const outliers = [...entry.outliers, ...count.outliers];
   for (const [index, row] of rows.entries()) {
@@ -379,7 +379,8 @@ export function logSummary(fields: LogField[], log: ExerciseLogRecord): string {
   if (log.status === "skipped") {
     return label;
   }
-  if (log.actual?.set_entries?.length) return `${label} · ${setSummary(log.actual.set_entries)}`;
+  if (log.actual?.set_entries?.length) return `${label} · ${setSummary(log.actual.set_entries, log.actual.sets ?? undefined)}`;
+  if (countOnlySetSummary(log.actual)) return `${label} · ${countOnlySetSummary(log.actual)}`;
   const parts = fields.flatMap((field) => {
     const value = actualNumber(log.actual, field.key);
     return value === null ? [] : [formatLogValue(field, value)];
@@ -529,7 +530,8 @@ export function lastPerformanceFor(block: StructuredBlock, history?: readonly Ex
 
 export function performanceSummary(log: ExerciseLogRecord): string {
   if (log.status === "skipped") return "Skipped";
-  if (log.actual?.set_entries?.length) return setSummary(log.actual.set_entries);
+  if (log.actual?.set_entries?.length) return setSummary(log.actual.set_entries, log.actual.sets ?? undefined);
+  if (countOnlySetSummary(log.actual)) return countOnlySetSummary(log.actual)!;
   const block: StructuredBlock = {
     ...log.prescribed,
     ...Object.fromEntries((["load", "duration", "work", "distance"] as const)

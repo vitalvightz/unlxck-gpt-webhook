@@ -56,3 +56,9 @@ export function measurementCount(count: number, metric: ProgressMetric): string 
   const [one, many] = PROGRESS_METRICS.find(item => item.key === metric)!.count;
   return `${count} recorded ${count === 1 ? one : many}`;
 }
+
+/** A sparse actual set is reported evidence even when its aggregate load is unknown. */
+export function measurementBasis(record: ExercisePerformance, metric: ProgressMetric): string {
+  return record.block.actual[metric] != null || (metric === "load" && record.block.actual.set_entries?.some(entry => entry.load != null))
+    ? "Reported" : "Confirmed as prescribed";
+}

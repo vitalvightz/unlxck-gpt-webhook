@@ -10,7 +10,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { RestSetLogger, TimerSetReview } from "./rest-set-logger";
-import { unconfirmedSets, completeSetWithResults, endSessionWithResults, finishItemWithResults, finishItemAsPlannedWithResults } from "@/lib/session-timer/sets";
+import { pendingSetLogs, completeSetWithResults, endSessionWithResults, finishItemWithResults, finishItemAsPlannedWithResults } from "@/lib/session-timer/sets";
 import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 
 import { useSessionTimer, type SessionTimerController } from "@/components/session-timer/use-session-timer";
@@ -1100,9 +1100,9 @@ export function SessionTimer({
   });
   // Also when the run comes back already finished (the app closed between the
   // last set and the hand-off): it is handed on, never left hidden.
-  const needsSetReview = state.phase === "done" && unconfirmedSets(state).length > 0;
+  const needsSetReview = state.phase === "done" && pendingSetLogs(state).length > 0;
   const restLogTarget = state.pendingSetLog && state.phase === "rest" && !state.prep ? state.pendingSetLog : null;
-  const restLogConfirmed = restLogTarget ? state.confirmedSetLogs?.[restLogTarget.itemId]?.includes(restLogTarget.set) : false;
+  const restLogConfirmed = restLogTarget ? (state.confirmedSetLogs?.[restLogTarget.itemId]?.includes(restLogTarget.set) || state.unreportedSetLogs?.[restLogTarget.itemId]?.includes(restLogTarget.set)) : false;
   const strengthLogging = Boolean((item?.kind === "sets" && item.setFields) || restLogTarget || needsSetReview);
   const handingOff = handOffWhenDone && state.phase === "done" && !needsSetReview && !finishError;
   useEffect(() => {
@@ -1422,7 +1422,7 @@ export function SessionTimer({
             </div>
           ) : (
             <div className="st-links">
-              {canMarkPlanned ? (
+              {canMarkPlanned && !restLogTarget ? (
                 <button type="button" className="st-link" onClick={() => timer.run(finishItemAsPlannedWithResults)}>
                   Done as planned
                 </button>
