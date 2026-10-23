@@ -316,6 +316,8 @@ class SessionBlock(BaseModel):
     work: MeasuredValue | None = None
     distance: MeasuredValue | None = None
     rounds: int | None = None
+    interval_blocks: int | None = Field(default=None, ge=1)
+    between_block_rest: MeasuredValue | None = None
     # Cluster structure (contrast pairs): each movement's own reps and load,
     # sharing the block's ``rounds`` and ``rest``. Absent for single movements.
     components: list[BlockComponent] | None = None
@@ -648,7 +650,7 @@ class StructuredTrainingPlan(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Strict json_schema generation for OpenAI structured outputs (opt-in)
+# Strict json_schema generation for OpenAI structured outputs
 # ---------------------------------------------------------------------------
 #
 # OpenAI's strict json_schema mode guarantees the model returns an object that
@@ -671,7 +673,7 @@ class StructuredTrainingPlan(BaseModel):
 # (all-required, additionalProperties:false, no banned keywords, no free-form
 # objects). Whether the live OpenAI endpoint accepts the schema, and whether the
 # model output round-trips cleanly through validation, MUST be confirmed in
-# staging with a real API key before the schema mode is enabled in production.
+# staging with a real API key when changing the configured model or endpoint.
 
 _STRICT_UNSUPPORTED_KEYWORDS = frozenset(
     {

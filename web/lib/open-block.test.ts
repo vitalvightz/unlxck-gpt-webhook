@@ -42,11 +42,10 @@ test("baseline week carries no per-block directive", () => {
   assert.equal(openBlockWeekDirective(null, block()), null);
 });
 
-test("every week shows its own saved prescription without inventing a progression", () => {
+test("the saved dose is provenance, never a duplicate week instruction", () => {
   for (const week of [1, 2, 3, 4]) {
     const dose = week === 4 ? "2x3 @ 65% 1RM; rest 120s." : "4x3 @ 75% 1RM; rest 120s.";
-    assert.deepEqual(openBlockWeekDirective(openBlockWeekIntent(week), block({ week_prescription: dose })),
-      { label: "This week", text: dose, usesProgressionRule: false });
+    assert.equal(openBlockWeekDirective(openBlockWeekIntent(week), block({ week_prescription: dose })), null);
   }
   assert.equal(openBlockWeekDirective(null, block({ week_prescription: "4x3" })), null);
 });

@@ -2251,6 +2251,8 @@ export type SessionBlock = {
   work: MeasuredValue | null;
   distance: MeasuredValue | null;
   rounds: number | null;
+  interval_blocks: number | null;
+  between_block_rest: MeasuredValue | null;
   components: BlockComponent[] | null;
   intensity: string | null;
   energy_system: string | null;

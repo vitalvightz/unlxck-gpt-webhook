@@ -446,32 +446,29 @@ def _stage2_structured_json_mode() -> bool:
 def _stage2_structured_schema_mode() -> bool:
     """Whether the structured-card calls use strict json_schema (vs json_object).
 
-    OFF by default. When enabled, the calls send the strict json_schema built
+    Enabled by default. The calls send the strict json_schema built
     from ``StructuredTrainingPlan`` (via
     :func:`build_strict_structured_plan_schema`) instead of plain JSON object
     mode, so the provider guarantees the response *conforms to the schema* - which
     in turn makes the repair retry unnecessary (disable it with
     ``UNLXCK_STAGE2_STRUCTURED_REPAIR=0`` once schema mode is validated).
 
-    It is off by default deliberately: the strict schema is verified only for
-    structural compliance in-repo, and whether the live endpoint accepts it and
-    the model output round-trips through validation must be confirmed in staging
-    with a real API key first. Set ``UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE`` to a
-    truthy value to opt in. JSON object mode remains the validated default.
+    Set UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE=0 to use JSON-object mode instead.
+    Content/faithfulness validation still runs in JSON-object mode.
     """
 
     raw = os.getenv("UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE")
     if raw is None:
-        return False  # unset → default off (opt-in)
+        return True
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _structured_response_format() -> dict[str, Any] | None:
     """Pick the Responses-API output-format for the structured-card calls.
 
-    Strict json_schema when schema mode is opted into; otherwise JSON object mode
+    Strict json_schema by default; otherwise JSON object mode
     when enabled; otherwise ``None`` (free-form). Never applied to the plan-text
-    pass. A schema-build failure degrades to JSON object mode rather than raising.
+    pass. A schema-build failure fails closed rather than weakening the contract.
     """
 
     if _stage2_structured_schema_mode():
@@ -482,13 +479,8 @@ def _structured_response_format() -> dict[str, Any] | None:
                 "schema": build_strict_structured_plan_schema(),
                 "strict": True,
             }
-        except Exception:  # never let schema generation break the call
-            # Degrade deterministically to JSON object mode (still valid JSON),
-            # not to free-form: schema mode opted into structured output, so a
-            # build failure must not silently reintroduce non-JSON responses even
-            # when json-object mode is toggled off.
-            logger.exception("[stage2] strict schema build failed; falling back to json_object")
-            return _STRUCTURED_JSON_FORMAT
+        except Exception as exc:
+            raise Stage2AutomationError("Could not build the strict structured-plan schema.") from exc
     if _stage2_structured_json_mode():
         return _STRUCTURED_JSON_FORMAT
     return None
@@ -1239,6 +1231,10 @@ class OpenAIStage2Automator:
             # server-side, so a dropped connection cannot kill a long generation.
             "background": True,
         }
+        # Reasoning models such as the configured gpt-5-mini reject temperature.
+        # Use deterministic sampling only on the supported non-reasoning families.
+        if re.match(r"^(?:gpt-4\.1|gpt-4o)(?:-|$)", self.model):
+            request["temperature"] = 0
         if response_format is not None:
             # Constrain the provider's output format (e.g. JSON object mode for the
             # structured-card calls) via the Responses API text.format field. The
@@ -1790,6 +1786,7 @@ class OpenAIStage2Automator:
             plan_markdown=final_plan_text,
             planning_brief=planning_brief,
             event_date=event_date,
+            schema_constrained=(json_format or {}).get("type") == "json_schema",
         )
         first_text, first_cost = await self._generate_text(
             first_prompt,
@@ -1826,6 +1823,7 @@ class OpenAIStage2Automator:
             computed_support=computed_support,
             planning_brief=planning_brief,
             allow_salvage=not _structured_repair_enabled(),
+            strict_content=(json_format or {}).get("type") == "json_schema",
         )
         _annotate_call(first_cost, outcome=first_outcome.status)
         # A safety-blocked card is terminal: it was schema-valid, so the repair
@@ -1852,6 +1850,7 @@ class OpenAIStage2Automator:
             event_date=event_date,
             repair_errors=first_outcome.errors,
             broken_json=first_text,
+            schema_constrained=(json_format or {}).get("type") == "json_schema",
         )
         repaired_text, repair_cost = await self._generate_text(
             repair_prompt,
@@ -1869,6 +1868,7 @@ class OpenAIStage2Automator:
             repair_fn=lambda _data, _errors: repaired_json,
             computed_support=computed_support,
             planning_brief=planning_brief,
+            strict_content=(json_format or {}).get("type") == "json_schema",
         )
         _annotate_call(repair_cost, outcome=repaired_outcome.status, reason=first_outcome.status)
         # Telemetry for the repair lever: did the second call actually rescue a

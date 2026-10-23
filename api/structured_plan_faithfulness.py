@@ -95,9 +95,13 @@ _PAREN_DDAY_RE = re.compile(r"\(D-\d+\)", re.I)
 
 _SOURCE_HEADING_RE = re.compile(r"^\s*#{1,6}\s+")
 _SOURCE_EFFORT_RE = re.compile(r"\b(?:RPE|RIR)\s*\d", re.I)
+# Match a quantity belonging to rest, rather than a nearby set count or RPE.
+# In "3 holds x 10 sec; full rest between holds; RPE 7", neither 3 nor 7
+# prescribes a rest duration. Qualitative rest is preserved as rest_note.
 _SOURCE_REST_RE = re.compile(
-    r"(?:\b(?:rest|recovery|reset)\b[^\n]{0,24}\d|"
-    r"\d[^\n]{0,24}\b(?:rest|recovery|reset)\b)",
+    r"(?:\b(?:rest|recovery|reset)\s*(?::|=)?\s*(?:for\s+)?\d|"
+    r"\b\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?\s*"
+    r"(?:s|secs?|seconds?|mins?|minutes?)\s+(?:of\s+)?(?:rest|recovery|reset)\b)",
     re.I,
 )
 _SOURCE_DETAIL_LABEL_RE = re.compile(
