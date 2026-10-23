@@ -468,6 +468,12 @@ def generate_plan_sync(
                 "override_key": _TRIAGE_RESUME_OVERRIDE_KEY,
             }
             why_log["injury_triage_original"] = triage_result.to_dict()
+            override = data.get(_TRIAGE_RESUME_OVERRIDE_KEY)
+            if isinstance(override, dict) and override.get("approval_source") == "automatic_admin_policy":
+                why_log["injury_triage_resume_override"].update({
+                    "approval_source": "automatic_admin_policy",
+                    "reason": override.get("reason"),
+                })
     return _validate_stage1_result(result)
 
 
