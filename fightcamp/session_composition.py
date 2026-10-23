@@ -378,10 +378,9 @@ def _effective_role_cap(role_key: str, pressure: int) -> tuple[int, int]:
     if pressure <= 0:
         return base_cap, base_cap
     if role_key in {"primary_strength_day", "structural_strength_day"}:
-        # Raise the unrestricted exercise ceiling, NOT the number of exercises
-        # allowed under fatigue or weight-cut pressure. Those limits
-        # remain exactly as they were when the base ceiling was four.
-        return base_cap, max(2, 4 - pressure)
+        # A six-exercise ceiling tapers gradually with fatigue and cut strain.
+        # Authoritative dose, injury and calendar safety rules remain in place.
+        return base_cap, max(3, base_cap - pressure)
     if pressure == 1:
         return base_cap, max(2, base_cap - 1)
     if pressure == 2:
@@ -801,7 +800,6 @@ def _select_bounded_records(
 _PRESSURE_SOURCE_REASONS = (
     ("fatigue_pressure", "high_fatigue"),
     ("cut_pressure", "weight_cut_pressure"),
-    ("injury_pressure", "injury_constraint"),
 )
 
 
