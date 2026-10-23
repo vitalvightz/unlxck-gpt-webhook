@@ -820,6 +820,8 @@ async def run_generation_job(
             log_context={"job_id": job_id, "athlete_id": athlete_id},
             remaining_runtime_seconds=max(0.0, runtime_deadline - time.monotonic()),
         )
+        if time.monotonic() >= runtime_deadline:
+            raise asyncio.TimeoutError
         await _touch_heartbeat()
 
         await persist_plan_and_finalize(
