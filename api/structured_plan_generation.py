@@ -27,7 +27,6 @@ from collections.abc import Mapping
 from typing import Any, Callable, Literal, get_args
 
 from fightcamp.injury_awareness import merge_injury_awareness
-from fightcamp.exercise_output_contract import STRUCTURED_CONVERSION_CONTRACT, exercise_field_ownership_errors
 from fightcamp.session_sequencing import sequence_structured_plan
 from fightcamp.fight_date_utils import parse_fight_date
 from fightcamp.structured_session_identity import match_sessions_to_roles
@@ -1138,7 +1137,6 @@ def _normalize_block(value: Any) -> dict[str, Any]:
         ("work", "seconds"),
         ("distance", "meters"),
         ("duration", "minutes"),
-        ("between_block_rest", "seconds"),
     ):
         if measured_key in out:
             out[measured_key] = _normalize_measured(out.get(measured_key), default_unit)
@@ -3302,7 +3300,6 @@ def build_structured_plan_outcome(
     computed_support: dict[str, Any] | None = None,
     planning_brief: dict[str, Any] | None = None,
     allow_salvage: bool = True,
-    strict_content: bool = False,
 ) -> StructuredPlanOutcome:
     """Validate a candidate structured payload into a persistable outcome.
 
@@ -3321,10 +3318,8 @@ def build_structured_plan_outcome(
     card discarded, so a leaking or contradictory card can never be persisted or
     trusted for publication. DUPLICATE findings stay advisory warnings.
 
-    Strict conversion blocks all faithfulness findings, including missing
-    numeric prescriptions. Qualitative rest stays in ``rest_note`` without an
-    invented duration. Legacy callers keep ``PRESCRIPTION`` omissions advisory:
-    the structured schema can only store scalar measured values, so an exact raw
+    Faithfulness findings remain blocking except ``PRESCRIPTION`` omissions.
+    The structured schema can only store scalar measured values, so an exact raw
     range such as ``Rest 2-3 minutes`` may be intentionally absent from the
     converted object. The persisted plan embeds the verbatim source and the
     renderer deterministically restores those explicit ranges; rejecting the
@@ -3347,7 +3342,7 @@ def build_structured_plan_outcome(
         blocking: list[str] = []
         advisory: list[str] = []
         for issue in findings:
-            target = advisory if not strict_content and issue.startswith(f"{PRESCRIPTION}:") else blocking
+            target = advisory if issue.startswith(f"{PRESCRIPTION}:") else blocking
             target.append(f"faithfulness: {issue}")
         return blocking, advisory
 
@@ -3371,9 +3366,6 @@ def build_structured_plan_outcome(
         # programming instruction. Use the same deterministic recovery as reads.
         from .structured_plan_coaching import recover_selected_coaching
         plan_dict = recover_selected_coaching(plan_dict, planning_brief or {}, source_text=raw_markdown)
-        ownership_errors = exercise_field_ownership_errors(plan_dict) if strict_content else []
-        if ownership_errors:
-            return StructuredPlanOutcome(status="invalid_fallback_used", errors=ownership_errors)
         # Hard invariant for every candidate that can ship (first pass,
         # schema-salvaged, faithfulness-pruned or model-repaired): conversion
         # never costs Stage 1 strength/conditioning the source rendered. A card
@@ -3640,9 +3632,9 @@ code fences, no commentary.
 The human-readable plan provided below is the SOURCE OF TRUTH for exercise and
 session membership, dates, explicit volume/load, and safety constraints. Convert
 it faithfully into structured form. Do NOT add new exercises, sessions, blocks,
-dates, athletes, biometrics, or override any explicit fixed prescription. Never
-infer missing rest, effort, loading, execution cues or progression; leave absent
-source fields empty. The final-session authoring pass owns those decisions.
+dates, athletes, biometrics, or override any explicit fixed prescription. You MAY fill
+missing rest, effort and one concise execution cue for an existing physical
+block, using the supplied athlete/session context and the rules below.
 
 The root JSON object IS the StructuredTrainingPlan.
 Do NOT wrap it inside a top-level "plan" key. Its top-level keys are exactly:
@@ -3781,9 +3773,18 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   block_id) are optional metadata: use a stable source id when one exists,
   otherwise emit null. A missing identifier must never reject the card and must
   never be replaced with a generic visible fallback.
-- For each EXISTING physical exercise/drill, preserve fixed volume, load, rest,
-  effort, execution cues and every safety condition. Never infer a missing
-  prescription or coaching field from athlete context. Use null or [] when absent.
+- For each EXISTING physical exercise/drill, preserve its fixed volume,
+  load, rest, effort and cue, and stay within any explicit range. When rest,
+  effort or an execution cue is
+  absent, infer only those missing presentation fields from the athlete context,
+  session objective/type, sport, goals and weaknesses, phase/fight proximity,
+  fatigue, injury restrictions, equipment, and the exercise's energy-system or
+  movement demands. Use conservative current evidence-based sport-science
+  reasoning: adequate recovery for quality/power work, shorter recovery only
+  where the session targets density/conditioning, and an effort that matches the
+  intended adaptation without violating taper, fatigue, injury, or supplied
+  dose caps. Never infer sparring/contact prescriptions. Never alter membership,
+  explicit volume/load, dates, or safety rules while filling these fields.
 - daily_check_ins are OPTIONAL and must be either fully valid or omitted. Emit a
   check-in entry ONLY when the plan actually states a dated self-report; each
   entry MUST then carry "date", a "morning" object with all of "sleep_quality"
@@ -3879,7 +3880,8 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   emitting only the generic phase cue. Keep it athlete-safe and supportive; never
   quote the note verbatim if it is distressing, and never invent clinical or
   mental-health diagnoses or treatment.
-- Omit detail the source cannot support rather than inventing it.
+- Except for the narrowly allowed rest, effort, and execution-cue completion
+  above, omit detail the plan/context cannot support rather than inventing it.
 
 VOICE & CONCISENESS (athlete-facing text — week_goal, today_card.headline,
 session title/objective, plan_notes, mindset_anchor, nutrition prose):
@@ -3957,7 +3959,8 @@ DETERMINISTIC AUTHORITY (when a "STAGE 1 COMPUTED SUPPORT" section is provided):
 - red_flag_rules MUST contain only stop / modify / report safety rules. Do not
   put general training or nutrition content there.
 - Do NOT duplicate identical mindset anchors at both the day and session level —
-  if a session's anchor is identical to the day's, leave the session anchor null.
+  if a session's anchor would be identical to the day's, vary phrasing while
+  still keeping a valid session-level mindset_anchor.
 - NEVER surface coach_gated content. The "coach_gated" sub-sections of computed
   support (acute weight-cut and supplement dosing) are coach/medical-only and
   MUST NOT appear in any athlete-facing field.
@@ -4110,7 +4113,6 @@ def build_structured_plan_prompt(
     event_date: str = "",
     repair_errors: list[str] | None = None,
     broken_json: str | None = None,
-    schema_constrained: bool = False,
 ) -> str:
     """Build the model prompt for turning a markdown plan into structured JSON.
 
@@ -4124,8 +4126,7 @@ def build_structured_plan_prompt(
     )
     if is_minor:
         plan_markdown = _minor_conversion_markdown(plan_markdown)
-    sections: list[str] = ([STRUCTURED_CONVERSION_CONTRACT] if schema_constrained
-                           else [_STRUCTURED_PLAN_RULES, _ROOT_SKELETON])
+    sections: list[str] = [_STRUCTURED_PLAN_RULES, _ROOT_SKELETON]
     if is_minor:
         sections.append(_MINOR_CONVERSION_RULE)
     open_plan_contract = _open_plan_prompt_contract(planning_brief)
