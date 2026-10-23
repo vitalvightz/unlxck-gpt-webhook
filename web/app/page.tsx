@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ActionLink } from "@/components/action-link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
@@ -644,17 +645,17 @@ export default function HomePage() {
                 ))}
                 {hero.safety ? <p className="muted overview-decision-safety">{hero.safety}</p> : null}
               </div>
-              <div className="plan-summary-actions overview-primary-actions">
+              <div className="action-stack overview-primary-actions">
                 <Link href={hero.primary.href} className="cta overview-primary-action">{hero.primary.label}</Link>
                 {hasActivePlan ? (
-                  <Link href={`/plans/${activePlan.id}`} className="secondary-button">{openOngoing ? "Training plan" : "Fight camp"}</Link>
+                  <ActionLink href={`/plans/${activePlan.id}`}>{openOngoing ? "Training plan" : "Fight camp"}</ActionLink>
                 ) : tracking ? (
                   <>
-                    <Link href="/quick-build" className="secondary-button">Generate my S&amp;C plan</Link>
-                    <Link href="/plans/custom" className="secondary-button">Build your own plan</Link>
+                    <ActionLink href="/quick-build">Generate my S&amp;C plan</ActionLink>
+                    <ActionLink href="/plans/custom">Build your own plan</ActionLink>
                   </>
                 ) : (
-                  <Link href="/quick-build" className="secondary-button">Quick Build</Link>
+                  <ActionLink href="/quick-build">Quick Build</ActionLink>
                 )}
               </div>
             </div>

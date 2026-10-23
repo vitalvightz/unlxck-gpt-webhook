@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { ActionLink } from "@/components/action-link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
@@ -1165,13 +1165,13 @@ function QuickBuildFormInner() {
             <span>{submitError}</span>
           </div>
         ) : null}
-        <div className="plan-summary-actions quick-build-action-buttons">
+        <div className="action-stack quick-build-action-buttons">
           <button type="submit" className="cta" disabled={isPending} aria-describedby={submitError ? submitErrorId : undefined}>
             {isPending ? "Saving..." : "Generate Plan"}
           </button>
-          <Link href="/onboarding" className="ghost-button">
+          <ActionLink href="/onboarding">
             Use Camp Setup instead
-          </Link>
+          </ActionLink>
         </div>
       </div>
     </form>
