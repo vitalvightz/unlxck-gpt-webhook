@@ -403,9 +403,8 @@ def test_prompt_carries_schema_and_safety_rules():
     # source-of-truth + no-invention guardrails
     assert "SOURCE OF TRUTH" in prompt
     assert "Do NOT add new exercises" in prompt
-    assert "infer only those missing presentation fields" in prompt
-    assert "goals and weaknesses" in prompt
-    assert "current evidence-based sport-science" in prompt
+    assert "Never infer a missing" in prompt
+    assert "infer only those missing presentation fields" not in prompt
     assert "A missing identifier must never reject the card" in prompt
     # exact root skeleton with the nested objects that were failing live
     assert "EXACT ROOT SKELETON" in prompt

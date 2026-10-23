@@ -196,11 +196,12 @@ def test_open_plan_render_contract_demands_one_exercise_and_a_progress_line():
     structured conversion into recycling the Easier: line as a progression.
     """
     from fightcamp.stage2_payload import _OPEN_ONGOING_RENDER_MODE_INSTRUCTIONS
+    from fightcamp.exercise_output_contract import EXERCISE_TEXT_CONTRACT
 
     rules = " ".join(
         build_open_ongoing_payload(athlete_model={})["open_plan_spec"]["render_rules"]
     )
-    prompt = _OPEN_ONGOING_RENDER_MODE_INSTRUCTIONS
+    prompt = _OPEN_ONGOING_RENDER_MODE_INSTRUCTIONS + EXERCISE_TEXT_CONTRACT
 
     for text in (rules, prompt):
         assert "one exercise per main-work line" in text.lower()
@@ -208,7 +209,8 @@ def test_open_plan_render_contract_demands_one_exercise_and_a_progress_line():
         assert "Progress:" in text
         assert "none this block" in text
     # The swap/safety split must stay explicit in the authoring prompt.
-    assert 'belongs on `Easier:` or `Stop:`, never on `Progress:`' in prompt
+    assert "use a swap/safety rule as progression" in prompt
+    assert "Progress/Deload describes a change, never repeats today's dose" in prompt
 
 
 def test_prioritised_open_plan_uses_weekly_cadence():

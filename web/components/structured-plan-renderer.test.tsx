@@ -2179,19 +2179,19 @@ test("dated camp block cards display authored Progress", () => {
   assert.equal(countOccurrences(html, "Add 2.5 kg when all sets feel crisp."), 1);
 });
 
-test("open card keeps the red week prescription, load, and authored progress together", () => {
+test("open cards retain load and show only actual changes under the week notice", () => {
   for (const week of [1, 2, 3, 4]) {
     const dose = week === 4 ? "2x3 @ 65% 1RM; rest 120s." : "4x3 @ 75% 1RM; rest 120s.";
     const html = renderToStaticMarkup(<BlockCard openWeekIntent={openBlockWeekIntent(week)} block={{
       display_name: "Squat", sets: week === 4 ? 2 : 4, reps: 3,
       load: { method: "percentage", value: week === 4 ? 65 : 75, unit: "percent", ref: "1RM" },
-      week_prescription: dose, progression_rule: "Refine control at the prescribed dose.",
+      week_prescription: dose, progression_rule: "Add one rep if every set stays controlled.",
+      deload_rule: "Keep two working sets and reassess.",
     }} />);
-    assert.equal(countOccurrences(html, "This week"), 1);
-    assert.match(html, /sp-week-directive/);
-    assert.ok(html.includes(dose));
+    assert.equal(countOccurrences(html, "This week"), week === 1 ? 0 : 1);
+    assert.ok(!html.includes(dose));
     assert.match(html, />Load</);
-    assert.equal(countOccurrences(html, "Refine control at the prescribed dose."), week === 4 ? 0 : 1);
+    assert.equal(countOccurrences(html, "Add one rep if every set stays controlled."), week === 4 ? 0 : 1);
   }
 });
 

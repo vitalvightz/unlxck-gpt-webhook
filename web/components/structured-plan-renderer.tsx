@@ -453,7 +453,7 @@ export function BlockCard({
   const execution = getBlockExecutionDisplay(block);
   const { cues: allCues, regressions, substitutions } = execution;
   const prescriptionText = cleanText(block.prescription_text)
-    || (metrics.length === 0 ? execution.prescription : null);
+    || (metrics.length === 0 ? cleanText(block.week_prescription) || execution.prescription : null);
   // The demo can pin the lead cue; every remaining authored detail still belongs here.
   const visibleCues = hideCues ? [] : allCues.slice(hideLeadCue ? 1 : 0).map(compactCoachLine);
   const directive = openBlockWeekDirective(openWeekIntent, block);
@@ -615,7 +615,9 @@ function exerciseRowSummary(
       .filter(Boolean).join(" · ") || "See prescription";
   }
   const metrics = prescription.metrics.map(metric => metric.label === "Rounds"
-    ? `${metric.value} rounds` : metric.label === "Work" ? `${metric.value} work` : metric.value);
+    ? `${metric.value} rounds` : metric.label === "Work" ? `${metric.value} work`
+      : metric.label === "Blocks" ? `${metric.value} blocks`
+        : metric.label === "Between blocks" ? `rest between blocks ${metric.value}` : metric.value);
   const headline = metrics.length > 0 ? metrics.join(" · ")
     : getBlockExecutionDisplay(block).prescription || formatMeasured(block.duration);
   // The collapsed row is the prescription athletes scan before opening a
@@ -633,7 +635,7 @@ function compactCoachLine(value: string): string {
 // A "How" line that only restates the dose ("6 x 20 sec work", "1x5s with
 // 120s rest", "30min continuous") repeats the stats; it explains nothing.
 const DOSE_ONLY_WORD_RE =
-  /^(?:\d+(?:\.\d+)?(?:x\d+(?:\.\d+)?)?(?:s|secs?|seconds?|mins?|minutes?|m|kg|lbs?|reps?|sets?|%)?|x|×|@|rpe|rir|sets?|reps?|rounds?|work|rest|reset|recovery|between|with|of|and|per|each|side|technical|continuous|easy|low|max|total|s|secs?|seconds?|mins?|minutes?)$/i;
+  /^(?:\d+(?:\.\d+)?(?:x\d+(?:\.\d+)?)?(?:s|secs?|seconds?|mins?|minutes?|m|kg|lbs?|reps?|sets?|%)?|x|×|@|rpe|rir|sets?|reps?|rounds?|blocks?|work|rest|reset|recovery|between|with|of|and|per|each|side|technical|continuous|easy|low|max|total|s|secs?|seconds?|mins?|minutes?|complete|after|the|single|before|next|item|for|at|all-out)$/i;
 
 function isDoseOnlyInstruction(text: string): boolean {
   const words = text.toLowerCase().split(/[\s,;|/()+.:]+/).filter(Boolean);
@@ -764,7 +766,7 @@ export function ExerciseRow({
                 </span>
               ) : null}
               {summary ? (
-                <span className="ex-row-summary">
+                <span className="ex-row-summary" hidden={!rowCollapsed}>
                   {/* Each part stays whole ("RPE 7", never "RPE / 7"); lines
                       break only at the separators. */}
                   {summary.split(" · ").map((part, index) => (
