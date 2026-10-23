@@ -7,12 +7,12 @@ test("uses the open-plan cap when fight date is missing or invalid", () => {
   assert.deepStrictEqual(getPerformanceFocusCap(""), {
     daysUntilFight: Number.POSITIVE_INFINITY,
     weeksOut: Number.POSITIVE_INFINITY,
-    maxSelections: 5,
+    maxSelections: 4,
     windowLabel: "Open plan",
     reason: "Open plans use a focused cap to keep goals and weak areas clear without a fight-date countdown.",
   });
-  assert.equal(getPerformanceFocusCap("not-a-date")?.maxSelections, 5);
-  assert.equal(getPerformanceFocusCap("2026-02-31")?.maxSelections, 5);
+  assert.equal(getPerformanceFocusCap("not-a-date")?.maxSelections, 4);
+  assert.equal(getPerformanceFocusCap("2026-02-31")?.maxSelections, 4);
 });
 
 test("uses the fight-week cap for events within seven days", () => {

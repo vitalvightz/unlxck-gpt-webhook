@@ -91,9 +91,9 @@ for (const [width, height, theme] of [
         const goals = quick ? page.locator(".field").filter({ has: page.locator(".checkbox-group-label").filter({ hasText: /^Key goals/ }) })
           : page.getByRole("group", { name: "Key Goals", exact: true });
         await goals.getByRole("checkbox", { name: /^Power/ }).check();
-        await goals.getByRole("checkbox", { name: /^Mobility/ }).check();
-        if (quick) await expect(goals).toContainText("shared cap: 5");
-        else await expect(page.locator(".focus-cap-badge")).toHaveText("5/5");
+        await expect(goals.getByRole("checkbox", { name: /^Mobility/ })).toBeDisabled();
+        if (quick) await expect(goals).toContainText("shared cap: 4");
+        else await expect(page.locator(".focus-cap-badge")).toHaveText("4/4");
         const recovery = goals.getByRole("checkbox", { name: /^Recovery/ });
         const conditioning = goals.getByRole("checkbox", { name: /^Conditioning/ });
         await expect(recovery).toBeDisabled(); await expect(conditioning).toBeEnabled();
