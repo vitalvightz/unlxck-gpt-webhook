@@ -125,7 +125,7 @@ def _compose(athlete: dict, *, role_key: str = "primary_strength_day", slots=Non
     [
         ({"fatigue": "low", "cut_severity_bucket": "none"}, 0),
         ({"fatigue": "moderate", "cut_severity_bucket": "none"}, 1),
-        ({"fatigue": "high", "cut_severity_bucket": "none"}, 4),
+        ({"fatigue": "high", "cut_severity_bucket": "none"}, 2),
         ({"fatigue": "low", "cut_severity_bucket": "moderate"}, 1),
         ({"fatigue": "low", "cut_severity_bucket": "high"}, 2),
         ({"fatigue": "low", "cut_severity_bucket": "critical"}, 3),
@@ -204,7 +204,7 @@ def test_full_strength_six_ceiling_preserves_pressure_reductions(role_key):
     for athlete, expected in [
         ({"fatigue": "low", "cut_severity_bucket": "none"}, 6),
         ({"fatigue": "moderate", "cut_severity_bucket": "none"}, 5),
-        ({"fatigue": "high", "cut_severity_bucket": "none"}, 2),
+        ({"fatigue": "high", "cut_severity_bucket": "none"}, 4),
     ]:
         _, role = _compose(athlete, role_key=role_key)
         policy = role["strength_composition_policy"]
