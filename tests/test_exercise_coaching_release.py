@@ -90,15 +90,6 @@ def test_final_persisted_physical_rows_keep_coaching_in_react(production_replay,
                 block.pop(field, None)
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0" if path == "not_attempted_fallback" else "1")
     monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_REPAIR", raising=False)
-    if path in {"converted", "rejected_fast_fallback"}:
-        # These two cases explicitly exercise the legacy model-conversion
-        # contract, including rejection of a model that drops coaching.
-        # The current planner-owned route succeeds without needing that call;
-        # bypass it ONLY in the test so the legacy failure guard stays covered.
-        monkeypatch.setattr(
-            "api.stage2_automation._build_source_owned_structured_card",
-            lambda **_kwargs: None,
-        )
     raw = source
     client = FakeOpenAIClient([response(raw), response(json.dumps(candidate))])
     automator = OpenAIStage2Automator(client=client, model="offline")
