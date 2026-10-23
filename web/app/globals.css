@@ -1169,7 +1169,24 @@ html[data-theme="light"] .cta:disabled {
 
 .quick-build-form {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 24px;
+}
+
+/* Preset labels must shrink inside the form. An implicit auto grid track
+   otherwise grows to the longest selected label and widens Safari's mobile
+   layout viewport, making the entire page look like the desktop version. */
+.quick-build-form .step-card,
+.quick-build-form .field {
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+
+.quick-build-form > *,
+.quick-build-form .step-card > *,
+.quick-build-form .field > * {
+  min-width: 0;
 }
 
 .quick-build-guide {

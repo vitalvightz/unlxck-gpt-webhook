@@ -311,13 +311,16 @@ function QuickBuildFormInner() {
     }
   }, [healthConsentGranted]);
 
-  const errors: QuickBuildValidationErrors = useMemo(() => validateQuickBuildInput(input), [input]);
+  const errors: QuickBuildValidationErrors = useMemo(
+    () => validateQuickBuildInput(input, { timeZone: athleteTimeZone }),
+    [input, athleteTimeZone],
+  );
   const parsedRounds = parseRoundsFormat(input.rounds_format);
   const focusValidation = useMemo(
     () => (!input.no_scheduled_fight && input.fight_date
       ? validatePerformanceFocusSelections(input.fight_date, { keyGoals: input.key_goals, weakAreas: input.weak_areas }, { timeZone: athleteTimeZone })
       : null),
-    [input.no_scheduled_fight, input.fight_date, input.key_goals, input.weak_areas],
+    [input.no_scheduled_fight, input.fight_date, input.key_goals, input.weak_areas, athleteTimeZone],
   );
   const daysUntilFight = useMemo(
     () => (input.no_scheduled_fight ? null : computeDaysUntilFight(input.fight_date)),
@@ -720,7 +723,7 @@ function QuickBuildFormInner() {
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setSubmitError(null);
-    const currentErrors = validateQuickBuildInput(input);
+    const currentErrors = validateQuickBuildInput(input, { timeZone: athleteTimeZone });
     const currentFocusValidation = (!input.no_scheduled_fight && input.fight_date)
       ? validatePerformanceFocusSelections(input.fight_date, { keyGoals: input.key_goals, weakAreas: input.weak_areas }, { timeZone: athleteTimeZone })
       : null;
@@ -1044,7 +1047,7 @@ function QuickBuildFormInner() {
           <label htmlFor="qb-weekly-frequency">Sessions per week</label>
           <CustomSelect
             id="qb-weekly-frequency"
-            value={String(input.weekly_training_frequency)}
+            value={sessionsSelectDisabled ? "" : String(input.weekly_training_frequency)}
             options={weeklyFrequencyOptions}
             placeholder={sessionsSelectDisabled ? "Choose training days first" : "Sessions"}
             disabled={sessionsSelectDisabled}
