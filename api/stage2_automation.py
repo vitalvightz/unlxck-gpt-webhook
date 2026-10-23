@@ -156,9 +156,9 @@ def _stage2_structured_timeout_seconds() -> float:
     # pass, so it gets a wider budget than the client default above. Raising this
     # is only effective while APP_STAGE2_FINALIZE_TIMEOUT_SECONDS (the whole-finalize
     # budget in api/generation/timeouts.py) leaves room for it.
-    # Structured conversion is optional; never consume most of the 900s job
-    # budget waiting for a second model pass after the full plan is complete.
-    default_timeout = 300.0
+    # Legacy/custom conversions retain their established provider budget.
+    # This is a true wall-clock deadline when a model call is necessary.
+    default_timeout = 600.0
     raw_value = os.getenv("UNLXCK_STAGE2_STRUCTURED_TIMEOUT_SECONDS", str(default_timeout)).strip()
     try:
         return max(1.0, float(raw_value))
