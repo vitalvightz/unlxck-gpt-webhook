@@ -3632,9 +3632,9 @@ code fences, no commentary.
 The human-readable plan provided below is the SOURCE OF TRUTH for exercise and
 session membership, dates, explicit volume/load, and safety constraints. Convert
 it faithfully into structured form. Do NOT add new exercises, sessions, blocks,
-dates, athletes, biometrics, or override any explicit fixed prescription. You MAY fill
-missing rest, effort and one concise execution cue for an existing physical
-block, using the supplied athlete/session context and the rules below.
+dates, athletes, biometrics, or override any explicit fixed prescription.
+You are a converter, not another programme author: leave absent dose, effort,
+rest, loading, cues and progression fields empty. Never reduce exercise count.
 
 The root JSON object IS the StructuredTrainingPlan.
 Do NOT wrap it inside a top-level "plan" key. Its top-level keys are exactly:
@@ -3773,18 +3773,10 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   block_id) are optional metadata: use a stable source id when one exists,
   otherwise emit null. A missing identifier must never reject the card and must
   never be replaced with a generic visible fallback.
-- For each EXISTING physical exercise/drill, preserve its fixed volume,
-  load, rest, effort and cue, and stay within any explicit range. When rest,
-  effort or an execution cue is
-  absent, infer only those missing presentation fields from the athlete context,
-  session objective/type, sport, goals and weaknesses, phase/fight proximity,
-  fatigue, injury restrictions, equipment, and the exercise's energy-system or
-  movement demands. Use conservative current evidence-based sport-science
-  reasoning: adequate recovery for quality/power work, shorter recovery only
-  where the session targets density/conditioning, and an effort that matches the
-  intended adaptation without violating taper, fatigue, injury, or supplied
-  dose caps. Never infer sparring/contact prescriptions. Never alter membership,
-  explicit volume/load, dates, or safety rules while filling these fields.
+- For each EXISTING physical exercise/drill, transcribe the exact source
+  volume, load, rest, effort, execution cues, progressions and safety instructions.
+  Missing fields stay empty, never inferred or replaced with generic prescriptions.
+  Preserve all sessions and every exercise from the authoritative source.
 - daily_check_ins are OPTIONAL and must be either fully valid or omitted. Emit a
   check-in entry ONLY when the plan actually states a dated self-report; each
   entry MUST then carry "date", a "morning" object with all of "sleep_quality"
@@ -3880,8 +3872,8 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   emitting only the generic phase cue. Keep it athlete-safe and supportive; never
   quote the note verbatim if it is distressing, and never invent clinical or
   mental-health diagnoses or treatment.
-- Except for the narrowly allowed rest, effort, and execution-cue completion
-  above, omit detail the plan/context cannot support rather than inventing it.
+- Omit detail the plan/context cannot support rather than inventing it.
+  Do not generate new rest, effort or execution-cue prescriptions.
 
 VOICE & CONCISENESS (athlete-facing text — week_goal, today_card.headline,
 session title/objective, plan_notes, mindset_anchor, nutrition prose):
@@ -4104,6 +4096,112 @@ PER-BLOCK PROGRESSION & DELOAD (open plans only).
 
 AUTHORITATIVE open_plan_spec:
 {spec_json}"""
+
+
+def build_authoritative_open_plan(
+    planning_brief: Any, plan_markdown: str = ""
+) -> dict[str, Any] | None:
+    """Create a full renewable card directly from the four planner-owned weeks.
+
+    The deterministic open development block already owns every session,
+    exercise, prescription and weekday. A second LLM conversion is unnecessary
+    and can silently drop exercises or stall. Reject incomplete planner facts
+    rather than inventing missing sessions.
+    """
+    spec = _open_plan_spec_from_brief(planning_brief)
+    if not isinstance(spec, dict):
+        return None
+    programmed = spec.get("weekly_session_plan") or {}
+    decisions = programmed.get("weeks")
+    training_days = _open_plan_training_weekdays(spec)
+    if (
+        programmed.get("authority") != "deterministic_open_development_block"
+        or not isinstance(decisions, list) or len(decisions) != 4
+        or not training_days
+        or any(not isinstance(week, dict) or not isinstance(week.get("sessions"), list)
+               for week in decisions)
+    ):
+        return None
+
+    athlete = planning_brief.get("athlete_snapshot") or {}
+    athlete = athlete if isinstance(athlete, dict) else {}
+    sport = str(athlete.get("sport") or "combat_sports")
+    development = spec.get("development_block") or {}
+    development = development if isinstance(development, dict) else {}
+    empty_mindset = {"intent": "", "focus_cue": "", "reset_cue": ""}
+    day_template = [
+        {
+            "date": "", "weekday": weekday, "day_type": "moderate",
+            "countdown_label": "", "phase_label": "GPP",
+            "today_card": {
+                "headline": "", "readiness_status": "train_as_planned",
+                "mindset_anchor": dict(empty_mindset),
+            },
+            "sessions": [],
+        }
+        for weekday in training_days
+    ]
+    base_week = {
+        "week_id": "open-template", "week_index": 1, "phase_label": "GPP",
+        "week_goal": str(development.get("week_1") or "Training"),
+        "start_date": "", "end_date": "", "countdown_start": "", "countdown_end": "",
+        "days": day_template,
+    }
+    draft = {
+        "schema_version": SCHEMA_VERSION,
+        "plan_metadata": {
+            "title": "Training programme", "sport": sport,
+            "plan_type": _OPEN_PLAN_TYPE,
+            "timezone": str(athlete.get("athlete_timezone") or "UTC"),
+            "status": "active", "units": "metric",
+        },
+        "athlete_context": {"sport_profile": sport},
+        "event_context": {"event_type": "none"},
+        "countdown_labels": [], "red_flag_rules": [], "plan_notes": [],
+        "weeks": [base_week], "daily_check_ins": [],
+        "nutrition": {
+            "summary": "", "daily_focus": "",
+            "training_day_guidance": "", "fight_week_guidance": "",
+        },
+        "progression_notes": "", "raw_markdown_fallback": "",
+    }
+
+    try:
+        # The locked merge calls the same production open-week projection used
+        # when reading saved plans, so all four weeks retain planner membership.
+        merged = _merge_locked_content(draft, planning_brief, plan_markdown)
+        if _open_plan_contract_errors(merged, planning_brief):
+            return None
+        from collections import Counter
+        from fightcamp.weekly_schedule_view import normalize_weekday
+
+        # A missing or duplicated selected exercise makes this path ineligible.
+        # The model fallback must never replace a six-exercise session with three.
+        for week_plan, decision in zip(merged.get("weeks") or [], decisions, strict=True):
+            by_day = {day.get("weekday"): day for day in week_plan.get("days") or []}
+            for item in decision["sessions"]:
+                if item.get("coach_owned") or item.get("category") == "sparring":
+                    continue
+                names = [str(ex.get("name") or "") for ex in item.get("exercises") or []]
+                if not names:
+                    continue
+                day = by_day.get(normalize_weekday(item.get("weekday")))
+                if not isinstance(day, dict):
+                    return None
+                actual = Counter(
+                    str(block.get("display_name") or "")
+                    for session in day.get("sessions") or []
+                    for block in session.get("blocks") or []
+                    if isinstance(block, dict)
+                )
+                if any(actual[name] < count for name, count in Counter(names).items()):
+                    return None
+        parsed = safe_parse_structured_plan(merged, raw_markdown=plan_markdown or None)
+        return merged if parsed.ok else None
+    except (KeyError, TypeError, ValueError, AttributeError):
+        # A malformed brief is not proof that the plan is unfit to publish.
+        # Fall through to the legacy model conversion (or raw source fallback).
+        return None
 
 
 def build_structured_plan_prompt(
