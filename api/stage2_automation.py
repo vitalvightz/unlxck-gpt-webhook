@@ -620,11 +620,13 @@ def _build_source_owned_structured_card(
 
     warnings: list[str] = []
     if not is_open:
-        from .structured_plan_faithfulness import check_structured_faithfulness, PRESCRIPTION
+        from .structured_plan_faithfulness import check_structured_faithfulness
         unfaithful = check_structured_faithfulness(candidate, plan_text, planning_brief)
-        if any(not str(finding).startswith(f"{PRESCRIPTION}:") for finding in unfaithful):
+        # Direct cards must not silently lose even one authored dose/rest.
+        # Unlike the generic model fallback, this fast path is only eligible
+        # when the exact source passes every faithfulness check.
+        if unfaithful:
             return None
-        warnings = [f"faithfulness: {item}" for item in unfaithful]
     # Open-plan source-of-truth is the four-week deterministic development block,
     # not the prose rendering, which may omit individual selected exercises.
     blocking, advisory = split_findings(audit_structured_plan(candidate, computed_support))
