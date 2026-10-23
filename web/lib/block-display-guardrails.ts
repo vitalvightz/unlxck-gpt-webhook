@@ -358,6 +358,29 @@ export function getSourcePrescriptionRangeOverrides(
   };
 }
 
+
+/**
+ * A narrow read-time recovery for a scalar dose that Stage 2 dropped from the
+ * JSON card. Only trust one exact, uniquely matched exercise line in the saved
+ * final plan; never infer a dose from cues, a planning range, or another day.
+ */
+export function getSourceExactVolumeOverride(
+  source: string | null | undefined,
+  blockName: string,
+  countdown?: string | null,
+): { sets: number; reps: string } | null {
+  const line = sourceBlockLine(source, blockName, countdown);
+  if (!line) return null;
+  const match = line.match(/\b(\d+)\s*(?:sets?\s*)?[x×]\s*(\d+)\s*reps?\b/i)
+    || line.match(/\b(\d+)\s+sets?\s+(?:of\s+)?(\d+)\s+reps?\b/i);
+  if (!match) return null;
+  const sets = Number(match[1]);
+  const reps = Number(match[2]);
+  if (!Number.isSafeInteger(sets) || !Number.isSafeInteger(reps) || sets <= 0 || reps <= 0) return null;
+  const perSide = /\b(?:each|per)\s+side\b/i.test(line);
+  return { sets, reps: `${reps}${perSide ? " each side" : ""}` };
+}
+
 /**
  * Recover the exact block-level Stop field from the authoritative source text.
  *
