@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   applySourceSetRange,
   getSourcePrescriptionRangeOverrides,
+  getSourceExactVolumeOverride,
   getSourceStopRuleOverride,
   stripSafetyOwnedClause,
   stripSafetyOwnedStopRules,
@@ -202,4 +203,24 @@ test("shared pain safety never removes a compound execution stop", () => {
   assert.deepEqual(stripSafetyOwnedStopRules(["slower speed, lost trunk control or pain"], safety),
     ["slower speed, lost trunk control or pain"]);
   assert.deepEqual(stripSafetyOwnedStopRules(["pain"], safety), []);
+});
+
+test("recovers the live missing Pallof card volume from the final written plan", () => {
+  const source = "- Cable Pallof Press: 2 sets x 3 reps each side; slow control; rest 90 sec.";
+  assert.deepEqual(getSourceExactVolumeOverride(source, "Cable Pallof Press"), { sets: 2, reps: "3 each side" });
+  assert.equal(getSourcePrescriptionRangeOverrides(source, "Cable Pallof Press").rest, "90 sec");
+});
+
+test("exact recovery refuses planning ranges and ambiguous duplicate source rows", () => {
+  assert.equal(getSourceExactVolumeOverride("- Cable Pallof Press: 1-2 controlled sets x 3-5 slow reps", "Cable Pallof Press"), null);
+  assert.equal(getSourceExactVolumeOverride(
+    "- Cable Pallof Press: 2 sets x 3 reps; rest 90 sec.\\n- Cable Pallof Press: 3 sets x 4 reps; rest 90 sec.",
+    "Cable Pallof Press",
+  ), null);
+});
+
+test("exact recovery does not borrow from a wrong exercise or countdown", () => {
+  const source = "D-13 (Monday): Strength\\n- Cable Pallof Press: 2 sets x 3 reps each side.";
+  assert.equal(getSourceExactVolumeOverride(source, "Cable Pallof Press Plus", "D-13"), null);
+  assert.equal(getSourceExactVolumeOverride(source, "Cable Pallof Press", "D-6"), null);
 });
