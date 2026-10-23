@@ -236,25 +236,24 @@
   font-size: clamp(20px, 5.4vw, 32px);
 }
 
-/* A supporting stats row, with one surface and no individual button shapes. */
+/* A small supporting line: no card surface or individual button shapes. */
 .st-stats {
   display: flex;
   justify-content: center;
-  width: min(100%, 340px);
-  margin: 6px 0 2px;
-  padding: 10px 0;
-  border-radius: 16px;
-  background: var(--st-surface);
+  width: fit-content;
+  max-width: 100%;
+  margin: 2px 0;
+  padding: 2px 0;
 }
 
 .st-stats > div {
-  flex: 1 1 0;
+  flex: 0 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 4px;
-  padding: 0 10px;
+  gap: 1px;
+  padding: 0 16px;
   overflow-wrap: anywhere;
 }
 
@@ -265,7 +264,7 @@
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.08em;
-  line-height: 1.3;
+  line-height: 1.2;
   text-transform: uppercase;
 }
 
@@ -273,16 +272,11 @@
   order: -1;
   margin: 0;
   color: var(--st-ink);
-  font-size: 22px;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1.15;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
-}
-
-@media (max-height: 700px) {
-  .st-stats { margin: 2px 0; padding: 7px 0; }
-  .st-stats dd { font-size: 20px; }
 }
 
 .st-detail,
