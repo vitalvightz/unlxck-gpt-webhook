@@ -452,7 +452,13 @@ export function AuthForm({
         <div className="auth-header">
           <div>
             <p className={`kicker ${styles.brand}`}>UNLXCK</p>
-            <h1 id="auth-title" className={styles.title}>{verificationEmail ? t("verifyTitle") : mode === "signup" ? t("createAccount") : t("welcomeBack")}</h1>
+            <h1 id="auth-title" className={styles.title}>{verificationEmail ? t("verifyTitle") : mode === "signup" ? t("signupTitle") : t("welcomeBack")}</h1>
+            {mode === "signup" && !verificationEmail ? (
+              <div className={styles.signupIntro}>
+                <p className="muted">{t("signupSummary")}</p>
+                <p>{t("signupAccess")}</p>
+              </div>
+            ) : null}
           </div>
         </div>
 
