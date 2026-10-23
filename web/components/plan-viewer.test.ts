@@ -22,6 +22,7 @@ import {
   readRawTriageMode,
   readStructuredCardDebug,
   resolveApprovalAfterError,
+  didPlanStatusChecksFail,
   resolvePlanActiveState,
   shouldAwaitStructuredPlanUpgrade,
   shouldHoldPlanForEnhancedCard,
@@ -81,6 +82,51 @@ test("Today can confirm the active plan when the dedicated endpoint fails", () =
     }),
     undefined,
   );
+});
+
+
+test("plan activation state does not depend on completion/progress reads", () => {
+  assert.equal(
+    resolvePlanActiveState({
+      todayResolved: false,
+      activeEndpointResolved: true,
+      activeEndpointPlanId: "active-plan",
+    }),
+    "active-plan",
+  );
+  assert.equal(
+    didPlanStatusChecksFail({
+      activeSettled: true, activeResolved: true,
+      todaySettled: false, todayResolved: false,
+    }),
+    false,
+  );
+  assert.equal(
+    didPlanStatusChecksFail({
+      activeSettled: true, activeResolved: false,
+      todaySettled: true, todayResolved: true,
+    }),
+    false,
+  );
+  assert.equal(
+    didPlanStatusChecksFail({
+      activeSettled: true, activeResolved: false,
+      todaySettled: true, todayResolved: false,
+    }),
+    true,
+  );
+  assert.equal(
+    didPlanStatusChecksFail({
+      activeSettled: false, activeResolved: false,
+      todaySettled: false, todayResolved: false,
+    }),
+    false,
+  );
+  // Active lookup, Today and completions must not be gated by one batch
+  // Promise: otherwise a slow completions response strands the whole screen.
+  assert.doesNotMatch(PLAN_VIEWER_SOURCE, /Promise\.allSettled\(\[\s*getActivePlan/);
+  assert.match(PLAN_VIEWER_SOURCE, /void getPlanCompletions\(/);
+  assert.match(PLAN_VIEWER_SOURCE, /Could not check plan status · Retry/);
 });
 
 test("the dedicated active-plan endpoint takes priority, including an explicit null", () => {
