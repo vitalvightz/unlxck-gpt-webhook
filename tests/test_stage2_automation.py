@@ -443,6 +443,41 @@ def test_schema_mode_off_by_default_uses_json_object(monkeypatch: pytest.MonkeyP
     assert "EXACT ROOT SKELETON" in client.responses.calls[0]["input"]
 
 
+@pytest.mark.parametrize(
+    "schema_setting, expected_format",
+    [(None, "json_object"), ("0", "json_object"), ("1", "json_schema")],
+)
+def test_strict_content_validation_does_not_depend_on_schema_mode(
+    monkeypatch: pytest.MonkeyPatch, schema_setting: str | None, expected_format: str
+) -> None:
+    # Schema mode only affects the provider's response format, not what can
+    # pass the server-owned dose/field-ownership and faithfulness checks.
+    if schema_setting is None:
+        monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE", raising=False)
+    else:
+        monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE", schema_setting)
+    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_JSON_MODE", raising=False)
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_REPAIR", "0")
+    client = FakeClient([_response("{}")])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+    checks: list[bool] = []
+    original = stage2_module.build_structured_plan_outcome
+
+    def record_validation(*args, **kwargs):
+        checks.append(kwargs["strict_content"])
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(stage2_module, "build_structured_plan_outcome", record_validation)
+    asyncio.run(
+        automator._generate_structured_outcome(
+            final_plan_text="# plan", planning_brief={}, source="test", costs=[]
+        )
+    )
+
+    assert client.responses.calls[0]["text"]["format"]["type"] == expected_format
+    assert checks == [True]
+
+
 def test_schema_build_failure_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
     # Opted-in schema mode must fail closed rather than weaken its contract.
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE", "1")
