@@ -927,12 +927,14 @@ export type ExerciseRecentLoad = {
 export type ExerciseSetResult = {
   reps: number | null;
   load: ExerciseLogMeasure | null;
+  rpe: number | null;
 };
 
 /** One confirmed set. Missing measurements stay unknown. */
 export type ExerciseSetResultRequest = {
   reps?: number | null;
   load?: ExerciseLogMeasureRequest | null;
+  rpe?: number | null;
 };
 
 export type ExerciseUndoRequest = {

@@ -763,6 +763,6 @@ def test_prescribed_set_entries_keep_each_load_and_leave_plan_unchanged():
     response = _log(client, status="modified", actual={"set_entries": sets})
     assert response.status_code == 201, response.text
     actual = response.json()["log"]["actual"]
-    assert actual["set_entries"] == sets and actual["sets"] == 2
+    assert actual["set_entries"] == [{**entry, "rpe": None} for entry in sets] and actual["sets"] == 2
     assert actual["load"] is None and actual["reps"] is None
     assert store.plans[PLAN_ID] == before

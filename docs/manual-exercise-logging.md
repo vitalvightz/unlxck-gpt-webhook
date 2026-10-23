@@ -101,8 +101,8 @@ did on that session, without creating an UNLXCK programme.
 ## Limits
 
 - Max 30 exercises per session. Strength/bodyweight entries can optionally hold
-  up to 50 confirmed `actual.set_entries` rows, each with its own reps and load.
-  Common sets/reps/load remain compatibility summaries; varied values are never
+  up to 50 confirmed `actual.set_entries` rows, each with its own reps, load and optional RPE (whole or half steps).
+  Common sets/reps/load/RPE remain compatibility summaries; varied values are never
   flattened into one weight. Existing aggregate logs remain valid.
 - Catalogue formats are a suggestion from bank evidence; the athlete can change them.
 - Renaming a personal exercise and merging a personal identity into a catalogue
@@ -115,9 +115,15 @@ did on that session, without creating an UNLXCK programme.
   individually” expands the shared row editor; an edit changes only that set.
   “Apply to remaining sets” copies only the edited field to later sets.
 - Planned-session logging seeds each row from exact prescribed values. Ranges
-  stay hints, and missing measurements stay unknown. The S&C timer uses the same
-  editor, shows one active set by default, and confirms it with “Set done”. Its
-  saved run retains drafts; only completed sets are handed off to exercise logs.
+  stay hints, and missing measurements stay unknown.
+- The S&C timer shows prescription chips during work. “Set done” starts rest
+  immediately and opens a non-modal sheet with load, reps and RPE. Confirming
+  collapses it to one editable confirmation line; starting the next set hides
+  it automatically. Editing and confirming preserve the countdown timestamps.
+- Saved timer runs retain drafts and confirmations. Unconfirmed measurements
+  stay out of actual history. At session end, missed confirmations open a
+  compact row review where athletes can correct and save their completed sets.
+  A final set with no following rest is included in this review.
 - Session Details and exercise performance history use the shared, collapsed
   set summary and expand into compact read-only rows. Best-load records and load
   charts inspect the individual loads; a varied workout never becomes an

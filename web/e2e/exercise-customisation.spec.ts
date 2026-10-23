@@ -338,9 +338,9 @@ test("Cue-only editing preserves an existing RIR prescription after reload", asy
   await expect(edit.getByLabel("Cues", { exact: true })).toHaveValue("Brace before moving");
 });
 
-test("strength timer confirms distinct set loads, restores drafts and saves real history", async ({ page, baseURL }) => {
+test("strength timer logs during rest, restores drafts and reviews actual history", async ({ page, baseURL }) => {
   test.skip(!api, "Run with EXERCISE_TEST_API pointing at the seeded local API");
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
   await page.request.post(`${api}/__e2e/reset`);
   const headers = { Authorization: "Bearer athlete-token" };
   const initial = await (await page.request.get(`${api}/api/today`, { headers })).json();
@@ -353,42 +353,78 @@ test("strength timer confirms distinct set loads, restores drafts and saves real
   await page.goto("/today");
   await page.getByRole("button", { name: "Start session", exact: true }).click();
   const timer = page.locator(".st-root");
+  const capture = async (state: string, action: string) => {
+    for (const [width, height] of [[320, 568], [390, 844], [430, 932], [1280, 800], [1440, 900]]) {
+      await page.setViewportSize({ width, height });
+      await expect(timer.getByRole("button", { name: action, exact: true })).toBeInViewport({ ratio: 1 });
+      expect(await timer.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      if (state !== "review") {
+        await expect(timer.getByRole("timer")).toBeInViewport({ ratio: 1 });
+        await expect(timer.getByRole("heading", { name: "Back Squat", exact: true })).toBeInViewport({ ratio: 1 });
+        await expect(timer.locator(".st-phase")).toBeInViewport({ ratio: 1 });
+      }
+      if (shots) { await settle(page); await page.screenshot({ path: `${shots}/timer-${state}-${width}.png` }); }
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+  };
   await timer.getByRole("button", { name: "Start", exact: true }).click();
+  await timer.locator(".st-hint").click();
+  await expect(timer.getByLabel("Load kg, set 1")).toHaveCount(0);
+  await expect(timer).toContainText("100 kg");
+  await expect(timer).toContainText("RPE 7");
+  await capture("work", "Set 1 done");
+  await timer.getByRole("button", { name: "Set 1 done", exact: true }).click();
   await expect(timer.getByLabel("Load kg, set 1")).toHaveValue("100");
   await expect(timer.getByLabel("Reps, set 1")).toHaveValue("5");
-  await timer.getByLabel("Load kg, set 1").fill("105");
-  await timer.getByRole("button", { name: "Set 1 done", exact: true }).click();
-  await expect(timer.getByRole("button", { name: "Start set 2", exact: true })).toBeVisible();
-  await timer.getByRole("button", { name: "Start set 2", exact: true }).click();
-  await timer.getByLabel("Load kg, set 2").fill("110");
-  if (shots) await page.screenshot({ path: `${shots}/timer-set-mobile.png` });
-  await timer.getByRole("button", { name: "All 4 sets", exact: true }).click();
-  await expect(timer.getByLabel("Load kg, set 1")).toHaveValue("105");
-  await expect(timer.getByLabel("Load kg, set 3")).toHaveValue("100");
-  // Check the actual column geometry, not only the text in nested history rows.
-  const cells = await timer.getByRole("list", { name: "Set results" }).getByRole("listitem").first().locator("input").all();
-  const boxes = await Promise.all(cells.map(cell => cell.boundingBox()));
-  expect(Math.round(boxes[0]!.y)).toBe(Math.round(boxes[1]!.y));
+  await expect(timer.getByLabel("RPE, set 1")).toHaveValue("7");
+  await capture("rest", "✓ Confirm set");
   expect((await new AxeBuilder({ page }).include(".st-root").analyze()).violations).toEqual([]);
-  await page.setViewportSize({ width: 1280, height: 844 });
-  if (shots) await page.screenshot({ path: `${shots}/timer-set-desktop.png` });
-  // A reload restores a live run as a mini bar; opening it keeps the edited draft.
+  await timer.getByLabel("Load kg, set 1").fill("105");
+  await timer.getByLabel("RPE, set 1").fill("8");
+  const clock = await timer.getByRole("timer").textContent();
+  await expect.poll(() => timer.getByRole("timer").textContent()).not.toBe(clock);
+  await timer.getByRole("button", { name: "✓ Confirm set", exact: true }).click();
+  await expect(timer.getByRole("status")).toContainText("Set 1 logged");
+  await capture("confirmed", "Start set 2");
+  await timer.getByRole("button", { name: "Edit set 1", exact: true }).click();
+  await expect(timer).toHaveAttribute("data-rest-log", "open");
+  await expect(timer.getByLabel("Load kg, set 1")).toHaveValue("105");
+  await timer.getByRole("button", { name: "✓ Confirm set", exact: true }).click();
+  await timer.getByRole("button", { name: "Start set 2", exact: true }).click();
+  await expect(timer.getByRole("region", { name: "Log completed set" })).toHaveCount(0);
+  await expect(timer.getByLabel("Load kg, set 1")).toHaveCount(0);
+  await timer.getByRole("button", { name: "Set 2 done", exact: true }).click();
+  await timer.getByLabel("Load kg, set 2").fill("110");
+  await timer.getByLabel("RPE, set 2").fill("8.5");
+  // Reloading preserves a running rest countdown and the unconfirmed draft.
   await page.reload();
   await page.locator(".st-mini").click();
-  await expect(page.locator(".st-root").getByLabel("Load kg, set 2")).toHaveValue("110");
-  await page.locator(".st-root").getByRole("button", { name: "Set 2 done", exact: true }).click();
-  for (const set of [3, 4]) {
-    await page.locator(".st-root").getByRole("button", { name: `Start set ${set}`, exact: true }).click();
-    await page.locator(".st-root").getByRole("button", { name: `Set ${set} done`, exact: true }).click();
-  }
-  await page.locator(".st-root").getByRole("button", { name: "End session", exact: true }).click();
+  await expect(timer.getByLabel("Load kg, set 2")).toHaveValue("110");
+  await expect(timer.getByLabel("RPE, set 2")).toHaveValue("8.5");
+  await timer.getByRole("button", { name: "✓ Confirm set", exact: true }).click();
+  await timer.getByRole("button", { name: "Start set 3", exact: true }).click();
+  await timer.getByRole("button", { name: "Set 3 done", exact: true }).click();
+  await timer.getByRole("button", { name: "✓ Confirm set", exact: true }).click();
+  await timer.getByRole("button", { name: "Start set 4", exact: true }).click();
+  await timer.getByRole("button", { name: "Set 4 done", exact: true }).click();
+  await timer.getByRole("button", { name: "End session", exact: true }).click();
   await page.getByRole("alertdialog", { name: "End session", exact: true }).getByRole("button", { name: "End", exact: true }).click();
-  await expect(page.locator(".st-root")).toHaveCount(0);
+  await expect(timer.getByRole("heading", { name: "Review your sets" })).toBeVisible();
+  await timer.getByLabel("Load kg, set 4").fill("102.5");
+  await capture("review", "Save sets & continue");
+  const cells = await timer.getByRole("list", { name: "Set results" }).getByRole("listitem").first().locator("input").all();
+  const boxes = await Promise.all(cells.map(cell => cell.boundingBox()));
+  expect(new Set(boxes.map(box => Math.round(box!.y))).size).toBe(1);
+  expect((await new AxeBuilder({ page }).include(".st-root").analyze()).violations).toEqual([]);
+  await timer.getByRole("button", { name: "Save sets & continue", exact: true }).click();
+  await expect(timer).toHaveCount(0);
   const response = await page.request.get(`${api}/api/today/exercise-logs?plan_id=${planId}`, { headers });
   expect(response.ok()).toBe(true);
   const logs = (await response.json()).logs;
   const squat = logs.find((log: { exercise_key: string }) => log.exercise_key === "back-squat");
-  expect(squat.actual.set_entries.map((entry: { load: { value: number } }) => entry.load.value)).toEqual([105, 110, 100, 100]);
+  expect(squat.actual.set_entries.map((entry: { load: { value: number } }) => entry.load.value)).toEqual([105, 110, 100, 102.5]);
+  expect(squat.actual.set_entries.map((entry: { rpe: number }) => entry.rpe)).toEqual([8, 8.5, 7, 7]);
+  expect(squat.actual.effort).toBeNull();
   expect(squat.status).toBe("modified");
   expect(squat.actual.load).toBeNull();
   expect(errors).toEqual([]);

@@ -436,10 +436,10 @@ def test_varied_sets_round_trip_through_manual_history_and_best_load(api):
     sets = [{"reps": 8, "load": {"value": 25, "unit": "kg"}},
             {"reps": 6, "load": {"value": 30, "unit": "kg"}}]
     saved = add(client, row["id"], actual={"set_entries": sets})
-    assert saved["actual"]["set_entries"] == sets
+    assert saved["actual"]["set_entries"] == [{**entry, "rpe": None} for entry in sets]
     assert saved["actual"]["sets"] == 2
     assert saved["actual"]["reps"] is None and saved["actual"]["load"] is None
-    assert details(client, row["id"]).json()["blocks"][0]["actual"]["set_entries"] == sets
+    assert details(client, row["id"]).json()["blocks"][0]["actual"]["set_entries"] == [{**entry, "rpe": None} for entry in sets]
     result = library(store)["key:back-squat"]
     assert result.best_loads[0].value == 30
     assert result.latest_values.set_entries[0].load.value == 25
@@ -463,3 +463,23 @@ def test_uniform_sets_have_truthful_legacy_summary_and_other_formats_refuse_rows
     assert saved["actual"]["sets"] == 3 and saved["actual"]["reps"] == 8
     assert saved["actual"]["load"]["value"] == 25
     assert put(client, row["id"], format="intervals", actual={"set_entries": sets}).status_code == 422
+
+
+def test_per_set_rpe_is_preserved_in_history_and_common_effort_is_truthful(api):
+    client, _ = api
+    row = session(client)
+    sets = [{"reps": 5, "load": {"value": 100, "unit": "kg"}, "rpe": 7},
+            {"reps": 5, "load": {"value": 105, "unit": "kg"}, "rpe": 8.5}]
+    saved = add(client, row["id"], actual={"set_entries": sets})
+    assert saved["actual"]["set_entries"] == sets
+    assert saved["actual"]["effort"] is None
+    assert details(client, row["id"]).json()["blocks"][0]["actual"]["set_entries"] == sets
+    uniform = add(client, row["id"], actual={"set_entries": [sets[0], sets[0]]})
+    assert uniform["actual"]["effort"] == {"method": "RPE", "value": 7}
+
+
+@pytest.mark.parametrize("rpe", [0, 11, 7.3, True, "7"])
+def test_invalid_per_set_rpe_is_rejected(api, rpe):
+    client, _ = api
+    row = session(client)
+    assert put(client, row["id"], actual={"set_entries": [{"reps": 5, "rpe": rpe}]}).status_code == 422

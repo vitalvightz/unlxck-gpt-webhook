@@ -1,0 +1,75 @@
+"use client";
+
+import { useState } from "react";
+import { SetRows } from "@/components/set-rows";
+import { readSets } from "@/lib/set-entries";
+import { confirmAllSetLogs, confirmSetLog, timerSetDrafts, unconfirmedSets } from "@/lib/session-timer/sets";
+import type { SessionTimerController } from "./use-session-timer";
+
+/** A non-modal sheet: typing and confirming never pause or restart the clock. */
+export function RestSetLogger({ timer, target }: { timer: SessionTimerController; target: { itemId: string; set: number } }) {
+  const { state } = timer;
+  const item = state.items.find(entry => entry.id === target.itemId);
+  const rows = timerSetDrafts(state, target.itemId);
+  if (item?.kind !== "sets" || !item.setFields || !rows) return null;
+  const row = rows[target.set - 1];
+  if (!row) return null;
+  const unit = item.setFields.find(field => field.key === "load")?.apiUnit ?? "kg";
+  const weighed = item.setFields.some(field => field.key === "load");
+  const confirmed = state.confirmedSetLogs?.[item.id]?.includes(target.set) ?? false;
+  const read = readSets([row], unit);
+  const prescribed = (key: "reps" | "load") => item.setFields?.find(field => field.key === key)?.hint;
+  const targetText = [weighed && prescribed("load") ? `${prescribed("load")} ${unit}` : null, prescribed("reps")].filter(Boolean).join(" × ");
+  if (confirmed) return <div className="st-log-confirmed" role="status">
+    <span><span aria-hidden="true">✓</span> Set {target.set} logged <span className="st-log-result">· {weighed && row.load ? `${row.load} ${unit} × ` : ""}{row.reps || "–"}{row.rpe ? ` · RPE ${row.rpe}` : ""}</span></span>
+    <button type="button" className="st-link" aria-label={`Edit set ${target.set}`} onClick={() => timer.update(s => ({ ...s, confirmedSetLogs: { ...s.confirmedSetLogs, [item.id]: (s.confirmedSetLogs?.[item.id] ?? []).filter(set => set !== target.set) } }))}>Edit</button>
+  </div>;
+  return <section className="st-rest-sheet" aria-label="Log completed set">
+    <div className="st-rest-sheet-head"><h3>Log completed set</h3><span>{targetText ? `Target: ${targetText}` : `Set ${target.set}`}</span></div>
+    <div className="st-rest-fields" data-count={weighed ? 3 : 2}>
+      {([...(weighed ? ["load" as const] : []), "reps" as const, "rpe" as const]).map(field => <label key={field}>
+        <span>{field === "load" ? unit : field === "rpe" ? "RPE" : "Reps"}</span>
+        <input type="text" inputMode={field === "reps" ? "numeric" : "decimal"} autoComplete="off" enterKeyHint="done" maxLength={8}
+          aria-label={`${field === "load" ? `Load ${unit}` : field === "rpe" ? "RPE" : "Reps"}, set ${target.set}`}
+          aria-invalid={read.invalid.includes(0) || undefined}
+          value={row[field] ?? ""} placeholder={field === "reps" ? prescribed("reps") ?? "–" : "–"}
+          onFocus={event => event.target.select()} onChange={event => {
+            const value = event.target.value;
+            timer.update(s => ({ ...s, setDrafts: { ...s.setDrafts, [item.id]: rows.map((entry, at) => at === target.set - 1 ? { ...entry, [field]: value } : entry) },
+              confirmedSetLogs: { ...s.confirmedSetLogs, [item.id]: (s.confirmedSetLogs?.[item.id] ?? []).filter(set => set !== target.set) } }));
+          }} />
+      </label>)}
+    </div>
+    {read.invalid.length ? <p className="st-log-error" role="alert">Check the values. RPE is 1–10 in whole or half steps.</p> : null}
+    <button type="button" className="st-primary st-confirm-set" disabled={read.invalid.length > 0}
+      onClick={() => { timer.update(s => confirmSetLog(s, target.itemId, target.set)); }}>✓ Confirm set</button>
+    <p className="st-rest-help">Edit values if different · Rest continues</p>
+  </section>;
+}
+
+/** Missed confirmations are reviewed after training, never during a set. */
+export function TimerSetReview({ timer }: { timer: SessionTimerController }) {
+  const { state } = timer;
+  const [error, setError] = useState(false);
+  return <div className="st-set-review">
+    <h2>Review your sets</h2><p className="st-note">Confirm or correct your completed work.</p>
+    <div className="st-set-review-list">{state.items.map((item, index) => {
+      const count = state.completed[index] ?? 0;
+      const rows = timerSetDrafts(state, item.id);
+      if (item.kind !== "sets" || !item.setFields || !rows || !count) return null;
+      const unit = item.setFields.find(field => field.key === "load")?.apiUnit ?? "kg";
+      const doneRows = rows.slice(0, count);
+      const read = readSets(doneRows, unit);
+      return <details key={item.id} open><summary>{item.title} <span>{count} sets</span></summary>
+        <SetRows rows={doneRows} unit={unit} editableCount={false} showRpe showLoad={item.setFields.some(field => field.key === "load")} invalid={read.invalid}
+          onChange={updated => timer.update(s => ({ ...s, setDrafts: { ...s.setDrafts, [item.id]: [...updated, ...rows.slice(count)] }, confirmedSetLogs: { ...s.confirmedSetLogs, [item.id]: [] } }))} />
+      </details>;
+    })}</div>
+    {error ? <p className="st-log-error" role="alert">Check the highlighted set values before continuing.</p> : null}
+    <button type="button" className="st-primary" onClick={() => {
+      const next = confirmAllSetLogs(timer.state);
+      setError(unconfirmedSets(next).length > 0);
+      timer.update(() => next);
+    }}>Save sets & continue</button>
+  </div>;
+}

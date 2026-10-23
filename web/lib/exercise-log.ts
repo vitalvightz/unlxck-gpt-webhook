@@ -312,8 +312,8 @@ export function buildSetLogEntry(fields: LogField[], rows: SetDraft[], unit: str
   const invalid = [...entry.invalid, ...(read.invalid.length ? ["reps" as const] : [])];
   const outliers = [...entry.outliers, ...count.outliers];
   for (const [index, row] of rows.entries()) {
-    const result = buildLogEntry(fields.filter(field => field.key === "reps" || field.key === "load")
-      .map(field => field.key === "load" && field.apiUnit !== unit ? { ...field, prescribed: null, unit, apiUnit: unit } : field), row);
+    const result = buildLogEntry(fields.filter(field => field.key === "reps" || field.key === "load" || (field.key === "effort" && row.rpe !== undefined))
+      .map(field => field.key === "load" && field.apiUnit !== unit ? { ...field, prescribed: null, unit, apiUnit: unit } : field), { ...row, effort: row.rpe });
     changed ||= result.status === "modified";
     outliers.push(...result.outliers.map(message => `Set ${index + 1}: ${message}`));
   }

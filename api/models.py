@@ -2458,6 +2458,14 @@ class ExerciseSetResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
     reps: int | None = Field(default=None, strict=True, ge=1, le=1000)
     load: ExerciseLogMeasure | None = None
+    rpe: float | None = Field(default=None, strict=True, ge=1, le=10)
+
+    @field_validator("rpe")
+    @classmethod
+    def half_step_rpe(cls, value):
+        if value is not None and value * 2 != int(value * 2):
+            raise ValueError("RPE must be a whole or half number.")
+        return value
 
     @field_validator("load", mode="before")
     @classmethod
@@ -2517,6 +2525,8 @@ class ExerciseLogActual(BaseModel):
             first = self.set_entries[0]
             self.reps = first.reps if all(entry.reps == first.reps for entry in self.set_entries) else None
             self.load = first.load if all(entry.load == first.load for entry in self.set_entries) else None
+            if any(entry.rpe is not None for entry in self.set_entries):
+                self.effort = ExerciseLogEffort(value=first.rpe) if first.rpe is not None and all(entry.rpe == first.rpe for entry in self.set_entries) else None
         return self
 
 

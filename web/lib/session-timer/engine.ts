@@ -30,6 +30,9 @@ export type TimerState = {
   completed: number[];
   /** Set drafts survive minimising, refresh and the final handoff. */
   setDrafts?: Record<string, SetDraft[]>;
+  /** Completed work is counted separately from confirmed measurements. */
+  confirmedSetLogs?: Record<string, number[]>;
+  pendingSetLog?: { itemId: string; set: number } | null;
   phaseStartedAt: number | null;
   /** Length of a timed phase; null for an untimed one. */
   phaseMs: number | null;

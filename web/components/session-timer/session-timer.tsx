@@ -9,9 +9,8 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { SetRows } from "@/components/set-rows";
-import { readSets } from "@/lib/set-entries";
-import { timerSetDrafts, completeSetWithResults, endSessionWithResults, finishItemWithResults, finishItemAsPlannedWithResults } from "@/lib/session-timer/sets";
+import { RestSetLogger, TimerSetReview } from "./rest-set-logger";
+import { unconfirmedSets, completeSetWithResults, endSessionWithResults, finishItemWithResults, finishItemAsPlannedWithResults } from "@/lib/session-timer/sets";
 import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 
 import { useSessionTimer, type SessionTimerController } from "@/components/session-timer/use-session-timer";
@@ -203,20 +202,6 @@ function doneLabel(item: TimerItem, done: number): string {
     return item.sets ? `${count} · plan ${formatRange(item.sets)}` : count;
   }
   return "Done";
-}
-
-function TimerSetEditor({ timer }: { timer: SessionTimerController }) {
-  const { state } = timer;
-  const item = currentItem(state);
-  const rows = timerSetDrafts(state);
-  if (!rows || item?.kind !== "sets" || !item.setFields) return null;
-  const unit = item.setFields.find(field => field.key === "load")?.apiUnit ?? "kg";
-  const read = readSets(rows, unit);
-  return <div className="st-set-editor"><SetRows rows={rows} unit={unit} compact editableCount={false}
-    active={Math.min(state.unit - 1, rows.length - 1)} completed={state.completed[state.index] ?? 0}
-    showLoad={item.setFields.some(field => field.key === "load")} invalid={read.invalid}
-    repsHint={item.setFields.find(field => field.key === "reps")?.hint}
-    onChange={updated => timer.update(s => ({ ...s, setDrafts: { ...s.setDrafts, [item.id]: updated } }))} /></div>;
 }
 
 function Progress({ state, item }: { state: TimerState; item: TimerItem | null }) {
@@ -1115,7 +1100,11 @@ export function SessionTimer({
   });
   // Also when the run comes back already finished (the app closed between the
   // last set and the hand-off): it is handed on, never left hidden.
-  const handingOff = handOffWhenDone && state.phase === "done" && !finishError;
+  const needsSetReview = state.phase === "done" && unconfirmedSets(state).length > 0;
+  const restLogTarget = state.pendingSetLog && state.phase === "rest" && !state.prep ? state.pendingSetLog : null;
+  const restLogConfirmed = restLogTarget ? state.confirmedSetLogs?.[restLogTarget.itemId]?.includes(restLogTarget.set) : false;
+  const strengthLogging = Boolean((item?.kind === "sets" && item.setFields) || restLogTarget || needsSetReview);
+  const handingOff = handOffWhenDone && state.phase === "done" && !needsSetReview && !finishError;
   useEffect(() => {
     if (!handingOff || autoFinishAttempted.current) return;
     const timeout = window.setTimeout(() => {
@@ -1186,6 +1175,8 @@ export function SessionTimer({
       ref={dialogRef}
       className="st-root"
       data-tone={tone}
+      data-strength-logging={strengthLogging || undefined}
+      data-rest-log={restLogTarget ? restLogConfirmed ? "confirmed" : "open" : undefined}
       role="dialog"
       aria-modal="true"
       aria-label={`${sessionTitle} timer`}
@@ -1244,7 +1235,7 @@ export function SessionTimer({
       {/* Tapping anywhere off an open sheet closes it. */}
       {sheet !== null ? <div className="st-scrim" aria-hidden="true" onClick={() => setSheet(null)} /> : null}
 
-      {handingOff && visible ? (
+      {needsSetReview ? <TimerSetReview timer={timer} /> : handingOff && visible ? (
         <div className="st-main st-done st-handoff">
           <div className="st-done-badge" aria-hidden="true">
             <Icon name="check" />
@@ -1333,7 +1324,6 @@ export function SessionTimer({
               ) : null}
             </>
           )}
-          {item?.kind === "sets" && item.setFields && state.phase !== "ready" ? <TimerSetEditor key={item.id} timer={timer} /> : null}
           {state.phase !== "ready" ? <Progress state={state} item={item} /> : null}
           {item?.kind === "interval" ? (
             <div className="st-audio-status" role="status">
@@ -1354,6 +1344,7 @@ export function SessionTimer({
 
       {state.phase !== "done" ? (
         <div className="st-controls" role="group" aria-label="Timer controls">
+          {restLogTarget ? <RestSetLogger key={`${restLogTarget.itemId}:${restLogTarget.set}`} timer={timer} target={restLogTarget} /> : null}
           {/* One light row of tools above the one main action: ±10s either side,
               pause (or End round during a round) in the middle. */}
           {hasTools ? (
