@@ -98,7 +98,7 @@ def test_same_drill_on_another_day_never_lends_its_dose():
     block = _only_block(_session(_tempo_role(16), 16, SOURCE_DAYS.get(16)))
     # Its own planner dose, never D-10's 25 min.
     assert block["duration"] == {"value": 20, "unit": "minutes"}
-    assert block["coaching_cues"] == ["20min continuous"]
+    assert block["coaching_cues"] == []
 
     block = _only_block(_session(_tempo_role(10), 10, SOURCE_DAYS.get(10)))
     assert block["duration"] == {"value": 25, "unit": "minutes"}
@@ -106,8 +106,9 @@ def test_same_drill_on_another_day_never_lends_its_dose():
 
 def test_no_plan_text_resolves_bank_bounds_to_one_value():
     block = _only_block(_session(_tempo_role(17), 17, None))
-    assert block["coaching_cues"] == ["20min continuous"]
-    assert not RANGE.search(" ".join(block["coaching_cues"]))
+    assert block["duration"] == {"value": 20, "unit": "minutes"}
+    assert block["coaching_cues"] == []
+    assert block.get("execution_instructions") is None
 
 
 def test_whole_quantity_clauses_become_stats_and_the_rest_stays_verbatim():

@@ -84,3 +84,36 @@ def test_tabata_keeps_round_work_rest_and_between_block_rest_separate(dose):
     assert fields["interval_blocks"] == 1
     between = fields["between_block_rest"]
     assert between["value"] * (60 if between["unit"] == "minutes" else 1) == 120
+
+
+@pytest.mark.parametrize("rest", ["full rest between holds", "rest until ready"])
+def test_strict_conversion_preserves_qualitative_rest_without_inventing_seconds(rest):
+    card = _valid_plan()
+    block = card["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+    block.pop("rest")
+    block["reps"] = 6
+    block["rest_note"] = rest
+    source = _faithful_source(card).replace(
+        f"- {block['display_name']}",
+        f"- {block['display_name']}: 4 sets x 6 reps; {rest}; RPE 7.",
+    )
+    outcome = build_structured_plan_outcome(card, raw_markdown=source, strict_content=True)
+    assert outcome.status == "valid", outcome.errors
+    actual = outcome.structured_plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+    assert actual["rest"] is None
+    assert actual["rest_note"].casefold() == rest.casefold()
+
+
+@pytest.mark.parametrize("rest", ["Rest 90-120 sec", "90-120 seconds recovery", "rest: 90 sec"])
+def test_strict_conversion_still_rejects_missing_numeric_rest(rest):
+    card = _valid_plan()
+    block = card["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+    block.pop("rest")
+    block["reps"] = 6
+    source = _faithful_source(card).replace(
+        f"- {block['display_name']}",
+        f"- {block['display_name']}: 4 sets x 6 reps; {rest}; RPE 7.",
+    )
+    outcome = build_structured_plan_outcome(card, raw_markdown=source, strict_content=True)
+    assert outcome.structured_plan is None
+    assert any("dropped explicit source rest" in error for error in outcome.errors)

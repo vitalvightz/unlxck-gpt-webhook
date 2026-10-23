@@ -3321,8 +3321,10 @@ def build_structured_plan_outcome(
     card discarded, so a leaking or contradictory card can never be persisted or
     trusted for publication. DUPLICATE findings stay advisory warnings.
 
-    Faithfulness findings remain blocking except ``PRESCRIPTION`` omissions.
-    The structured schema can only store scalar measured values, so an exact raw
+    Strict conversion blocks all faithfulness findings, including missing
+    numeric prescriptions. Qualitative rest stays in ``rest_note`` without an
+    invented duration. Legacy callers keep ``PRESCRIPTION`` omissions advisory:
+    the structured schema can only store scalar measured values, so an exact raw
     range such as ``Rest 2-3 minutes`` may be intentionally absent from the
     converted object. The persisted plan embeds the verbatim source and the
     renderer deterministically restores those explicit ranges; rejecting the
