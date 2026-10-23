@@ -210,7 +210,12 @@ def test_any_readiness_cut_or_injury_pressure_keeps_its_existing_cap(athlete, ro
     assert policy["pressure"] >= 1
     assert _decision(role) is None
     assert policy["standalone_minimum_applied"] is False
-    assert policy["effective_exercise_cap"] < policy["base_exercise_cap"]
+    if policy["exercise_count_pressure"] == 0:
+        # Injury alone no longer shrinks the generic exercise budget.
+        assert policy["injury_restricted"] is True
+        assert policy["effective_exercise_cap"] == policy["base_exercise_cap"]
+    else:
+        assert policy["effective_exercise_cap"] < policy["base_exercise_cap"]
     assert _count(role) == policy["effective_exercise_cap"]
 
 
