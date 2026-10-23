@@ -332,6 +332,9 @@ class SessionBlock(BaseModel):
     # instruction. Dated camps prescribe their taper week by week, so they
     # leave this unset.
     deload_rule: str | None = None
+    # Exact prescription from this open block week's deterministic decision.
+    # Kept outside disposable coaching cues so every dose qualifier survives.
+    week_prescription: str | None = None
     stop_rules: list[str] = Field(default_factory=list)
     substitutions: list[str] = Field(default_factory=list)
     red_flags: list[RedFlagRule] = Field(default_factory=list)

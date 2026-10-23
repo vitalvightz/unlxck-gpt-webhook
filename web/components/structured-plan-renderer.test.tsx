@@ -2139,9 +2139,9 @@ test("progression week: block cards display authored progression once and retain
     />,
   );
 
-  assert.equal(countOccurrences(html, "This week"), 0);
+  assert.equal(countOccurrences(html, "This week"), 1);
   assert.equal(countOccurrences(html, "Add 2.5 kg when all sets feel crisp."), 1);
-  assert.equal(html.includes(">Progress</span>"), true);
+  assert.equal(html.includes("sp-week-directive"), true);
   // The stop-rule block keeps its safety aside and invents no generic bump.
   assert.equal(countOccurrences(html, "Stop when throw speed drops."), 1);
   assert.equal(html.includes(">Stop rule</span>"), true);
@@ -2177,6 +2177,42 @@ test("dated camp block cards display authored Progress", () => {
   assert.equal(html.includes("This week"), false);
   assert.equal(html.includes(">Progress</span>"), true);
   assert.equal(countOccurrences(html, "Add 2.5 kg when all sets feel crisp."), 1);
+});
+
+test("open card keeps the red week prescription, load, and authored progress together", () => {
+  for (const week of [1, 2, 3, 4]) {
+    const dose = week === 4 ? "2x3 @ 65% 1RM; rest 120s." : "4x3 @ 75% 1RM; rest 120s.";
+    const html = renderToStaticMarkup(<BlockCard openWeekIntent={openBlockWeekIntent(week)} block={{
+      display_name: "Squat", sets: week === 4 ? 2 : 4, reps: 3,
+      load: { method: "percentage", value: week === 4 ? 65 : 75, unit: "percent", ref: "1RM" },
+      week_prescription: dose, progression_rule: "Refine control at the prescribed dose.",
+    }} />);
+    assert.equal(countOccurrences(html, "This week"), 1);
+    assert.match(html, /sp-week-directive/);
+    assert.ok(html.includes(dose));
+    assert.match(html, />Load</);
+    assert.equal(countOccurrences(html, "Refine control at the prescribed dose."), week === 4 ? 0 : 1);
+  }
+});
+
+test("collapsed exercise rows retain loading and all interval quantities", () => {
+  const lift = renderToStaticMarkup(<ExerciseRow block={{ display_name: "Squat", sets: 3, reps: 5,
+    load: { method: "percentage", value: 75, ref: "1RM" }, rest: { value: 120, unit: "seconds" },
+  }} open={false} onToggle={() => {}} />);
+  assert.match(lift, /75% 1RM/);
+  assert.match(lift, /rest 2 min/);
+  const interval = renderToStaticMarkup(<ExerciseRow block={{ display_name: "Counter Shadow Flow", rounds: 2,
+    work: { value: 180, unit: "seconds" }, rest: { value: 60, unit: "seconds" },
+  }} open={false} onToggle={() => {}} />);
+  assert.match(interval, /2 rounds/);
+  assert.match(interval, /3 min work/);
+  assert.match(interval, /rest 1 min/);
+  const cluster = renderToStaticMarkup(<ExerciseRow block={{ display_name: "RDL → Broad Jump", rounds: 3,
+    components: [{ name: "RDL", reps: 2, load: { method: "percentage", value: 85, ref: "1RM" } },
+      { name: "Broad Jump", reps: 2 }],
+  }} open={false} onToggle={() => {}} />);
+  assert.match(cluster, /A1: 85% 1RM/);
+  assert.doesNotMatch(cluster, /A2: 85%/);
 });
 
 test("open plan week overview headlines the block-week intent", () => {
