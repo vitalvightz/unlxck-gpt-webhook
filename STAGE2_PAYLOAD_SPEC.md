@@ -152,7 +152,7 @@ Structured-card call behaviour is controlled by three further flags:
 |---|---|---|
 | `UNLXCK_STAGE2_STRUCTURED_REPAIR` | **off** (opt-in) | One repair call after a failed first structured pass. Off because production telemetry (40 jobs, 2026-10-05 to 2026-10-14) showed it rescuing about 1 in 12 failed cards at 150–200 s each. |
 | `UNLXCK_STAGE2_STRUCTURED_JSON_MODE` | on | `json_object` mode unless schema mode is explicitly enabled. |
-| `UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE` | **on** | Send the strict `json_schema` built from `StructuredTrainingPlan`. Missing source prescriptions and dose text in execution fields fail content validation. Schema construction failure never silently falls back to free-form output. Set to `0` to use JSON-object mode instead. |
+| `UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE` | **off** (opt-in) | Keep standard JSON-object conversion and established source-faithfulness/safety checks by default. Set to `1` only after live endpoint verification to enable strict `json_schema` and additional field-ownership rejection. |
 
 These apply only to the structured-card calls. The markdown plan-text pass never
 uses an output-format parameter.
@@ -172,9 +172,9 @@ remain visible alongside the available metrics.
 Sampling is temperature 0 on supported GPT-4.1/GPT-4o families. The configured
 `gpt-5-mini` reasoning model does not accept temperature, so no unsupported
 sampling parameter is sent. Shape constraints and content validation apply
-independently of sampling. Strict schema mode is enabled by default. Live
-`gpt-5-mini` endpoint acceptance has not been verified in this workspace;
-in-repo model calls are mocked.
+independently of sampling. Strict schema mode is opt-in and remains disabled
+until the live `gpt-5-mini` endpoint has been verified; in-repo model calls
+are mocked.
 
 Result fields added to the Stage 2 return contract (all optional):
 
