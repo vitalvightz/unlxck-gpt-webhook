@@ -85,6 +85,7 @@ import type {
   StructuredSession,
   StructuredWeek,
   TodaySession,
+  TodayCommandView,
   UserRole,
 } from "@/lib/types";
 import {
@@ -1623,6 +1624,15 @@ function AdminArtifactSection({
   );
 }
 
+export function didPlanStatusChecksFail(params: {
+  activeSettled: boolean;
+  activeResolved: boolean;
+  todaySettled: boolean;
+  todayResolved: boolean;
+}): boolean {
+  return params.activeSettled && params.todaySettled && !params.activeResolved && !params.todayResolved;
+}
+
 export function resolvePlanActiveState(params: {
   todayResolved: boolean;
   todayActivePlanId?: string | null;
@@ -1997,7 +2007,12 @@ export function PlanViewer({
         activeEndpointPlanId: active.planId,
       });
       if (resolvedPlanId === undefined) {
-        if (active.settled && today.settled) {
+        if (didPlanStatusChecksFail({
+          activeSettled: active.settled,
+          activeResolved: active.resolved,
+          todaySettled: today.settled,
+          todayResolved: today.resolved,
+        })) {
           setActivePlanLookupFailed(true);
         }
         return;
