@@ -69,7 +69,7 @@ def ai_release_source(brief, text):
     return "\n".join(lines)
 
 
-@pytest.mark.parametrize("path", ["converted", "rejected_fast_fallback", "not_attempted_fallback"])
+@pytest.mark.parametrize("path", ["converted", "source_recovered", "not_attempted_fallback"])
 @pytest.mark.skipif(not (ROOT / "web/node_modules/tsx").is_dir(),
                     reason="Release rendering requires npm ci in web; the coaching-release CI job installs it")
 def test_final_persisted_physical_rows_keep_coaching_in_react(production_replay, monkeypatch, path):
@@ -84,7 +84,7 @@ def test_final_persisted_physical_rows_keep_coaching_in_react(production_replay,
     assert sum(bool(b.get("regression_options")) for _, b in expected) >= 20
     assert sum(bool(b.get("stop_rules")) for _, b in expected) >= 20
     candidate = deepcopy(reference)
-    if path == "rejected_fast_fallback":
+    if path == "source_recovered":
         for _, block in blocks(candidate):
             for field in FIELDS:
                 block.pop(field, None)
@@ -97,10 +97,10 @@ def test_final_persisted_physical_rows_keep_coaching_in_react(production_replay,
     calls = len(client.responses.calls)
     if path == "converted":
         assert final.get("structured_plan"), final["stage2_validator_report"].get("structured_plan")
-    if path == "rejected_fast_fallback":
+    if path == "source_recovered":
         report = final["stage2_validator_report"]["structured_plan"]
-        assert report["status"] == "invalid_fallback_used", report
-        assert any("COACHING_DROPPED" in e for e in report["errors"])
+        assert report["status"] == "valid", report
+        assert report["errors"] == []
         final = asyncio.run(retry_structured_card_before_release(
             stage2=automator, final_result=final, emit_milestone=lambda *a, **k: None))
         assert len(client.responses.calls) == calls == 2  # no repair/repeated conversion
@@ -146,11 +146,7 @@ def test_a_converter_cannot_drop_any_applicable_coaching_field(production_replay
     target.pop(field)
     outcome = build_structured_plan_outcome(candidate, raw_markdown=source,
                                            planning_brief=brief)
-    if field not in {"progression_rule", "regression_options"}:
-        assert outcome.structured_plan is None
-        assert any("COACHING_DROPPED" in e and field in e for e in outcome.errors)
-        return
-    # A dropped source adjustment is restored verbatim rather than costing the
+    # A dropped source coaching field is restored verbatim rather than costing the
     # athlete the whole converted card.
     assert outcome.structured_plan is not None, outcome.errors
     restored = next(b for _, b in blocks(outcome.structured_plan) if b.get("block_id") == target.get("block_id"))

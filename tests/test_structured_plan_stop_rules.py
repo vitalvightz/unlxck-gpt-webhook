@@ -57,7 +57,7 @@ def test_normalizer_hides_taper_programming_but_preserves_stop_rule():
 def test_converter_prompt_keeps_stop_rules_separate_from_progression():
     prompt = build_structured_plan_prompt(plan_markdown="D-7 — Band-Resisted Punch")
     assert '"stop_rules"' in prompt
-    assert '"Stop:" / "Stop rule:" ->' in prompt
+    assert "Stop/Stop rule -> stop_rules" in prompt
     assert '"Stop rule:" content as progression_rule' not in prompt
 
 
@@ -104,15 +104,14 @@ def test_converter_prompt_keeps_reasoning_rich_but_cues_execution_only():
     prompt = build_structured_plan_prompt(plan_markdown="D-7 — Band-Resisted Punch")
     normalized = " ".join(prompt.split())
     assert '"why_today"' in prompt
-    assert "execution-only how-to instructions" in prompt
-    assert '"Why today:" -> why_today' in prompt
-    assert "`Cue:` ->" in prompt
-    assert "must never be omitted or simplified away" in normalized
+    assert "How -> execution_instructions" in prompt
+    assert "Why today -> why_today" in prompt
+    assert "Cue -> coaching_cues" in prompt
+    assert "Preserve all conditions and safety detail" in normalized
 
 
-def test_converter_prompt_requires_compact_athlete_facing_stop_rules():
+def test_converter_prompt_preserves_complete_source_stop_rules():
     prompt = build_structured_plan_prompt(plan_markdown="D-7 — Band-Resisted Punch")
     normalized = " ".join(prompt.split())
-    assert "contain one trigger only" in normalized
-    assert "no more than 10 words" in normalized
-    assert "never invent a new safety criterion" in normalized
+    assert "no word limit may shorten an approved instruction" in normalized
+    assert "Never lose safety thresholds" in normalized

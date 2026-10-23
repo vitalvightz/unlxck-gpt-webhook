@@ -155,3 +155,25 @@ test("sheet shows saved swaps, Easier and Progress once", async () => {
     assert.equal(lines.filter(line => line.querySelector(".sp-stat-label")?.textContent === "Progress").length, 1);
   } finally { await cleanup(); }
 });
+
+for (const running of [false, true]) {
+  test(`without a demo How and rest remain available ${running ? "during logging" : "in preview"}`, async () => {
+    const instruction = "Parry once, throw the cross, then step out of range.";
+    const progress = "At the same dose, keep your exits clean.";
+    const { sheet, byTitle, cleanup } = await openSheet(running, {
+      block_id: "no-demo", display_name: "Parry-Cross-Exit", block_type: "skill",
+      rounds: 3, work: { value: 5, unit: "seconds" }, rest: { value: 120, unit: "seconds" },
+      execution_instructions: instruction, progression_rule: progress,
+      stop_rules: ["Stop if stance breaks."],
+    });
+    try {
+      assert.equal(byTitle("Demo video"), undefined);
+      assert.equal(sheet.querySelector(".ex-execution-instructions")?.textContent, `How${instruction}`);
+      assert.equal(sheet.textContent?.split(instruction).length, 2);
+      const rest = [...sheet.querySelectorAll(".sp-stat")].find(stat => stat.textContent?.startsWith("Rest"));
+      assert.equal(rest?.textContent, "Rest2 min");
+      assert.equal(sheet.textContent?.includes(progress), !running);
+      assert.match(sheet.textContent ?? "", /stance breaks/);
+    } finally { await cleanup(); }
+  });
+}

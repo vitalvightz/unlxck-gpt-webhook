@@ -352,83 +352,23 @@ def test_all_banned_keys_are_lowercase_and_stripped_case_insensitively():
 # --- G + format. prompt contract -------------------------------------------
 
 
-def test_prompt_carries_schema_and_safety_rules():
+def test_prompt_carries_compact_conversion_and_safe_gap_completion_contract():
     prompt = build_structured_plan_prompt(
         plan_markdown="# Fight Camp\n- squat",
-        planning_brief={"main_limiter": "conditioning"},
-        event_date="2026-06-13",
+        planning_brief={"main_limiter": "conditioning"}, event_date="2026-06-13",
     )
-    # schema_version + hierarchy + machine-readable load
-    assert SCHEMA_VERSION in prompt
-    assert "weeks[] -> days[] -> sessions[] -> blocks[]" in prompt
-    assert '"method": "percentage"' in prompt
-    assert 'NEVER a string' in prompt
-    # Root shape must be unambiguous: no top-level "plan" wrapper.
-    assert "Do NOT wrap it inside a top-level" in prompt
-    assert "StructuredTrainingPlan" in prompt
-    assert "plan -> weeks[]" not in prompt
-    assert '"plan": {' not in prompt
-    # Every required top-level key is named so the model emits the real root.
-    for top_level_key in (
-        "schema_version",
-        "plan_metadata",
-        "athlete_context",
-        "event_context",
-        "countdown_labels",
-        "red_flag_rules",
-        "weeks",
-        "daily_check_ins",
-        "nutrition",
-        "progression_notes",
-        "raw_markdown_fallback",
-    ):
-        assert top_level_key in prompt
-    # phases
-    for phase in ("GPP", "SPP", "TAPER", "FIGHT_WEEK", "REINTEGRATION"):
-        assert phase in prompt
-    # self-report only / no biometrics
-    assert "self-report" in prompt.lower()
-    assert "WHOOP" in prompt
-    # weight-cut safety: risk, not direct acute-cut instructions
-    assert "weight_cut_warning" in prompt
-    assert "NEVER direct acute-cut instructions" in prompt
-    # raw markdown fallback + countdown labels + completion_status + mindset
-    assert "raw_markdown_fallback" in prompt
-    assert "countdown" in prompt.lower()
-    assert "completion_status" in prompt
-    assert "mindset_anchor" in prompt
-    # the original plan is included for fidelity
-    assert "# Fight Camp" in prompt
-    assert "2026-06-13" in prompt
-    # source-of-truth + no-invention guardrails
-    assert "SOURCE OF TRUTH" in prompt
-    assert "Do NOT add new exercises" in prompt
-    assert "infer only those missing presentation fields" in prompt
-    assert "goals and weaknesses" in prompt
-    assert "current evidence-based sport-science" in prompt
-    assert "A missing identifier must never reject the card" in prompt
-    # exact root skeleton with the nested objects that were failing live
-    assert "EXACT ROOT SKELETON" in prompt
-    for skeleton_marker in (
-        '"load_focus"',
-        '"progression"',
-        '"today_card"',
-        '"mindset_anchor"',
-        '"blocks"',
-        '"daily_check_ins": []',
-        '"weight_cut_warning"',
-    ):
-        assert skeleton_marker in prompt
-    # Live text-output patterns that must stay explicit in the card converter.
-    for live_marker in (
-        "Power Transfer Touch",
-        "Duration",
-        "Prescription",
-        "Progression/regression/stop",
-        "Tactical Cue",
-        "Optimize for a valid first-pass card",
-    ):
-        assert live_marker in prompt
+    for marker in (SCHEMA_VERSION, "weeks[] -> days[] -> sessions[] -> blocks[]",
+                   '"method":"percentage"', "Self-report only", "WHOOP",
+                   "weight_cut_warning", "coach_gated", "safety trigger",
+                   "completion_status", "mindset_anchor", "# Fight Camp", "2026-06-13",
+                   "ROOT SHAPE EXAMPLE", "Do not select exercises", "source of truth",
+                   "missing presentation", "no word limit", "Preserve source Progress/Progression"):
+        assert marker in prompt, marker
+    assert "infer only those missing presentation" in prompt
+    assert "Never infer sparring/contact prescriptions" in prompt
+    assert "volume, load, dates, safety rules" in prompt
+    assert "Ignore exercise Progress" not in prompt
+    assert len(prompt) < 11_000
 
 
 def test_repair_prompt_instructs_shape_only_fix_and_includes_skeleton():
@@ -440,7 +380,7 @@ def test_repair_prompt_instructs_shape_only_fix_and_includes_skeleton():
     assert "Fix ONLY the JSON structure" in prompt
     assert "Do NOT change the training content." in prompt
     # The repair prompt still carries the exact skeleton to anchor the shape.
-    assert "EXACT ROOT SKELETON" in prompt
+    assert "ROOT SHAPE EXAMPLE" in prompt
 
 
 def test_planning_brief_context_is_allowlisted_and_deterministic():
@@ -502,7 +442,7 @@ def test_prompt_does_not_ask_model_to_echo_plan_into_fallback():
     assert '"raw_markdown_fallback": ""' in prompt
     assert "preserve this exactly in raw_markdown_fallback" not in prompt
     assert "preserve the original human-readable plan verbatim" not in prompt
-    assert 'raw_markdown_fallback" to an empty string' in prompt
+    assert 'raw_markdown_fallback to ""' in prompt
 
 
 def test_repair_prompt_strips_echoed_plan_from_broken_json():
@@ -1965,11 +1905,11 @@ def test_open_plan_conversion_prompt_projects_authored_adjustments_only():
         planning_brief=_open_plan_brief("Monday", "Tuesday"),
     )
 
-    assert "PER-BLOCK PROGRESSION & DELOAD (open plans only)" in prompt
+    assert "OPEN-PLAN DELOAD" in prompt
     assert '"deload_rule"' in prompt
     assert 'Preserve each source "progression_rule" and "deload_rule" verbatim' in prompt
-    assert "Missing source fields stay empty" in prompt
-    assert "Never create a progression or Easier note" in prompt
+    assert "Missing source adjustment fields stay empty" in prompt
+    assert "Never create a progression or Easier note" in " ".join(prompt.split())
 
 
 def test_block_name_offering_a_choice_keeps_one_exercise_and_swaps_the_other():
@@ -2085,7 +2025,7 @@ def test_a_real_target_survives_even_when_it_also_hedges():
 
 def test_conditional_swap_is_never_routed_into_progression_rule():
     prompt = build_structured_plan_prompt(plan_markdown="# Plan")
-    assert "never put a conditional swap there" in " ".join(prompt.split())
+    assert "Never put a conditional swap there" in " ".join(prompt.split())
 
 
 def test_open_plan_conversion_prompt_forbids_authoring_missing_progress():
@@ -2094,8 +2034,8 @@ def test_open_plan_conversion_prompt_forbids_authoring_missing_progress():
         planning_brief=_open_plan_brief("Monday", "Tuesday"),
     )
 
-    assert "Never invent a number the plan does not have" in prompt
-    assert "Missing source fields stay empty" in prompt
+    assert "Preserve any explicit value or bound" in prompt
+    assert "Missing source adjustment fields stay empty" in prompt
     assert "not authoring adjustments" in prompt
     assert "You own the Progress" not in prompt
     assert "author a useful short note" not in prompt
@@ -2108,7 +2048,7 @@ def test_dated_camp_prompt_has_no_open_plan_progression_contract():
         event_date="2026-06-20",
     )
 
-    assert "PER-BLOCK PROGRESSION & DELOAD" not in prompt
+    assert "OPEN-PLAN DELOAD" not in prompt
     assert "deload_rule" not in prompt
 
 

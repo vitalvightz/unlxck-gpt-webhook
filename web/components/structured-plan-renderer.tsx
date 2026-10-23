@@ -952,7 +952,8 @@ function ExerciseDetail({
         ) : null}
         <div className="ex-detail-prescription">
           <BlockCard block={block} openWeekIntent={openWeekIntent}
-            sourceCountdown={sourceCountdown} embedded hideCues hideStopRule hideAdjustments hideInstructions />
+            sourceCountdown={sourceCountdown} embedded hideCues hideStopRule hideAdjustments
+            hideInstructions={Boolean(media || block.private_media_id || block.community_revision_id)} />
         </div>
         <ExerciseLogPanel block={block} />
       </div>

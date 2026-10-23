@@ -3624,353 +3624,118 @@ def _strip_fallback_from_broken_json(broken_json: str) -> str:
     return _RAW_FALLBACK_VALUE_RE.sub(r'\1""', broken_json)
 
 
+# One conversion contract. The finalizer owns programming and adjustments;
+# conversion may complete missing rest, effort and one execution cue only.
 _STRUCTURED_PLAN_RULES = f"""\
-You are converting an already-written training plan into a strict,
-machine-readable JSON object. Output ONLY a single JSON object — no markdown, no
-code fences, no commentary.
+Convert the approved plan below into ONE StructuredTrainingPlan JSON object.
+Output ONLY JSON, with no wrapper, markdown or commentary.
 
-The human-readable plan provided below is the SOURCE OF TRUTH for exercise and
-session membership, dates, explicit volume/load, and safety constraints. Convert
-it faithfully into structured form. Do NOT add new exercises, sessions, blocks,
-dates, athletes, biometrics, or override any explicit fixed prescription. You MAY fill
-missing rest, effort and one concise execution cue for an existing physical
-block, using the supplied athlete/session context and the rules below.
+AUTHORITY
+- The plan is the source of truth. Preserve every exercise, session, assigned
+  day, fixed dose, rest period, effort method, restriction and safety trigger.
+  Do not select exercises, rewrite supplied coaching, invent dates, Easier
+  options, progression or future workouts. Preserve source Progress/Progression
+  verbatim in progression_rule, separate from weekly development and deload.
+- For an EXISTING physical exercise only, infer only those missing presentation
+  fields: rest, effort and one concise execution cue. Use the supplied athlete
+  context, goals and weaknesses, session purpose, sport, phase/fight proximity,
+  fatigue, injury restrictions, equipment and movement demands. Use conservative
+  current evidence-based sport-science: adequate recovery for quality/power,
+  density only when intended, effort within every supplied safety/dose cap.
+  Preserve any explicit value or bound; never replace max intent with RPE.
+  Never infer sparring/contact prescriptions or fill locked mental drills.
+  This completion cannot change membership, volume, load, dates, safety rules
+  or adjustments. Other missing source fields stay empty.
+- Server-owned locked sessions are restored in code. Do not recreate omitted
+  locked drills. The server also assigns identifiers and execution order;
+  use a source id when available, otherwise omit ids and execution_order.
+- Set schema_version to "{SCHEMA_VERSION}" and raw_markdown_fallback to "".
+  The server restores the original text. Do not echo it in any other field.
 
-The root JSON object IS the StructuredTrainingPlan.
-Do NOT wrap it inside a top-level "plan" key. Its top-level keys are exactly:
+STRUCTURE
+- Root shape: plan_metadata, athlete_context, event_context, countdown_labels,
+  red_flag_rules, plan_notes, weeks, daily_check_ins, nutrition,
+  progression_notes, raw_markdown_fallback, schema_version. No top-level plan.
+- Training hierarchy: weeks[] -> days[] -> sessions[] -> blocks[]. Preserve
+  source order, every dated day, every session and every listed exercise.
+- A header such as D-18 (Wednesday) — Power starts a session on that day.
+  Two headers with the same D-day mean two sessions on ONE day. A Why: line
+  is its objective. A bullet is one block; indented/labelled detail belongs
+  to that bullet, never a new exercise. A tactical drill's Step N lines are
+  ordered coaching_cues on ONE skill/mindset block, not separate blocks.
+- Use source dates/countdowns when stated. Known fight dates use D-N/D0/D+N.
+  An OPEN ONGOING PLAN CONTRACT overrides dated-camp fields and examples.
+- phase_label: GPP|SPP|TAPER|FIGHT_WEEK|REINTEGRATION.
+  session_type: strength_power|conditioning|skill|sparring|primer|recovery|
+  rehab|fight_or_match|mixed.
+  block_type: preparation|strength|strength_speed|plyometric_power|speed|
+  accessory|conditioning|skill|sparring|rehab|mobility_activation|
+  cooldown_recovery|mindset|nutrition. Jumps/throws are power, not accessory lifting;
+  tactical watch/visualisation is mindset/skill, never physical conditioning.
+- Keep declared contact even without S&C: sessions=[] and a headline naming
+  Hard sparring or Technical-only combat. If that day ALSO has prescribed work,
+  keep the sessions and put the contact label in today_card.coach_led_contact.
+  Empty days without contact use day_type=rest and No planned session.
+- session completion_status defaults to not_started. Preserve supplied mindset
+  in session.mindset_anchor and today_card.mindset_anchor, including intent,
+  focus_cue, reset_cue, confidence_anchor and context. Do not invent anchors.
 
-  schema_version, plan_metadata, athlete_context, event_context,
-  countdown_labels, red_flag_rules, plan_notes, weeks, daily_check_ins,
-  nutrition, progression_notes, raw_markdown_fallback.
+PRESCRIPTION SHAPES
+- sets/rounds: positive integers. reps: count or exact source qualifier such
+  as "6 per side" or "AMRAP"; never put time, distance or combined chains here.
+- duration/work/rest/distance: {{"value": number, "unit": string}}. Time units:
+  seconds/minutes/hours. Distance: meters/kilometers/miles/yards. A timed hold
+  uses sets + duration; intervals use rounds + work + rest. Keep rest separate.
+- Keep explicit ranges verbatim in execution_instructions; scalar working
+  fields use lower work/intensity and longer rest, never outside the source.
+  Example: 3 x 8; rest 90 sec -> sets=3,reps=8,rest={{"value":90,"unit":"seconds"}}.
+- load: {{"method":"percentage","value":85,"unit":"percent","ref":"1RM",
+  "display":"85% 1RM"}}, or method=absolute with a stated kg/lb value.
+  Other methods: bodyweight|band|rpe|rir|velocity|relative|other. No numeric
+  load in the source means null; do not manufacture kg or percentages.
+- effort: {{"method":"RPE","value":7,"scale":"1-10"}}. Other methods:
+  RIR|intent|velocity|heart_rate_zone|pace|max_effort_percent. Intent is a word
+  ("max", "explosive"), never a number. Preserve the source method.
+- tempo uses eccentric/pause_bottom/concentric/pause_top, with seconds or X.
+- Route labelled source text verbatim: How -> execution_instructions;
+  Cue -> coaching_cues; Purpose -> purpose; Why today -> why_today;
+  Easier/Regression -> regression_options; Swap -> substitutions;
+  Progress/Progression -> progression_rule;
+  Stop/Stop rule -> stop_rules. You are not authoring adjustments. Never put
+  a conditional swap there in progression_rule. Preserve all conditions and
+  safety detail; no word limit may shorten an approved instruction.
+- coaching_cues, regression_options, substitutions, stop_rules and applies_to
+  are arrays ([] when empty). Other optional fields can be omitted or null.
+  Do not emit unused null/default keys for every exercise.
 
-The nested training hierarchy lives inside the root object as:
-weeks[] -> days[] -> sessions[] -> blocks[].
-
-The JSON object MUST conform to the StructuredTrainingPlan schema:
-
-- It MUST set "schema_version" to "{SCHEMA_VERSION}".
-- Set "raw_markdown_fallback" to an empty string "". Do NOT echo the plan text
-  back into it — the system restores the verbatim original after you respond.
-  Spend your output tokens on the structured fields, not on copying the plan.
-- It MUST use countdown labels (countdown_labels[] and per-day countdown_label,
-  e.g. "D-28", "D-7", "D-1", "D0", "D+1") whenever an event/fight/match date is
-  known. A renewable open-plan contract explicitly overrides this: open plans
-  carry no event dates or countdown labels.
-- Each week's phase_label MUST be one of: GPP, SPP, TAPER, FIGHT_WEEK,
-  REINTEGRATION.
-- When present, a block load MUST be a machine-readable object, NEVER a string. Use:
-  {{"method": "percentage", "value": 85, "unit": "percent", "ref": "1RM",
-  "display": "85% 1RM"}}. Do NOT output loads like "85%" as plain strings.
-- Working-dose fields have fixed shapes: `sets` and `rounds` are positive integers;
-  `reps` is an integer for a count, or a string only for an exact source qualifier
-  such as "6 per side" or "AMRAP". Never put a range, time, distance, or a
-  combined `8x8x30` chain in `reps`. `duration`, `work`, `rest`, and `distance`
-  are separate {{"value": number, "unit": string}} objects, never bare numbers
-  or prose. Use seconds/minutes/hours for time and meters/kilometers/miles/yards
-  for distance; `work` and `rest` normally use seconds, total `duration` minutes.
-- `load.method` must be one of percentage, absolute, bodyweight, band, rpe, rir,
-  velocity, relative, other. Its `value` is one number and `unit` names that
-  number: e.g. {{"method":"absolute","value":24,"unit":"kg","display":"24 kg"}}
-  or the percentage object above. Use `ref` only for a stated reference such as
-  1RM. Never manufacture kg, percent, or 1RM from an RPE or a vague "light"
-  cue. Explicit bodyweight-only work may use
-  {{"method":"bodyweight","value":0,"unit":"bodyweight","display":"bodyweight"}};
-  zero means no external load. If band resistance has no numerical value, set
-  `load` to null and keep the qualitative band cue in the block text.
-- `effort` is separate from load: {{"method":"RPE","value":7,"scale":"1-10"}}.
-  Allowed methods are RPE, RIR, intent, velocity, heart_rate_zone, pace, and
-  max_effort_percent; use the method the source actually states. An `intent`
-  value is a word, never a bare number: "max" for full-intent power, speed,
-  jump and throw work, or a short phrase such as "max speed" or "explosive"
-  with scale null (never {{"method":"intent","value":1}}). `intensity` is
-  a qualitative cue, not a substitute for a measured `load` or `effort`. `tempo`, when
-  stated, uses eccentric/pause_bottom/concentric/pause_top phases as seconds or
-  an explicit cue such as "X", never a number chain in `reps` or `duration`.
-- Keep one exact working value in each dose field. A source range is a bound:
-  choose its lower work/intensity value and longer rest unless the plan gives a
-  narrower fixed target. Preserve every fixed source value and safety cap.
-  For example, "3 sets x 8 reps @ 60% 1RM; rest 90 sec" maps to `sets`: 3,
-  `reps`: 8, `load`: {{"method":"percentage","value":60,"unit":"percent","ref":"1RM","display":"60% 1RM"}},
-  `rest`: {{"value":90,"unit":"seconds"}}. "2 sets x 20 m carries" maps to
-  `sets`: 2 and `distance`: {{"value":20,"unit":"meters"}}, with no `reps`.
-  "20 min easy run" maps to `duration`: {{"value":20,"unit":"minutes"}},
-  with no `reps`. "3 rounds x 30 sec work; rest 60 sec" maps to `rounds`: 3,
-  `work`: {{"value":30,"unit":"seconds"}}, `rest`: {{"value":60,"unit":"seconds"}}.
-  "3 holds x 10-20 sec" maps to `sets`: 3, `reps`: null, and
-  `duration`: {{"value":10,"unit":"seconds"}}; a hold is timed work, not one rep.
-  Safety limits and conditional adjustments may keep ranges.
-- Readiness is self-report ONLY. Do NOT output HRV, CNS recovery percentage,
-  WHOOP-style recovery scores, strain scores, or any other biometric/wearable
-  readiness field. Use the self-report today_card readiness_status and the 3-tap
-  morning check-in only.
-- Each session MUST include completion_status (default "not_started") and a
-  session-level mindset_anchor.
-- Hard-sparring, sparring, or technical contact days where NO programmed S&C work
-  is prescribed (e.g. "Hard sparring — controlled hard contact", "Technical-only
-  combat", "your own hard sparring/contact work", or the legacy "Coach-led boxing —
-  hard sparring / controlled hard contact", "Coach-led boxing — technical-only
-  combat", "coach-owned combat session", "Coach-led boxing session", "no extra S&C
-  today", "no app S&C today", "technical only") MUST still be emitted as a day.
-  Leave that day's "sessions" as [] and set a concise today_card.headline naming
-  what it is (e.g. "Hard sparring", "Technical-only combat") so the day renders as
-  its own card. Do NOT invent S&C blocks for these days and do NOT drop the day.
-  Never label these days "coach-led" or "coach-owned" — name the contact work as
-  the athlete's own hard sparring / contact work.
-- For a day with no programmed session and no declared combat work, use
-  `day_type`: "rest" and a headline such as "No planned session". Do not reuse
-  a conditioning or strength role label as the headline of an empty day.
-- A hard-sparring / sparring / technical contact day can ALSO carry a low-load
-  programmed session on the SAME day (e.g. the plan lists "Technical-only combat"
-  AND a short touch such as a tactical cue card, mobility reset, or freshness
-  primer). When that happens the two COEXIST — never drop one for the other: emit
-  the programmed S&C work as normal entries in "sessions" (with its blocks), AND
-  set today_card.coach_led_contact to the contact label (e.g. "Technical-only
-  combat"). Put the contact label in coach_led_contact, NOT in headline (set
-  headline to a generic title like "Training Day" or the programmed session's
-  title instead, as headline is still required), so the programmed session keeps
-  its own title; the renderer shows the contact work as a context line above it.
-  The contact-only wording only applies when there is genuinely no programmed
-  work — if a session is listed for the day, keep it.
-- Preserve compact plan-output formats reliably:
-  * A day header like `D-18 (Wednesday) — Power Transfer Touch` starts a day.
-    A following `Why:` line is the session/day objective, not a separate block.
-  * Bulleted prescriptions such as `- Band-Resisted Jab-Cross Primer — 3 x
-    4-6 reps...` are blocks. Carry labelled follow-up lines into that same block:
-    `Purpose`, `Why today`, `Progression/regression/stop`, `Progression`,
-    `Regression`, `Stop`, `Duration`, `Prescription`, `Output`, `Intensity`, `Cue`,
-    `Step 1`/`Step 2`/…, `Intent`, `Focus`, `Reset`, `Anchor`, `Context`,
-    and `Coach call`. An INDENTED line always belongs to the bullet above it —
-    it is never a block of its own, however imperative it reads.
-  * Short late-camp support days like `Tactical Focus`, `Tactical Cue
-    Card`, `Breathing Reset`, `Freshness Reset`, and `Final Neural Cue` are real
-    sessions when the plan gives Duration/Prescription/Purpose lines. Do not
-    collapse them into rest days just because they are low-load. A
-    `Tactical Focus` day is ONE block: the single bulleted drill name
-    (e.g. `- Pocket Exchange Map: 10 minutes...`) is the block, its dose is the
-    duration, and every `Step N` / `Intent` / `Focus` / `Reset` / `Anchor` /
-    `Purpose` / `Progress` line below it is that block's own detail. Never emit
-    one block per step, and never push the drill name or its duration up into
-    the session objective — the objective is the day's `Why:` line.
-  * Label a block by what the athlete does, not by its slot: jumps, bounds,
-    hops, throws, slams and any drill done "at max speed" / with max intent are
-    "plyometric_power" (sprints and reaction drills "speed"). "accessory" is
-    only for trunk, prehab, isolation and other support work, which is dosed by
-    RPE or RIR, never by intent.
-  * Tactical watch, cue-card, film-review, and visualization work is tactical /
-    mindset support, NOT physical conditioning. Use session_type "skill" or
-    "recovery" as appropriate and block_type "skill" or "mindset"; do not label
-    these as conditioning/strength/plyometric blocks.
-  * If a contact-only day says `Your own hard sparring/contact work` (or the
-    legacy `Coach-owned combat session` / `No extra S&C today` / `No app S&C
-    today`), keep sessions as []. If it also lists any prescribed touch on the
-    same D-day, keep that touch as a session and put the contact label in
-    today_card.coach_led_contact.
-- Emit each day's sessions, and each session's blocks, in the order the source
-  lists them, and set every session's `execution_order` to null. The server
-  decides the within-day execution order after conversion.
-- Optimize for a valid first-pass card. Preserve every dated day and every
-  listed prescription. Identifier fields (rule_id, week_id, session_id,
-  block_id) are optional metadata: use a stable source id when one exists,
-  otherwise emit null. A missing identifier must never reject the card and must
-  never be replaced with a generic visible fallback.
-- For each EXISTING physical exercise/drill, preserve its fixed volume,
-  load, rest, effort and cue, and stay within any explicit range. When rest,
-  effort or an execution cue is
-  absent, infer only those missing presentation fields from the athlete context,
-  session objective/type, sport, goals and weaknesses, phase/fight proximity,
-  fatigue, injury restrictions, equipment, and the exercise's energy-system or
-  movement demands. Use conservative current evidence-based sport-science
-  reasoning: adequate recovery for quality/power work, shorter recovery only
-  where the session targets density/conditioning, and an effort that matches the
-  intended adaptation without violating taper, fatigue, injury, or supplied
-  dose caps. Never infer sparring/contact prescriptions. Never alter membership,
-  explicit volume/load, dates, or safety rules while filling these fields.
-- daily_check_ins are OPTIONAL and must be either fully valid or omitted. Emit a
-  check-in entry ONLY when the plan actually states a dated self-report; each
-  entry MUST then carry "date", a "morning" object with all of "sleep_quality"
-  (1-5), "overall_readiness" (1-5) and "pain" (0-10), and a "decision" of
-  "train_as_planned", "modify", "pull_back" or "unavailable". Never emit a
-  partial check-in and never invent these self-report scores or a date — if you
-  cannot fill every field from the plan, leave daily_check_ins as [].
-- Provide red_flag_rules[] with machine fields (metric/operator/threshold/logic)
-  kept separate from a human-readable display_text. "threshold" MUST be a bare
-  number (e.g. 20, not ">20%" or "form breaks") — put the comparison in
-  "operator" and the prose in display_text, and OMIT threshold entirely when the
-  rule has no numeric trigger.
-- List fields (coaching_cues, regression_options, substitutions, stop_rules, applies_to)
-  MUST be JSON arrays — emit [] when empty, never null and never a bare string.
-  A block's "effort" MUST be an object like
-  {{"method": "RPE", "value": 7, "scale": "1-10"}}, never a bare string.
-- Capture short plan-level reminders that live OUTSIDE any week — e.g. a header
-  "Active notes" block and footer "End of plan notes" — in plan_notes[]. Each
-  entry is {{"category": one of weight_cut|injury|nutrition|training|recovery|
-  general, "label": optional short label, "text": the reminder}}. Use plan_notes
-  for the active weight-cut summary, injury/wound handling and general
-  non-negotiables. Keep stop/modify/report SAFETY thresholds in red_flag_rules —
-  plan_notes is for the brief, always-on context. A weight_cut note is a brief, calm statement of the
-  active cut and how it shapes recovery/fuelling; it must NEVER contain acute-cut
-  directives (no sauna, dehydration, water-loading, or sodium manipulation). Omit
-  plan_notes entirely if the plan states none.
-- WEIGHT-CUT SEVERITY GATE. The deterministic layer grades every active cut into
-  a risk band (see STAGE 1 COMPUTED SUPPORT weight_cut.by_phase.*.risk_band: none / moderate
-  / high / severe). Match the plan's alarm level to that band — do NOT shout
-  medical warnings at a routine cut:
-  * band "none" or "moderate": treat the cut as ordinary context. Give at most ONE
-    short, calm plan_notes weight_cut summary about protecting recovery and
-    fuelling. Do NOT add a weight-cut stop/report red_flag_rule, do NOT tell the
-    athlete to "seek supervision" / "notify coach" / see a professional, and set
-    the nutrition weight_cut_warning risk_level to "none" (or omit it) with
-    requires_professional_support = false.
-  * band "high": add a single measured precaution — one weight_cut_warning at
-    risk_level "amber" and, only if warranted, one weight-cut red_flag_rule.
-  * band "severe": full supervision framing is appropriate — weight_cut_warning
-    at "red" with requires_professional_support = true and a weight-cut
-    red_flag_rule.
-  Never escalate ABOVE the computed band. When in doubt, under-warn.
-- Nutrition is not part of this plan: set nutrition summary, daily_focus,
-  training_day_guidance and fight_week_guidance to "" and never invent
-  macros, hydration or fuelling advice. Where a weight cut applies, give a
-  nutrition weight_cut_warning whose risk_level matches the computed band per the gate
-  above. Weight-cut guidance is NEVER direct acute-cut instructions (no sauna,
-  dehydration, water-loading, or sodium-manipulation directives).
-- When the plan states them, carry per-block detail into separate semantic fields:
-  "purpose" (what the exercise develops), "why_today" (why it is placed today),
-  "coaching_cues" (execution-only how-to instructions),
-  "regression_options"/"substitutions" (safer or alternative exercises),
-  "progression_rule" (authored exercise progression or quality guidance), and "stop_rules"
-  (stop/safety criteria). Each stop_rules item MUST be athlete-facing, contain one
-  trigger only, and use no more than 9 words. Preserve the source meaning and never
-  invent a new safety criterion. Preserve purpose/why_today as structured backend context,
-  but NEVER copy those explanations into coaching_cues.
-- Keep every planner-selected exercise on its assigned day with its exact dose
-  and complete contrast-pair name. Do not split, drop or rename members.
-- Project the final-session AI's Progress and Easier notes verbatim into
-  progression_rule and regression_options. You are converting validated source,
-  not authoring adjustments. Never invent, replace, shorten or expand either
-  instruction. If a field is absent, leave it absent. Preserve every condition,
-  quantity, per-set/per-side scope and safety restriction. Keep today's dose,
-  rest, effort, exercise membership and schedule unchanged.
-  Locked tactical/visualisation steps retain exact bank wording and membership.
-- Preserve a technical drill's setup and movement sequence in
-  execution_instructions, separate from its single short coaching_cues item.
-  Route a source "How:" line here verbatim. A drill name or generic form cue
-  does not explain the exercise. Use one or two clear sentences, preserving
-  sequence and restrictions; the 9-word cue limit does not apply to this field.
-- coaching_cues MUST tell the athlete how to execute the exercise: position,
-  movement, intent, brace, rhythm, guard, stance, reset, or other actionable form
-  cues. Do NOT put Purpose, Why today, Easier/Regression, Progress/Progression,
-  Stop/Stop rule, Swap/Substitution, taper rationale, phase rationale, or selection
-  reasoning in coaching_cues.
-- Route labelled source lines deterministically: "Purpose:" -> purpose;
-  "Why today:" -> why_today; "Easier:" / "Regression:" -> regression_options;
-  "Progress:" / "Progression:" -> progression_rule; "Stop:" / "Stop rule:" ->
-  stop_rules; "Swap:" / "Swaps:" / "Substitution:" -> substitutions; `Cue:` ->
-  coaching_cues. An explicit source volume, rest, effort/RPE, or Cue must never be
-  omitted or simplified away in the structured block. Ignore a
-  bare separator label such as "Regression /" rather than rendering it as athlete
-  guidance. If Progress or Easier is absent, leave its field empty. Do not invent it;
-  never put a conditional swap there: "Switch to X if the joints feel sore" is
-  a regression/substitution, not a progression.
-- Carry mental/mindset coaching into mindset_anchor at BOTH the session level and
-  the day level (today_card.mindset_anchor), including "confidence_anchor" and
-  "context" when the plan provides them. When STAGE 1 COMPUTED SUPPORT includes a
-  mindset.athlete_note (the athlete's own words about their mental/confidence
-  issue), personalise the mindset_anchor to that note — reflect their specific
-  concern in "intent"/"focus_cue"/"confidence_anchor"/"context" rather than
-  emitting only the generic phase cue. Keep it athlete-safe and supportive; never
-  quote the note verbatim if it is distressing, and never invent clinical or
-  mental-health diagnoses or treatment.
-- Except for the narrowly allowed rest, effort, and execution-cue completion
-  above, omit detail the plan/context cannot support rather than inventing it.
-
-VOICE & CONCISENESS (athlete-facing text — week_goal, today_card.headline,
-session title/objective, plan_notes, mindset_anchor, nutrition prose):
-- week_goal MUST be a SHORT label of AT MOST 6 words — a phrase, not a sentence.
-  No semicolons, no "while …" tails, no second clause. Compress the source goal
-  to its single most important driver (e.g. "Build single-leg drive and balance",
-  "Sharpen punch speed, stay fresh"). Do NOT add content — only shorten.
-- The session "objective" carries the plan's "Why:" / "Purpose:" line and MUST
-  stay a WHY. It is the reason this session is on the calendar today — NOT a
-  summary of the blocks (those render directly underneath it) and NOT a
-  restatement of the session title. The athlete reads it under the title and
-  decides whether to do the session, so the payoff has to be obvious without any
-  training knowledge:
-  * Name the benefit the athlete gets, in plain words they would use themselves
-    ("keeps your opening sequence sharp", not "refines motor planning").
-  * Tie it to the fight, the week, or how they will feel/perform — a why the
-    athlete can check against their own goal.
-  * State the trade-off when the plan gives one, especially why the session is
-    EASY or short, since that is what athletes skip or doubt ("…without adding
-    fatigue this close to the fight", "…so the legs are fresh for Saturday").
-  * ONE line, AT MOST 14 words, starting with a capital letter. No jargon, no
-    hedging, no "the plan says".
-  Good: "Keeps your opening sequence sharp while the body recovers for
-  Saturday." Bad: "refine motor plan and composure without physical load."
-  Keep every constraint the plan states; never invent a reason it does not give.
-- Keep every athlete-facing string tight: prefer short phrases over full
-  sentences, drop filler and hedging, and never repeat the same point across two
-  fields.
-- PLAIN LANGUAGE (KS3 READING LEVEL). Every athlete-facing string must be
-  readable by a 13-year-old — UK Key Stage 3 level — while keeping the coach
-  voice: direct, decisive, confident. This applies to ALL athlete-facing fields,
-  not just week_goal and objective: today_card.headline, session title and
-  objective, coaching_cues, purpose, why_today, regression_options,
-  substitutions, progression_rule, stop_rules, plan_notes, red_flag_rules
-  display_text, nutrition prose, and every mindset_anchor field.
-  * One idea per sentence. Aim for 12-15 words, hard cap 20.
-  * Use the everyday word the athlete would use themselves. "power" not "rate of
-    force development"; "the way down" / "lowering phase" not "eccentric"; "hold
-    the position" not "isometric"; "balance and body awareness" not
-    "proprioception"; "brace your middle" not "anti-rotation" or "trunk
-    stiffness"; "legs and hips drive it" not "posterior chain" or "triple
-    extension"; "you will feel flat" not "CNS fatigue"; "short explosive efforts
-    with full rest" not "alactic"; "hard efforts that create a strong burn" not
-    "glycolytic"; "clearing the burn between hard efforts" not "lactate
-    clearance"; "ability to keep working and recover" not "aerobic capacity".
-    Keep these training meanings distinct. "sharp and quick"
-    not "neuromuscular sharpness"; "how it carries into the fight" not
-    "transfer" or "specificity". These are examples of the standard, not the
-    whole list — if a fighter would not say it in the gym, rewrite it.
-  * Words athletes actually use stay: reps, sets, rest, RPE, sparring, rounds,
-    taper, tempo, warm-up, drill, pad work, clinch, footwork, sprint, and the
-    exercise names themselves.
-  * Never define jargon and then use it anyway, and never put the plain word in
-    brackets after the technical one.
-  This is the ONE licensed exception to "convert faithfully": when the source
-  plan states something in technical wording, rewrite the WORDS into plain
-  language rather than copying the jargon verbatim. It never licenses changing
-  the content. Keep every number, dose, rep scheme, load, duration, restriction
-  and safety trigger exactly as the source gives it, keep the same meaning, and
-  never drop a safety detail to make a line simpler. If you cannot say it plainly
-  without changing what it means, keep the source wording.
-- Do NOT refer to "the app", "this app", "the platform", or "app sessions" in any
-  athlete-facing text. The athlete is reading their own plan, so name the work
-  directly ("S&C and rehab inserts on the listed D-days", "your sessions") rather
-  than attributing it to "the app".
-
-DETERMINISTIC AUTHORITY (when a "STAGE 1 COMPUTED SUPPORT" section is provided):
-- Treat STAGE 1 COMPUTED SUPPORT as AUTHORITATIVE for weight-cut risk and for
-  mindset block classification and phase cues. It is the source of truth for
-  those classifications — the plan text only supplies wording.
-- Do NOT output a weight-cut risk that conflicts with computed support when
-  computed support is present.
-- Keep today_card brief: a short headline, readiness, and the day's mindset
-  anchor. Do NOT put nutrition detail into today_card.
-- red_flag_rules MUST contain only stop / modify / report safety rules. Do not
-  put general training or nutrition content there.
-- Do NOT duplicate identical mindset anchors at both the day and session level —
-  if a session's anchor would be identical to the day's, vary phrasing while
-  still keeping a valid session-level mindset_anchor.
-- NEVER surface coach_gated content. The "coach_gated" sub-sections of computed
-  support (acute weight-cut and supplement dosing) are coach/medical-only and
-  MUST NOT appear in any athlete-facing field.
+SAFETY AND SUPPORT
+- Self-report only: no HRV, CNS scores, WHOOP, strain or wearable readiness.
+- daily_check_ins must be fully valid or omitted ([]): only actual dated
+  self-reports with date, morning.sleep_quality (1-5), overall_readiness (1-5),
+  pain (0-10), and decision=train_as_planned|modify|pull_back|unavailable.
+  Never invent scores or emit a partial check-in.
+- red_flag_rules contain stop/modify/report rules only. Separate display_text
+  from machine metric/operator/threshold/logic. threshold is a number; omit it
+  for nonnumeric triggers. Never lose safety thresholds while shortening copy.
+- plan_notes holds stated plan-level context outside weeks. category:
+  weight_cut|injury|nutrition|training|recovery|general. No duplicate warnings.
+- Computed support owns risk bands and mindset classification. Weight-cut
+  none/moderate: calm context only, warning risk_level=none, professional
+  support=false; high: amber; severe: red with professional support=true.
+  Never expose coach_gated content, acute-cut instructions or supplement doses.
+- Nutrition advice is server-owned: keep summary, daily_focus,
+  training_day_guidance and fight_week_guidance empty. Preserve only the
+  computed weight_cut_warning when applicable.
+- Use short source-backed titles/objectives in plain language. Do not duplicate
+  coaching across fields. Except for the three permitted missing presentation
+  fields above, omit unsupported optional detail rather than invent it.
 """
 
 
 # Compact, valid skeleton showing the exact root shape and every nested object
 # the schema requires. "..." marks free text to fill from the source plan.
 _ROOT_SKELETON = f"""\
-EXACT ROOT SKELETON (match this shape; fill values from the plan, keep all keys):
+ROOT SHAPE EXAMPLE (replace example values; omit unsupported optional detail):
 {{
   "schema_version": "{SCHEMA_VERSION}",
   "plan_metadata": {{"title": "...", "sport": "...", "plan_type": "fight_camp", "timezone": "Europe/London", "status": "active", "units": "metric"}},
@@ -4001,7 +3766,7 @@ EXACT ROOT SKELETON (match this shape; fill values from the plan, keep all keys)
                   "rest": {{"value": 180, "unit": "seconds"}}, "duration": null,
                   "purpose": "...", "why_today": "...", "coaching_cues": ["..."],
                   "regression_options": ["..."], "substitutions": ["..."],
-                  "progression_rule": "...", "stop_rules": ["..."]
+                  "execution_instructions": "...", "progression_rule": "...", "stop_rules": ["..."]
                 }}
               ]
             }}
@@ -4035,10 +3800,8 @@ _BRIEF_CONTEXT_KEYS = (
     "main_risks",
 )
 
-# Backstop cap on the selected context (the allowlist is normally ~6k chars; this
-# only bites if athlete_snapshot / phase_strategy balloon). Applied to the
-# deterministic selection, so any truncation is stable rather than key-order
-# dependent.
+# Soft context only: include complete fields within this budget. Never cut JSON
+# mid-value; the approved programme and all explicit prescriptions stay in full.
 _BRIEF_CONTEXT_CHAR_CAP = 8000
 
 
@@ -4053,11 +3816,17 @@ def _select_brief_context(planning_brief: Any) -> dict[str, Any]:
 
     if not isinstance(planning_brief, dict):
         return {}
-    return {
-        key: planning_brief[key]
-        for key in _BRIEF_CONTEXT_KEYS
-        if key in planning_brief and planning_brief[key] not in (None, "", [], {})
-    }
+    selected: dict[str, Any] = {}
+    for key in _BRIEF_CONTEXT_KEYS:
+        if key not in planning_brief or planning_brief[key] in (None, "", [], {}):
+            continue
+        candidate = {**selected, key: planning_brief[key]}
+        try:
+            if len(json.dumps(candidate, ensure_ascii=False)) <= _BRIEF_CONTEXT_CHAR_CAP:
+                selected = candidate
+        except (TypeError, ValueError):
+            continue
+    return selected
 
 
 def _open_plan_prompt_contract(planning_brief: Any) -> str:
@@ -4066,8 +3835,17 @@ def _open_plan_prompt_contract(planning_brief: Any) -> str:
         return ""
 
     weekdays = _open_plan_training_weekdays(spec)
+    # The plan text already contains the programme. Repeating the full spec
+    # (four weeks, exercise bank prose, render_rules and tactical libraries)
+    # made the converter reason over two overlapping instructions and doses.
+    programmed_weeks = (spec.get("weekly_session_plan") or {}).get("weeks") or []
+    calendar = {
+        "plan_type": _OPEN_PLAN_TYPE,
+        "training_weekdays": weekdays,
+        "week_count": len(programmed_weeks) or 1,
+    }
     try:
-        spec_json = json.dumps(spec, ensure_ascii=False, sort_keys=True)
+        spec_json = json.dumps(calendar, ensure_ascii=False, sort_keys=True)
     except (TypeError, ValueError):
         spec_json = "{}"
 
@@ -4091,16 +3869,11 @@ values in the generic root skeleton):
   stated, otherwise use "GPP" as a neutral internal value. Never surface phase
   labels as open-plan headings.
 
-PER-BLOCK PROGRESSION & DELOAD (open plans only).
-- Preserve each source "progression_rule" and "deload_rule" verbatim.
-- These fields project the final-session AI's wording and the authorised
-  programme. Never create a progression or Easier note from exercise type,
-  baseline dose, week number or a generic 4-week development policy.
-- Never invent a number the plan does not have. No new sets, reps, duration,
-  load, effort, rest change or future workout. Missing source fields stay empty.
-- Preserve source-specific conditions, movement quality and recovery limits.
-- The existing week display selects the source progression or deload rule;
-  conversion does not write a new instruction for the week.
+OPEN-PLAN DELOAD
+- Preserve each source "progression_rule" and "deload_rule" verbatim. Never create a
+  progression or Easier note from exercise type or a generic week policy.
+- Missing source adjustment fields stay empty. Rest, effort and execution-cue
+  completion still follow the same physical-exercise limits above.
 
 AUTHORITATIVE open_plan_spec:
 {spec_json}"""
@@ -4162,7 +3935,7 @@ def build_structured_plan_prompt(
         # deterministic and drops the internal pools entirely.
         brief_context = _select_brief_context(planning_brief)
         try:
-            brief_json = json.dumps(brief_context, ensure_ascii=False)[:_BRIEF_CONTEXT_CHAR_CAP]
+            brief_json = json.dumps(brief_context, ensure_ascii=False)
         except (TypeError, ValueError):
             brief_json = ""
         if not brief_json:
