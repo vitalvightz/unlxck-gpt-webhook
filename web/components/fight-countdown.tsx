@@ -93,8 +93,11 @@ export function FightCountdown({
   plan?: StructuredPlan | null;
 }) {
   const countdown = getFightCountdown({ fightDate, trainingDay, phase, plan });
+  // If the date arrived before the calendar, keep its already-visible count
+  // stable when the weeks load instead of jumping back to the camp's start.
+  const [initialCampDays] = useState(countdown?.campDays ?? null);
   const [ref, revealed] = useRevealed<HTMLElement>(countdown?.pct != null);
-  const shown = useCountdownTick(countdown?.daysOut ?? 0, countdown?.campDays ?? null, revealed);
+  const shown = useCountdownTick(countdown?.daysOut ?? 0, initialCampDays, revealed);
   if (!countdown) {
     return null;
   }
@@ -109,7 +112,7 @@ export function FightCountdown({
       ref={ref}
       className="fight-countdown"
       data-revealed={revealed ? "true" : undefined}
-      data-pending={pct !== null && !revealed ? "true" : undefined}
+      data-pending={initialCampDays !== null && pct !== null && !revealed ? "true" : undefined}
       aria-label={`Fight countdown: ${label}`}
     >
       <div className="fight-countdown-head">

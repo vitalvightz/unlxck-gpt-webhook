@@ -10,7 +10,7 @@ import { useAppSession } from "@/components/auth-provider";
 import { useConnectivity, useOnReconnect } from "@/components/connection-status-banner";
 import { getAuthenticatedLandingHref, needsStartingPath } from "@/lib/auth-routing";
 import { EmptyState } from "@/components/empty-state";
-import { FightCountdown, FightCountdownSkeleton } from "@/components/fight-countdown";
+import { FightCountdown } from "@/components/fight-countdown";
 import { InstallUnlxck } from "@/components/install-unlxck";
 import { PlansFeaturedSkeleton, Skeleton } from "@/components/skeleton";
 import { XpProgressCard, XpProgressCardSkeleton } from "@/components/xp-progress-card";
@@ -21,7 +21,6 @@ import { describeLoadFailure } from "@/lib/connectivity";
 import { hasHealthDataConsent } from "@/lib/compliance";
 import { getTrackingHome } from "@/lib/tracking-home";
 import type { TrainingHistorySession } from "@/lib/training-history";
-import { getFightCountdown } from "@/lib/fight-countdown";
 import {
   getOptionLabel,
   PROFESSIONAL_STATUS_OPTIONS,
@@ -260,11 +259,8 @@ export default function HomePage() {
   const router = useRouter();
   const [commandState, setCommandState] = useState<TodayCommandView | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);
-  const [structuredPlan, setStructuredPlan] = useState<StructuredPlan | null>(null);
-  // Which active plan's structured_plan request has finished (loaded or
-  // failed). The fight countdown waits for it so it appears once, already
-  // animating, instead of showing today's count and then replaying.
-  const [planSettledFor, setPlanSettledFor] = useState<string | null>(null);
+  const [calendar, setCalendar] = useState<{ token: string; id: string; plan: StructuredPlan | null } | null>(null);
+  const calendarRequest = useRef<{ token: string; id: string; promise: ReturnType<typeof getPlan> } | null>(null);
 
   useEffect(() => {
     if (isReady && session && isMeHydrated && !me) {
@@ -396,34 +392,39 @@ export default function HomePage() {
     };
   }, [session?.access_token]);
 
-  // Best-effort structured plan for the fight countdown's calendar. Read-only:
-  // if it fails, the countdown shows without its bar (the rest of the command
-  // view is unaffected). Mirrors how Today loads the same data.
+  // Warm the known plan while Today loads. Only the confirmed active plan can
+  // supply the countdown's calendar; a different latest plan is never shown.
   const activePlanId = commandState?.active_plan?.id;
+  const calendarPlanId = activePlanId || me?.latest_plan?.plan_id;
   useEffect(() => {
     const token = session?.access_token;
-    if (!token || !activePlanId) {
-      setStructuredPlan(null);
+    if (!token || !calendarPlanId) {
+      setCalendar(null);
       return;
     }
     let cancelled = false;
-    getPlan(token, activePlanId)
+    let request = calendarRequest.current;
+    if (!request || request.token !== token || request.id !== calendarPlanId) {
+      request = { token, id: calendarPlanId, promise: getPlan(token, calendarPlanId) };
+      calendarRequest.current = request;
+    }
+    request.promise
       .then((detail) => {
-        if (!cancelled) {
-          setStructuredPlan(detail.outputs?.structured_plan ?? null);
-          setPlanSettledFor(activePlanId);
+        if (!cancelled && calendarPlanId === activePlanId) {
+          setCalendar({ token, id: activePlanId, plan: detail.outputs?.structured_plan ?? null });
         }
       })
       .catch(() => {
-        if (!cancelled) {
-          setStructuredPlan(null);
-          setPlanSettledFor(activePlanId);
+        if (calendarRequest.current === request) calendarRequest.current = null;
+        if (!cancelled && calendarPlanId === activePlanId) {
+          setCalendar({ token, id: activePlanId, plan: null });
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [session?.access_token, activePlanId]);
+  }, [session?.access_token, activePlanId, calendarPlanId]);
+  const structuredPlan = calendar?.token === session?.access_token && calendar?.id === activePlanId ? calendar?.plan : null;
 
   if (session && hasTransientMeError) {
     return (
@@ -634,9 +635,9 @@ export default function HomePage() {
       <>
         {/* Primary command area — today's decision, the session it affects, and
             one dominant action lead the first viewport. */}
-        <section className="hero-panel overview-command-shell overview-command-primary athlete-motion-slot athlete-motion-header">
+        <section className="hero-panel overview-command-shell overview-command-primary athlete-motion-slot athlete-motion-header" data-tone={hero.tone}>
           <div className="overview-primary-grid">
-            <div className="status-card overview-command-card overview-decision-lead" data-tone={hero.tone}>
+            <div className="overview-decision-lead">
               <p className="eyebrow">{hero.eyebrow}</p>
               <h1 className="hero-title overview-decision-headline">{hero.title}</h1>
               <div className="overview-decision-copy">
@@ -724,16 +725,13 @@ export default function HomePage() {
                 <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? "Mode" : "Phase"}</span><span className="overview-operational-value">{openOngoing ? "Ongoing" : humanizeIfRawEnum(activePlan.phase) || "Not set"}</span></div>
                 <div className="overview-operational-item"><span className="overview-operational-label">Fight date</span><span className="overview-operational-value">{openOngoing ? "Not scheduled" : formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
               </div>
-              {planSettledFor === activePlanId ? (
-                <FightCountdown
-                  fightDate={activePlan.fight_date ? String(activePlan.fight_date) : null}
-                  trainingDay={commandState?.today?.training_day}
-                  phase={activePlan.phase ? String(activePlan.phase) : null}
-                  plan={structuredPlan}
-                />
-              ) : getFightCountdown({ fightDate: activePlan.fight_date, trainingDay: commandState?.today?.training_day }) ? (
-                <FightCountdownSkeleton />
-              ) : null}
+              <FightCountdown
+                key={activePlanId}
+                fightDate={activePlan.fight_date ? String(activePlan.fight_date) : null}
+                trainingDay={commandState?.today?.training_day}
+                phase={activePlan.phase ? String(activePlan.phase) : null}
+                plan={structuredPlan}
+              />
             </>
           )}
           <OverviewRiskWatch risks={risks} />
