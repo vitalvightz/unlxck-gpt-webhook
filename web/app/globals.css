@@ -2490,7 +2490,7 @@ html[data-theme="light"] .cta:disabled {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at top left, rgba(181, 18, 43, 0.18), transparent 28%),
+    radial-gradient(circle at top left, var(--overview-command-wash, rgba(181, 18, 43, 0.18)), transparent 28%),
     linear-gradient(135deg, rgba(181, 18, 43, 0.08), transparent 42%);
   pointer-events: none;
 }
@@ -2515,6 +2515,10 @@ html[data-theme="light"] .cta:disabled {
 .overview-command-primary {
   gap: 18px;
 }
+
+.overview-command-primary[data-tone="green"] { --overview-command-wash: rgba(39, 174, 96, 0.13); }
+.overview-command-primary[data-tone="amber"] { --overview-command-wash: rgba(214, 175, 106, 0.14); }
+.overview-command-primary[data-tone="red"] { --overview-command-wash: rgba(219, 47, 64, 0.14); }
 
 .overview-primary-grid {
   position: relative;
@@ -2828,14 +2832,6 @@ html[data-theme="light"] .cta:disabled {
 
 .overview-primary-actions {
   margin-top: 4px;
-}
-
-.overview-command-card.overview-decision-lead {
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
 }
 
 .overview-session-state {
@@ -15887,7 +15883,7 @@ html[data-theme="light"] .appearance-mode-card-active {
 
 html[data-theme="light"] .overview-command-shell::before {
   background:
-    radial-gradient(circle at top left, rgba(90, 101, 115, 0.05), transparent 24%),
+    radial-gradient(circle at top left, var(--overview-command-wash, rgba(90, 101, 115, 0.05)), transparent 24%),
     linear-gradient(135deg, rgba(90, 101, 115, 0.025), transparent 38%);
 }
 
@@ -16980,7 +16976,7 @@ html[data-app-surface="workspace"][data-theme="dark"] .overview-command-shell::b
 html[data-app-surface="workspace"][data-theme="dark"] .plans-dashboard-primary-card::before,
 html[data-app-surface="workspace"][data-theme="dark"] .plans-featured-card::before {
   background:
-    radial-gradient(circle at top left, rgba(181, 18, 43, 0.08), transparent 26%),
+    radial-gradient(circle at top left, var(--overview-command-wash, rgba(181, 18, 43, 0.08)), transparent 26%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.015), transparent 36%);
 }
 

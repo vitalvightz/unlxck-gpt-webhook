@@ -772,7 +772,6 @@ function CheckboxGroup({
             <label
               key={option.value}
               className={`checkbox-card ${checked ? "checkbox-card-checked" : ""} ${disabled ? "checkbox-card-disabled" : ""}`.trim()}
-              aria-disabled={disabled}
               title={comingSoon ? "Coming soon" : labelTitle}
             >
               <input
@@ -3206,7 +3205,7 @@ export function PlanIntakeForm() {
                   options={WEAK_AREA_OPTIONS}
                   selectedValues={form.weak_areas}
                   onToggle={(value) => toggleFieldValue("weak_areas", value)}
-                  disableAdditionalSelections={performanceFocusCapReached}
+                  disableAdditionalSelections={form.weak_areas.length >= 2 || performanceFocusCapReached}
                   capDisabledReason={weakAreaCapDisabledReason}
                   disableAll={shouldDisableField(daysOutCtx, "weak_areas")}
                   getOptionDisabledReason={getWeakAreaDisabledReason}

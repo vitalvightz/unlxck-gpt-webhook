@@ -172,7 +172,7 @@
           "open_plan": true,
           "days_until_fight": null,
           "weeks_out": null,
-          "max_selections": 5,
+          "max_selections": 4,
           "window_label": "Open plan"
         }
       },
@@ -184,7 +184,7 @@
           "open_plan": true,
           "days_until_fight": null,
           "weeks_out": null,
-          "max_selections": 5,
+          "max_selections": 4,
           "window_label": "Open plan"
         }
       },
@@ -196,7 +196,7 @@
           "open_plan": true,
           "days_until_fight": null,
           "weeks_out": null,
-          "max_selections": 5,
+          "max_selections": 4,
           "window_label": "Open plan"
         }
       },
@@ -208,7 +208,7 @@
           "open_plan": true,
           "days_until_fight": null,
           "weeks_out": null,
-          "max_selections": 5,
+          "max_selections": 4,
           "window_label": "Open plan"
         }
       },
@@ -281,10 +281,10 @@
         "fight_date": null,
         "now": "2026-08-01T12:00:00+00:00",
         "time_zone": "UTC",
-        "key_goals": 4,
+        "key_goals": 3,
         "weak_areas": 2,
         "expected_excess": 1,
-        "expected_message": "This camp allows 5 total focus picks. Remove 1 goal or weak-area selection before generating."
+        "expected_message": "This camp allows 4 total focus picks. Remove 1 goal or weak-area selection before generating."
       },
       {
         "fight_date": "2026-08-05",

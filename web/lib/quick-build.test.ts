@@ -378,6 +378,17 @@ test("validateQuickBuildInput blocks generation when focus cap is exceeded", () 
   );
 });
 
+test("open Quick Build plans allow four total focus picks and block a fifth even with a stale fight date", () => {
+  const input = buildValidInput();
+  input.fight_date = "2027-06-20";
+  input.key_goals = ["conditioning", "power"];
+  input.weak_areas = ["gas_tank", "mobility"];
+  assert.equal(validateQuickBuildInput(input).focus_cap, undefined);
+  input.key_goals.push("mobility");
+  assert.equal(validateQuickBuildInput(input).focus_cap,
+    "This camp allows 4 total focus picks. Remove 1 goal or weak-area selection before generating.");
+});
+
 test("quick build keeps the saved profile timezone instead of the device zone", () => {
   const saved = quickBuildToPlanRequest(buildValidInput(), { savedTimeZone: "Europe/London" });
   assert.equal(saved.athlete.athlete_timezone, "Europe/London");

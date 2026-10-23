@@ -171,7 +171,6 @@ function ChipMultiSelect({
             <label
               key={option.value}
               className={`checkbox-card ${checked ? "checkbox-card-checked" : ""} ${disabled ? "checkbox-card-disabled" : ""}`.trim()}
-              aria-disabled={disabled}
               title={disabled ? reason : undefined}
             >
               <input
@@ -317,9 +316,11 @@ function QuickBuildFormInner() {
   );
   const parsedRounds = parseRoundsFormat(input.rounds_format);
   const focusValidation = useMemo(
-    () => (!input.no_scheduled_fight && input.fight_date
-      ? validatePerformanceFocusSelections(input.fight_date, { keyGoals: input.key_goals, weakAreas: input.weak_areas }, { timeZone: athleteTimeZone })
-      : null),
+    () => validatePerformanceFocusSelections(
+      input.no_scheduled_fight ? null : input.fight_date,
+      { keyGoals: input.key_goals, weakAreas: input.weak_areas },
+      { timeZone: athleteTimeZone },
+    ),
     [input.no_scheduled_fight, input.fight_date, input.key_goals, input.weak_areas, athleteTimeZone],
   );
   const daysUntilFight = useMemo(
@@ -724,9 +725,11 @@ function QuickBuildFormInner() {
     event.preventDefault();
     setSubmitError(null);
     const currentErrors = validateQuickBuildInput(input, { timeZone: athleteTimeZone });
-    const currentFocusValidation = (!input.no_scheduled_fight && input.fight_date)
-      ? validatePerformanceFocusSelections(input.fight_date, { keyGoals: input.key_goals, weakAreas: input.weak_areas }, { timeZone: athleteTimeZone })
-      : null;
+    const currentFocusValidation = validatePerformanceFocusSelections(
+      input.no_scheduled_fight ? null : input.fight_date,
+      { keyGoals: input.key_goals, weakAreas: input.weak_areas },
+      { timeZone: athleteTimeZone },
+    );
     if (currentFocusValidation?.isOverCap) {
       currentErrors.focus_cap = currentFocusValidation.errorMessage ?? "Adjust goals and weak areas before generating.";
     }
@@ -1116,7 +1119,9 @@ function QuickBuildFormInner() {
           selectedValues={input.weak_areas}
           onToggle={(value) => togglePerformanceFocusField("weak_areas", value)}
           disableAdditionalSelections={input.weak_areas.length >= QUICK_BUILD_WEAK_AREA_CAP || sharedFocusCapReached}
-          capDisabledReason={sharedFocusCapReached ? FOCUS_CAP_DISABLED_REASON : `Limit ${QUICK_BUILD_WEAK_AREA_CAP}`}
+          capDisabledReason={input.weak_areas.length >= QUICK_BUILD_WEAK_AREA_CAP
+            ? `Maximum of ${QUICK_BUILD_WEAK_AREA_CAP} weak areas reached. Unselect one to add another.`
+            : FOCUS_CAP_DISABLED_REASON}
           disabledValues={unavailableWeakAreaValues}
           disabledValueReason="Not available for this fight window"
           getOptionDisabledReason={(option, checked) => {

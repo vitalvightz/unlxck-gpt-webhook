@@ -208,9 +208,9 @@ export function validateQuickBuildInput(
     errors.weak_areas = "One or more weak areas are not available for this fight window.";
   }
 
-  if (!input.no_scheduled_fight && input.fight_date && !errors.fight_date) {
+  if (input.no_scheduled_fight || (input.fight_date && !errors.fight_date)) {
     const focus = validatePerformanceFocusSelections(
-      input.fight_date,
+      input.no_scheduled_fight ? null : input.fight_date,
       { keyGoals: input.key_goals, weakAreas: input.weak_areas },
       { now: options?.now, timeZone: options?.timeZone },
     );
