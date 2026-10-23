@@ -1990,6 +1990,7 @@ export function PlanViewer({
     let cancelled = false;
     setActivePlanLookupFailed(false);
 
+    let completedPlanRows: PlanCompletionsResponse | null = null;
     const active = { settled: false, resolved: false, planId: null as string | null };
     const today = {
       settled: false,
@@ -2032,7 +2033,7 @@ export function PlanViewer({
         nextSessionFocusDate:
           parsed && !Number.isNaN(parsed.getTime()) ? parsed : undefined,
         planCompletions:
-          previous?.planId === plan.plan_id ? previous.planCompletions : null,
+          completedPlanRows ?? (previous?.planId === plan.plan_id ? previous.planCompletions : null),
       }));
     };
 
@@ -2069,6 +2070,7 @@ export function PlanViewer({
       void getPlanCompletions(accessToken, plan.plan_id)
         .then((completions) => {
           if (cancelled) return;
+          completedPlanRows = completions;
           setPlanOperationalState((previous) => previous?.planId === plan.plan_id
             ? { ...previous, planCompletions: completions }
             : previous
