@@ -400,8 +400,6 @@ export type BlockComponent = {
 };
 
 export type StructuredBlock = {
-  interval_blocks?: number | null;
-  between_block_rest?: MeasuredValue | null;
   week_prescription?: string | null;
   prescription_source?: "athlete" | null;
   prescription_text?: string | null;
