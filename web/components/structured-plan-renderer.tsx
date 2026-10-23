@@ -457,11 +457,10 @@ export function BlockCard({
   // The demo can pin the lead cue; every remaining authored detail still belongs here.
   const visibleCues = hideCues ? [] : allCues.slice(hideLeadCue ? 1 : 0).map(compactCoachLine);
   const directive = openBlockWeekDirective(openWeekIntent, block);
-  // Keep the week's exact prescription visible in red. Older cards can carry
-  // the authored progression instead; show it once under the same week label.
-  const weekDirective = hideAdjustments ? null : directive;
+  // Display the validated AI instruction once; deload retains its own directive.
+  const weekDirective = directive?.usesProgressionRule ? null : directive;
   const adjustmentRules = [
-    ...(progression && !directive?.usesProgressionRule && openWeekIntent?.key !== "deload" ? [{ label: "Progress" as const, text: progression }] : []),
+    ...(progression && openWeekIntent?.key !== "deload" ? [{ label: "Progress" as const, text: progression }] : []),
     ...(compactStopRule && !hideStopRule
       ? [{ label: "Stop rule" as const, text: compactStopRule }]
       : []),
@@ -594,16 +593,10 @@ export function BlockCard({
 /** One compact exercise-list stat line, not a full prescription paragraph. */
 function exerciseRowSummary(
   block: StructuredBlock,
-  prescription: { metrics: { label: string; value: string }[]; load: string | null; effort: string | null; rest: string | null },
+  prescription: { metrics: { value: string }[]; load: string | null; effort: string | null },
 ): string | null {
   const cluster = formatClusterSummary(block);
-  if (cluster) {
-    const loads = (block.components ?? []).flatMap((component, index) => {
-      const load = formatBlockLoad(component.load);
-      return load ? [`A${index + 1}: ${load}`] : [];
-    });
-    return [cluster, ...loads].join(" · ");
-  }
+  if (cluster) return cluster;
   if (block.prescription_text) {
     const full = block.prescription_text.trim();
     if (full.length <= 72) return full;
@@ -614,14 +607,10 @@ function exerciseRowSummary(
     return [duration ? compactTimeUnits(duration) : null, effort]
       .filter(Boolean).join(" · ") || "See prescription";
   }
-  const metrics = prescription.metrics.map(metric => metric.label === "Rounds"
-    ? `${metric.value} rounds` : metric.label === "Work" ? `${metric.value} work` : metric.value);
-  const headline = metrics.length > 0 ? metrics.join(" · ")
-    : getBlockExecutionDisplay(block).prescription || formatMeasured(block.duration);
-  // The collapsed row is the prescription athletes scan before opening a
-  // drill. A rep count must not shadow its load or an interval's work time.
-  const parts = [headline, prescription.load, prescription.effort,
-    prescription.rest ? `rest ${prescription.rest}` : null].filter((part): part is string => Boolean(part));
+  const headline =
+    prescription.metrics[0]?.value || getBlockExecutionDisplay(block).prescription
+    || prescription.load || formatMeasured(block.duration);
+  const parts = [headline, prescription.effort].filter((part): part is string => Boolean(part));
   return parts.length > 0 ? Array.from(new Set(parts)).join(" · ") : null;
 }
 
@@ -905,13 +894,6 @@ function ExerciseDetail({
   const whyToday = sameCopy(builds, whyTodayRaw) ? null : whyTodayRaw;
   const execution = getBlockExecutionDisplay(block);
   const allCues = execution.cues.map(compactCoachLine);
-  const weekDirective = openBlockWeekDirective(openWeekIntent, block);
-  const weekNotice = weekDirective ? (
-    <p className="sp-block-aside sp-week-directive">
-      <span className="sp-stat-label">{weekDirective.label}</span>
-      {weekDirective.text}
-    </p>
-  ) : null;
   // Banked mindset drills (Tactical Watch, Fight Visualisation) store their
   // ordered instructions as cues: show those as numbered steps rather than
   // one "Cue" label per step. Labelled extras ("Cue: …") stay cues.
@@ -949,7 +931,6 @@ function ExerciseDetail({
           <p className="ex-detail-summary">{[tagLabel, summary].filter(Boolean).join(" · ")}</p>
         ) : null}
         {stopLine}
-        {weekNotice}
         {steps.length > 0 ? (
           <div className="sp-block-aside ex-detail-steps">
             <span className="sp-stat-label">Steps</span>
@@ -1003,7 +984,6 @@ function ExerciseDetail({
         </details>
       ) : null}
       <ExecutionInstructions block={block} />
-      {weekNotice}
       {/* Keep the cue and available adjustments outside nested disclosures. */}
       {steps.length > 0 ? (
         <div className="sp-block-aside ex-detail-steps">
@@ -1014,7 +994,7 @@ function ExerciseDetail({
       {cues.map(cue => <p className="sp-block-aside" key={cue}><span className="sp-stat-label">Cue</span>{cue}</p>)}
       {swap ? <p className="sp-block-aside"><span className="sp-stat-label">Swaps</span>{swap}</p> : null}
       {easier.map(text => <p className="sp-block-aside" key={text}><span className="sp-stat-label">Easier</span>{text}</p>)}
-      {progression && !weekDirective?.usesProgressionRule && openWeekIntent?.key !== "deload" ? <p className="sp-block-aside"><span className="sp-stat-label">Progress</span>{progression}</p> : null}
+      {progression && openWeekIntent?.key !== "deload" ? <p className="sp-block-aside"><span className="sp-stat-label">Progress</span>{progression}</p> : null}
       <details className="ex-detail-section" open={block.block_type === "rehab" || undefined}>
         <summary>Full prescription</summary>
         <BlockCard block={block} openWeekIntent={openWeekIntent}
