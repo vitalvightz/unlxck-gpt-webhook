@@ -260,8 +260,20 @@ def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list
                                 violations.append(f"{PRESCRIPTION_CHANGED}: {name!r} added movement tempo to a hold")
                     if str(block.get("block_type")) not in _EXERCISE_BLOCK_TYPES:
                         continue
+                    # Qualitative rest ("full rest between holds") must be
+                    # preserved as rest_note, never invented as a duration.
+                    # A numeric rest still requires the actual rest field.
+                    # RPE 7 appearing later on that line formerly caused a
+                    # false "dropped rest" finding for complete source cards.
+                    source_rest = bool(_SOURCE_REST_RE.search(segment))
+                    expected_rest = expected.get("rest") if expected else None
+                    expected_note = expected.get("rest_note") if expected else None
+                    rest_preserved = bool(block.get("rest")) or (
+                        bool(expected_note) and not expected_rest
+                        and bool(block.get("rest_note"))
+                    )
                     checks = (
-                        (_SOURCE_REST_RE.search(segment), bool(block.get("rest")), "rest"),
+                        (source_rest, rest_preserved, "rest"),
                         (_SOURCE_EFFORT_RE.search(segment), bool(block.get("effort")), "effort"),
                         (_SOURCE_CUE_RE.search(segment), bool(block.get("coaching_cues")), "cue"),
                     )

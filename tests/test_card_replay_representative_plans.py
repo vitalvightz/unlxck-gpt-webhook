@@ -230,10 +230,47 @@ def test_faithful_card_for_the_affected_boxer_validates(boxer_card_and_text):
     brief, card, text = boxer_card_and_text
     outcome = _validate(brief, card, text)
     assert outcome.status == "valid", outcome.errors
-    # Only the one rest the source states in words ("full rest") stays advisory.
-    assert [w for w in outcome.warnings if "dropped explicit source rest" in w] == [
-        "faithfulness: PRESCRIPTION: 'Single-Leg TRX Suspension Hold' dropped explicit source rest"
-    ]
+    # "Full rest between holds" is faithfully preserved as a qualitative
+    # rest_note. The source's RPE number must not manufacture a missing-rest
+    # finding and force a second model conversion.
+    assert [w for w in outcome.warnings if "dropped explicit source rest" in w] == []
+
+
+def test_representative_fight_camp_converts_without_second_openai_call(boxer_card_and_text):
+    """Realistic multiweek fight camp should use the completed source programme."""
+    import asyncio
+
+    from api.stage2_automation import OpenAIStage2Automator
+    from support import FakeOpenAIClient
+
+    brief, _, text = boxer_card_and_text
+    client = FakeOpenAIClient([])
+    automator = OpenAIStage2Automator(client=client, model="gpt-5-mini")
+    outcome, costs = asyncio.run(automator._generate_structured_outcome(
+        final_plan_text=text, planning_brief=brief, source="quick_build", costs=[]
+    ))
+    assert outcome.status == "valid", outcome.errors
+    assert outcome.structured_plan is not None
+    assert safe_parse_structured_plan(outcome.structured_plan).ok
+    assert client.responses.calls == []
+    assert costs == []
+
+
+def test_qualitative_rest_note_does_not_hide_missing_numeric_rest(boxer_card_and_text):
+    from api.structured_plan_faithfulness import check_structured_faithfulness
+
+    brief, card, text = boxer_card_and_text
+    tampered = copy.deepcopy(card)
+    bag = next(
+        block
+        for week in tampered["weeks"] for day in week["days"] for block in _blocks(day)
+        if block.get("display_name") == "Max-Power Bag Burst"
+    )
+    bag.pop("rest", None)
+    bag["rest_note"] = "Full rest between efforts"
+    findings = check_structured_faithfulness(tampered, text, brief)
+    assert any("Max-Power Bag Burst" in finding and "dropped explicit source rest" in finding
+               for finding in findings)
 
 
 def test_converter_shortening_bag_rest_from_60_to_20_seconds_is_rejected(boxer_card_and_text):
