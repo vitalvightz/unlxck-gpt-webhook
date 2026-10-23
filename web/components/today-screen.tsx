@@ -15,6 +15,7 @@ import { TodayDecisionPanel } from "@/components/today/today-decision-panel";
 import { TodayInjuryManager } from "@/components/today/today-injury-manager";
 import { TodayReadinessForm } from "@/components/today/today-readiness-form";
 import { TodayRiskWatch } from "@/components/today/today-risk-watch";
+import { StandaloneRehab } from "@/components/today/standalone-rehab";
 import { TodaySessionPanel } from "@/components/today/today-session-panel";
 import { useTodayCommand } from "@/components/today/use-today-command";
 import { humanizeIfRawEnum } from "@/lib/plan-labels";
@@ -282,10 +283,10 @@ export function TodayScreen() {
   const availableRehabInjuries = new Set((state.open_injuries ?? []).filter(injury => {
     const decision = injury.rehab_decision;
     return decision?.outcome === "prescribed_rehab" && (decision.schedule?.state === "due"
-      || state.today.completion_status === "started" && decision.schedule?.state === "already_completed"
+      || (state.live_prescription?.session.completion_status ?? state.today.completion_status) === "started" && decision.schedule?.state === "already_completed"
         && /started session/i.test(decision.schedule.reason));
   }).map(injury => injury.id));
-  const rehabBlocks = hasPlan && resolvedDecision.sessionIsToday && !error && !isRefreshing
+  const rehabBlocks = (hasPlan ? resolvedDecision.sessionIsToday : Boolean(state.live_prescription?.rehab_only)) && !error && !isRefreshing
     && !state.live_prescription?.safety_hold
     && !["done", "modified", "skipped"].includes(state.live_prescription?.session.completion_status ?? state.today.completion_status)
     ? (state.live_prescription?.session.blocks ?? []).filter(block => rehabExerciseTarget(block)
@@ -330,7 +331,7 @@ export function TodayScreen() {
       onPlanSessionChanged={patchSession}
       professionalStatus={me?.profile.professional_status}
     />
-  ) : null;
+  ) : <StandaloneRehab key={state.live_prescription?.session.session_id ?? "rehab"} state={state} token={token ?? ""} unavailable={Boolean(error) || isRefreshing} onRefresh={refresh} />;
 
   return (
     <div className="today-page">
@@ -431,6 +432,7 @@ export function TodayScreen() {
       {token && (hasHealthDataConsent(me) || (state.open_injuries?.length ?? 0) > 0) ? (
         <TodayInjuryManager
           openInjuries={state.open_injuries ?? []}
+          rehabTargets={Object.fromEntries(rehabBlocks.map(block => [block.injury_id!, `#${encodeURIComponent(rehabExerciseTarget(block)!)}`]))}
           effectiveClearance={state.effective_clinician_clearance}
           delayedPrompts={state.delayed_rehab_prompts}
           todaySafetyNoticeInjuryId={state.today.primary_safety_notice?.injury_id ?? null}

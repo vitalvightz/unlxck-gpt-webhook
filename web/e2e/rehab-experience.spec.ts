@@ -60,9 +60,9 @@ async function setup(page: Page, baseURL: string, name: keyof typeof cases, vide
 }
 
 for (const [name, message] of [
-  ["permission_entry", "LOAD follows your reported clinician advice. RESTORE completion isn’t needed."],
-  ["missing_permission", "Confirm the rehab loading your clinician allows"],
-  ["pending_response", "Tomorrow, answer the follow-up"],
+  ["earned_load", "You meet the checks for this LOAD exercise."],
+  ["missing_permission", "Do today’s rehab, then tap how it feels"],
+  ["pending_response", "Do today’s rehab, then tap how it feels"],
   ["worsening", "Your injury got worse"],
   ["missing_equipment", "This exercise needs equipment you haven’t listed"],
 ] as const) {
@@ -71,7 +71,7 @@ for (const [name, message] of [
     const { errors } = await setup(page, baseURL!, name);
     const summary = page.locator(".today-injury-summary-row");
     await expect(summary).toContainText(message);
-    if (name === "permission_entry") {
+    if (name === "earned_load") {
       await expect(summary).toContainText("DYNAMIC exercises aren’t available");
       await expect(summary).not.toContainText(/Complete your|Confirm what/);
     } else {
@@ -89,9 +89,7 @@ for (const [name, message] of [
       await page.locator("button.injury-progress").click();
       await expect(page.getByRole("dialog")).toBeVisible();
       await expect(page.getByRole("dialog").locator("form, input, select, textarea")).toHaveCount(0);
-      if (name === "permission_entry") {
-        await expect(page.getByRole("dialog")).toContainText(message);
-        await expect(page.getByRole("dialog")).toContainText("All other safety checks still apply");
+      if (name === "earned_load") {
         await expect(page.getByRole("dialog")).toContainText("DYNAMIC exercises aren’t available");
         await expect(page.getByRole("dialog").locator(".injury-requirements")).toHaveCount(0);
       }
@@ -107,15 +105,15 @@ for (const [name, message] of [
 
 test("a readiness schedule hold keeps LOAD eligibility at 375px", async ({ page, baseURL }) => {
   await page.setViewportSize({ width: 375, height: 844 });
-  const { errors } = await setup(page, baseURL!, "permission_entry", undefined, true);
+  const { errors } = await setup(page, baseURL!, "earned_load", undefined, true);
   const summary = page.locator(".today-injury-summary-row");
   await expect(summary).toContainText("Stage: Load");
-  await expect(summary).toContainText("LOAD follows your reported clinician advice");
+  await expect(summary).toContainText("You meet the checks for this LOAD exercise.");
   await expect(summary).not.toContainText("Progression is on hold");
   await summary.click();
   await expect(page.locator(".today-injury-care")).toContainText("Today’s rehab on hold");
   await expect(page.locator(".today-injury-care")).toContainText("Complete today's check-in");
-  await expect(page.locator(".injury-progress")).toContainText("Dynamic · Unavailable in UNLXCK");
+  await expect(page.locator(".injury-progress")).toHaveAttribute("aria-label", /DYNAMIC exercises aren’t available/);
   await expect(page.locator(".today-injury-care")).not.toContainText("Progression · On hold");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await shot(page, "readiness-schedule-hold-375.png");
@@ -144,7 +142,7 @@ for (const width of [375, 1280]) {
     await shot(page, `after-chest-exercise-${width}.png`);
     await page.keyboard.press("Escape");
     await page.locator(".today-injury-summary-row").click();
-    await page.getByRole("button", { name: /Load · Unavailable in UNLXCK/ }).click();
+    await page.locator("button.injury-progress").click();
     await expect(page.getByRole("dialog")).toContainText("LOAD exercises aren’t available");
     await expect(page.getByRole("dialog")).not.toContainText(/Complete your|Confirm what|unlock|Closed/);
     await shot(page, `after-chest-progression-${width}.png`);

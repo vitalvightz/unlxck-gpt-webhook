@@ -23,7 +23,10 @@ NOW = datetime(2026, 10, 2, 12, tzinfo=timezone.utc)
 def context():
     store = FakeStore()
     athlete, plan = str(uuid4()), str(uuid4())
-    store.plans[plan] = dict(id=plan, athlete_id=athlete, status="ready", created_at="2026-09-01T00:00:00Z",
+    intake = str(uuid4())
+    store.intakes[athlete] = [dict(id=intake, athlete_id=athlete,
+        equipment_access=["chair", "stable_support", "wall", "table"])]
+    store.plans[plan] = dict(id=plan, athlete_id=athlete, intake_id=intake, status="ready", created_at="2026-09-01T00:00:00Z",
         structured_plan={"weeks": [{"phase_label": "GPP", "days": [
             {"date": DAY, "day_type": "rest", "sessions": []},
             {"date": "2026-10-03", "day_type": "strength", "sessions": [

@@ -289,6 +289,7 @@ function getSurfaceGuidance(injury: InjuryFlagRecord): SurfaceGuidance | null {
  */
 export function TodayInjuryManager({
   openInjuries,
+  rehabTargets = {},
   effectiveClearance,
   delayedPrompts = [],
   todaySafetyNoticeInjuryId = null,
@@ -296,6 +297,7 @@ export function TodayInjuryManager({
   onRefresh,
 }: {
   openInjuries: InjuryFlagRecord[];
+  rehabTargets?: Record<string, string>;
   effectiveClearance?: TodayCommandView["effective_clinician_clearance"];
   delayedPrompts?: TodayCommandView["delayed_rehab_prompts"];
   /** The injury whose skin instruction Today's main advice already shows. */
@@ -658,7 +660,7 @@ export function TodayInjuryManager({
             // A skin injury shows only its skin-care guidance; nothing is staged.
             const isSurface = Boolean(surfaceGuidance) || injury.rehab_decision?.outcome === "wound_care";
             // Only an injury with a guided pathway has a stage to show.
-            const hasPathway = !isSurface && injury.rehab_decision?.outcome === "prescribed_rehab";
+            const hasPathway = !isSurface && Boolean(rehabStageLabel(injury.rehab_decision));
             const stageLabel = hasPathway ? rehabStageLabel(injury.rehab_decision) : null;
             // Today's main advice already shows this injury's skin instruction.
             const showSurfaceGuidance = Boolean(surfaceGuidance) && todaySafetyNoticeInjuryId !== injury.id;
@@ -747,7 +749,7 @@ export function TodayInjuryManager({
                     <p>{surfaceGuidance.message}</p>
                   </div>
                 ) : null}
-                {!isSurface && (injury.rehab_decision || injury.episode_id) ? <InjuryCareStatus injury={injury} token={token} onRefresh={onRefresh} showClearance={false} summaryVisible /> : null}
+                {!isSurface && (injury.rehab_decision || injury.episode_id) ? <InjuryCareStatus rehabHref={rehabTargets[injury.id]} injury={injury} token={token} onRefresh={onRefresh} showClearance={false} summaryVisible /> : null}
                 <div className="today-injury-update-head">
                   <p className="today-field-label today-injury-status-label">{delayedPrompts.some(prompt =>
                     prompt.injury_id === injury.id && prompt.injury_episode_id === injury.episode_id)

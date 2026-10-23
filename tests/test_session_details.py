@@ -129,6 +129,19 @@ def test_legacy_and_deleted_plans_never_read_a_current_plan():
     assert read(store_for(row), row).message == MISSING_DETAILS
 
 
+def test_standalone_rehab_history_keeps_its_saved_prescription_without_a_plan():
+    row = occurrence([block("rehab", block_type="rehab")], plan_id=None, rehab_performance="done_as_shown")
+    row["prescription_snapshot"].update(plan_id=None, rehab_only=True)
+    row["prescription_snapshot"]["session"]["session_type"] = "rehab"
+    store = store_for(row)
+    result = read(store, row)
+    assert result.prescription_source == "snapshot"
+    assert result.blocks[0].completed_dose.sets == 4
+    store.list_session_detail_exercise_logs.assert_not_called()
+    row["prescription_snapshot"]["rehab_only"] = False
+    assert read(store_for(row), row).message == MISSING_DETAILS
+
+
 @pytest.mark.parametrize("snapshot", [[], {"session": []}, {"plan_id": "other", "session": {"session_id": "strength-1"}},
     {"plan_id": PLAN, "training_day": "wrong", "session": {"session_id": "strength-1"}}])
 def test_malformed_or_mismatched_snapshots_fail_to_missing_details(snapshot):

@@ -586,10 +586,11 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         )
 
     def _plan_row_for_completion(
-        store: AppStore, *, profile: ProfileRecord, plan_id: str
+        store: AppStore, *, profile: ProfileRecord, plan_id: str | None
     ) -> dict[str, Any] | None:
         if not plan_id:
-            return None
+            # Standalone work is resolved only from its saved prescription.
+            return {"id": None}
         return store.get_plan_for_athlete(plan_id, profile.athlete_id)
 
     def _rehab_prompts_for_completion(
@@ -631,7 +632,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
                 persisted = store.initialize_session_completion_rehab_contexts(
                     profile.athlete_id,
                     completion_id=str(completion.get("id") or ""),
-                    plan_id=str(completion.get("plan_id") or ""),
+                    plan_id=completion.get("plan_id"),
                     session_id=str(completion.get("session_id") or ""),
                     training_day=str(completion.get("training_day") or ""),
                     contexts=contexts,

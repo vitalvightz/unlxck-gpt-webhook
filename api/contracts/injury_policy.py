@@ -66,7 +66,7 @@ def resolve_injury_policy(
         "injury_id": str(injury.get("id") or injury.get("injury_id") or ""),
         "injury_episode_id": str(injury.get("episode_id") or ""),
         "region": region, "injury_type": kind, "stage": stage,
-        "outcome": "unsupported_prescription", "summary": "No suitable rehab is available for this injury yet. Keep to your current restrictions.",
+        "outcome": "unsupported_prescription", "summary": "No rehab exercises available for this stage yet.",
         "reason_codes": ["unsupported_injury_policy"], "activation": "shadow",
         "prescription": None, "restrictions": {},
         # Pull back changes training, never rehab: rehab is identical on
@@ -97,6 +97,12 @@ def resolve_injury_policy(
     if injury.get("status") == "resolved":
         result.update(outcome="no_rehab_indicated", summary="This injury is marked resolved.", reason_codes=["resolved_episode"])
         return result
+    report = injury.get("clinician_clearance") or {}
+    if (str(report.get("episode_id")) == str(injury.get("episode_id")) and injury.get("episode_id")
+            and (report.get("rehabilitation_permission") or {}).get("level") == "not_cleared"):
+        result.update(outcome="no_rehab_indicated", reason_codes=["reported_rehabilitation_not_cleared"],
+                      summary="Your reported clinician advice does not permit rehab. Update clearance only when that advice changes.")
+        return result
     if not region or not kind or kind == "unspecified":
         result.update(outcome="missing_information", summary="Add the injury area and type so your rehab can be matched.", reason_codes=["missing_injury_identity"])
         return result
@@ -113,7 +119,7 @@ def resolve_injury_policy(
         if conflict:
             matched = next((p for p in policies if p.region == region and p.injury_type == kind
                             and p.activation == "live" and p.status == "active"), None)
-            result.update(outcome="medical_review", reason_codes=["specific_injury_identity_conflict"],
+            result.update(outcome="missing_information", reason_codes=["specific_injury_identity_conflict"],
                           summary="Confirm the exact injury to get symptom guidance.",
                           restrictions={"blocked_regions": [region], "blocked_tags": [], "contact_limit": "none"})
             if matched:
@@ -124,8 +130,8 @@ def resolve_injury_policy(
         return result
     result.update(policy_id=policy.policy_id, policy_version=policy.version, activation=policy.activation)
     if policy.status == "retired":
-        result.update(activation="retired", outcome="medical_review", prescription=None,
-                      summary="This rehab routine is unavailable. Follow the current injury guidance.", reason_codes=["rehab_policy_retired"])
+        result.update(activation="retired", outcome="unsupported_prescription", prescription=None,
+                      summary="No rehab exercises available for this stage yet.", reason_codes=["rehab_policy_retired"])
         return result
     if policy.status != "active":
         result["reason_codes"] = ["rehab_policy_draft"]
@@ -202,7 +208,7 @@ def resolve_injury_policy(
         stage = progression["stage"]
         result["stage"] = stage
     if stage not in policy.live_stages:
-        result.update(outcome="missing_information", summary="More injury-specific evidence is needed before changing your rehab.", reason_codes=["stage_not_activated"])
+        result.update(outcome="unsupported_prescription", summary="No rehab exercises available for this stage yet.", reason_codes=["stage_not_activated"])
         return result
     drill_by_id = {d.get("id"): d for group in bank for d in group.get("drills", [])}
     candidates, prescriptions = [], {}
@@ -266,7 +272,7 @@ def resolve_injury_policy(
         drill = deepcopy(drill_by_id[identity])
         reviewed_work = None
         permission_work = (prescription.required_rehabilitation_level or
-            (progression.get("entry_basis") == "reported_clinician_permission" and not prescription.clinical_criterion
+            (prescription.range_choice and not prescription.clinical_criterion
                 and prescription.stage not in {"calm", "restore"}))
         if permission_work:
             if (not prescription.range_choice or not prescription.resistance or not prescription.mandatory_restrictions
@@ -411,7 +417,7 @@ def _clinician_clearance_hold(
 
 def reconcile_session_prescription(
     session: Mapping[str, Any] | None, *, decisions: Sequence[Mapping[str, Any]],
-    plan_id: str, training_day: str, frozen: Mapping[str, Any] | None = None,
+    plan_id: str | None, training_day: str, frozen: Mapping[str, Any] | None = None,
     injuries: Sequence[Mapping[str, Any]] = (),
     allocation_ceiling: int | None = None,
 ) -> dict[str, Any] | None:

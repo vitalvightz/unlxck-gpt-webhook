@@ -55,6 +55,18 @@ def planning_input_hash(path):
         bank, ledger = before_elbow_content_addition(read(ROOT / 'data/rehab_bank.json'), read(ROOT / 'data/rehab_metadata_review.json'))
         value = bank if path.name == 'rehab_bank.json' else ledger
         return hashlib.sha256((json.dumps(value, indent=2, ensure_ascii=False) + '\n').encode('utf-8')).hexdigest()
+    if path == ROOT / 'api/services/rehab_completion_service.py':
+        # #3003 permits saved standalone rehab completions. Preserve the dated
+        # planning snapshot without refreshing its original protected digest.
+        added = ('    snapshot = (completion or {}).get("prescription_snapshot") or {}\n'
+                 '    standalone = (not plan_id and (completion or {}).get("plan_id") is None\n'
+                 '                  and snapshot.get("plan_id") is None and snapshot.get("rehab_only") is True)\n'
+                 '    if completion_plan_id != plan_id or (not plan_id and not standalone):\n')
+        data = path.read_text(encoding='utf-8')
+        if data.count(added) != 1:
+            raise ValueError('Standalone completion history drift')
+        data = data.replace(added, '    if not plan_id or completion_plan_id != plan_id:\n', 1)
+        return hashlib.sha256(data.encode('utf-8')).hexdigest()
     return file_hash(path)
 
 

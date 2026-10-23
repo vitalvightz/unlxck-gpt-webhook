@@ -1,4 +1,4 @@
-"""Reported advice authorises a starter; it never certifies recovery evidence."""
+"""Reported advice grants permission; stage progression requires its own evidence."""
 from copy import deepcopy
 from datetime import timedelta
 
@@ -11,20 +11,16 @@ from tests.test_rehab_consumer_journey import Journey, PILOTS
 
 @pytest.mark.parametrize("pilot", PILOTS, ids=lambda p: p[0])
 @pytest.mark.parametrize("status", ["improving", "ongoing"])
-def test_reported_advice_opens_exact_starter_without_work_or_good_day_counter(monkeypatch, pilot, status):
+def test_reported_advice_grants_permission_without_advancing_stage(monkeypatch, pilot, status):
+    from api.contracts.clinician_clearance import permits_rehabilitation_stage
     j = Journey(monkeypatch, pilot, initial_status=status, edit_subtype=False)
     assert not j.store.rehab_exposures and not j.store.session_completions.get(j.athlete)
+    current = j.view()
     d = j.decision()
-    assert d["stage"] == "load", d["progression"]
-    entry = d["progression"]["entry_decision"]
-    assert entry["status"] == "met"
-    assert d["progression"]["entry_basis"] == "reported_clinician_permission"
-    assert d["progression"]["authority_event_id"] in j.store.injury_episode_events
-    for r in entry["requirements"]:
-        if r["kind"] in {"completed_reviewed_exposure", "during_session_response", "next_day_response"}:
-            assert r["status"] == "not_applicable" and r["evidence_ids"] == []
-    expected = next(p.drill_id for p in j.policy.prescriptions if p.stage == "load")
-    assert j.view().live_prescription["session"]["blocks"][0]["rehab_drill_id"] == expected
+    assert d["stage"] in {"calm", "restore"}
+    assert "entry_basis" not in d["progression"]
+    assert permits_rehabilitation_stage(current.open_injuries[0], "load")
+    assert all(b.get("rehab_stage") != "load" for b in current.live_prescription["session"]["blocks"])
     assert d["progression"]["evidence_ids"] == []
 
 
@@ -34,7 +30,7 @@ def test_advice_levels_never_create_unapproved_stages(monkeypatch, pilot, permis
     j = Journey(monkeypatch, pilot)
     j.permission(permission)
     d = j.decision()
-    assert (d["stage"] == "load") == (permission == "sport_specific")
+    assert d["stage"] in {"calm", "restore"}
     assert d["stage"] not in {"dynamic", "return"}
     assert j.view().effective_clinician_clearance["level"] == "rehab_only"
 
@@ -55,7 +51,7 @@ def test_known_pending_uncertain_or_adverse_response_cannot_be_bypassed_by_new_a
 
 
 @pytest.mark.parametrize("pilot", PILOTS, ids=lambda p: p[0])
-def test_generation_uses_permission_entry_without_exposure_history(monkeypatch, pilot):
+def test_generation_keeps_stage_independent_of_permission_without_exposure_history(monkeypatch, pilot):
     from api.services.rehab_stage_snapshot import resolve_open_injury_rehab_context
     from fightcamp.rehab_protocols import _episode_context, _reviewed_episode_option
     from fightcamp.input_parsing import _apply_rehab_generation_context, _coerce_rehab_generation_context
@@ -64,7 +60,8 @@ def test_generation_uses_permission_entry_without_exposure_history(monkeypatch, 
     entry = dict(injury_type=pilot[2], severity=pilot[4], laterality="left")
     _apply_rehab_generation_context(entry, _coerce_rehab_generation_context({"rehab_generation_context": raw}))
     generated = _reviewed_episode_option(_episode_context(entry), j.policy.region, "GPP")
-    assert generated["decision"]["stage"] == j.decision()["stage"] == "load"
+    assert generated["decision"]["stage"] == j.decision()["stage"]
+    assert j.decision()["stage"] in {"calm", "restore"}
     assert generated["drill"]["id"] == j.decision()["prescription"]["drill_id"]
 
 
@@ -91,6 +88,7 @@ def test_permission_entry_fails_closed_without_current_applicable_authority(monk
 @pytest.mark.parametrize("restriction", ["unknown_location", "unsupported_location", "medical", "restriction", "severity", "withdrawn"])
 def test_fresh_permission_preserves_injury_eligibility_and_visible_holds(monkeypatch, pilot, restriction):
     j = Journey(monkeypatch, pilot, initial_status="ongoing", edit_subtype=False)
+    j.reach_load()
     load_id = next(p.drill_id for p in j.policy.prescriptions if p.stage == "load")
     assert j.decision()["stage"] == "load"
     if restriction in {"unknown_location", "unsupported_location"}:
@@ -109,7 +107,7 @@ def test_fresh_permission_preserves_injury_eligibility_and_visible_holds(monkeyp
     assert decision["stage"] != "load", decision
     assert not current.live_prescription or all(
         b.get("rehab_drill_id") != load_id for b in current.live_prescription["session"]["blocks"])
-    assert not j.store.rehab_exposures and not j.store.session_completions.get(j.athlete)
+    assert j.store.rehab_exposures
 
 
 @pytest.mark.parametrize("pilot,area,kind,held", [
@@ -124,6 +122,7 @@ def test_fresh_permission_cannot_override_relevant_second_injury(monkeypatch, pi
     from fightcamp.rehab_protocols import _episode_context, _reviewed_episode_option
     from fightcamp.input_parsing import _apply_rehab_generation_context, _coerce_rehab_generation_context
     j = Journey(monkeypatch, pilot, initial_status="ongoing", edit_subtype=False)
+    j.reach_load()
     load_id = next(p.drill_id for p in j.policy.prescriptions if p.stage == "load")
     assert j.decision()["stage"] == "load"
     advice = deepcopy(j.store.injury_episode_events)
@@ -145,7 +144,7 @@ def test_fresh_permission_cannot_override_relevant_second_injury(monkeypatch, pi
     assert current.effective_clinician_clearance["level"] == "rehab_only"
     assert primary["clinician_clearance"]["rehabilitation_permission"]["level"] == "loading"
     assert all(j.store.injury_episode_events[key] == event for key, event in advice.items())
-    assert not j.store.rehab_exposures and not j.store.session_completions.get(j.athlete)
+    assert j.store.rehab_exposures
 
 
 def test_shared_entry_uses_publication_not_per_pathway_flags():
@@ -194,6 +193,7 @@ def test_another_normally_published_load_exercise_needs_no_code_registry_or_entr
     from fightcamp.rehab_clinical import ClinicalPolicy, content_hash, load_clinical_policies, policy_review_hash
     from fightcamp.rehab_protocols import get_rehab_bank
     j = Journey(monkeypatch, pilot)
+    j.reach_load()
     original = next(p for p in j.policy.prescriptions if p.stage == "load")
     bank = deepcopy(get_rehab_bank())
     group = next(g for g in bank if any(d["id"] == original.drill_id for d in g["drills"]))
@@ -223,6 +223,7 @@ def test_another_normally_published_load_exercise_needs_no_code_registry_or_entr
 def test_saved_starter_rechecks_pending_work_and_side_without_rewriting_snapshot(monkeypatch, pilot):
     from api.services.clinical_review_freeze import frozen_review_hold
     j = Journey(monkeypatch, pilot)
+    j.reach_load()
     saved = deepcopy(j.view().live_prescription)
     original = deepcopy(saved)
     assert not frozen_review_hold(j.store, j.athlete, saved, work_state="unstarted", as_of=j.now)

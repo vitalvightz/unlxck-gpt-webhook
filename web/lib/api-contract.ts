@@ -45,6 +45,8 @@ type Declared<WebType, Served, Unsent extends PropertyKey = never> = [
 //   (CommandView.open_injuries), not as InjuryFlagRecord.
 
 export type ReadActiveInjuryRegion = Reads<Api.ActiveInjuryRegion, Web.ActiveInjuryRegion>;
+export type ReadBlockComponent = Reads<Api.BlockComponent, Web.BlockComponent>;
+export type DeclaredBlockComponent = Expect<Declared<Web.BlockComponent, Api.BlockComponent>>;
 export type ReadAdminAthleteRecord = Reads<
   Omit<Api.AdminAthleteRecord, "onboarding_draft" | "latest_intake">,
   Omit<Web.AdminAthleteRecord, "onboarding_draft" | "latest_intake">

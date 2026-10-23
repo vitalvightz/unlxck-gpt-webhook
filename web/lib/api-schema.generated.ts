@@ -355,6 +355,7 @@ export type CommandView = {
   risk_watch: RiskWatchItem[];
   open_injuries: Record<string, unknown>[];
   live_prescription: Record<string, unknown> | null;
+  session_hold: Record<string, unknown> | null;
   exercise_media: Record<string, unknown>;
   effective_clinician_clearance: Record<string, unknown> | null;
   delayed_rehab_prompts: Record<string, unknown>[];
@@ -2280,7 +2281,7 @@ export type SessionBlock = {
 export type SessionCompletionHistoryResponse = {
   id: string;
   athlete_id: string;
-  plan_id: string;
+  plan_id: string | null;
   session_id: string;
   training_day: string;
   status: "done" | "modified" | "not_started" | "skipped" | "started";
@@ -2300,7 +2301,7 @@ export type SessionCompletionHistoryResponse = {
 export type SessionCompletionRecordResponse = {
   id: string;
   athlete_id: string;
-  plan_id: string;
+  plan_id: string | null;
   session_id: string;
   training_day: string;
   status: "done" | "modified" | "not_started" | "skipped" | "started";
@@ -2317,7 +2318,7 @@ export type SessionCompletionRecordResponse = {
 };
 
 export type SessionCompletionRequest = {
-  plan_id: string;
+  plan_id?: string | null;
   session_id: string;
   status: "done" | "modified" | "not_started" | "skipped" | "started";
   prescription_revision?: string | null;

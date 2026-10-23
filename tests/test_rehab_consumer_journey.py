@@ -132,6 +132,15 @@ class Journey:
         self.report(response)
         return events
 
+    def reach_load(self):
+        """Earn LOAD through actual RESTORE work and its day-after response."""
+        self.permission("gentle_recovery")
+        self.complete()
+        self.advance()
+        self.followup()
+        self.permission("loading")
+        assert self.decision()["stage"] == "load", self.decision()["progression"]
+
     def followup(self, answer="same"):
         prompts = self.view().delayed_rehab_prompts
         assert prompts, self.decision()
@@ -254,6 +263,7 @@ def test_new_reviewed_session_does_not_borrow_previous_delayed_answer(monkeypatc
 @pytest.mark.parametrize("pilot", PILOTS, ids=lambda p: p[0])
 def test_load_completion_has_defined_dose_and_still_needs_next_day_answer(monkeypatch, pilot):
     j = Journey(monkeypatch, pilot)
+    j.reach_load()
     assert j.decision()["stage"] == "load"
     events = j.complete()
     prescribed = next(p for p in j.policy.prescriptions if p.stage == "load")
@@ -272,11 +282,13 @@ def test_load_completion_has_defined_dose_and_still_needs_next_day_answer(monkey
 @pytest.mark.parametrize("pilot", PILOTS, ids=lambda p: p[0])
 def test_load_flare_reentry_uses_resolved_engine_evidence_without_erasing_old_work(monkeypatch, pilot):
     j = Journey(monkeypatch, pilot)
+    j.reach_load()
     j.complete()
     j.advance()
     j.report("ongoing")
     assert j.decision()["stage"] == "load"
     adverse = j.complete("worse")[0]
+    assert str(adverse.injury_episode_id) == j.injury["episode_id"]
     originals = deepcopy(j.store.rehab_exposures)
     assert j.decision()["stage"] == "calm"
     j.advance()
@@ -289,7 +301,7 @@ def test_load_flare_reentry_uses_resolved_engine_evidence_without_erasing_old_wo
     j.report("ongoing")
     decision = j.decision()
     assert decision["stage"] == "load", decision["progression"]
-    assert j.view().live_prescription["session"]["blocks"][0]["rehab_drill_id"] == adverse.drill_id
+    assert j.view().live_prescription["session"]["blocks"][0]["rehab_drill_id"] == decision["prescription"]["drill_id"]
     for identity, original in originals.items():
         assert j.store.rehab_exposures[identity] == original
 

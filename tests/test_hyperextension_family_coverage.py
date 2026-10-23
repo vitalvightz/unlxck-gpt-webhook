@@ -140,7 +140,7 @@ def test_unprofiled_and_absent_regions_do_not_inherit_joint_work(region):
 @pytest.mark.parametrize("region", REGIONS)
 def test_restore_is_explicitly_closed_despite_improvement(region):
     decision = resolve(injury(region, "hyperextension", "restore"))
-    assert decision["outcome"] == "missing_information"
+    assert decision["outcome"] == "unsupported_prescription"
     assert decision["prescription"] is None and decision["reason_codes"] == ["stage_not_activated"]
 
 

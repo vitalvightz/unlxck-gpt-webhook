@@ -44,7 +44,8 @@ def schedule_rehab(injury, decision, *, training_day, completions=(), exposures=
         return {"state": state, "reason": reason, "next_due_day": next_day}
     prescription = decision.get("prescription")
     if not prescription:
-        return result("held" if decision.get("outcome") == "medical_review" else "unsupported", decision["summary"])
+        held = decision.get("outcome") == "medical_review" or "reported_rehabilitation_not_cleared" in decision.get("reason_codes", [])
+        return result("held" if held else "unsupported", decision["summary"])
     drill_ids = {member["drill_id"] for member in prescription.get("drills", [prescription])}
     today = date.fromisoformat(training_day)
     injury_id, episode_id = str(injury["id"]), str(injury["episode_id"])

@@ -221,7 +221,7 @@ def test_conflicting_generic_identity_cannot_downgrade_a_specific_injury(descrip
     frozen, _, _ = frozen_work(row)
     row["description"] = description
     decision = resolve(row)
-    assert decision["outcome"] == "medical_review" and decision["prescription"] is None
+    assert decision["outcome"] == "missing_information" and decision["prescription"] is None
     assert decision["reason_codes"] == ["specific_injury_identity_conflict"]
     assert reconcile_session_prescription(None, decisions=[decision], plan_id=PLAN, training_day=DAY,
         frozen=frozen, injuries=[row])["safety_hold"]

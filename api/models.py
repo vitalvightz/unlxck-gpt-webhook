@@ -2251,7 +2251,7 @@ class TodayCheckinResponse(BaseModel):
 
 
 class SessionCompletionRequest(BaseModel):
-    plan_id: str = Field(min_length=1)
+    plan_id: str | None = Field(default=None, min_length=1)
     session_id: str = Field(min_length=1)
     status: CompletionStatus
     prescription_revision: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
@@ -2290,7 +2290,7 @@ class SessionCompletionRequest(BaseModel):
 class SessionCompletionRecordResponse(BaseModel):
     id: str
     athlete_id: str
-    plan_id: str
+    plan_id: str | None
     session_id: str
     training_day: str
     status: CompletionStatus = "not_started"

@@ -44,7 +44,7 @@ class SessionCompletionRecord(BaseModel):
     """
 
     user_id: str
-    plan_id: str
+    plan_id: str | None
     session_id: str
     # Athlete-local training day (§3), ``YYYY-MM-DD``.
     training_day: str

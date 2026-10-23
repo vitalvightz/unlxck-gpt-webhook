@@ -803,7 +803,30 @@ def original_equipment_source(relative):
     from tools.replay_safety_metadata import original_safety_source
     data = reverse_mechanical_source(relative, pre_combat_round_source(
         relative, original_safety_source(relative, (ROOT / relative).read_bytes())))
+    if relative == "api/contracts/completion.py":
+        # #3003 permits plan-free rehab records; replay keeps the old contract.
+        return data.replace(b'    plan_id: str | None\n', b'    plan_id: str\n', 1)
     if relative == "api/contracts/clinician_clearance.py":
+        # #3003 changes runtime permission authority, not this dated audit.
+        # Reverse only the exact delta; the original digest below stays strict.
+        authority_changes = (
+            (b'\n\ndef has_reported_clinician_permission(injury: Mapping) -> bool:\n'
+             b'    """An episode-owned permission report, without claiming independent verification."""\n'
+             b'    report = injury.get("clinician_clearance")\n'
+             b'    return (injury.get("status") in {"open", "monitoring"} and bool(injury.get("episode_id"))\n'
+             b'            and isinstance(report, Mapping) and str(report.get("episode_id")) == str(injury["episode_id"])\n'
+             b'            and canonical_clearance_scopes(report.get("scopes")) is not None\n'
+             b'            and ("training" in report["scopes"] or permits_rehabilitation_stage(injury, "calm")))\n', b''),
+            (b'    from .rehab_stage import _is_urgent_injury\n', b''),
+            (b'            or injury.get("medical_hold") or injury.get("restriction_hold")\n'
+             b'            or injury.get("progression_assessment_medical_hold") or _is_urgent_injury(injury)):\n',
+             b'            or (injury.get("rehab_decision") or {}).get("outcome") == "medical_review"):\n'),
+            (b'    if consequence == "neuro":\n', b'    if consequence in {"structural", "neuro"}:\n'),
+        )
+        for added, original in authority_changes:
+            if data.count(added) != 1:
+                raise ValueError("Rehab clearance authority history drift")
+            data = data.replace(added, original, 1)
         # #2977 generalises the existing permission reader to a stage ceiling.
         # Reverse only its exact changes for dated audit replay. The original
         # frozen digest still validates the entire reconstructed file.

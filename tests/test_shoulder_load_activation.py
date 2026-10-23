@@ -140,14 +140,14 @@ def test_severity_is_not_inferred_from_subtype(severity):
 
 
 @pytest.mark.parametrize("field", ["athlete_id", "injury_id", "injury_episode_id", "side"])
-def test_wrong_exposure_ownership_is_excluded_from_permission_entry(field):
+def test_wrong_exposure_ownership_cannot_supply_progression(field):
     b = bundle()
     for row in b[0].rehab_exposures.values():
         row[field] = "right" if field == "side" else str(uuid4())
         row["event_json"][field] = row[field]
     decision = view(b).open_injuries[0]["rehab_decision"]
-    assert decision["stage"] == "load"
-    assert decision["progression"]["entry_basis"] == "reported_clinician_permission"
+    assert decision["stage"] == "restore"
+    assert "entry_basis" not in decision["progression"]
     assert decision["progression"]["evidence_ids"] == []  # foreign work never certifies tolerance
 
 
@@ -160,10 +160,10 @@ def test_missing_or_worsening_response_cannot_pass(field, value):
     assert view(b).open_injuries[0]["rehab_decision"]["stage"] != "load"
 
 
-def test_reported_permission_allows_starter_without_prior_work():
+def test_reported_permission_does_not_advance_stage_without_prior_work():
     b = bundle()
     b[0].rehab_exposures.clear()
-    assert view(b).open_injuries[0]["rehab_decision"]["stage"] == "load"
+    assert view(b).open_injuries[0]["rehab_decision"]["stage"] == "restore"
 
 
 @pytest.mark.parametrize("mutation", ["permission", "episode", "worse", "medical", "restriction", "equipment", "setback", "response", "history", "scope"])
@@ -294,9 +294,8 @@ def test_real_restore_completion_and_existing_checkins_supply_consumer_progressi
     decision = resolve_injury_policy(injury, policies=load_clinical_policies(), bank=get_rehab_bank(),
         equipment=["wall"], exposures=exposure_rows_with_observations(list(b[0].rehab_exposures.values()), events),
         as_of=NOW + timedelta(days=1))
-    assert decision["stage"] == "load"
-    if not eligible:
-        assert decision["progression"]["entry_basis"] == "reported_clinician_permission", decision
+    assert decision["stage"] == ("load" if eligible else "restore")
+    assert "entry_basis" not in decision["progression"]
     assert not any(e["event_type"] == "rehab_progression_assessment" for e in events)
     if eligible:
         from api.services import today_service

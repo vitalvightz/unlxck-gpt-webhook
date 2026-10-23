@@ -32,7 +32,7 @@ from .rehab_assessment import AssessmentContext, input_definitions, read_assessm
 from .achilles_restore_load import CRITERION_ID, review_achilles_restore_load
 from .clinical_review_validity import ClinicalReviewInput, ReviewReason, evaluate_clinical_review
 from .clinical_progression_review import CLINICAL_REVIEW_REGISTRY
-from .clinician_clearance import LOAD_PERMISSION_CHECKPOINT, achilles_load_permission_reason, permits_rehabilitation_stage
+from .clinician_clearance import LOAD_PERMISSION_CHECKPOINT, achilles_load_permission_reason
 from .lateral_elbow_progression import CRITERION as ELBOW_CRITERION, PERMISSION_CRITERION, evaluate_elbow_entry, evaluate_elbow_permission
 from .ankle_restore_load import CRITERION as ANKLE_CRITERION, evaluate_ankle_permission
 
@@ -103,17 +103,6 @@ def _permission_entry(transition, policy):
                     for p in policy.prescriptions))
 
 
-def _reported_entry(transition, policy, injury, as_of):
-    """A persisted, episode-owned advice report; never inferred from silence."""
-    report = injury.get("clinician_clearance") or {}
-    if not _permission_entry(transition, policy) or not isinstance(report, Mapping):
-        return False
-    stamp = _instant(report.get("reported_at"))
-    return (permits_rehabilitation_stage(injury, transition.to_stage) and injury.get("side") in {"left", "right"}
-            and report.get("source") == "athlete_reported" and bool(report.get("report_id"))
-            and stamp is not None and stamp <= as_of)
-
-
 def _resolved_setback(policy, transition, injury, exposures, latest, performed, as_of):
     """Bounded re-entry after a flare, using existing observations only.
 
@@ -172,14 +161,12 @@ def evaluate_transition(transition: PathwayTransition, *, policy: ClinicalPolicy
                  and not e.dose_completed.stopped_early]
     performed_groups = [g for g in groups if g.group_id and any(e in performed for e in g.events)]
     latest = performed_groups[-1] if performed_groups else None
-    # Permission is an entry basis, not proof of tolerance. A known setback
-    # always requires the declared recovery evidence, even after renewed advice.
-    starter = (_reported_entry(transition, policy, injury, as_of)
-               and not _latest_setback_at(injury, exposures) and not any(g.negative_reasons for g in groups))
-    response_latest = groups[-1] if starter and groups else latest
+    # Later work still needs its own response. Removing the permission shortcut
+    # must not let an older RESTORE answer stand in for a pending LOAD answer.
+    response_latest = groups[-1] if groups and _permission_entry(transition, policy) else latest
     event_ids = {str(e.exposure_id) for e in events}
     unreadable_owned_work = False
-    if starter:
+    if _permission_entry(transition, policy):
         for row in exposures:
             raw = row.get("event_json") or row
             if (str(row.get("athlete_id")) == str(injury.get("athlete_id"))
@@ -217,8 +204,6 @@ def evaluate_transition(transition: PathwayTransition, *, policy: ClinicalPolicy
                           or not requirement.requires_defined_dose or has_defined_prescribed_dose(e)]
             if qualifying:
                 results.append(_result(requirement, PASS, "reviewed_stage_work_performed", qualifying))
-            elif starter and requirement.basis == "data_sufficiency":
-                results.append(_result(requirement, NOT_APPLICABLE, "prior_stage_work_not_required_for_reported_permission"))
             elif performed:
                 # "Done as shown" of self-paced work is not completion of a defined dose.
                 results.append(_result(requirement, UNKNOWN, "no_defined_dose_completed", performed))
@@ -231,10 +216,8 @@ def evaluate_transition(transition: PathwayTransition, *, policy: ClinicalPolicy
         elif kind in {"during_session_response", "next_day_response"}:
             field = "during_response" if kind == "during_session_response" else "next_day_response"
             response_group = response_latest
-            if starter and unreadable_owned_work:
+            if unreadable_owned_work:
                 results.append(_result(requirement, UNKNOWN, "incomplete_prior_rehab_evidence"))
-            elif starter and response_group is None and requirement.basis == "product_safety":
-                results.append(_result(requirement, NOT_APPLICABLE, "no_prior_rehab_response_to_resolve"))
             elif response_group is None:
                 results.append(_result(requirement, UNKNOWN, "no_reviewed_response_group"))
             elif not response_group.group_id or not response_group.response_consistent:
@@ -341,9 +324,7 @@ def evaluate_transition(transition: PathwayTransition, *, policy: ClinicalPolicy
     live = transition.to_stage in policy.live_stages
     if status == "met" and not live:
         reasons = ["target_stage_not_activated"]
-    authority = ({"entry_basis": "reported_clinician_permission",
-                  "authority_event_id": str(injury["clinician_clearance"]["report_id"])} if starter else {})
-    return {**authority, "from_stage": transition.from_stage, "to_stage": transition.to_stage, "status": status,
+    return {"from_stage": transition.from_stage, "to_stage": transition.to_stage, "status": status,
             "reason_codes": reasons, "target_stage_live": live, "closed_reason": transition.closed_reason,
             "missing_inputs": [r["reason_code"].split(":", 1)[1] for r in results if r["status"] == MISSING_INPUT],
             "requirements": results, "ignored_evidence": dict(sorted(ignored.items()))}
@@ -367,9 +348,8 @@ def resolve_reviewed_progression(injury: Mapping[str, Any], *, base_stage: str,
     result: dict[str, Any] = {"stage": stage, "reason_codes": reasons, "evidence_ids": [], "engine_version": "2"}
     # Declared transitions: one rung at a time, each judged on its own stage's work.
     by_source = {t.from_stage: t for t in policy.transitions}
-    entry = next((t for t in policy.transitions if _reported_entry(t, policy, injury, as_of or datetime.now(timezone.utc))), None)
-    while stage in by_source or (stage == "calm" and entry is not None):
-        transition = entry if stage == "calm" else by_source[stage]
+    while stage in by_source:
+        transition = by_source[stage]
         evaluation = evaluate_transition(transition, policy=policy, injury=injury,
             exposures=exposures, history_truncated=history_truncated, as_of=as_of,
             clinical_review_input=next((clinical_review_inputs[r.checkpoint] for r in transition.requirements
@@ -381,12 +361,7 @@ def resolve_reviewed_progression(injury: Mapping[str, Any], *, base_stage: str,
             result["next_transition"] = evaluation
             break
         stage = evaluation["to_stage"]
-        reason = (f"reported_clinician_permission_entry:{stage}" if evaluation.get("entry_basis")
-                  else f"transition_met:{evaluation['from_stage']}->{stage}")
-        result.update(stage=stage, reason_codes=[reason])
-        if evaluation.get("entry_basis"):
-            result.update(entry_basis=evaluation["entry_basis"], authority_event_id=evaluation["authority_event_id"],
-                          entry_decision=evaluation)
+        result.update(stage=stage, reason_codes=[f"transition_met:{evaluation['from_stage']}->{stage}"])
         result["evidence_ids"] = list(dict.fromkeys(
             [*result["evidence_ids"], *(i for r in evaluation["requirements"] for i in r["evidence_ids"])]))
     return result

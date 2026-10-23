@@ -1,13 +1,12 @@
 {
-  "permission_entry": {
+  "earned_load": {
     "view": {
       "active_plan": {
         "status": "ready",
-        "phase": "GPP",
-        "id": "d27910f2-7f8a-45bb-b5f9-6a652ae3d29f"
+        "id": "e12c26d5-a0bc-4477-ac0b-d80e01e88dbe"
       },
       "today": {
-        "training_day": "2026-10-05",
+        "training_day": "2026-10-06",
         "recommendation_state": "modify",
         "recommendation_reason": "Reviewed rehab today\nYour planned training conflicts with the current injury restrictions.\nFollow only the reviewed rehab shown today.",
         "decision_tier": "modify",
@@ -19,29 +18,20 @@
         "recommendation_safety_checks": [],
         "recommendation_sources": [
           "today's check-in",
-          "today's planned session",
           "your tracked injuries"
         ],
         "recommendation_confidence": "moderate",
-        "recommendation_confidence_note": "Less to go on today: this is based on today's check-in alone, with no recent days to compare.",
+        "recommendation_confidence_note": "Less to go on today: today's session isn't resolved yet.",
         "primary_safety_notice": null,
         "warnings": [],
         "next_session": {
-          "calendar_date": "2026-10-05",
-          "weekday": "Monday",
-          "weekday_with_label": "Monday",
-          "day_label": "",
-          "phase": "GPP",
-          "session_id": "rehab-2026-10-05-035281aea20cfa032dde0ede",
-          "session_type": "rehab",
+          "session_id": "rehab-2026-10-06-3874d4208b41011f99f6e2de",
           "title": "Today's rehab",
-          "objective": "Follow the reviewed rehab for your current injury guidance.",
-          "effective_load": "reduced",
-          "contact_level": "none",
+          "session_type": "rehab",
           "blocks": [
             {
               "injury_side": "left",
-              "block_id": "rehab:463e972f-05aa-4a48-bc2c-068c8bc552df:0148b63c-4bd2-4898-b0f3-fc66cc9bba05",
+              "block_id": "rehab:d15e4fa0-706f-4a46-8cfe-7251f4243e1c:a4ad8598-2e23-4698-82b4-1e6f95f530ab",
               "block_type": "rehab",
               "title": "Floor-level controlled Achilles lowering",
               "display_name": "Floor-level controlled Achilles lowering",
@@ -50,8 +40,8 @@
               ],
               "rehab_drill_id": "achilles_tendonitis_eccentric_calf_drops_on_step",
               "exercise_key": "achilles-tendonitis-eccentric-calf-drops-on-step",
-              "injury_id": "463e972f-05aa-4a48-bc2c-068c8bc552df",
-              "injury_episode_id": "0148b63c-4bd2-4898-b0f3-fc66cc9bba05",
+              "injury_id": "d15e4fa0-706f-4a46-8cfe-7251f4243e1c",
+              "injury_episode_id": "a4ad8598-2e23-4698-82b4-1e6f95f530ab",
               "target_regions": [
                 "achilles"
               ],
@@ -149,26 +139,46 @@
       ],
       "open_injuries": [
         {
-          "id": "463e972f-05aa-4a48-bc2c-068c8bc552df",
-          "athlete_id": "0ebfdfd4-1c47-4648-914c-7e832c03d91c",
-          "plan_id": "d27910f2-7f8a-45bb-b5f9-6a652ae3d29f",
+          "id": "d15e4fa0-706f-4a46-8cfe-7251f4243e1c",
+          "athlete_id": "ff783480-4020-42fb-9fb4-b15732731a68",
+          "plan_id": "e12c26d5-a0bc-4477-ac0b-d80e01e88dbe",
           "source": "checkin",
           "body_area": "Left Achilles",
           "severity": "mild",
           "status": "monitoring",
           "resolved_at": null,
-          "episode_id": "0148b63c-4bd2-4898-b0f3-fc66cc9bba05",
+          "episode_id": "a4ad8598-2e23-4698-82b4-1e6f95f530ab",
           "body_region": "achilles",
           "side": "left",
           "description": "tendonitis [achilles_site:midportion]",
           "latest_reported_status": "improving",
           "created_at": "2026-10-05T12:01:00+00:00",
-          "updated_at": "2026-10-05T12:02:00+00:00",
+          "updated_at": "2026-10-05T12:06:00+00:00",
           "surface_class": "non_surface",
           "canonical_location": "achilles",
           "region_group": "lower_leg_foot",
           "load_region": "lower_limb",
           "consequence": "load_sensitive",
+          "assessment_history_complete": true,
+          "progression_assessments": [],
+          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
+          "latest_reported_at": "2026-10-05T12:06:00+00:00",
+          "rehab_improvement_reports": [
+            {
+              "id": "45a9ee04-39cb-4f3a-b984-430df9af2ee1",
+              "reported_at": "2026-10-05T12:01:00+00:00"
+            },
+            {
+              "id": "f387a9ff-e61a-493a-9c35-3a18e5e41f02",
+              "reported_at": "2026-10-05T12:02:00+00:00"
+            },
+            {
+              "id": "a7bc01a3-5abf-4c71-94c1-ef7da3744ba6",
+              "reported_at": "2026-10-05T12:06:00+00:00"
+            }
+          ],
+          "rehab_improvement_at": "2026-10-05T12:06:00Z",
+          "assessment_setback_at": null,
           "rehab_stage": "load",
           "rehab_stage_reasons": [
             "symptoms_not_worsening",
@@ -177,33 +187,17 @@
           "rehab_care_pathway": "musculoskeletal",
           "rehab_medical_gate": false,
           "label": "Left achilles tendonitis",
-          "assessment_history_complete": true,
-          "progression_assessments": [],
-          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
-          "latest_reported_at": "2026-10-05T12:02:00+00:00",
-          "rehab_improvement_reports": [
-            {
-              "id": "3a9d1938-b463-4d6a-a866-c202234be6fd",
-              "reported_at": "2026-10-05T12:01:00+00:00"
-            },
-            {
-              "id": "86ccd9c2-c5b9-4056-bbc8-9b93fd2caaff",
-              "reported_at": "2026-10-05T12:02:00+00:00"
-            }
-          ],
-          "rehab_improvement_at": "2026-10-05T12:02:00Z",
-          "assessment_setback_at": null,
           "clinician_clearance": {
-            "episode_id": "0148b63c-4bd2-4898-b0f3-fc66cc9bba05",
+            "episode_id": "a4ad8598-2e23-4698-82b4-1e6f95f530ab",
             "scopes": [
               "rehab"
             ],
-            "report_id": "3b1f5aa1-f324-5087-b62c-16db493bd499",
-            "reported_at": "2026-10-05T12:03:00+00:00",
+            "report_id": "fef49ef2-8f8e-5cea-971c-039f57f798b8",
+            "reported_at": "2026-10-06T12:07:00+00:00",
             "source": "athlete_reported",
             "externally_verified": false,
             "scope_reported_at": {
-              "rehab": "2026-10-05T12:03:00+00:00"
+              "rehab": "2026-10-06T12:07:00+00:00"
             },
             "rehabilitation_permission": {
               "schema_version": 1,
@@ -211,8 +205,8 @@
             }
           },
           "rehab_decision": {
-            "injury_id": "463e972f-05aa-4a48-bc2c-068c8bc552df",
-            "injury_episode_id": "0148b63c-4bd2-4898-b0f3-fc66cc9bba05",
+            "injury_id": "d15e4fa0-706f-4a46-8cfe-7251f4243e1c",
+            "injury_episode_id": "a4ad8598-2e23-4698-82b4-1e6f95f530ab",
             "region": "achilles",
             "injury_type": "tendonitis",
             "stage": "load",
@@ -303,7 +297,7 @@
               "blocked_tags": [],
               "contact_limit": "none"
             },
-            "loading_hold": false,
+            "readiness_hold": false,
             "achilles_load_review": {
               "criterion_id": "achilles_restore_load_review_v1",
               "criterion_version": 1,
@@ -332,74 +326,12 @@
             "progression": {
               "stage": "load",
               "reason_codes": [
-                "reported_clinician_permission_entry:load"
+                "transition_met:restore->load"
               ],
-              "evidence_ids": [],
+              "evidence_ids": [
+                "bc3f7c1e-e419-563a-9069-d3f71e98223f"
+              ],
               "engine_version": "2",
-              "entry_basis": "reported_clinician_permission",
-              "authority_event_id": "3b1f5aa1-f324-5087-b62c-16db493bd499",
-              "entry_decision": {
-                "entry_basis": "reported_clinician_permission",
-                "authority_event_id": "3b1f5aa1-f324-5087-b62c-16db493bd499",
-                "from_stage": "restore",
-                "to_stage": "load",
-                "status": "met",
-                "reason_codes": [],
-                "target_stage_live": true,
-                "closed_reason": null,
-                "missing_inputs": [],
-                "requirements": [
-                  {
-                    "requirement_id": "no_unresolved_setback",
-                    "kind": "no_unresolved_setback",
-                    "basis": "product_safety",
-                    "status": "pass",
-                    "reason_code": "no_negative_response",
-                    "evidence_ids": []
-                  },
-                  {
-                    "requirement_id": "complete_episode_history",
-                    "kind": "complete_history",
-                    "basis": "product_safety",
-                    "status": "pass",
-                    "reason_code": "history_complete",
-                    "evidence_ids": []
-                  },
-                  {
-                    "requirement_id": "reviewed_stage_exposure",
-                    "kind": "completed_reviewed_exposure",
-                    "basis": "data_sufficiency",
-                    "status": "not_applicable",
-                    "reason_code": "prior_stage_work_not_required_for_reported_permission",
-                    "evidence_ids": []
-                  },
-                  {
-                    "requirement_id": "during_response_not_worse",
-                    "kind": "during_session_response",
-                    "basis": "product_safety",
-                    "status": "not_applicable",
-                    "reason_code": "no_prior_rehab_response_to_resolve",
-                    "evidence_ids": []
-                  },
-                  {
-                    "requirement_id": "next_day_response_not_worse",
-                    "kind": "next_day_response",
-                    "basis": "product_safety",
-                    "status": "not_applicable",
-                    "reason_code": "no_prior_rehab_response_to_resolve",
-                    "evidence_ids": []
-                  },
-                  {
-                    "requirement_id": "achilles_midportion_reported_load_permission_v1",
-                    "kind": "functional_checkpoint",
-                    "basis": "clinical",
-                    "status": "pass",
-                    "reason_code": "reported_permission_and_option_applicable",
-                    "evidence_ids": []
-                  }
-                ],
-                "ignored_evidence": {}
-              },
               "next_transition": {
                 "from_stage": "load",
                 "to_stage": "dynamic",
@@ -460,30 +392,51 @@
             "schedule": {
               "state": "due",
               "reason": "Your baseline rehab is due today; missed work adds no extra volume.",
-              "next_due_day": "2026-10-05"
-            }
+              "next_due_day": "2026-10-06"
+            },
+            "recent_log": [
+              {
+                "at": "2026-10-05T12:06:00+00:00",
+                "date": "2026-10-05",
+                "kind": "checkin",
+                "label": "Better"
+              },
+              {
+                "at": "2026-10-05T12:05:00Z",
+                "date": "2026-10-05",
+                "kind": "rehab",
+                "label": "Seated Achilles heel movement",
+                "felt": "Better",
+                "next_day": "Same",
+                "counts": false
+              },
+              {
+                "at": "2026-10-05T12:02:00+00:00",
+                "date": "2026-10-05",
+                "kind": "checkin",
+                "label": "Better"
+              },
+              {
+                "at": "2026-10-05T12:01:00+00:00",
+                "date": "2026-10-05",
+                "kind": "checkin",
+                "label": "Better"
+              }
+            ]
           }
         }
       ],
       "live_prescription": {
-        "plan_id": "d27910f2-7f8a-45bb-b5f9-6a652ae3d29f",
-        "training_day": "2026-10-05",
+        "plan_id": "e12c26d5-a0bc-4477-ac0b-d80e01e88dbe",
+        "training_day": "2026-10-06",
         "session": {
-          "calendar_date": "2026-10-05",
-          "weekday": "Monday",
-          "weekday_with_label": "Monday",
-          "day_label": "",
-          "phase": "GPP",
-          "session_id": "rehab-2026-10-05-035281aea20cfa032dde0ede",
-          "session_type": "rehab",
+          "session_id": "rehab-2026-10-06-3874d4208b41011f99f6e2de",
           "title": "Today's rehab",
-          "objective": "Follow the reviewed rehab for your current injury guidance.",
-          "effective_load": "reduced",
-          "contact_level": "none",
+          "session_type": "rehab",
           "blocks": [
             {
               "injury_side": "left",
-              "block_id": "rehab:463e972f-05aa-4a48-bc2c-068c8bc552df:0148b63c-4bd2-4898-b0f3-fc66cc9bba05",
+              "block_id": "rehab:d15e4fa0-706f-4a46-8cfe-7251f4243e1c:a4ad8598-2e23-4698-82b4-1e6f95f530ab",
               "block_type": "rehab",
               "title": "Floor-level controlled Achilles lowering",
               "display_name": "Floor-level controlled Achilles lowering",
@@ -492,8 +445,8 @@
               ],
               "rehab_drill_id": "achilles_tendonitis_eccentric_calf_drops_on_step",
               "exercise_key": "achilles-tendonitis-eccentric-calf-drops-on-step",
-              "injury_id": "463e972f-05aa-4a48-bc2c-068c8bc552df",
-              "injury_episode_id": "0148b63c-4bd2-4898-b0f3-fc66cc9bba05",
+              "injury_id": "d15e4fa0-706f-4a46-8cfe-7251f4243e1c",
+              "injury_episode_id": "a4ad8598-2e23-4698-82b4-1e6f95f530ab",
               "target_regions": [
                 "achilles"
               ],
@@ -573,46 +526,39 @@
             }
           ]
         },
-        "changes": [
-          {
-            "action": "held",
-            "reason": "clinician_clearance_ceiling"
-          },
-          {
-            "block_id": "training",
-            "action": "held",
-            "reason": "no_reviewed_safe_substitution",
-            "restriction_reasons": [
-              "injury_loading_restriction"
-            ]
-          }
-        ],
+        "changes": [],
         "safety_hold": false,
         "frozen": false,
         "engine_version": "2",
         "rehab_only": true,
-        "held_session_id": "training",
+        "held_session_id": null,
         "injury_ids": [
-          "463e972f-05aa-4a48-bc2c-068c8bc552df"
+          "d15e4fa0-706f-4a46-8cfe-7251f4243e1c"
         ],
         "allocation_limit": 2,
         "training_hold_reason": "Your planned training conflicts with the current injury restrictions.",
-        "revision": "62a6a3a780c05a14452daef52d0ad52fd56c87d3a54852f0180f965c35316f99",
+        "training_hold_source": "injury",
+        "revision": "9d6710cf4a44e0395336948fed40dc5d5a981624927761c79998fb7dfb334318",
         "injury_context": [
           {
-            "id": "463e972f-05aa-4a48-bc2c-068c8bc552df",
-            "episode_id": "0148b63c-4bd2-4898-b0f3-fc66cc9bba05",
-            "updated_at": "2026-10-05T12:02:00+00:00"
+            "id": "d15e4fa0-706f-4a46-8cfe-7251f4243e1c",
+            "episode_id": "a4ad8598-2e23-4698-82b4-1e6f95f530ab",
+            "updated_at": "2026-10-05T12:06:00+00:00"
           }
         ],
         "evidence_context": {
-          "exposure_id": null,
-          "event_id": "3b1f5aa1-f324-5087-b62c-16db493bd499"
+          "exposure_id": "bc3f7c1e-e419-563a-9069-d3f71e98223f",
+          "event_id": "fef49ef2-8f8e-5cea-971c-039f57f798b8"
         },
         "readiness_context": {
-          "id": "33e53bcc-33cb-4df4-9927-70ea80a89709",
-          "updated_at": "2026-10-05T12:02:00+00:00"
+          "id": "2baa1d43-2022-4b31-a5e8-ee64bc4843dd",
+          "updated_at": "2026-10-06T12:06:00+00:00"
         }
+      },
+      "session_hold": {
+        "held": false,
+        "reason": null,
+        "source": null
       },
       "exercise_media": {},
       "effective_clinician_clearance": {
@@ -623,8 +569,8 @@
         "requires_update": false,
         "limited_by": [
           {
-            "injury_id": "463e972f-05aa-4a48-bc2c-068c8bc552df",
-            "injury_episode_id": "0148b63c-4bd2-4898-b0f3-fc66cc9bba05",
+            "injury_id": "d15e4fa0-706f-4a46-8cfe-7251f4243e1c",
+            "injury_episode_id": "a4ad8598-2e23-4698-82b4-1e6f95f530ab",
             "label": "Left achilles tendonitis"
           }
         ]
@@ -640,7 +586,7 @@
         {
           "id": "view_plan",
           "label": "View Plan",
-          "route": "/plans/d27910f2-7f8a-45bb-b5f9-6a652ae3d29f"
+          "route": "/plans/e12c26d5-a0bc-4477-ac0b-d80e01e88dbe"
         }
       ]
     },
@@ -652,7 +598,7 @@
           "decisions": []
         },
         "training_habits_revision": 0,
-        "athlete_id": "0ebfdfd4-1c47-4648-914c-7e832c03d91c",
+        "athlete_id": "ff783480-4020-42fb-9fb4-b15732731a68",
         "email": "fixture@example.com",
         "username": null,
         "username_change_history": [],
@@ -696,15 +642,15 @@
         "health_consent_withdrawn_at": null,
         "health_consent_granted": true,
         "created_at": "2026-10-05T12:03:00+00:00",
-        "updated_at": "2026-10-05T12:03:00+00:00"
+        "updated_at": "2026-10-06T12:07:00+00:00"
       },
       "effective_admin": false,
       "latest_intake": null,
       "latest_plan": {
         "custom_plan_id": null,
-        "plan_id": "d27910f2-7f8a-45bb-b5f9-6a652ae3d29f",
+        "plan_id": "e12c26d5-a0bc-4477-ac0b-d80e01e88dbe",
         "plan_name": null,
-        "athlete_id": "0ebfdfd4-1c47-4648-914c-7e832c03d91c",
+        "athlete_id": "ff783480-4020-42fb-9fb4-b15732731a68",
         "full_name": "",
         "fight_date": "",
         "technical_style": [],
@@ -2389,11 +2335,10 @@
     "view": {
       "active_plan": {
         "status": "ready",
-        "phase": "GPP",
-        "id": "3bccf195-c3d0-49d4-b0aa-8f89f548e0f7"
+        "id": "a1ce6231-0d56-484c-a5f0-e5d5e3f88d9c"
       },
       "today": {
-        "training_day": "2026-10-05",
+        "training_day": "2026-10-06",
         "recommendation_state": "modify",
         "recommendation_reason": "Reviewed rehab today\nYour planned training conflicts with the current injury restrictions.\nFollow only the reviewed rehab shown today.",
         "decision_tier": "modify",
@@ -2405,28 +2350,19 @@
         "recommendation_safety_checks": [],
         "recommendation_sources": [
           "today's check-in",
-          "today's planned session",
           "your tracked injuries"
         ],
         "recommendation_confidence": "moderate",
-        "recommendation_confidence_note": "Less to go on today: this is based on today's check-in alone, with no recent days to compare.",
+        "recommendation_confidence_note": "Less to go on today: today's session isn't resolved yet.",
         "primary_safety_notice": null,
         "warnings": [],
         "next_session": {
-          "calendar_date": "2026-10-05",
-          "weekday": "Monday",
-          "weekday_with_label": "Monday",
-          "day_label": "",
-          "phase": "GPP",
-          "session_id": "rehab-2026-10-05-2606da7f5340038262d13456",
-          "session_type": "rehab",
+          "session_id": "rehab-2026-10-06-f37cab8bad01d2e5a98a2bbe",
           "title": "Today's rehab",
-          "objective": "Follow the reviewed rehab for your current injury guidance.",
-          "effective_load": "reduced",
-          "contact_level": "none",
+          "session_type": "rehab",
           "blocks": [
             {
-              "block_id": "rehab:cd5683cf-b774-48d0-8f19-2f6ed2f86c5a:a8db04a8-7e95-4a9d-a4cb-8227a680a655",
+              "block_id": "rehab:414bfcb7-3b57-449c-ac03-e8de9c15ba7f:6120edf2-5fc5-4999-b152-0d0f2922ee55",
               "block_type": "rehab",
               "title": "Seated Achilles heel movement",
               "display_name": "Seated Achilles heel movement",
@@ -2435,8 +2371,8 @@
               ],
               "rehab_drill_id": "achilles_tendonitis_reviewed_restore",
               "exercise_key": "achilles-tendonitis-reviewed-restore",
-              "injury_id": "cd5683cf-b774-48d0-8f19-2f6ed2f86c5a",
-              "injury_episode_id": "a8db04a8-7e95-4a9d-a4cb-8227a680a655",
+              "injury_id": "414bfcb7-3b57-449c-ac03-e8de9c15ba7f",
+              "injury_episode_id": "6120edf2-5fc5-4999-b152-0d0f2922ee55",
               "target_regions": [
                 "achilles"
               ],
@@ -2506,26 +2442,46 @@
       ],
       "open_injuries": [
         {
-          "id": "cd5683cf-b774-48d0-8f19-2f6ed2f86c5a",
-          "athlete_id": "67c5a053-9f6b-48af-ace1-1bb4e3d5e42f",
-          "plan_id": "3bccf195-c3d0-49d4-b0aa-8f89f548e0f7",
+          "id": "414bfcb7-3b57-449c-ac03-e8de9c15ba7f",
+          "athlete_id": "b30b8479-b21a-4fb6-93c9-bdc358984b3a",
+          "plan_id": "a1ce6231-0d56-484c-a5f0-e5d5e3f88d9c",
           "source": "checkin",
           "body_area": "Left Achilles",
           "severity": "mild",
           "status": "monitoring",
           "resolved_at": null,
-          "episode_id": "a8db04a8-7e95-4a9d-a4cb-8227a680a655",
+          "episode_id": "6120edf2-5fc5-4999-b152-0d0f2922ee55",
           "body_region": "achilles",
           "side": "left",
           "description": "tendonitis [achilles_site:midportion]",
           "latest_reported_status": "improving",
           "created_at": "2026-10-05T12:01:00+00:00",
-          "updated_at": "2026-10-05T12:02:00+00:00",
+          "updated_at": "2026-10-05T12:06:00+00:00",
           "surface_class": "non_surface",
           "canonical_location": "achilles",
           "region_group": "lower_leg_foot",
           "load_region": "lower_limb",
           "consequence": "load_sensitive",
+          "assessment_history_complete": true,
+          "progression_assessments": [],
+          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
+          "latest_reported_at": "2026-10-05T12:06:00+00:00",
+          "rehab_improvement_reports": [
+            {
+              "id": "4487a7b4-d79b-4b74-9e88-7aa2fcdc5ee3",
+              "reported_at": "2026-10-05T12:01:00+00:00"
+            },
+            {
+              "id": "03957599-5d8e-4555-99fe-ecba39a62dc3",
+              "reported_at": "2026-10-05T12:02:00+00:00"
+            },
+            {
+              "id": "6137199d-2af4-4b99-9f5a-69a49cb4b6b7",
+              "reported_at": "2026-10-05T12:06:00+00:00"
+            }
+          ],
+          "rehab_improvement_at": "2026-10-05T12:06:00Z",
+          "assessment_setback_at": null,
           "rehab_stage": "restore",
           "rehab_stage_reasons": [
             "symptoms_not_worsening",
@@ -2534,33 +2490,17 @@
           "rehab_care_pathway": "musculoskeletal",
           "rehab_medical_gate": false,
           "label": "Left achilles tendonitis",
-          "assessment_history_complete": true,
-          "progression_assessments": [],
-          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
-          "latest_reported_at": "2026-10-05T12:02:00+00:00",
-          "rehab_improvement_reports": [
-            {
-              "id": "c3b57b6d-4bb7-46e3-a84a-02fd3d879195",
-              "reported_at": "2026-10-05T12:01:00+00:00"
-            },
-            {
-              "id": "18c515ff-5f89-4885-8659-dc0d742f6e75",
-              "reported_at": "2026-10-05T12:02:00+00:00"
-            }
-          ],
-          "rehab_improvement_at": "2026-10-05T12:02:00Z",
-          "assessment_setback_at": null,
           "clinician_clearance": {
-            "episode_id": "a8db04a8-7e95-4a9d-a4cb-8227a680a655",
+            "episode_id": "6120edf2-5fc5-4999-b152-0d0f2922ee55",
             "scopes": [
               "rehab"
             ],
-            "report_id": "b3234e83-cb03-5d5e-b79a-3a733c3e06ae",
-            "reported_at": "2026-10-05T12:03:00+00:00",
+            "report_id": "6213b218-6970-54bf-b2f3-af86843e9f93",
+            "reported_at": "2026-10-06T12:07:00+00:00",
             "source": "athlete_reported",
             "externally_verified": false,
             "scope_reported_at": {
-              "rehab": "2026-10-05T12:03:00+00:00"
+              "rehab": "2026-10-06T12:07:00+00:00"
             },
             "rehabilitation_permission": {
               "schema_version": 1,
@@ -2568,8 +2508,8 @@
             }
           },
           "rehab_decision": {
-            "injury_id": "cd5683cf-b774-48d0-8f19-2f6ed2f86c5a",
-            "injury_episode_id": "a8db04a8-7e95-4a9d-a4cb-8227a680a655",
+            "injury_id": "414bfcb7-3b57-449c-ac03-e8de9c15ba7f",
+            "injury_episode_id": "6120edf2-5fc5-4999-b152-0d0f2922ee55",
             "region": "achilles",
             "injury_type": "tendonitis",
             "stage": "restore",
@@ -2635,7 +2575,7 @@
               "blocked_tags": [],
               "contact_limit": "none"
             },
-            "loading_hold": false,
+            "readiness_hold": false,
             "achilles_load_review": {
               "criterion_id": "achilles_restore_load_review_v1",
               "criterion_version": 1,
@@ -2669,8 +2609,6 @@
               "evidence_ids": [],
               "engine_version": "2",
               "next_transition": {
-                "entry_basis": "reported_clinician_permission",
-                "authority_event_id": "b3234e83-cb03-5d5e-b79a-3a733c3e06ae",
                 "from_stage": "restore",
                 "to_stage": "load",
                 "status": "blocked",
@@ -2702,25 +2640,31 @@
                     "requirement_id": "reviewed_stage_exposure",
                     "kind": "completed_reviewed_exposure",
                     "basis": "data_sufficiency",
-                    "status": "not_applicable",
-                    "reason_code": "prior_stage_work_not_required_for_reported_permission",
-                    "evidence_ids": []
+                    "status": "pass",
+                    "reason_code": "reviewed_stage_work_performed",
+                    "evidence_ids": [
+                      "023367b4-e241-5d2d-8ea8-d307dbbd8302"
+                    ]
                   },
                   {
                     "requirement_id": "during_response_not_worse",
                     "kind": "during_session_response",
                     "basis": "product_safety",
-                    "status": "not_applicable",
-                    "reason_code": "no_prior_rehab_response_to_resolve",
-                    "evidence_ids": []
+                    "status": "pass",
+                    "reason_code": "during_response_better",
+                    "evidence_ids": [
+                      "023367b4-e241-5d2d-8ea8-d307dbbd8302"
+                    ]
                   },
                   {
                     "requirement_id": "next_day_response_not_worse",
                     "kind": "next_day_response",
                     "basis": "product_safety",
-                    "status": "not_applicable",
-                    "reason_code": "no_prior_rehab_response_to_resolve",
-                    "evidence_ids": []
+                    "status": "pass",
+                    "reason_code": "next_day_response_same",
+                    "evidence_ids": [
+                      "023367b4-e241-5d2d-8ea8-d307dbbd8302"
+                    ]
                   },
                   {
                     "requirement_id": "achilles_midportion_reported_load_permission_v1",
@@ -2740,29 +2684,50 @@
             "schedule": {
               "state": "due",
               "reason": "Your baseline rehab is due today; missed work adds no extra volume.",
-              "next_due_day": "2026-10-05"
-            }
+              "next_due_day": "2026-10-06"
+            },
+            "recent_log": [
+              {
+                "at": "2026-10-05T12:06:00+00:00",
+                "date": "2026-10-05",
+                "kind": "checkin",
+                "label": "Better"
+              },
+              {
+                "at": "2026-10-05T12:05:00Z",
+                "date": "2026-10-05",
+                "kind": "rehab",
+                "label": "Seated Achilles heel movement",
+                "felt": "Better",
+                "next_day": "Same",
+                "counts": true
+              },
+              {
+                "at": "2026-10-05T12:02:00+00:00",
+                "date": "2026-10-05",
+                "kind": "checkin",
+                "label": "Better"
+              },
+              {
+                "at": "2026-10-05T12:01:00+00:00",
+                "date": "2026-10-05",
+                "kind": "checkin",
+                "label": "Better"
+              }
+            ]
           }
         }
       ],
       "live_prescription": {
-        "plan_id": "3bccf195-c3d0-49d4-b0aa-8f89f548e0f7",
-        "training_day": "2026-10-05",
+        "plan_id": "a1ce6231-0d56-484c-a5f0-e5d5e3f88d9c",
+        "training_day": "2026-10-06",
         "session": {
-          "calendar_date": "2026-10-05",
-          "weekday": "Monday",
-          "weekday_with_label": "Monday",
-          "day_label": "",
-          "phase": "GPP",
-          "session_id": "rehab-2026-10-05-2606da7f5340038262d13456",
-          "session_type": "rehab",
+          "session_id": "rehab-2026-10-06-f37cab8bad01d2e5a98a2bbe",
           "title": "Today's rehab",
-          "objective": "Follow the reviewed rehab for your current injury guidance.",
-          "effective_load": "reduced",
-          "contact_level": "none",
+          "session_type": "rehab",
           "blocks": [
             {
-              "block_id": "rehab:cd5683cf-b774-48d0-8f19-2f6ed2f86c5a:a8db04a8-7e95-4a9d-a4cb-8227a680a655",
+              "block_id": "rehab:414bfcb7-3b57-449c-ac03-e8de9c15ba7f:6120edf2-5fc5-4999-b152-0d0f2922ee55",
               "block_type": "rehab",
               "title": "Seated Achilles heel movement",
               "display_name": "Seated Achilles heel movement",
@@ -2771,8 +2736,8 @@
               ],
               "rehab_drill_id": "achilles_tendonitis_reviewed_restore",
               "exercise_key": "achilles-tendonitis-reviewed-restore",
-              "injury_id": "cd5683cf-b774-48d0-8f19-2f6ed2f86c5a",
-              "injury_episode_id": "a8db04a8-7e95-4a9d-a4cb-8227a680a655",
+              "injury_id": "414bfcb7-3b57-449c-ac03-e8de9c15ba7f",
+              "injury_episode_id": "6120edf2-5fc5-4999-b152-0d0f2922ee55",
               "target_regions": [
                 "achilles"
               ],
@@ -2824,46 +2789,39 @@
             }
           ]
         },
-        "changes": [
-          {
-            "action": "held",
-            "reason": "clinician_clearance_ceiling"
-          },
-          {
-            "block_id": "training",
-            "action": "held",
-            "reason": "no_reviewed_safe_substitution",
-            "restriction_reasons": [
-              "injury_loading_restriction"
-            ]
-          }
-        ],
+        "changes": [],
         "safety_hold": false,
         "frozen": false,
         "engine_version": "2",
         "rehab_only": true,
-        "held_session_id": "training",
+        "held_session_id": null,
         "injury_ids": [
-          "cd5683cf-b774-48d0-8f19-2f6ed2f86c5a"
+          "414bfcb7-3b57-449c-ac03-e8de9c15ba7f"
         ],
         "allocation_limit": 2,
         "training_hold_reason": "Your planned training conflicts with the current injury restrictions.",
-        "revision": "a25bba6cc1b51a13ba0f4d903810948ee5c25d5220d38462385c61eb3ddb3d36",
+        "training_hold_source": "injury",
+        "revision": "c824e27294178943ab84eaf0e3ebedf2fc793700288bd5b7ddbc343c08c65265",
         "injury_context": [
           {
-            "id": "cd5683cf-b774-48d0-8f19-2f6ed2f86c5a",
-            "episode_id": "a8db04a8-7e95-4a9d-a4cb-8227a680a655",
-            "updated_at": "2026-10-05T12:02:00+00:00"
+            "id": "414bfcb7-3b57-449c-ac03-e8de9c15ba7f",
+            "episode_id": "6120edf2-5fc5-4999-b152-0d0f2922ee55",
+            "updated_at": "2026-10-05T12:06:00+00:00"
           }
         ],
         "evidence_context": {
-          "exposure_id": null,
-          "event_id": "b3234e83-cb03-5d5e-b79a-3a733c3e06ae"
+          "exposure_id": "023367b4-e241-5d2d-8ea8-d307dbbd8302",
+          "event_id": "6213b218-6970-54bf-b2f3-af86843e9f93"
         },
         "readiness_context": {
-          "id": "f144f0b8-0fe6-401b-84a8-365eed04bc68",
-          "updated_at": "2026-10-05T12:02:00+00:00"
+          "id": "b7ac0d68-e40b-4e9d-93ae-9fd998c7eab1",
+          "updated_at": "2026-10-06T12:06:00+00:00"
         }
+      },
+      "session_hold": {
+        "held": false,
+        "reason": null,
+        "source": null
       },
       "exercise_media": {},
       "effective_clinician_clearance": {
@@ -2874,8 +2832,8 @@
         "requires_update": false,
         "limited_by": [
           {
-            "injury_id": "cd5683cf-b774-48d0-8f19-2f6ed2f86c5a",
-            "injury_episode_id": "a8db04a8-7e95-4a9d-a4cb-8227a680a655",
+            "injury_id": "414bfcb7-3b57-449c-ac03-e8de9c15ba7f",
+            "injury_episode_id": "6120edf2-5fc5-4999-b152-0d0f2922ee55",
             "label": "Left achilles tendonitis"
           }
         ]
@@ -2891,7 +2849,7 @@
         {
           "id": "view_plan",
           "label": "View Plan",
-          "route": "/plans/3bccf195-c3d0-49d4-b0aa-8f89f548e0f7"
+          "route": "/plans/a1ce6231-0d56-484c-a5f0-e5d5e3f88d9c"
         }
       ]
     },
@@ -2903,7 +2861,7 @@
           "decisions": []
         },
         "training_habits_revision": 0,
-        "athlete_id": "67c5a053-9f6b-48af-ace1-1bb4e3d5e42f",
+        "athlete_id": "b30b8479-b21a-4fb6-93c9-bdc358984b3a",
         "email": "fixture@example.com",
         "username": null,
         "username_change_history": [],
@@ -2947,15 +2905,15 @@
         "health_consent_withdrawn_at": null,
         "health_consent_granted": true,
         "created_at": "2026-10-05T12:03:00+00:00",
-        "updated_at": "2026-10-05T12:03:00+00:00"
+        "updated_at": "2026-10-06T12:07:00+00:00"
       },
       "effective_admin": false,
       "latest_intake": null,
       "latest_plan": {
         "custom_plan_id": null,
-        "plan_id": "3bccf195-c3d0-49d4-b0aa-8f89f548e0f7",
+        "plan_id": "a1ce6231-0d56-484c-a5f0-e5d5e3f88d9c",
         "plan_name": null,
-        "athlete_id": "67c5a053-9f6b-48af-ace1-1bb4e3d5e42f",
+        "athlete_id": "b30b8479-b21a-4fb6-93c9-bdc358984b3a",
         "full_name": "",
         "fight_date": "",
         "technical_style": [],

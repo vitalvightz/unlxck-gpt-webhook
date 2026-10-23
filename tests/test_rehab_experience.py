@@ -68,6 +68,7 @@ def test_chest_restore_has_no_published_load_through_today_api(monkeypatch):
 @pytest.mark.parametrize("pilot", PILOTS, ids=lambda p: p[0])
 def test_published_load_keeps_exact_prescription_through_today_api(monkeypatch, pilot):
     journey, client = consumer(monkeypatch, pilot)
+    journey.reach_load()
     body = view(client)
     current = decision(body)
     assert current["stage"] == "load"
@@ -106,6 +107,7 @@ def test_missing_permission_pending_response_and_worsening_remain_engine_holds(m
 @pytest.mark.parametrize("url", ["https://www.youtube.com/watch?v=AAAAAAAAAAA", "https://youtu.be/AAAAAAAAAAA", "https://youtube.com/shorts/AAAAAAAAAAA", None, "https://example.com/AAAAAAAAAAA"])
 def test_exact_demo_metadata_does_not_change_prescription_or_completion(monkeypatch, url):
     journey, client = consumer(monkeypatch, PILOTS[0])
+    journey.reach_load()
     before = view(client)
     live = before["live_prescription"]
     block = live["session"]["blocks"][0]
@@ -129,7 +131,8 @@ def test_exact_demo_metadata_does_not_change_prescription_or_completion(monkeypa
             json={**payload, "status": status, **({"rehab_performance": "done_as_shown"} if status == "done" else {})})
         assert response.status_code == 201, response.text
     assert journey.store.rehab_exposures
-    event = next(iter(journey.store.rehab_exposures.values()))["event_json"]
+    event = next(row["event_json"] for row in journey.store.rehab_exposures.values()
+                 if row["event_json"]["drill_id"] == block["rehab_drill_id"])
     assert event["drill_id"] == block["rehab_drill_id"]
     assert event["dose_completed"]["completion_state"] == "quantified"
     for field, value in block["dose"].items():
