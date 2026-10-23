@@ -426,3 +426,23 @@ def test_source_owned_conversion_never_fills_in_missing_open_prescriptions():
     strength = next(session for session in saturday["sessions"] if session["title"] == "Strength")
     assert strength["blocks"][0]["sets"] == 2
     assert strength["blocks"][0]["reps"] == 6
+
+
+def test_open_structured_generation_does_not_make_a_second_model_request():
+    import asyncio
+    from api.stage2_automation import OpenAIStage2Automator
+    from tests.support import FakeOpenAIClient
+
+    brief = _reference_row()["planning_brief"]
+    client = FakeOpenAIClient([])
+    automator = OpenAIStage2Automator(client=client, model="gpt-5-mini")
+    outcome, costs = asyncio.run(automator._generate_structured_outcome(
+        final_plan_text="# Approved training programme",
+        planning_brief=brief,
+        source="quick_build",
+        costs=[],
+    ))
+    assert outcome.status == "valid"
+    assert len(outcome.structured_plan["weeks"]) == 4
+    assert costs == []
+    assert client.responses.calls == []
