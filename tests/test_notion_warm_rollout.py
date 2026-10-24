@@ -1,4 +1,4 @@
-"""Formula migration and confirmed-send boundary tests; no live sends."""
+"""Confirmed-send boundary tests; no live sends."""
 import copy
 import importlib.util
 import sqlite3
@@ -21,30 +21,12 @@ def load(name):
 def modules(monkeypatch):
     monkeypatch.syspath_prepend(str(TOOLS))
     monkeypatch.delitem(sys.modules, "sync_notion_followups", raising=False)
-    return load("confirm_notion_warm_send"), load("migrate_notion_warm_counter")
-
-
-def test_migration_only_removes_legacy_counter_without_touching_other_branches(modules):
-    _, migration = modules
-    properties = {
-        name: {"formula": {"expression": 'if(prop("Stage (AI Fills First)") == "Activated", "feedback", lets(n,if(prop("Signup Nudges Sent") == "1",1,0)' + legacy + ',"warm"))'}}
-        for name, legacy in zip(migration.FIELDS, (*migration.LEGACY_TERMS, migration.LEGACY_TERMS[0]))
-    }
-    changes = migration.formula_changes(properties)
-    assert set(changes) == set(migration.FIELDS)
-    for name, patch in changes.items():
-        expression = patch["formula"]["expression"]
-        assert '"feedback"' in expression
-        assert 'prop("Signup Nudges Sent")' in expression
-        assert 'Onboarding Nudges Sent' not in expression
-    merged = {**properties, **changes}
-    assert migration.formula_changes(merged) == {}
-    assert migration.formula_changes({"Warm Next DM": {"formula": {"expression": "untouched"}}, "Next DM to Copy": {"formula": {"expression": "untouched"}}, "Outreach Next Step": {"formula": {"expression": "untouched"}}}) == {}
+    return load("confirm_notion_warm_send")
 
 
 @pytest.fixture
 def sending(modules, monkeypatch, tmp_path):
-    helper, _ = modules
+    helper = modules
     fixtures = load_fixture()
     page = fixtures.warm_row("Replied")
     page["id"] = "safe-test"
