@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from typing import Iterable, Mapping
 
 from .injury_formatting import format_injury_summary, parse_injury_entry
@@ -866,6 +867,12 @@ def _log_episode_selection(
     )
 
 
+def is_rehab_guidance_name(name: str) -> bool:
+    """Recognize advisory bank entries, including legacy rendered lines."""
+    title = re.split(r"\s+[–—]\s+|:\s+", str(name), maxsplit=1)[0]
+    return bool(re.search(r"\b(?:activity guidance|safety guidance|medical advice|precautions|seek assessment)\b", title, re.I))
+
+
 def _reviewed_episode_option(episode: dict, location: str | None, phase: str):
     """Use the same published decision as Today; missing policy grants no exercise."""
     from .rehab_clinical import load_clinical_policies
@@ -896,7 +903,17 @@ def _reviewed_episode_option(episode: dict, location: str | None, phase: str):
     amount = f"{dose['reps']} reps" if "reps" in dose else f"{dose['duration_seconds']:g} seconds" if "duration_seconds" in dose else "Self-paced movement within comfort"
     if dose.get("sets") is not None:
         amount = f"{dose['sets']} x {amount}"
-    notes = f"{amount}. {prescription['instructions']} Stop: {'; '.join(prescription['stop_when'])}"
+    instructions = prescription["instructions"].strip()
+    stops = list(dict.fromkeys(rule.strip() for rule in prescription["stop_when"] if rule.strip()))
+    extra_stops = [rule for rule in stops if rule.casefold() not in instructions.casefold()]
+    notes = f"{amount}. {instructions}"
+    if extra_stops:
+        notes += " Stop: " + "; ".join(extra_stops)
+    if is_rehab_guidance_name(prescription["drill"]["name"]):
+        # Advice stays in the rehab section's informational summary, never a
+        # selected drill or session member. Preserve every distinct stop rule.
+        guidance = instructions + (" " + " ".join(extra_stops) if extra_stops else "")
+        return {"decision": {**decision, "summary": guidance}, "line": None, "drill": None}
     return {"decision": decision, "line": (prescription["drill"]["name"], notes), "drill": prescription["drill"]}
 
 

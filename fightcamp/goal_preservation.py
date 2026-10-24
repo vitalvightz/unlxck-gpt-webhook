@@ -1861,7 +1861,35 @@ def validate_goal_preservation(brief: dict) -> list[dict]:
     if not goals:
         return []
     if brief.get("payload_variant") == "open_ongoing_stage2_payload" and not brief.get("goal_preservation_version"):
-        return []
+        spec = brief.get("open_plan_spec") or {}
+        coverage = spec.get("goal_coverage") or []
+        errors = []
+        for goal, priority in goals:
+            rows = [row for row in coverage if row.get("goal") == goal]
+            row = rows[0] if len(rows) == 1 else {}
+            # The canonical contract is evaluated before the weekday projection,
+            # while causal restrictions and effective doses are still available.
+            # A valid deferral intentionally has no satisfied training exposure.
+            valid = (len(rows) == 1 and row.get("priority") == priority
+                     and row.get("contract_errors") == [])
+            if row.get("state") == "defer":
+                valid = valid and bool(row.get("constraints"))
+            else:
+                valid = (valid and row.get("state") in {"build", "maintain"}
+                         and bool(row.get("satisfied")) and bool(row.get("evidence")))
+            if valid and row.get("state") != "defer":
+                sessions = [(week.get("week"), session)
+                            for week in (spec.get("weekly_session_plan") or {}).get("weeks") or []
+                            for session in week.get("sessions") or []]
+                valid = all(any(
+                    evidence.get("week") == week and evidence.get("weekday") == session.get("weekday")
+                    and any(exercise.get("name") == evidence.get("name") for exercise in session.get("exercises") or [])
+                    for week, session in sessions) for evidence in row["evidence"])
+            if not valid:
+                errors.append({"code": "goal_preservation_failed", "goal": goal,
+                               "message": "Open plan lacks justified deterministic goal coverage.",
+                               "severity": "blocker", "confidence": "high"})
+        return errors
     # A resolved dated payload that carries goal-preservation entries must also
     # carry the current contract version before publication validation. Without
     # this, a brief with valid-looking states/evidence but a missing or stale

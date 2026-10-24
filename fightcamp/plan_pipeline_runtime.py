@@ -274,28 +274,29 @@ def build_runtime_context(
     injury_restrictions = [dict(entry) for entry in plan_input.restrictions]
     triage_mode = str((triage_summary or {}).get("mode") or "").strip().lower()
     neutralize_non_limiting_injuries = is_approved_triage_resume or triage_mode == "full_plan"
+    from .injury_awareness import is_awareness_only
+
+    def awareness_only(entry: dict) -> bool:
+        return is_awareness_only(entry) and not entry.get("avoid")
+
     non_limiting_injuries: list[dict] = []
     if neutralize_non_limiting_injuries:
         non_limiting_injuries = [
             entry
             for entry in parsed_injuries
-            if entry.get("training_impact") == "not_limiting"
+            if awareness_only(entry)
         ]
         # Triage runs against the untouched intake first. Once it has either
         # cleared normal planning or an admin has approved a resumable hold, a
-        # non-limiting injury cannot influence selection, rehab, copy, or Stage
-        # 2 through parsed/raw intake paths. Medical holds and every other
+        # non-limiting injury without independent restrictions is awareness
+        # only. Medical holds and every other
         # non-full-plan triage outcome remain unchanged.
         parsed_injuries = [
             entry
             for entry in parsed_injuries
-            if entry.get("training_impact") != "not_limiting"
+            if not awareness_only(entry)
         ]
-        injury_restrictions = [
-            entry
-            for entry in injury_restrictions
-            if entry.get("training_impact") != "not_limiting"
-        ]
+        # Explicit movement/clinician restrictions override self-reported ability.
 
     parsed_injury_phrases = [
         entry.get("original_phrase")
@@ -380,7 +381,7 @@ def build_runtime_context(
         effective_guided_injuries = [
             item
             for item in source_guided_injuries
-            if "[training_impact:not_limiting]" not in item.notes.lower()
+            if not awareness_only(_serialize_guided_injury(item))
         ]
 
     guided_injury = None if is_approved_triage_resume else (

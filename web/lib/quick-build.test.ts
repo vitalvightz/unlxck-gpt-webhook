@@ -395,3 +395,40 @@ test("quick build keeps the saved profile timezone instead of the device zone", 
   const firstTime = quickBuildToPlanRequest(buildValidInput(), { savedTimeZone: "" });
   assert.equal(firstTime.athlete.athlete_timezone, emptyPlanRequest().athlete.athlete_timezone);
 });
+
+for (const impact of ["not_limiting", "limiting", "cant_train"] as const) {
+  test(`Quick Build persists and reloads the Camp Setup ${impact} choice`, () => {
+    const request = quickBuildToPlanRequest({ ...buildValidInput(), injuries: "Sometimes my left knee hurts", injury_impact: impact });
+    assert.match(request.injuries ?? "", new RegExp(`\\[training_impact:${impact}\\]`));
+    const resumed = planRequestToQuickBuildInput(request);
+    assert.equal(resumed.injuries, "Sometimes my left knee hurts");
+    assert.equal(resumed.injury_impact, impact);
+  });
+}
+
+test("Quick Build reuses onboarding impact and retains original symptoms and clinician restrictions when updated", () => {
+  const request = emptyPlanRequest();
+  request.guided_injuries = [{ area: "Left shoulder", severity: "low", trend: "stable",
+    notes: "Original tightness [training_impact:not_limiting]", avoid: "overhead pressing", injury_type: "tightness" }];
+  const input = planRequestToQuickBuildInput(request);
+  assert.equal(input.injury_impact, "not_limiting");
+  const updated = quickBuildToPlanRequest({ ...input, injury_impact: "limiting" });
+  assert.equal(updated.guided_injuries?.[0].avoid, "overhead pressing");
+  assert.equal(updated.guided_injuries?.[0].notes, "Original tightness [training_impact:limiting]");
+});
+
+for (const impact of ["not_limiting", "limiting", "cant_train"] as const) {
+  test(`changing impact to ${impact} preserves high clinical severity and restrictions`, () => {
+    const request = emptyPlanRequest();
+    request.guided_injuries = [{ area: "Left shoulder", severity: "high", trend: "worse",
+      notes: "Clinician assessment: fracture [training_impact:cant_train]", avoid: "overhead pressing",
+      injury_type: "fracture", cleared: "no" }];
+    const original = structuredClone(request.guided_injuries[0]);
+    const updated = quickBuildToPlanRequest({ ...planRequestToQuickBuildInput(request), injury_impact: impact });
+    assert.deepEqual(updated.guided_injuries?.[0], {
+      ...original, notes: `Clinician assessment: fracture [training_impact:${impact}]`,
+    });
+    assert.deepEqual(request.guided_injuries[0], original);
+    assert.equal(planRequestToQuickBuildInput(updated).guided_injuries?.[0].severity, "high");
+  });
+}
