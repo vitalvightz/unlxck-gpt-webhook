@@ -564,7 +564,9 @@ def _extract_guided_injuries(data: dict) -> list[GuidedInjury]:
 def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, str | None]], list[ParsedRestriction]]:
     injuries: list[dict[str, str | None]] = []
     restrictions: list[ParsedRestriction] = []
-    is_not_limiting = "[training_impact:not_limiting]" in guided_injury.notes.lower()
+    from .injury_awareness import reported_training_impact
+    training_impact = reported_training_impact({"notes": guided_injury.notes})
+    is_not_limiting = training_impact == "not_limiting"
 
     if guided_injury.area:
         injury_entry = parse_injury_entry(guided_injury.area)
@@ -610,6 +612,8 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
 
         if guided_injury.notes:
             injury_entry["notes"] = guided_injury.notes
+            if training_impact:
+                injury_entry["training_impact"] = training_impact
             if is_not_limiting:
                 # Keep the athlete's explicit onboarding impact choice attached
                 # to the parsed record.  The approved-resume runtime can then
@@ -1031,6 +1035,7 @@ class PlanInput:
         injuries = normalize_injury_text(
             get_value("Any injuries or areas you need to work around?", fields)
         )
+        raw_training_impact = ""
         guided_injuries = _extract_guided_injuries(data)
         if guided_injuries:
             guided_injury = guided_injuries[0]
@@ -1042,8 +1047,26 @@ class PlanInput:
                 parsed_injuries, parsed_restrictions = _parse_guided_injury(guided_injury)
             else:
                 guided_injuries = []
-                parsed_injuries, parsed_restrictions = parse_injuries_and_restrictions(injuries or "")
+                from .injury_awareness import reported_training_impact
+                impact = raw_training_impact = reported_training_impact({"notes": injuries})
+                symptom_text = re.sub(r"\s*\[training_impact:[^\]]*\]", "", injuries or "", flags=re.I)
+                parsed_injuries, parsed_restrictions = parse_injuries_and_restrictions(symptom_text)
+                if impact:
+                    for entry in parsed_injuries:
+                        entry["training_impact"] = impact
+                        entry["notes"] = f"[training_impact:{impact}]"
         parsed_injuries = _attach_severity_provenance(parsed_injuries)
+        if raw_training_impact:
+            # Match Camp Setup's compatibility bands only after clinical text
+            # and injury-type severity are resolved. Never soften that evidence.
+            reported_band = {"not_limiting": "low", "limiting": "moderate", "cant_train": "high"}[raw_training_impact]
+            bands = {"low": 0, "moderate": 1, "high": 2}
+            for entry in parsed_injuries:
+                if bands[reported_band] > bands.get(str(entry.get("severity") or "moderate"), 1):
+                    entry["severity"] = reported_band
+                    entry["severity_source"] = "athlete_training_impact"
+                    entry["severity_evidence"] = [*(entry.get("severity_evidence") or []),
+                                                  f"training impact: {raw_training_impact}"]
         training_days = [d.strip() for d in raw_available_days.split(",") if d.strip()]
         hard_sparring_days = [
             d.strip() for d in values["hard_sparring_days_raw"].split(",") if d.strip()

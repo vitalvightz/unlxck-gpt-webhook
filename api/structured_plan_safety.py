@@ -426,6 +426,19 @@ def detect_minor_guidance_leakage_findings(
     return detect_minor_guidance_leakage(structured_plan, is_minor=True)
 
 
+def detect_guidance_exercise_blocks(plan: dict) -> list[str]:
+    """An advisory bank entry is never executable, even with invented reps."""
+    from fightcamp.rehab_protocols import is_rehab_guidance_name
+    findings = []
+    for week in plan.get("weeks") or []:
+        for day in week.get("days") or []:
+            for session in day.get("sessions") or []:
+                for block in session.get("blocks") or []:
+                    if is_rehab_guidance_name(block.get("display_name", "")):
+                        findings.append(f"{CONFLICT}: medical guidance presented as exercise: {block.get('display_name')}")
+    return findings
+
+
 def audit_structured_plan(structured_plan: dict, computed_support: dict | None = None) -> list[str]:
     """Run all safety audits, returning prefixed finding strings.
 
@@ -435,6 +448,7 @@ def audit_structured_plan(structured_plan: dict, computed_support: dict | None =
     """
     try:
         findings: list[str] = []
+        findings.extend(detect_guidance_exercise_blocks(structured_plan))
         findings.extend(detect_coach_gated_leakage(structured_plan, computed_support))
         findings.extend(detect_minor_guidance_leakage_findings(structured_plan, computed_support))
         findings.extend(detect_computed_support_conflicts(structured_plan, computed_support))

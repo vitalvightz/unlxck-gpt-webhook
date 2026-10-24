@@ -517,7 +517,7 @@ def test_payload_test_oracles_survived_the_dedupe():
 
 
 
-def test_generic_and_crowded_week_injury_semantics_remain_distinct():
+def test_generic_and_crowded_week_require_evidenced_injury_limitation():
     from fightcamp import athlete_model, stage2_role_map
     from fightcamp.training_context import TrainingContext
 
@@ -564,7 +564,7 @@ def test_generic_and_crowded_week_injury_semantics_remain_distinct():
     )
 
     assert "injury_management" in athlete["readiness_flags"]
-    assert stage2_role_map._compute_readiness_compression(athlete) == 1
+    assert stage2_role_map._compute_readiness_compression(athlete) == 0
     policy = stage2_role_map._boxing_crowded_week_policy_state(
         {"declared_hard_sparring_days": []}, athlete
     )

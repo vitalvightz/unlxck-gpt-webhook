@@ -1847,7 +1847,18 @@ def validate_goal_preservation(brief: dict) -> list[dict]:
     if not goals:
         return []
     if brief.get("payload_variant") == "open_ongoing_stage2_payload" and not brief.get("goal_preservation_version"):
-        return []
+        spec = brief.get("open_plan_spec") or {}
+        coverage = spec.get("goal_coverage") or []
+        errors = []
+        for goal, _ in goals:
+            rows = [row for row in coverage if row.get("goal") == goal]
+            if len(rows) != 1 or not rows[0].get("satisfied") or (
+                rows[0].get("state") == "defer" and not rows[0].get("constraints")
+            ):
+                errors.append({"code": "goal_preservation_failed", "goal": goal,
+                               "message": "Open plan lacks justified deterministic goal coverage.",
+                               "severity": "blocker", "confidence": "high"})
+        return errors
     # A resolved dated payload that carries goal-preservation entries must also
     # carry the current contract version before publication validation. Without
     # this, a brief with valid-looking states/evidence but a missing or stale

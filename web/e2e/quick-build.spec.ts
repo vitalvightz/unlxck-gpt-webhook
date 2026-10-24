@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { isolateFromNetwork } from "./support";
 
@@ -85,11 +86,25 @@ for (const width of [320, 390, 430, 1280]) {
       await page.getByRole("checkbox", { name: /No scheduled fight/ }).check();
       await page.locator(".quick-build-equipment-details summary").click();
       await expectFits(page, width);
+      await page.locator("#qb-injuries").fill("Sometimes my left knee hurts");
+      const impact = page.getByRole("group", { name: "How much is it affecting you?" });
+      await expect(impact.getByRole("button")).toHaveCount(3);
+      await impact.getByRole("button", { name: "Not limiting me", exact: true }).click();
+      await expect(impact.getByRole("button", { name: "Not limiting me", exact: true })).toHaveAttribute("aria-pressed", "true");
+      await impact.getByRole("button", { name: "Limiting me", exact: true }).focus();
+      await page.keyboard.press("Space");
+      await expect(impact.getByRole("button", { name: "Limiting me", exact: true })).toHaveAttribute("aria-pressed", "true");
+      await impact.getByRole("button", { name: "Not limiting me", exact: true }).click();
+      const accessibility = await new AxeBuilder({ page }).include(".injury-severity-chips").analyze();
+      expect(accessibility.violations).toEqual([]);
+      await impact.screenshot({ path: `/tmp/quick-build-impact-${width}.png` });
+      await expectFits(page, width);
       await page.screenshot({ path: `/tmp/quick-build-${width}.png`, fullPage: true });
       await page.getByRole("button", { name: "Generate Plan", exact: true }).click();
       await expect(page).toHaveURL(/\/generate$/);
       expect(writes).toHaveLength(1);
       expect(writes[0].onboarding_draft).toMatchObject({ plan_source: "quick_build", equipment_preset: "full_gym", training_preset: "five_days", focus_preset: "explosive_power", weekly_training_frequency: 5 });
+      expect(writes[0].onboarding_draft).toMatchObject({ injuries: "Sometimes my left knee hurts [training_impact:not_limiting]" });
       expect(errors).toEqual([]);
     } finally {
       await context.close();

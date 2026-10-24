@@ -835,7 +835,7 @@ def test_approved_resume_excludes_non_limiting_injury_from_generation_context():
         "area": "hip flexor",
         "severity": "low",
         "trend": "stable",
-        "avoid": "deep hip flexion",
+        "avoid": "",
         "notes": "mild tightness [training_impact:not_limiting]",
     }
 
@@ -885,7 +885,7 @@ def test_full_plan_triage_excludes_non_limiting_injury_from_generation_context()
         "area": "hip flexor",
         "severity": "low",
         "trend": "stable",
-        "avoid": "deep hip flexion",
+        "avoid": "",
         "notes": "mild tightness [training_impact:not_limiting]",
     }
 
