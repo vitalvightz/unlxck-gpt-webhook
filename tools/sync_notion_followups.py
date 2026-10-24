@@ -529,7 +529,10 @@ def stage_changes(page, now):
     if stage != observed or not p["Observed Since"].get("date"):
         return {"Observed Stage": rich(stage),
                 "Observed Since": {"date": {"start": now.isoformat(timespec="seconds")}}}
-    # The Notion schema may lack this legacy field. Never infer or write\n    # historical stage transitions without its confirmed baseline.\n    if "Confirmed Stage" not in p:\n        return {}\n    confirmed = plain(p, "Confirmed Stage")
+    # Skip stage-history writes if the legacy schema field is absent.
+    if "Confirmed Stage" not in p:
+        return {}
+    confirmed = plain(p, "Confirmed Stage")
     first_seen = datetime.fromisoformat(
         p["Observed Since"]["date"]["start"].replace("Z", "+00:00"))
     # General page edits can delay confirmation; they cannot prove stage continuity.
