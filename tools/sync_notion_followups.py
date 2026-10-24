@@ -4,7 +4,8 @@ Run every two minutes using a single server-side timer. Reuse the existing
 server-side outreach qualification worker's Notion integration and credentials.
 """
 
-import fcntl
+import hashlib
+from pathlib import Path
 import json
 import os
 import random
@@ -31,8 +32,29 @@ WARM_STAGES = ("Replied", "Accepted", "Activated")
 # New warm follow-up counters are independent of the original cold DM counter.
 WARM_COUNTERS = (
     ("Replied", "Signup Nudges Sent", "Synced Signup Nudges Sent", "Signup Nudge 1 At"),
-    ("Accepted", "Onboarding Nudges Sent", "Synced Onboarding Nudges Sent", "Onboarding Nudge 1 At"),
 )
+
+# Approved scripts from the outreach SOP; select by shared sequence position.
+WARM_MESSAGES = {
+    "Replied": (
+        "Hey mate, just checking you got the beta link. Any issues signing up? Happy to help.",
+        "Final check mate. Still keen to test Unlxck? Here is the link again: https://unlxck.com/signup. No pressure either way.",
+    ),
+    "Accepted": (
+        "Hey mate, were you able to get into Unlxck? If anything is stopping you getting started, let me know.",
+        "Quick final check mate. Still keen to give Unlxck a try? I can help you get started. No worries if timing is off.",
+    ),
+}
+# Opaque hashes keep historical CRM identifiers out of the public source tree.
+WARM_REVIEW_IDS = frozenset(json.loads(
+    Path(__file__).with_name("notion_warm_review.json").read_text())["page_id_sha256"])
+WARM_REVIEW = "Needs Review: historical warm count requires Instagram verification"
+
+
+def warm_review(page):
+    identity = page["id"].replace("-", "").lower()
+    return hashlib.sha256(identity.encode()).hexdigest() in WARM_REVIEW_IDS
+
 
 # Only the Contacted stage produces automatic follow-up sends.
 # A blank due date for an exception/terminal stage is intentional; Timing explains why.
@@ -224,16 +246,19 @@ def get_changes(page, today, previous=None):
         warm_changes = get_warm_changes(page, today, previous=previous)
         changes.update(warm_changes)
         due, status = warm_schedule({**p, **warm_changes}, now)
-        preview = p["Next DM to Copy"].get("formula") or {}
-        if preview.get("type") != "string" or preview.get("string") is None:
-            raise ValueError(f"Missing calculated next DM preview for {page['id']}")
-        # Keep the rich-text copy current even before the suggested due date.
-        # The formula chooses the message and enforces stage/count safeguards;
-        # the worker continues to own timestamps, dates, and sent counters.
-        candidate = preview["string"]
-        sendable_prefixes = ("Hey mate,", "Final check mate.", "Quick final check mate.",
-                             "How have your", "Any quick thoughts")
-        message = candidate if due and candidate.startswith(sendable_prefixes) else ""
+        stage = (p["Stage (AI Fills First)"].get("select") or {}).get("name")
+        if stage in WARM_MESSAGES:
+            if warm_review(page):
+                due, status = None, WARM_REVIEW
+            count, _, error = warm_nudge_progress({**p, **warm_changes})
+            message = WARM_MESSAGES[stage][count] if due and not error and count in (0, 1) else ""
+        else:
+            # Activated keeps its existing feedback formula and safeguards.
+            preview = p["Next DM to Copy"].get("formula") or {}
+            if preview.get("type") != "string" or preview.get("string") is None:
+                raise ValueError(f"Missing calculated next DM preview for {page['id']}")
+            candidate = preview["string"]
+            message = candidate if due and candidate.startswith(("How have your", "Any quick thoughts")) else ""
     # A poll missed one or more intermediate send events. Never infer their
     # dates, and never show potentially premature sendable copy.
     if (p["Stage (AI Fills First)"].get("select") or {}).get("name") == "Contacted" and increased and not consecutive:
@@ -263,7 +288,7 @@ def elapsed_due(value, days):
 
 
 def warm_schedule(properties, now):
-    """Return only scheduling state; message content remains in existing formulas."""
+    """Schedule shared warm nudges and the unchanged Activated feedback sequence."""
     stage = (properties["Stage (AI Fills First)"].get("select") or {}).get("name")
     if stage == "Activated":
         if (properties.get("Feedback Submitted", {}).get("number") or 0) > 0:
@@ -288,8 +313,7 @@ def warm_schedule(properties, now):
             return None, "Signup complete"
         if not signup and properties.get("Onboarding Complete", {}).get("checkbox"):
             return None, "Onboarding complete"
-        # One details DM starts one two-follow-up sequence. Counters retain
-        # the stage of each actual send; stage progression must not reset it.
+        # One details DM starts one shared sequence across both warm stages.
         root = date_value(properties, "Details Sent At")
         if not root:
             if properties.get("Details Sent", {}).get("checkbox"):
@@ -309,6 +333,9 @@ def warm_schedule(properties, now):
 
 def warm_nudge_progress(properties):
     """Count actual signup/getting-started sends without mirroring history."""
+    legacy = (properties.get("Onboarding Nudges Sent", {}).get("select") or {}).get("name")
+    if legacy not in (None, "0") or date_value(properties, "Onboarding Nudge 1 At"):
+        return None, None, "Needs Review: legacy onboarding history requires reconciliation"
     total = 0
     first_dates = []
     for _, counter, checkpoint, first_field in WARM_COUNTERS:
@@ -353,7 +380,7 @@ def get_warm_changes(page, today, previous=None):
         if not last or parse_stamp(value).astimezone(timezone.utc) > parse_stamp(last).astimezone(timezone.utc):
             changes["Warm Last Nudge At"] = date_patch(value)
 
-    for _, count_field, synced_field, first_field in WARM_COUNTERS:
+    for _, count_field, synced_field, first_field in (() if warm_review(page) else WARM_COUNTERS):
         count_name = (p[count_field].get("select") or {}).get("name") or "0"
         synced = p[synced_field].get("number")
         if count_name not in ("0", "1", "2") or synced not in (None, 0, 1, 2):
@@ -373,7 +400,7 @@ def get_warm_changes(page, today, previous=None):
             elif count == 2 and first:
                 record_last(now)
         # Do not checkpoint a jump/reversal: the inconsistency must persist.
-        # Counter identities keep sends attributable even after stage changes.
+        # The shared checkpoint survives stage changes and duplicate polls.
 
     requested = date_value({**p, **changes}, "Feedback Requested At")
     if stage == "Activated" and p.get("Feedback Reminder Sent", {}).get("checkbox") and requested:
@@ -627,6 +654,8 @@ def sync_scorecard():
     return total, updated
 
 def run():
+    import fcntl  # Host timer lock; keep calculation/helpers importable on Windows.
+
     if not notion_token():
         sys.exit("Expose the existing qualification worker Notion token as NOTION_TOKEN or NOTION_API_KEY (never commit it).")
     # Keep overlapping invocations of the existing worker from dating one send twice.
