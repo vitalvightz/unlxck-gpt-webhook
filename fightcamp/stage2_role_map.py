@@ -2189,6 +2189,7 @@ def _make_compression_suppression(role: dict, reason_codes: list[str], summary: 
         "reasons": [summary],
         "governance": dict(role.get("governance", {})),
         "intentional_compression": True,
+        "reason_codes": list(reason_codes),
         "compression_reason_codes": list(reason_codes),
         "compression_summary": summary,
     }
@@ -2257,20 +2258,16 @@ def _cut_severity_compression_points(athlete_model: dict) -> int:
 
 
 def _active_injury_is_moderate_plus(athlete_model: dict) -> bool:
-    """Preserve the generic readiness rule: any non-surface active injury counts."""
-    # Generic readiness compression intentionally counts any active non-surface
-    # injury, including mild injury. Stable surface-only issues remain hygiene /
-    # friction constraints and do not add generic compression pressure.
-    if _all_active_injuries_surface_only(athlete_model):
-        return False
-    if athlete_model.get("injuries"):
-        return True
-    readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
-    return "injury_management" in readiness_flags
+    """Symptoms alone do not establish a whole-programme load limitation.
+
+    Use the existing severity-aware policy; exercise-specific restrictions
+    remain authoritative in candidate selection and calendar legality.
+    """
+    return _boxing_crowded_week_injury_is_moderate_plus(athlete_model)
 
 
 def _boxing_crowded_week_injury_is_moderate_plus(athlete_model: dict) -> bool:
-    """Severity-aware injury signal used only by boxing crowded-week policy."""
+    """Shared severity-aware signal for normal role-budget policies."""
     readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
     if readiness_flags & {
         "moderate_injury",
@@ -2298,6 +2295,11 @@ def _boxing_crowded_week_injury_is_moderate_plus(athlete_model: dict) -> bool:
             entry for entry in injury_restrictions if isinstance(entry, dict)
         )
 
+    from .injury_awareness import reported_training_impact, is_awareness_only
+    structured_entries = [entry for entry in structured_entries
+                          if not is_awareness_only(entry)]
+    if any(reported_training_impact(entry) == "cant_train" for entry in structured_entries):
+        return True
     structured_severities = {
         str(entry.get("severity") or "").strip().lower()
         for entry in structured_entries
@@ -3199,6 +3201,7 @@ def _apply_high_fatigue_week_compression(
                 "preferred_system": role.get("preferred_system", ""),
                 "reasons": [summary],
                 "governance": dict(role.get("governance", {})),
+                "reason_codes": list(reason_codes),
                 "compression_reason_codes": list(reason_codes),
                 "compression_summary": summary,
             }

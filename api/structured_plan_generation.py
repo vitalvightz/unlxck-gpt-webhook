@@ -2991,6 +2991,25 @@ def planner_sc_coverage_losses(
     the shared identity rule, or an otherwise-unclaimed session of the same
     session type, also represents it.
     """
+    if isinstance(plan_dict, dict) and isinstance(planning_brief, dict):
+        programmed = (planning_brief.get("open_plan_spec") or {}).get("weekly_session_plan") or {}
+        if programmed.get("authority") == "deterministic_open_development_block":
+            losses = []
+            expected_weeks = {week.get("week"): week for week in programmed.get("weeks") or []}
+            for position, week in enumerate(plan_dict.get("weeks") or [], 1):
+                expected = expected_weeks.get(week.get("week_index") or position, {})
+                for session in expected.get("sessions") or []:
+                    weekday = _normalize_weekday(session.get("weekday"))
+                    actual_names = set()
+                    for day in week.get("days") or []:
+                        if _normalize_weekday(day.get("weekday")) == weekday:
+                            for actual in day.get("sessions") or []:
+                                for block in actual.get("blocks") or []:
+                                    actual_names.update(exercise_name_forms(block.get("display_name")))
+                    for exercise in session.get("exercises") or []:
+                        if not actual_names.intersection(exercise_name_forms(exercise.get("name"))):
+                            losses.append(f"planner_coverage: open week {position} {weekday} lost {exercise.get('name')}")
+            return losses
     roles_by_dday = _planner_sc_roles_by_dday(planning_brief)
     if not isinstance(plan_dict, dict) or not isinstance(planning_brief, dict) or not raw_markdown.strip():
         return []
@@ -3717,6 +3736,7 @@ SAFETY AND SUPPORT
 - red_flag_rules contain stop/modify/report rules only. Separate display_text
   from machine metric/operator/threshold/logic. threshold is a number; omit it
   for nonnumeric triggers. Never lose safety thresholds while shortening copy.
+- Medical advice, activity guidance and precautions belong once in injury plan_notes or red_flag_rules, never in executable session blocks. Do not duplicate the same warning across these fields.
 - plan_notes holds stated plan-level context outside weeks. category:
   weight_cut|injury|nutrition|training|recovery|general. No duplicate warnings.
 - Computed support owns risk bands and mindset classification. Weight-cut

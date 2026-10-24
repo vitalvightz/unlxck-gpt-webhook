@@ -1,5 +1,6 @@
 "use client";
 
+import { INJURY_IMPACT_OPTIONS } from "@/lib/injury-impact";
 import { ActionLink } from "@/components/action-link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -1144,10 +1145,22 @@ function QuickBuildFormInner() {
           <textarea
             id="qb-injuries"
             value={input.injuries}
+            readOnly={Boolean(input.guided_injuries?.length)}
             onChange={(event) => patch("injuries", event.target.value)}
             placeholder="Example: Left knee sprain. Avoid jumping and hard pivots for 2 weeks."
           />
-          <p className="muted">Be specific. Include body area, injury type, and what to avoid.</p>
+          {input.guided_injuries?.length ? <p className="muted">
+            Saved injury details. Update training impact below, or <a href="/onboarding?from=quick_build">edit injury details</a>.
+          </p> : <p className="muted">Be specific. Include body area, injury type, and what to avoid.</p>}
+          {input.injuries.trim() ? <div className="gi-field">
+            <span id="qb-injury-impact" className="gi-label">How much is it affecting you?</span>
+            <div className="injury-severity-chips" role="group" aria-labelledby="qb-injury-impact">
+              {INJURY_IMPACT_OPTIONS.map(option => <button key={option.value} type="button"
+                className={`injury-severity-chip ${input.injury_impact === option.value ? `injury-severity-chip-${option.guidedSeverity}` : ""}`.trim()}
+                aria-pressed={input.injury_impact === option.value}
+                onClick={() => patch("injury_impact", option.value)}>{option.label}</button>)}
+            </div>
+          </div> : null}
         </div> : <p className="muted">{HEALTH_CONSENT_BLOCKED_MESSAGE}</p>}
       </article>
 

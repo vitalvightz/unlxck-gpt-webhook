@@ -20,6 +20,8 @@ import { getSparringConsistency, HARD_SPARRING_DAY_CAP } from "@/lib/training-sc
 import { buildAthleteInjuryTexts } from "@/lib/guided-injury";
 import type { PlanRequest } from "@/lib/types";
 
+import { readInjuryImpact, writeInjuryImpact, type InjuryImpact } from "@/lib/injury-impact";
+
 export const QUICK_BUILD_KEY_GOAL_CAP = 3;
 export const QUICK_BUILD_WEAK_AREA_CAP = 2;
 const ROUNDS_FORMAT_PATTERN = /^\d+\s*[xX]\s*\d+$/;
@@ -40,6 +42,8 @@ export type QuickBuildInput = {
   key_goals: string[];
   weak_areas: string[];
   injuries: string;
+  injury_impact?: InjuryImpact | "";
+  guided_injuries?: PlanRequest["guided_injuries"];
 };
 
 export function emptyQuickBuildInput(fullName = ""): QuickBuildInput {
@@ -62,6 +66,7 @@ export function emptyQuickBuildInput(fullName = ""): QuickBuildInput {
 }
 
 export function planRequestToQuickBuildInput(plan: PlanRequest): QuickBuildInput {
+  const guidedInjuries = plan.guided_injuries?.length ? plan.guided_injuries : plan.guided_injury ? [plan.guided_injury] : [];
   const trainingAvailability = retainKnownOptionValues(
     plan.training_availability ?? [],
     TRAINING_AVAILABILITY_OPTIONS,
@@ -113,7 +118,12 @@ export function planRequestToQuickBuildInput(plan: PlanRequest): QuickBuildInput
     // stable). Type: surface_injury. Surface: bruise..."), not their own words.
     // Show what they actually typed; fall back to the free-text field only when
     // there are no structured guided injuries to draw from.
-    injuries: buildAthleteInjuryTexts(plan.guided_injuries) || (plan.injuries ?? "").trim(),
+    injuries: writeInjuryImpact(buildAthleteInjuryTexts(guidedInjuries) || (plan.injuries ?? "").trim(), ""),
+    injury_impact: guidedInjuries.length
+      ? (new Set(guidedInjuries.map(injury => readInjuryImpact(injury.notes ?? "")?.value ?? "")).size === 1
+        ? readInjuryImpact(guidedInjuries[0].notes ?? "")?.value ?? "" : "")
+      : readInjuryImpact(plan.injuries ?? "")?.value ?? "",
+    guided_injuries: guidedInjuries,
   };
 }
 
@@ -257,7 +267,13 @@ export function quickBuildToPlanRequest(
       canonicalizeEquipmentAccessValues(input.equipment_access),
       EQUIPMENT_ACCESS_OPTIONS,
     ),
-    injuries: input.injuries.trim(),
+    injuries: input.injuries.trim() ? writeInjuryImpact(input.injuries.trim(), input.injury_impact ?? "") : "",
+    // Retain detailed onboarding injury and clinician fields. Changing impact
+    // updates only that report; it never erases the original symptom/avoidance.
+    guided_injuries: input.injuries.trim() ? input.guided_injuries?.map(injury => ({
+      ...injury,
+      notes: input.injury_impact ? writeInjuryImpact(injury.notes ?? "", input.injury_impact) : injury.notes,
+    })) : [],
     key_goals: keyGoals,
     primary_goal: keyGoals[0] ?? "",
     weak_areas: weakAreas,

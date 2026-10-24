@@ -1951,7 +1951,9 @@ def _project_open_development_block(block: dict[str, Any]) -> dict[str, Any]:
             "sessions": sessions,
             "removed_sessions": [
                 {"role_key": row.get("role_key"), "reason_code": row.get("reason_code")
-                 or (row.get("reason_codes") or ["role_budget"])[0]}
+                 or (row.get("reason_codes") or row.get("compression_reason_codes") or ["unspecified_suppression"])[0],
+                 "reason_codes": row.get("reason_codes") or row.get("compression_reason_codes") or [],
+                 "reasons": row.get("reasons") or []}
                 for row in week.get("suppressed_roles") or []
                 if isinstance(row, dict) and row.get("role_key") not in _OPEN_BLOCK_SERVER_OWNED
             ],
@@ -1973,6 +1975,8 @@ def _project_open_goal_coverage(block: dict[str, Any]) -> list[dict[str, Any]]:
         for day in week.get("calendar_days") or []
         if isinstance(day, dict)
     }
+    from .goal_preservation import validate_goal_preservation
+    contract_errors = validate_goal_preservation(block)
     coverage = []
     for entry in block.get("goal_preservation") or []:
         if not isinstance(entry, dict):
@@ -1982,6 +1986,9 @@ def _project_open_goal_coverage(block: dict[str, Any]) -> list[dict[str, Any]]:
             "priority": entry.get("priority"),
             "state": entry.get("state"),
             "satisfied": entry.get("satisfied"),
+            "contract_errors": [error for error in contract_errors if error.get("goal") in {None, entry.get("goal")}],
+            "reason_codes": entry.get("reason_codes") or [],
+            "constraints": entry.get("constraints") or [],
             "evidence": [
                 {"name": item.get("name"), "week": week_by_d_day.get(item.get("d_day")),
                  "weekday": weekday_by_d_day.get(item.get("d_day"))}
@@ -2947,7 +2954,9 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
         if _is_surface_type(injury_type):
             continue
         role = f"rehab_{slugify(location)}_{slugify(injury_type)}"
-        selected_lines = [line for line in group.get("drills", []) if line]
+        from .rehab_protocols import is_rehab_guidance_name
+        selected_lines = list(dict.fromkeys(line for line in group.get("drills", [])
+                                           if line and not is_rehab_guidance_name(line)))
         from .rehab_protocols import reviewed_rehab_drill_id_for_line
         if phase.upper() == "TAPER":
             selected_lines = [line for line in selected_lines if "nordic" not in line.lower()
@@ -2961,7 +2970,8 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
             phase,
             limit=6,
         )
-        rehab_options = [record["line"] for record in rehab_option_records]
+        rehab_options = [record["line"] for record in rehab_option_records
+                         if not is_rehab_guidance_name(record["line"])]
         # Canonical bank id per rendered line, so both the selected drill and
         # its alternates keep a stable identity through Stage 2.
         drill_ids_by_line = {
@@ -3141,6 +3151,13 @@ def build_stage2_payload(
 
     athlete_model["triage_summary"] = dict(training_context.triage_summary or {})
     injury_context = _build_injury_context(athlete_model=athlete_model)
+    # Non-indented rehab summaries are advice, never drill assignments. Keep
+    # one copy across phases in the existing injury context for the finalizer.
+    injury_context["safety_guidance"] = list(dict.fromkeys(
+        line.strip().removeprefix("- ")
+        for block in rehab_blocks.values() for line in block.splitlines()
+        if line.startswith("- ") and not line.rstrip().endswith(":")
+    ))
     serialized_restrictions = _serialize_restrictions(restrictions)
     phase_briefs = _build_phase_briefs(training_context, phase_weeks)
     omission_ledger = _build_omission_ledger(
@@ -3326,6 +3343,7 @@ _FINALIZER_SEGMENT_A = """\
 You are Stage 2 (finalizer). Stage 1 has already made the training decisions. Your job is to render and coach the resolved plan, not redesign it.
 
 Input = FINALIZER PACKET + LOCKED SESSION RENDER MANIFEST + Stage 1 draft + athlete profile + optional injury context.
+Medical advice and injury_context.safety_guidance are information: render each distinct precaution once in Rehab / Red Flags, never as an exercise, drill assignment, or standalone training session.
 
 AUTHORITY ORDER
 1. FINALIZER PACKET — primary authority for calendar, render mode, countdown labels, restrictions, priorities, compact selected candidate facts, session-count metadata, and risks.
