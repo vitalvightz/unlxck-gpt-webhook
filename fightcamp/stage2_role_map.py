@@ -2951,19 +2951,6 @@ def _select_boxing_crowded_week_non_spar_roles(
     return selected
 
 
-def _declared_light_combat_appointment_count(week_entry: dict, athlete_model: dict) -> int:
-    """Reserve coach appointments before their immutable roles are inserted."""
-    days = set(declared_light_combat_weekdays(
-        athlete_model, training_days=clean_list(athlete_model.get("training_days", [])),
-        exclude_hard_sparring=True,
-    ))
-    calendar = week_entry.get("calendar_days") or []
-    if calendar:
-        windows = cadence_windows([(day["d_day"], str(day.get("weekday") or "")) for day in calendar])
-        return max((sum(weekday.lower() in days for _, weekday in window) for window in windows), default=0)
-    return len(days)
-
-
 def _apply_boxing_crowded_week_compression(
     week_entry: dict,
     session_roles: list[dict],
@@ -2981,11 +2968,7 @@ def _apply_boxing_crowded_week_compression(
 
     spar_roles = [role for role in session_roles if role.get("role_key") == "hard_sparring_day"]
     non_spar_roles = [role for role in session_roles if role.get("role_key") != "hard_sparring_day"]
-    light_appointments = _declared_light_combat_appointment_count(week_entry, athlete_model)
-    non_spar_cap = max(0, weekly_cap - len(spar_roles) - light_appointments)
-    week_entry["appointment_budget"] = {"requested": weekly_cap, "reserved_light_combat": light_appointments}
-    if light_appointments:
-        policy_state["reason_codes"].append("coach_owned_appointment_capacity")
+    non_spar_cap = max(0, weekly_cap - len(spar_roles))
     allowed_non_spar = min(non_spar_cap, policy_state["max_non_spar_roles"])
 
     resolved_rule_state = dict(week_entry.get("resolved_rule_state") or {})
@@ -3134,9 +3117,7 @@ def _apply_high_fatigue_week_compression(
     weekly_cap = sessions_per_week
     locked_spar_days = {day for day in training_days if day in hard_sparring_days_set}
     spar_count = len(locked_spar_days)
-    light_appointments = _declared_light_combat_appointment_count(week_entry, athlete_model)
-    non_spar_cap = max(0, weekly_cap - spar_count - light_appointments)
-    week_entry["appointment_budget"] = {"requested": weekly_cap, "reserved_light_combat": light_appointments}
+    non_spar_cap = max(0, weekly_cap - spar_count)
 
     # Separate sparring and non-sparring roles up front: the zero-non-spar
     # exemption below must be decided on combat work that actually exists in
@@ -3220,8 +3201,6 @@ def _apply_high_fatigue_week_compression(
     dropped_non_spar = ranked_roles[non_spar_target:]
 
     reason_codes = _build_spar_allocation_reason_codes(athlete_model, compression, is_hard_spar_week, is_meaningful_cut)
-    if light_appointments:
-        reason_codes.append("coach_owned_appointment_capacity")
     if not reason_codes:
         reason_codes = ["spar_first_cap"]
     summary = _compression_summary(reason_codes)
@@ -4101,7 +4080,6 @@ def _build_weekly_role_map(
                 "effective_hard_sparring_days": list(effective_days),
                 "final_week_sparring_cap": _final_week_sparring_cap_summary(hard_sparring_plan, list(effective_days)),
                 "coach_note_flags": _dedupe_clean_strings(clean_list(week_entry.get("coach_note_flags", []))),
-                "appointment_budget": dict(week_entry.get("appointment_budget") or {}),
                 "intentional_compression": dict(week_entry.get("intentional_compression") or _intentional_compression_stub()),
                 "intentionally_unused_days": list(week_entry.get("intentionally_unused_days") or []),
                 "combat_pressure_floor": dict(week_entry.get("combat_pressure_floor") or {"active": False}),

@@ -10,7 +10,6 @@ from api.models import PlanRequest
 from api.services.sparring_readiness_snapshot import annotate_payload_with_sparring_readiness
 from fightcamp.goal_preservation import validate_goal_preservation
 from fightcamp.main import generate_plan_sync
-from fightcamp.physical_session_frequency import appointment_budget_exceeded
 from planner_clock import pin_planner_clock
 from tests.support import FakeStore
 
@@ -18,7 +17,7 @@ from tests.support import FakeStore
 @pytest.mark.parametrize("dated", [False, True])
 @pytest.mark.parametrize("symptom", ["Sometimes my left knee hurts", "Sometimes my right shoulder hurts", ""])
 @pytest.mark.parametrize("coached_days", [[], ["Tuesday", "Friday"]])
-def test_persisted_readiness_and_real_capacity_have_separate_goal_verdicts(monkeypatch, dated, symptom, coached_days, frequency=4):
+def test_persisted_readiness_preserves_app_budget_with_coached_days(monkeypatch, dated, symptom, coached_days, frequency=4):
     import fightcamp.goal_preservation as goals
 
     intake = json.loads((Path(__file__).parent / "fixtures/injury_readiness/sam_like.json").read_text())
@@ -57,7 +56,6 @@ def test_persisted_readiness_and_real_capacity_have_separate_goal_verdicts(monke
                   for slot in pool.get(group) or []
                   for option in [slot.get("selected") or {}, *(slot.get("alternates") or [])]}
     for week in normal:
-        assert not appointment_budget_exceeded({"weeks": [week]}, frequency)
         roles = week["session_roles"]
         assert {r["scheduled_day_hint"].lower() for r in roles if r["role_key"] == "hard_sparring_day"} == {"wednesday", "sunday"}
         assert all(r.get("scheduled_day_hint", "").lower() in {d.lower() for d in intake["training_availability"]}
@@ -65,21 +63,22 @@ def test_persisted_readiness_and_real_capacity_have_separate_goal_verdicts(monke
         assert not any("injury_management" in r.get("compression_reason_codes", []) for r in week["suppressed_roles"])
         strength = [r for r in roles if r["category"] == "strength"]
         if coached_days:
-            assert not strength  # All four appointments belong to the coach.
             assert {r["scheduled_day_hint"].lower() for r in roles if r["role_key"] == "light_combat_day"} == {"tuesday", "friday"}
-        else:
+        if frequency == 4:
+            assert any(r["category"] == "conditioning" for r in roles)
             assert strength and all(r.get("selected_exercise_assignments") for r in strength)
             assert all(member["name"] in candidates for r in strength for member in r["selected_exercise_assignments"])
             assert not any("guidance" in member["name"].lower() for r in strength for member in r["selected_exercise_assignments"])
+    if dated:
+        assert any(r["category"] == "recovery" for w in weeks for r in w["session_roles"])
+    if coached_days and symptom and not dated:
+        assert any(r["role_key"] in {"mobility_rehab", "joint_prep"}
+                   for w in normal for r in w["session_roles"])
     assert all(e["scope"] == "contact" for e in model["readiness_evidence"])
     if not dated:
         primary = next(g for g in final["open_plan_spec"]["goal_coverage"] if g["goal"] == "strength")
-        assert primary["satisfied"] is (not coached_days)
-        if coached_days:
-            assert primary["state"] == "defer"
-            assert primary["constraints"]
-            assert {c["reason_code"] for c in primary["constraints"]} == {"calendar_capacity"}
-        else:
+        assert primary["satisfied"]
+        if frequency == 4:
             assert primary["state"] == "build" and primary["evidence"]
             members = {(w["week"], s["weekday"], ex["name"])
                        for w in final["open_plan_spec"]["weekly_session_plan"]["weeks"]
@@ -94,7 +93,7 @@ def test_persisted_readiness_and_real_capacity_have_separate_goal_verdicts(monke
 
 
 
-def test_three_total_sessions_does_not_gain_an_extra_goal_recovery_appointment(monkeypatch):
-    test_persisted_readiness_and_real_capacity_have_separate_goal_verdicts(
+def test_three_session_app_budget_preserves_lawful_goal_recovery(monkeypatch):
+    test_persisted_readiness_preserves_app_budget_with_coached_days(
         monkeypatch, dated=False, symptom="", coached_days=[], frequency=3,
     )

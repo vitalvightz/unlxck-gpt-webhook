@@ -204,20 +204,6 @@ def _place_filler(
         return None
     insert, d_day = selected
     _decorate_filler(insert, day, d_day)
-    # A physical filler on an empty day is another appointment. Shared support
-    # may still ride an existing session, but cannot reopen capacity reserved
-    # for the athlete's immutable coached work.
-    from .physical_session_frequency import (
-        appointment_budget_exceeded, physical_appointments, requested_training_frequency,
-    )
-    frequency = requested_training_frequency(athlete_model)
-    if frequency and len(physical_appointments([*session_roles, insert])) > len(physical_appointments(session_roles)):
-        trial = {**weekly_role_map, "weeks": [
-            {**w, "session_roles": [*session_roles, insert]} if w is week else w
-            for w in weekly_role_map.get("weeks") or []
-        ]}
-        if appointment_budget_exceeded(trial, frequency):
-            return None
     session_roles.append(insert)
     usage_ledger.setdefault("coverage_roles", []).append(insert)
     _record_insert_usage(usage_ledger, str(insert.get("role_key") or ""), d_day)

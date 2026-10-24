@@ -136,14 +136,17 @@ def test_capacity_reason_is_not_a_permanent_repair_veto(remaining_coach):
 
 
 
-def test_repeated_weekday_does_not_double_charge_the_seven_day_budget():
-    from fightcamp.stage2_role_map import _declared_light_combat_appointment_count
-
-    athlete = {"training_days": ["Tuesday"], "support_work_days": ["Tuesday"]}
-    week = {"calendar_days": [{"weekday": day, "d_day": 20 - index} for index, day in enumerate(
-        ["tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "monday", "tuesday"])]}
-    assert _declared_light_combat_appointment_count(week, athlete) == 1
-
+@pytest.mark.parametrize("sport", ["mma", "boxing"])
+def test_light_coach_days_do_not_consume_app_compression_budget(sport):
+    athlete = {"sport": sport, "primary_goal": "strength", "key_goals": ["strength"],
+               "training_frequency": 4, "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Sunday"],
+               "support_work_days": ["Tuesday", "Friday"], "hard_sparring_days": ["Wednesday", "Sunday"]}
+    roles = [_role("primary_strength_day"), _role("aerobic_base_day", "conditioning", "aerobic"),
+             _role("hard_sparring_day", "sparring"), _role("hard_sparring_day", "sparring")]
+    week = {"phase": "GPP", "must_keep": ["primary_strength", "aerobic"]}
+    kept, _ = _apply_high_fatigue_week_compression(week, roles, [], athlete)
+    assert {r["role_key"] for r in kept} >= {"primary_strength_day", "aerobic_base_day"}
+    assert "coach_owned_appointment_capacity" not in (week.get("intentional_compression") or {}).get("reason_codes", [])
 
 
 def test_legacy_fatigue_reason_keeps_the_true_cause_of_compression():
