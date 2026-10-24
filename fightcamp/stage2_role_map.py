@@ -2143,7 +2143,7 @@ def _high_fatigue_compression_reason_codes(
         reason_codes.append("high_pressure_weight_cut")
     elif athlete_model.get("weight_cut_risk") or readiness_flags & {"active_weight_cut", "aggressive_weight_cut"}:
         reason_codes.append("active_weight_cut")
-    if (athlete_model.get("injuries") or "injury_management" in readiness_flags) and not _all_active_injuries_surface_only(athlete_model):
+    if _active_injury_is_moderate_plus(athlete_model):
         reason_codes.append("injury_management")
     return reason_codes
 
@@ -2272,12 +2272,18 @@ def _boxing_crowded_week_injury_is_moderate_plus(athlete_model: dict) -> bool:
         return True
     readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
     if readiness_flags & {
-        "moderate_injury",
         "high_injury",
         "significant_injury",
         "severe_injury",
         "red_flag_injury",
     }:
+        return True
+    # A contact-readiness flag alone is not medical severity. Only current,
+    # sourced capacity evidence may promote it to global compression.
+    if "moderate_injury" in readiness_flags and any(
+        item.get("flag") == "moderate_injury" and item.get("scope") == "training_capacity"
+        for item in athlete_model.get("readiness_evidence") or []
+    ):
         return True
     if _all_active_injuries_surface_only(athlete_model):
         return False
@@ -2554,7 +2560,9 @@ def _non_spar_role_priority_rank(
     category = str(role.get("category") or "").strip()
 
     # Must-keep roles always survive compression
-    if preferred_system in must_keep or role_key in must_keep:
+    if (preferred_system in must_keep or role_key in must_keep
+            or ("primary_strength" in must_keep and role_key in PRIMARY_STRENGTH_ROLE_KEYS
+                and role.get("category") == "strength")):
         return 100
 
     # Dedicated recovery/mobility support is a protected low-load touch. It sits
@@ -2891,7 +2899,9 @@ def _boxing_crowded_role_priority(role: dict[str, Any], must_keep: set[str]) -> 
     preferred_system = str(role.get("preferred_system") or "").strip()
     category = str(role.get("category") or "").strip()
 
-    if preferred_system in must_keep or role_key in must_keep:
+    if (preferred_system in must_keep or role_key in must_keep
+            or ("primary_strength" in must_keep and role_key in PRIMARY_STRENGTH_ROLE_KEYS
+                and role.get("category") == "strength")):
         return 100
     if _is_boxing_crowded_anchor_role(role):
         return 5
@@ -2941,6 +2951,19 @@ def _select_boxing_crowded_week_non_spar_roles(
     return selected
 
 
+def _declared_light_combat_appointment_count(week_entry: dict, athlete_model: dict) -> int:
+    """Reserve coach appointments before their immutable roles are inserted."""
+    days = set(declared_light_combat_weekdays(
+        athlete_model, training_days=clean_list(athlete_model.get("training_days", [])),
+        exclude_hard_sparring=True,
+    ))
+    calendar = week_entry.get("calendar_days") or []
+    if calendar:
+        windows = cadence_windows([(day["d_day"], str(day.get("weekday") or "")) for day in calendar])
+        return max((sum(weekday.lower() in days for _, weekday in window) for window in windows), default=0)
+    return len(days)
+
+
 def _apply_boxing_crowded_week_compression(
     week_entry: dict,
     session_roles: list[dict],
@@ -2958,7 +2981,11 @@ def _apply_boxing_crowded_week_compression(
 
     spar_roles = [role for role in session_roles if role.get("role_key") == "hard_sparring_day"]
     non_spar_roles = [role for role in session_roles if role.get("role_key") != "hard_sparring_day"]
-    non_spar_cap = max(0, weekly_cap - len(spar_roles))
+    light_appointments = _declared_light_combat_appointment_count(week_entry, athlete_model)
+    non_spar_cap = max(0, weekly_cap - len(spar_roles) - light_appointments)
+    week_entry["appointment_budget"] = {"requested": weekly_cap, "reserved_light_combat": light_appointments}
+    if light_appointments:
+        policy_state["reason_codes"].append("coach_owned_appointment_capacity")
     allowed_non_spar = min(non_spar_cap, policy_state["max_non_spar_roles"])
 
     resolved_rule_state = dict(week_entry.get("resolved_rule_state") or {})
@@ -3107,7 +3134,9 @@ def _apply_high_fatigue_week_compression(
     weekly_cap = sessions_per_week
     locked_spar_days = {day for day in training_days if day in hard_sparring_days_set}
     spar_count = len(locked_spar_days)
-    non_spar_cap = max(0, weekly_cap - spar_count)
+    light_appointments = _declared_light_combat_appointment_count(week_entry, athlete_model)
+    non_spar_cap = max(0, weekly_cap - spar_count - light_appointments)
+    week_entry["appointment_budget"] = {"requested": weekly_cap, "reserved_light_combat": light_appointments}
 
     # Separate sparring and non-sparring roles up front: the zero-non-spar
     # exemption below must be decided on combat work that actually exists in
@@ -3191,6 +3220,8 @@ def _apply_high_fatigue_week_compression(
     dropped_non_spar = ranked_roles[non_spar_target:]
 
     reason_codes = _build_spar_allocation_reason_codes(athlete_model, compression, is_hard_spar_week, is_meaningful_cut)
+    if light_appointments:
+        reason_codes.append("coach_owned_appointment_capacity")
     if not reason_codes:
         reason_codes = ["spar_first_cap"]
     summary = _compression_summary(reason_codes)
@@ -4070,6 +4101,7 @@ def _build_weekly_role_map(
                 "effective_hard_sparring_days": list(effective_days),
                 "final_week_sparring_cap": _final_week_sparring_cap_summary(hard_sparring_plan, list(effective_days)),
                 "coach_note_flags": _dedupe_clean_strings(clean_list(week_entry.get("coach_note_flags", []))),
+                "appointment_budget": dict(week_entry.get("appointment_budget") or {}),
                 "intentional_compression": dict(week_entry.get("intentional_compression") or _intentional_compression_stub()),
                 "intentionally_unused_days": list(week_entry.get("intentionally_unused_days") or []),
                 "combat_pressure_floor": dict(week_entry.get("combat_pressure_floor") or {"active": False}),

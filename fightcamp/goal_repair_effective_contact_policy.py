@@ -18,6 +18,7 @@ def _resolved_effective_hard_count(week: dict[str, Any]) -> int | None:
 def effective_goal_repair_compression_state(
     week: dict[str, Any],
     suppressed: list[dict[str, Any]],
+    *, athlete_model: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     """Return live compression authority for goal repair without mutating planner state.
 
@@ -34,6 +35,21 @@ def effective_goal_repair_compression_state(
 
     effective_hard_count = _resolved_effective_hard_count(week)
     stale_codes: set[str] = set()
+    if athlete_model is not None and ("parsed_injuries" in athlete_model or athlete_model.get("has_active_injury") is False):
+        from .stage2_role_map import _active_injury_is_moderate_plus
+
+        if not _active_injury_is_moderate_plus(athlete_model):
+            stale_codes.add("injury_management")
+    capacity_codes = {"coach_owned_appointment_capacity", "weekly_appointment_capacity"} & set(compression_codes)
+    if capacity_codes:
+        from .physical_session_frequency import physical_appointments
+
+        target = (week.get("appointment_budget") or {}).get("requested")
+        roles = week.get("session_roles") or []
+        if (not isinstance(target, int) or target <= 0 or len(physical_appointments(roles)) < target):
+            stale_codes.update(capacity_codes)
+        elif not any(r.get("role_key") == "light_combat_day" for r in roles):
+            stale_codes.add("coach_owned_appointment_capacity")
     # Routine candidate-budget trimming is not an intentional safety veto.
     # Repair must test the remaining session budget and resolved calendar rather
     # than let two contacts alone prohibit every strength/power alternative.

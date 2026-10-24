@@ -23,9 +23,10 @@ def recent_rows(rows: list[dict[str, Any]], as_of: str, days: int = 7) -> list[d
     return result
 
 
-def sparring_readiness_flags(context: dict[str, Any]) -> list[str]:
+def sparring_readiness_flags(context: dict[str, Any], *, evidence: list[dict] | None = None) -> list[str]:
     """Count distinct days/sessions; future dates and stale evidence never count."""
     from .injury_triage import current_report_medical_hold_reasons
+    from .injury_awareness import has_independent_medical_override, is_awareness_only
 
     as_of = context.get("as_of", "")
     # More than one plan may have a check-in on the same day. Latest update wins.
@@ -52,17 +53,43 @@ def sparring_readiness_flags(context: dict[str, Any]) -> list[str]:
     hard_reports = [row for row in checkins if row.get("previous_session") == "very_hard"]
     if len(recent_rows(demanding, as_of, 3)) >= 2 or len(recent_rows(hard_reports, as_of, 3)) >= 2:
         flags.add("high_fatigue")
+    def injury_signal(row: dict, *, source: str, global_capacity: bool, reason: str) -> None:
+        flags.add("moderate_injury")
+        if evidence is not None:
+            evidence.append({
+                "flag": "moderate_injury", "source": source,
+                "scope": "training_capacity" if global_capacity else "contact",
+                "reason_code": reason, "as_of": as_of,
+                **{key: row[key] for key in ("id", "training_day", "severity", "severity_source") if key in row},
+            })
+
     latest = max(checkins, key=lambda row: row["training_day"], default={})
     if latest.get("pain") in {"manageable", "high"} or latest.get("active_injury") == "worse":
-        flags.add("moderate_injury")
+        # Manageable pain is contact-readiness evidence, not a diagnosis or an
+        # automatic loss of a weekly training appointment. High pain/worsening
+        # is current functional evidence and remains a capacity restriction.
+        injury_signal(latest, source="today_checkins",
+                      global_capacity=latest.get("pain") == "high" or latest.get("active_injury") == "worse",
+                      reason="worsening_checkin" if latest.get("active_injury") == "worse" else "pain_checkin")
     if any(row.get("neurological_symptoms") is True for row in checkins):
         flags.add("neurological_symptoms")
-    if any(
-        row.get("severity") in {"moderate", "high", "severe"}
-        and row.get("surface_class") != "stable_surface"
-        for row in context.get("active_injuries", [])
-    ):
-        flags.add("moderate_injury")
+    for row in context.get("active_injuries", []):
+        severity = row.get("manual_severity") or row.get("severity")
+        if row.get("surface_class") == "stable_surface" or is_awareness_only({**row, "severity": severity}):
+            continue
+        medical = has_independent_medical_override(row)
+        if severity not in {"moderate", "high", "severe"} and not medical:
+            continue
+        # Legacy intake tracking defaults every free-text symptom to moderate.
+        # That compatibility value has no severity provenance and cannot trump
+        # current parsed intake. Keep its conservative contact signal only.
+        confirmed = bool(row.get("manual_severity")) or bool(
+            row.get("severity_source") and row["severity_source"] != "fallback_default"
+        ) or row.get("source") in {"manual", "clinician", "checkin"}
+        injury_signal(row, source="injury_flags",
+                      global_capacity=medical or severity in {"high", "severe"} or confirmed,
+                      reason="medical_override" if medical else "injury_severity" if confirmed or severity in {"high", "severe"}
+                      else "unverified_tracker_severity")
     active_injuries = context.get("active_injuries", [])
     if any(row.get("surface_class") == "surface_no_contact" for row in active_injuries):
         flags.add("medical_contact_restriction")

@@ -20,6 +20,15 @@ for _export_name in dir(_impl):
         globals()[_export_name] = getattr(_impl, _export_name)
 
 
+def _goal_render_context(entries: Any) -> list[dict]:
+    from .goal_preservation import athlete_goal_explanation
+
+    return [{**{key: deepcopy(value) for key, value in entry.items()
+                if key not in {"contract_errors", "repair_attempts"}},
+             "athlete_explanation": athlete_goal_explanation(entry)}
+            for entry in entries or [] if isinstance(entry, dict)]
+
+
 def _late_fight_tail_contracts(weekly_role_map: Any) -> dict[str, Any]:
     if not isinstance(weekly_role_map, dict):
         return {}
@@ -148,6 +157,21 @@ def build_stage2_finalizer_packet(
         planning_brief=planning_brief,
     )
 
+    # Diagnostics remain in the saved planning brief and validator report, not
+    # in the material the finalizer is asked to turn into athlete plan notes.
+    selected = packet["selected_plan"]
+    spec = selected.get("open_plan_spec")
+    # Open plans retain initial classifications in compressed_priorities; their
+    # final projected coverage, not that earlier classification, owns the notes.
+    entries = (spec.get("goal_coverage") if isinstance(spec, dict) else None) or selected.get("goal_preservation")
+    selected["goal_preservation"] = _goal_render_context(entries)
+    if isinstance(spec, dict):
+        selected["open_plan_spec"] = {**spec, "goal_coverage": _goal_render_context(spec.get("goal_coverage"))}
+    packet["hard_rules"].append(
+        "Use athlete_explanation verbatim for goal notes. Do not expose validator messages, "
+        "repair workflows, coverage tests or internal planning terms in athlete content. "
+        "Never describe a missing goal as a deliberate choice unless its current constraint explains it."
+    )
     tail_contracts = _late_fight_tail_contracts(weekly_role_map)
     if not tail_contracts:
         return packet
