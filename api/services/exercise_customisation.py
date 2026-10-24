@@ -7,16 +7,8 @@ This is personalisation of an existing prescription, not a workout builder:
 * alternatives come from the training catalogue's own metadata, ranked with no
   model call, in the order safety -> training purpose -> movement -> athlete
   relevance -> session cost;
-* every write re-runs the same checks server-side, and the effective session is
-  still reconciled by the injury policy when Today is built and when the session
-  is started, so a manual choice can never bypass a restriction;
+* manual additions and swaps are athlete choices, independent of injury guidance;
 * started, completed or past workouts are never changed.
-
-Candidate safety uses the existing injury system as its oracle:
-``reconcile_session_prescription`` decides whether the candidate block would be
-held under the live injury decisions (blocked regions/tags, contact limits,
-clinician clearance), and an exercise whose load regions are unknown is never
-treated as safe. Exercises with no reviewed bank evidence are not offered.
 """
 
 from __future__ import annotations
@@ -779,8 +771,7 @@ def swap_candidates(
     original = _record_for_block(index, block)
     sources = _SOURCES_BY_BLOCK_TYPE.get(_clean(block.get("block_type")), ())
     athlete = AthleteContext(_intake_for_plan(store, occurrence.plan_row, athlete_id))
-    safety = safety or SafetyContext(store, athlete_id=athlete_id, occurrence=occurrence,
-                                     equipment=sorted(athlete.equipment))
+
     original_raw = {**(original["entry"]["raw"] if original else block),
                     "name": original["entry"]["name"] if original else block.get("display_name")}
     source = original["entry"]["source"] if original else next(iter(sources), "")
@@ -791,7 +782,6 @@ def swap_candidates(
     original_mode = _block_mode(block)
     original_total = _total_cost(original_raw)
     candidates: list[Candidate] = []
-    held_by_safety = 0
     for record in index.records:
         entry = record["entry"]
         raw = entry["raw"]
@@ -804,17 +794,11 @@ def swap_candidates(
             continue
         if not _sport_allows(record, athlete) or not _phase_allows(raw, occurrence.phase) or not _equipment_available(record, athlete):
             continue
-        stress_ceiling = ceiling if safety.has_injuries or reduced else {k: v for k, v in ceiling.items() if raw.get(k) is not None}
+        stress_ceiling = ceiling if reduced else {k: v for k, v in ceiling.items() if raw.get(k) is not None}
         if not _no_more_stress(raw, stress_ceiling):
-            continue
-        if safety.contraindicated(raw):
             continue
         evidence = _purpose_evidence(original_raw, {**raw, "name": entry["name"]}, source)
         if evidence is None:
-            continue
-        candidate_block = _base_block(record, block_type=_clean(block.get("block_type")))
-        if not safety.allows(candidate_block, raw):
-            held_by_safety += 1
             continue
         score, reasons = evidence
         relevance, relevance_reasons = _relevance(raw, athlete)
@@ -848,8 +832,7 @@ def swap_candidates(
     candidates.sort(key=lambda c: (-c.score, c.record["entry"]["name"], c.record["entry"]["catalogue_id"]))
     notice = None
     if not candidates:
-        notice = ("Your current injury guidance rules out the usual alternatives. Keep it, or remove it for today."
-                  if held_by_safety else "No close match fits your equipment and plan right now.")
+        notice = "No close match fits your equipment and plan right now."
     return candidates, notice
 
 
@@ -869,8 +852,7 @@ def add_candidates(
         return [], "Search the library to add an exercise."
     index = _library_index()
     athlete = AthleteContext(_intake_for_plan(store, occurrence.plan_row, athlete_id))
-    safety = safety or SafetyContext(store, athlete_id=athlete_id, occurrence=occurrence,
-                                     equipment=sorted(athlete.equipment))
+
     blocks = list(_iter_mapping_items(occurrence.session.get("blocks")))
     existing = [(b, r) for b in blocks if (r := _record_for_block(index, b)) is not None]
     # The session's heaviest known cost bounds an addition: adding work is the
@@ -883,7 +865,6 @@ def add_candidates(
     taken = _taken_identities(occurrence)
     reduced = _readiness_reduced(store, athlete_id, occurrence)
     candidates: list[Candidate] = []
-    held_by_safety = 0
     for record in index.records:
         entry = record["entry"]
         raw = entry["raw"]
@@ -900,14 +881,8 @@ def add_candidates(
             continue
         if reduced and _total_cost(raw) > _COST_RANK["low"] * 3:
             continue
-        if safety.contraindicated(raw):
-            continue
         block_type = "skill" if family == "skill" else "conditioning" if family == "conditioning" else "plyometric_power" if family == "power" else (
             "strength" if "compound" in _tags(raw) else "accessory")
-        candidate_block = _base_block(record, block_type=block_type)
-        if not safety.allows(candidate_block, raw):
-            held_by_safety += 1
-            continue
         score, reasons = _relevance(raw, athlete)
         movement = _clean(raw.get("movement")).lower()
         if movement and movement not in covered and movement not in _GENERIC_MOVEMENTS:
@@ -936,8 +911,7 @@ def add_candidates(
     candidates.sort(key=lambda c: (-c.score, c.record["entry"]["name"], c.record["entry"]["catalogue_id"]))
     notice = None
     if not candidates:
-        notice = ("Your current injury guidance rules out additions to this session."
-                  if held_by_safety else "Nothing suitable to add with your equipment right now.")
+        notice = "Nothing suitable to add with your equipment right now."
     return candidates, notice
 
 
@@ -954,15 +928,14 @@ def _added_block_type(record: Mapping[str, Any]) -> str:
 
 
 def _library_candidate(
-    record: Mapping[str, Any], *, occurrence: Occurrence, athlete: AthleteContext, safety: SafetyContext,
+    record: Mapping[str, Any], *, occurrence: Occurrence, athlete: AthleteContext, safety: SafetyContext | None,
     existing: list, taken: set[str],
 ) -> Candidate | str | None:
     """One exercise the athlete picked from the library, or why it can't be added.
 
     An explicit pick is the athlete's choice: purpose, phase, equipment and
-    session-fit rankings do not restrict it. Safety still does — the injury
-    policy, the planner's injury exclusions and contraindications — and so do
-    identity rules (training category, not already in this workout).
+    session-fit rankings and injury guidance do not restrict it. Identity
+    rules still apply (training category, not already in this workout).
     """
     entry = record["entry"]
     raw = entry["raw"]
@@ -970,11 +943,7 @@ def _library_candidate(
         return None
     if entry["exercise_key"] in taken or slug(entry["name"]) in taken:
         return None
-    if safety.contraindicated(raw):
-        return "held"
     block_type = _added_block_type(record)
-    if not safety.allows(_base_block(record, block_type=block_type), raw):
-        return "held"
     _, reasons = _relevance(raw, athlete)
     if not reasons:
         context = [part for part in _clean(record["summary"].get("context")).split(" · ") if part][:2]
@@ -1000,35 +969,28 @@ def library_add_candidates(
 
     index = _library_index()
     athlete = AthleteContext(_intake_for_plan(store, occurrence.plan_row, athlete_id))
-    safety = safety or SafetyContext(store, athlete_id=athlete_id, occurrence=occurrence,
-                                     equipment=sorted(athlete.equipment))
+
     blocks = list(_iter_mapping_items(occurrence.session.get("blocks")))
     existing = [(b, r) for b in blocks if (r := _record_for_block(index, b)) is not None]
     taken = _taken_identities(occurrence)
     results = search(index, q=query, category="training", limit=50)["entries"]
     candidates: list[Candidate] = []
-    held = 0
     for summary in results:
         record = index.by_id.get(summary["catalogue_id"])
         if record is None:
             continue
         candidate = _library_candidate(record, occurrence=occurrence, athlete=athlete, safety=safety,
                                        existing=existing, taken=taken)
-        if candidate == "held":
-            held += 1
-        elif isinstance(candidate, Candidate):
+        if isinstance(candidate, Candidate):
             candidates.append(candidate)
     notice = None
-    if held:
-        notice = ("Some matches are held by your current injury guidance." if candidates
-                  else "Your current injury guidance holds every match for this search.")
-    elif not candidates:
+    if not candidates:
         notice = "No library exercise matches that search."
     return candidates, notice
 
 
 def library_pick(
-    store: Any, *, athlete_id: str, occurrence: Occurrence, catalogue_id: str, safety: SafetyContext,
+    store: Any, *, athlete_id: str, occurrence: Occurrence, catalogue_id: str, safety: SafetyContext | None,
 ) -> Candidate | None:
     from api.services.today_service import _iter_mapping_items
 
@@ -1279,7 +1241,7 @@ def apply_change(
             new_block["progression_rule"] = _clean(payload["progression_rule"]) or None
         entry["block"] = new_block
     else:
-        safety = SafetyContext(store, athlete_id=athlete_id, occurrence=occurrence, equipment=sorted(athlete.equipment))
+        safety = None
         if action == "swap":
             candidates, _ = swap_candidates(store, athlete_id=athlete_id, occurrence=occurrence, safety=safety)
         else:
@@ -1289,11 +1251,11 @@ def apply_change(
         catalogue_id = _clean(payload.get("catalogue_id"))
         chosen = next((c for c in candidates if c.record["entry"]["catalogue_id"] == catalogue_id), None)
         if chosen is None and action == "add":
-            # Anything from the training library, re-checked for safety now.
+            # An explicit library choice is independent of injury guidance.
             chosen = library_pick(store, athlete_id=athlete_id, occurrence=occurrence,
                                   catalogue_id=catalogue_id, safety=safety)
         if chosen is None:
-            # Re-checked now, against today's injuries, equipment and plan.
+            # Reject unavailable catalogue identities.
             raise HTTPException(409, "That exercise isn't available for this workout anymore. Choose another.")
         fields = chosen.fields
         dose = payload.get("dose")

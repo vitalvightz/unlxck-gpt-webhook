@@ -588,6 +588,11 @@ def reconcile_session_prescription(
         return [prescribed_block(decision, member) for member in current.get("drills", [current])]
 
     for block in entry.get("blocks", []):
+        # Explicit additions and swaps retain the athlete's selected exercise.
+        change = block.get("athlete_change") or {}
+        if change.get("action") in {"add", "swap"}:
+            blocks.append(deepcopy(block))
+            continue
         if _is_non_physical_mapping(block) and not blocked_tags:
             # Mindset/video review is not ankle/chest loading. Its combat topic
             # and absent physical metadata cannot turn it into contact work.
@@ -681,7 +686,9 @@ def reconcile_session_prescription(
     if hold and not athlete_owned and not any(d.get("outcome") == "medical_review" for d in decisions):
         reviewed_blocks = [block for block in blocks if block.get("block_type") == "rehab" and block.get("policy_id")
                            and not block.get("_policy_held")]
-        if reviewed_blocks:
+        manual_choices = any((block.get("athlete_change") or {}).get("action") in {"add", "swap"}
+                             for block in blocks)
+        if reviewed_blocks and not manual_choices:
             # Hold the original training while offering separately reviewed
             # rehab. It has its own completion identity, so a rehab completion
             # cannot assert that the scheduled strength/combat work was done.

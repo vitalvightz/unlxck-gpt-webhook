@@ -389,33 +389,21 @@ def squat_hold(**extra) -> dict:
             "sets": 3, "duration": {"value": 6, "unit": "seconds"}, "rest": {"value": 120, "unit": "seconds"}, **extra}
 
 
-def test_injury_restriction_cannot_be_bypassed():
-    from fightcamp.injury_filtering import injury_flag_reasons, injury_violation_reasons
-    from api.services.training_library import cache
-
-    index = cache.get()
+def test_manual_swap_ignores_injury_restrictions():
     client, store, _ = _build_client()
     today = seed_dated(store, blocks=[squat_hold(), plank()])
     hold_id = f"blk-{today}-squat-isometric-110-1rm-parallel"
     healthy = options(client, PLAN_ID, today, SESSION_ID, hold_id, all=True).json()
     front = next(a for a in healthy["alternatives"] if a["exercise_key"] == "front-squat-isometric-105-1rm-100")
-
     store.create_injury_flag("athlete-1", {"body_area": "knee", "description": "knee pain on squats"})
     injured = options(client, PLAN_ID, today, SESSION_ID, hold_id, all=True).json()
-    # Heavy knee-dominant work is what the planner itself excludes for a knee.
-    assert front["exercise_key"] not in {a["exercise_key"] for a in injured["alternatives"]}
-    for alternative in injured["alternatives"]:
-        raw = dict(index.by_id[alternative["catalogue_id"]]["entry"]["raw"])
-        assert not injury_violation_reasons(raw, ["knee knee pain on squats"])
-        assert not injury_flag_reasons(raw, ["knee knee pain on squats"])
-    # A forged write for it is refused server-side, however well it matched.
+    assert front["catalogue_id"] in {a["catalogue_id"] for a in injured["alternatives"]}
     response, _ = change(client, PLAN_ID, action="swap", date=today.isoformat(), session_id=SESSION_ID,
                          block_id=hold_id, catalogue_id=front["catalogue_id"])
-    assert response.status_code == 409
-    assert store.plans[PLAN_ID]["exercise_overrides"] == []
+    assert response.status_code == 200, response.text
 
 
-def test_unknown_injury_state_fails_closed():
+def test_manual_options_do_not_require_injury_guidance():
     client, store, _ = _build_client()
     today = seed_dated(store)
 
@@ -424,7 +412,7 @@ def test_unknown_injury_state_fails_closed():
 
     store.list_injury_flags = broken
     response = options(client, PLAN_ID, today, SESSION_ID, squat_id(today))
-    assert response.status_code == 503
+    assert response.status_code == 200, response.text
 
 
 def test_unknown_or_unavailable_candidates_are_refused_server_side():
@@ -571,20 +559,20 @@ def test_add_can_use_anything_from_the_library():
     assert sled["catalogue_id"] not in {a["catalogue_id"] for a in again}
 
 
-def test_library_add_still_respects_injury_restrictions():
+def test_library_add_ignores_injury_restrictions():
     from api.services.training_library import cache
 
     client, store, _ = _build_client()
     today = seed_dated(store)
     store.create_injury_flag("athlete-1", {"body_area": "knee", "description": "knee pain on squats"})
     found = additions(client, today, q="front squat isometric").json()
-    assert "front-squat-isometric-105-1rm-100" not in {a["exercise_key"] for a in found["alternatives"]}
-    assert "injury guidance" in (found["notice"] or "")
+    assert "front-squat-isometric-105-1rm-100" in {a["exercise_key"] for a in found["alternatives"]}
+    assert not found["notice"]
     held = next(r for r in cache.get().records if r["entry"]["exercise_key"] == "front-squat-isometric-105-1rm-100")
     response, _ = change(client, PLAN_ID, action="add", date=today.isoformat(), session_id=SESSION_ID,
                          catalogue_id=held["entry"]["catalogue_id"], dose={"mode": "duration", "duration_seconds": 6})
-    assert response.status_code == 409
-    assert store.plans[PLAN_ID]["exercise_overrides"] == []
+    assert response.status_code == 200, response.text
+    assert store.plans[PLAN_ID]["exercise_overrides"]
 
 
 def test_rehab_and_clinical_blocks_stay_protected():
@@ -859,7 +847,7 @@ def test_edit_sets_and_clears_easier_and_progress():
     assert block["regression_options"] == [] and not block.get("progression_rule")
 
 
-def test_active_injury_with_unknown_candidate_loading_is_not_cleared(monkeypatch):
+def test_manual_swap_allows_unknown_loading_with_injury(monkeypatch):
     from api.services import exercise_customisation as service
 
     client, store, _ = _build_client()
@@ -889,11 +877,11 @@ def test_active_injury_with_unknown_candidate_loading_is_not_cleared(monkeypatch
     store.create_injury_flag("athlete-1", {"body_area": "shoulder", "description": "shoulder pain"})
     response = options(client, PLAN_ID, today, SESSION_ID, squat_id(today), all=True)
     assert response.status_code == 200, response.text
-    assert pick["catalogue_id"] not in {a["catalogue_id"] for a in response.json()["alternatives"]}
+    assert pick["catalogue_id"] in {a["catalogue_id"] for a in response.json()["alternatives"]}
     response, _ = change(client, PLAN_ID, action="swap", date=today.isoformat(), session_id=SESSION_ID,
                          block_id=squat_id(today), catalogue_id=pick["catalogue_id"])
-    assert response.status_code == 409, response.text
-    assert store.plans[PLAN_ID]["exercise_overrides"] == []
+    assert response.status_code == 200, response.text
+    assert store.plans[PLAN_ID]["exercise_overrides"]
 
 
 @pytest.mark.parametrize("target_position", [0, 1])
@@ -1132,3 +1120,21 @@ def test_dose_edit_clears_inherited_adjustments_but_preserves_the_edited_prescri
     assert store.plans[PLAN_ID]["structured_plan"] == original
     override = store.plans[PLAN_ID]["exercise_overrides"][-1]["block"]
     assert not override.get("progression_rule") and not override.get("regression_options")
+
+
+@pytest.mark.parametrize("action", ["add", "swap"])
+def test_injury_projection_preserves_manual_choices(action):
+    from api.contracts.injury_policy import reconcile_session_prescription
+
+    manual = back_squat(block_id="manual", mechanical_load_regions=["knee"],
+                        athlete_change={"action": action})
+    generated = back_squat(block_id="generated", mechanical_load_regions=["knee"])
+    snapshot = reconcile_session_prescription(
+        {"session_id": SESSION_ID, "session_type": "strength_power", "blocks": [manual, generated]},
+        decisions=[{"activation": "live", "injury_id": "knee", "outcome": "monitor",
+                    "restrictions": {"blocked_regions": ["knee"], "contact_limit": "full"}}],
+        plan_id=PLAN_ID, training_day="2026-10-24",
+    )
+    blocks = snapshot["session"]["blocks"]
+    assert blocks[0] == manual
+    assert blocks[1]["_policy_held"]
