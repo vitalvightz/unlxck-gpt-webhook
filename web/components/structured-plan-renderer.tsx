@@ -643,6 +643,9 @@ function isDoseOnlyInstruction(text: string): boolean {
 }
 
 function ExecutionInstructions({ block }: { block: StructuredBlock }) {
+  const media = useExerciseMedia(block.display_name, block.exercise_key);
+  const hasVideo = (block.prescription_source !== "athlete" || block.exercise_key) && media;
+  if (hasVideo || block.private_media_id || block.community_revision_id) return null;
   const raw = cleanText(block.execution_instructions);
   // Keep only lines that describe the movement, not a restated dose.
   const instructions = raw

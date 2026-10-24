@@ -2896,3 +2896,22 @@ test("a written-out 'none this block' Progress and a dose-only How are not shown
   assert.match(drill, />How<\/span>Draw one attack/);
   assert.doesNotMatch(drill, /1x5s with 120s rest/);
 });
+
+// The same instruction component serves expanded cards and exercise sheets.
+test("How is shown only when the exercise has no demo video", async () => {
+  const { ExerciseMediaProvider } = await import("./exercise-demo");
+  const block = { block_type: "strength", display_name: "Squat", exercise_key: "squat",
+    execution_instructions: "Brace and lower under control." };
+  const plain = renderToStaticMarkup(<BlockCard block={block} />);
+  assert.match(plain, /Brace and lower under control/);
+  const curated = renderToStaticMarkup(
+    <ExerciseMediaProvider media={{ "exercise:squat": { provider: "youtube", video_id: "hQgFixeXdZo", start_s: 0, end_s: null, source: "curated" } }}>
+      <BlockCard block={block} />
+    </ExerciseMediaProvider>,
+  );
+  assert.doesNotMatch(curated, /ex-execution-instructions/);
+  for (const video of [{ private_media_id: "private-video" }, { community_revision_id: "community-video" }]) {
+    const html = renderToStaticMarkup(<BlockCard block={{ ...block, ...video }} />);
+    assert.doesNotMatch(html, /ex-execution-instructions/);
+  }
+});
