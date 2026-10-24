@@ -124,7 +124,11 @@ def test_a_gas_tank_weakness_enters_the_obligation_set_through_the_full_planner(
         "required_intent": "energy_system_training",
     }
     entry = next(e for e in brief["goal_preservation"] if e["goal"] == "conditioning")
-    assert (entry["priority"], entry["state"]) == ("primary_weakness", "build")
+    assert (entry["priority"], entry["initial_state"]) == ("primary_weakness", "build")
+    # A build obligation cannot manufacture an over-budget appointment. A
+    # lawful maintenance result still needs both evidence and a live constraint.
+    if entry["state"] == "maintain":
+        assert entry["constraints"]
     if entry["state"] == "defer":
         assert entry["constraints"]
     else:

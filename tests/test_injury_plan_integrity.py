@@ -80,7 +80,10 @@ def test_original_symptom_keeps_safe_development_work(open_build, symptom, monke
     intake = copy.deepcopy(_VITO_B)
     intake.update(injuries=symptom, guided_injury=None, guided_injuries=[],
                   key_goals=['strength', 'power', 'conditioning'], primary_goal='strength',
-                  hard_sparring_days=['Wednesday', 'Sunday'], support_work_days=['Tuesday', 'Friday'],
+                  # Leave two appointments for app-owned work. Four coached sessions
+                  # consume the four-total-session budget; that exact intake is
+                  # covered as an honest capacity deferral in the replay suite.
+                  hard_sparring_days=['Wednesday', 'Sunday'], support_work_days=[],
                   training_availability=['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Sunday'],
                   weekly_training_frequency=4)
     intake['athlete']['technical_style'] = ['boxing']

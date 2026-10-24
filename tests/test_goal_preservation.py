@@ -229,7 +229,13 @@ def test_determinism_and_finalizer_packet_preserve_structured_contract():
     assert first == second
     snapshot = deepcopy(first)
     packet = build_stage2_finalizer_packet(stage2_payload={}, planning_brief=first)
-    assert packet["selected_plan"]["goal_preservation"] == first["goal_preservation"]
+    # The render projection retains every decision/evidence field, while
+    # workflow diagnostics stay in the original admin contract.
+    rendered = packet["selected_plan"]["goal_preservation"]
+    assert [{k: v for k, v in entry.items() if k != "athlete_explanation"} for entry in rendered] == [
+        {k: v for k, v in entry.items() if k not in {"repair_attempts", "contract_errors"}}
+        for entry in first["goal_preservation"]
+    ]
     assert first == snapshot
     assert "meaningful_strength" in " ".join(packet["hard_rules"])
 

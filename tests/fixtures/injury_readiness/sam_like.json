@@ -1,0 +1,17 @@
+{
+  "athlete": {"full_name": "Readiness regression", "age": 29, "technical_style": ["boxing"], "tactical_style": ["counter_striker"], "athlete_timezone": "Europe/London"},
+  "injuries": "Sometimes my left knee hurts",
+  "guided_injuries": [],
+  "key_goals": ["strength", "power", "conditioning"],
+  "primary_goal": "strength",
+  "weak_areas": ["footwork"],
+  "primary_weak_area": "footwork",
+  "rounds_format": "4 x 3",
+  "equipment_access": ["dumbbells", "kettlebell", "barbell", "plate", "bench", "pullup_bar", "bands", "heavy_bag", "pads", "jump_rope", "foam_roller", "towel"],
+  "training_availability": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Sunday"],
+  "hard_sparring_days": ["Wednesday", "Sunday"],
+  "support_work_days": ["Tuesday", "Friday"],
+  "weekly_training_frequency": 4,
+  "no_scheduled_fight": true,
+  "fight_date": ""
+}

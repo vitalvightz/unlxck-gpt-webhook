@@ -202,6 +202,10 @@ def _build_athlete_model(
         has_active_injury
         and _all_active_injuries_surface_only_from_training_context(training_context)
     )
+    readiness_evidence: list[dict] = []
+    contact_readiness_flags = sparring_readiness_flags(
+        training_context.sparring_readiness, evidence=readiness_evidence,
+    )
     return {
         "has_active_injury": has_active_injury,
         "surface_injury_only": surface_injury_only,
@@ -262,6 +266,7 @@ def _build_athlete_model(
         "short_notice": short_notice,
         "plan_creation_weekday": plan_creation_dt.strftime("%A").lower(),
         "plan_creation_weekday_basis": "athlete_local_weekday",
+        "readiness_evidence": readiness_evidence,
         "readiness_flags": _derive_readiness_flags(
             fatigue=training_context.fatigue,
             weight_cut_risk=training_context.weight_cut_risk,
@@ -270,5 +275,5 @@ def _build_athlete_model(
             short_notice=short_notice,
             days_until_fight=training_context.days_until_fight,
             surface_injury_only=surface_injury_only,
-        ) + sparring_readiness_flags(training_context.sparring_readiness),
+        ) + contact_readiness_flags,
     }

@@ -130,6 +130,38 @@ BANNED_BIOMETRIC_KEYS: frozenset[str] = frozenset(
 logger = logging.getLogger(__name__)
 
 
+def _with_athlete_goal_notes(plan: dict, brief: Any) -> dict:
+    """Replace goal-gap/deferral prose with the authoritative plain explanation.
+
+    This only owns goal notes; injury context and safety rules are untouched.
+    Full diagnostic messages stay in the planning brief and admin reports.
+    """
+    from fightcamp.goal_preservation import athlete_goal_explanation
+
+    if not isinstance(brief, dict):
+        return plan
+    entries = (brief.get("open_plan_spec") or {}).get("goal_coverage") or brief.get("goal_preservation") or []
+    entries = [entry for entry in entries if isinstance(entry, dict) and entry.get("goal")]
+    notes = []
+    for note in plan.get("plan_notes") or []:
+        if not isinstance(note, dict):
+            notes.append(note)
+            continue
+        label = str(note.get("label") or "").lower()
+        text = str(note.get("text") or "").lower()
+        goal_note = any(str(e["goal"]).replace("_", " ") in label for e in entries)
+        internal = any(token in text for token in ("deterministic", "qualified exercises", "planner repair", "contract_errors"))
+        if goal_note and (internal or any(token in label for token in ("deferred", "gap", "missing"))):
+            continue
+        notes.append(note)
+    for entry in entries:
+        explanation = athlete_goal_explanation(entry)
+        if explanation and not any(isinstance(n, dict) and n.get("text") == explanation for n in notes):
+            notes.append({"category": "training", "label": str(entry["goal"]).replace("_", " ").title(),
+                          "text": explanation})
+    return {**plan, "plan_notes": notes}
+
+
 def _merge_locked_content(
     plan_dict: dict[str, Any], planning_brief: Any, raw_markdown: str | None = None
 ) -> dict[str, Any]:
@@ -3381,6 +3413,7 @@ def build_structured_plan_outcome(
         # and regrouping (which matches the model's names to the text).
         plan_dict = reconcile_canonical_names(plan_dict, planning_brief)
         plan_dict = sequence_structured_plan(plan_dict, planning_brief)
+        plan_dict = _with_athlete_goal_notes(plan_dict, planning_brief)
         # Conversion cannot turn a quality cue or an ungrounded number into a
         # programming instruction. Use the same deterministic recovery as reads.
         from .structured_plan_coaching import recover_selected_coaching

@@ -529,10 +529,12 @@ def _session_count_summary(week: dict[str, Any], athlete_model: dict[str, Any]) 
         reasons.append("d17_technical_only_rule")
     elif "d14_hard_sparring_ban" in reason_codes:
         reasons.append("d14_technical_only_rule")
-    if (
-        _has_active_injury(athlete_model) or "injury_management" in reason_codes
-    ) and not _all_active_injuries_surface_only(athlete_model):
+    # Explain actual removals, not injury presence: a mild symptom must not
+    # be reintroduced here as a global workload restriction in athlete prose.
+    if "injury_management" in reason_codes and not _all_active_injuries_surface_only(athlete_model):
         reasons.append("injury_management")
+    if "coach_owned_appointment_capacity" in reason_codes:
+        reasons.append("coach_owned_appointment_capacity")
     if coach_owned_count or week.get("hard_sparring_plan") or week.get("effective_hard_sparring_days"):
         reasons.append("coach_led_contact_load")
     if "fight_week_override" in reason_codes:
@@ -549,6 +551,7 @@ def _session_count_summary(week: dict[str, Any], athlete_model: dict[str, Any]) 
         "d14_technical_only_rule": "The D-14 hard-sparring cutoff moves contact work to technical-only.",
         "injury_management": "Injury management removes or compresses risky standalone work.",
         "coach_led_contact_load": "Hard sparring / contact work owns part of the weekly load.",
+        "coach_owned_appointment_capacity": "Your coached sessions count toward your weekly training schedule.",
         "fight_week_override": "Fight-week override caps app-owned work.",
         "intentional_compression": "Planner marked this as intentional compression.",
         "no_eligible_exercise": "A session with no eligible exercise was removed rather than filled.",
@@ -795,7 +798,7 @@ def build_stage2_finalizer_packet(
         "render_guards": guards,
         "hard_rules": [
             "selected_plan.goal_preservation is the deterministic final decision for every selected athlete goal, overriding generic Build wording in priority_focus.main_focus. Render build, maintain and explicit deferrals faithfully. Explain deferred goals and their constraint in Lead notes using plain language; never claim a deferred goal is being trained. Do not reconsider these states from role names or draft prose.",
-            "Each goal_preservation evidence entry with a name is a required selected stimulus on its recorded D-day. Preserve that exercise and its effective prescription/dose. Do not substitute a power, rehab, balance or primer exercise for meaningful_strength. These witnesses override general freedom to reselect exercises. Missing evidence requires deterministic planner repair, never an invented LLM exercise or training claim.",
+            "Each goal_preservation evidence entry with a name is a required selected stimulus on its recorded D-day. Preserve that exercise and its effective prescription/dose. Do not substitute a power, rehab, balance or primer exercise for meaningful_strength. These witnesses override general freedom to reselect exercises. Missing evidence never authorises an invented exercise or training claim.",
             "Render only athlete-facing plan content.",
             "Do not expose candidate pools, scoring logic, internal menus, or unused options.",
             "weekly_role_map.weeks[*].calendar_days is the only authority for weekday and D-day labels.",

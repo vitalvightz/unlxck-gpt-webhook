@@ -54,6 +54,8 @@ _COMPRESSION_REASONS = {
     "high_pressure_weight_cut": "weight_cut_pressure",
     "aggressive_weight_cut": "weight_cut_pressure",
     "injury_management": "injury_constraint",
+    "coach_owned_appointment_capacity": "calendar_capacity",
+    "weekly_appointment_capacity": "calendar_capacity",
     "fight_week_override": "fight_proximity",
     "pre_hard_contact_strength_exposure_cap": "pre_hard_contact_managed_stress",
 }
@@ -970,6 +972,25 @@ def _coverage(entry: dict, brief: dict, evidence: list[dict]) -> tuple[list[dict
     return witnesses, missing
 
 
+def athlete_goal_explanation(entry: dict) -> str:
+    """Plain, factual plan context; never expose the internal repair workflow."""
+    goal = str(entry.get("goal") or "training").replace("_", " ")
+    if entry.get("satisfied") is True:
+        return ""
+    if entry.get("state") != "defer":
+        return f"This plan does not yet include work for your {goal} goal."
+    reasons = set(entry.get("reason_codes") or []) | {
+        item.get("reason_code") for item in entry.get("constraints") or [] if isinstance(item, dict)
+    }
+    if "calendar_capacity" in reasons:
+        return f"Your current training schedule leaves no room for separate {goal} work this block."
+    if "injury_constraint" in reasons:
+        return f"{goal.capitalize()} work is on hold while your current symptoms are managed."
+    if "high_fatigue" in reasons:
+        return f"{goal.capitalize()} work is on hold to allow recovery."
+    return f"{goal.capitalize()} work is not scheduled in this block."
+
+
 def _role_matches_goal(role: dict, goal: str) -> bool:
     category = role.get("category")
     if goal in {"strength", "power", "trunk_strength"}:
@@ -1290,8 +1311,8 @@ def _restore_goal_roles(brief: dict, entry: dict, *, enforce_session_budget: boo
 
     Intentional compression and finished tails are immutable. No new exercise,
     role family, dose, extra session capacity or contact rule is invented here.
-    New maintenance retries enforce the requested appointment budget; the
-    existing build-repair reporting policy remains unchanged.
+    Reconciliation enforces the requested appointment budget for both build
+    and maintenance attempts. Direct legacy callers retain their explicit option.
     """
     from .late_camp_role_morph import _apply_late_camp_role_morph_once
     from .pre_hard_contact_strength import apply_pre_hard_contact_strength_exposure_cap
@@ -1360,7 +1381,7 @@ def _restore_goal_roles(brief: dict, entry: dict, *, enforce_session_budget: boo
                               "result": "authority_preserved",
                               "reason_codes": [HANDOFF_UNPLACED_REASON_CODE]})
                 continue
-            compression, compression_codes = effective_goal_repair_compression_state(week, suppressed)
+            compression, compression_codes = effective_goal_repair_compression_state(week, suppressed, athlete_model=_athlete(brief))
             if compression_codes or compression.get("active") or any((r.get("governance") or {}).get("hard_suppression_reasons") for r in suppressed):
                 audit.append({"week_index": week.get("week_index"), "role_key": candidate.get("role_key"),
                               "result": "authority_preserved", "reason_codes": sorted(set(compression_codes))})
@@ -1491,6 +1512,17 @@ def _restore_goal_roles(brief: dict, entry: dict, *, enforce_session_budget: boo
                     # Repair may reuse capacity, never manufacture another
                     # appointment to satisfy a goal.
                     if enforce_session_budget and appointment_budget_exceeded({"weeks": [trial_week]}, frequency):
+                        # Retain a causal refusal only for a trial that actually
+                        # supplies the missing adaptation. Live capacity is checked
+                        # again before this can justify a deferral.
+                        _, trial_missing = _coverage(entry, trial, collect_goal_evidence(trial))
+                        _, live_missing = _coverage(entry, brief, collect_goal_evidence(brief))
+                        if len(trial_missing) < len(live_missing):
+                            week.setdefault("appointment_budget", {})["requested"] = frequency
+                            refusal = {"role_key": candidate.get("role_key"), "category": candidate.get("category"),
+                                       "compression_reason_codes": ["weekly_appointment_capacity"]}
+                            if refusal not in week.setdefault("suppressed_roles", []):
+                                week["suppressed_roles"].append(refusal)
                         audit.append({"week_index": week.get("week_index"), "d_day": d_day,
                                       "result": "session_cap", "reason_codes": ["calendar_capacity"]})
                         continue
@@ -1578,7 +1610,7 @@ def _restore_goal_roles(brief: dict, entry: dict, *, enforce_session_budget: boo
     return audit
 
 
-def _repair_refusal_reasons(week: dict, goal: str, window: dict) -> list[dict]:
+def _repair_refusal_reasons(week: dict, goal: str, window: dict, *, athlete_model: dict | None = None) -> list[dict]:
     """Live compression codes that stop this week's goal candidates being restored.
 
     Mirrors the refusal in ``_restore_goal_roles`` exactly (same candidates, same
@@ -1593,7 +1625,7 @@ def _repair_refusal_reasons(week: dict, goal: str, window: dict) -> list[dict]:
         if identity in existing or not _role_matches_goal(candidate, goal):
             continue
         suppressed = [r for r in week.get("suppressed_roles") or [] if r.get("role_key") == candidate.get("role_key")]
-        _, codes = effective_goal_repair_compression_state(week, suppressed)
+        _, codes = effective_goal_repair_compression_state(week, suppressed, athlete_model=athlete_model)
         for code in sorted(set(codes)):
             reason = {"reason_code": _COMPRESSION_REASONS.get(code, "planner_compression"),
                       "authority": "planner_compression", "source_reason_code": code,
@@ -1673,7 +1705,8 @@ def _deferral_constraints(entry: dict, brief: dict, missing: list[dict]) -> list
             for row in week.get("suppressed_roles") or []:
                 if not _role_matches_goal(row, entry["goal"]):
                     continue
-                for code in row.get("compression_reason_codes") or []:
+                _, live_codes = effective_goal_repair_compression_state(week, [row], athlete_model=_athlete(brief))
+                for code in live_codes:
                     if code in _COMPRESSION_REASONS:
                         window_reasons.append({"reason_code": _COMPRESSION_REASONS[code], "authority": "planner_compression",
                             "source_reason_code": code, "week_index": week.get("week_index"), "role_key": row.get("role_key"),
@@ -1687,7 +1720,7 @@ def _deferral_constraints(entry: dict, brief: dict, missing: list[dict]) -> list
             # compressed week (e.g. crowded-week `low_session_budget_high_combat_load`)
             # blocked the repair yet left the gap unexplained, so the goal stayed
             # an unsatisfiable `build` blocker instead of a cited deferral.
-            window_reasons.extend(_repair_refusal_reasons(week, entry["goal"], window))
+            window_reasons.extend(_repair_refusal_reasons(week, entry["goal"], window, athlete_model=_athlete(brief)))
             if entry["goal"] == "strength":
                 readiness = athlete_dose_state(_athlete(brief))
                 for role in week.get("session_roles") or []:
@@ -1773,7 +1806,7 @@ def _reconcile_goal_preservation(brief: dict) -> dict:
     for entry in entries:
         initial_state = entry["state"]
         matching, missing = _coverage(entry, brief, collect_goal_evidence(brief))
-        audit = _restore_goal_roles(brief, entry) if missing else []
+        audit = _restore_goal_roles(brief, entry, enforce_session_budget=True) if missing else []
         if audit:
             apply_effective_conditioning_prescriptions(
                 weekly_role_map=brief.get("weekly_role_map") or {}, athlete_model=_athlete(brief),
