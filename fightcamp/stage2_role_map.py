@@ -2266,50 +2266,10 @@ def _active_injury_is_moderate_plus(athlete_model: dict) -> bool:
     return _boxing_crowded_week_injury_is_moderate_plus(athlete_model)
 
 
-def _injury_requires_session_compression(athlete_model: dict) -> bool:
-    """Capacity reduction needs impact/severity evidence, not injury presence.
-
-    Unknown impact retains the separate movement/contact safeguards. In
-    particular, the parser's fallback moderate band is not evidence that an
-    athlete needs fewer weekly appointments.
-    """
-    from .injury_awareness import (
-        CANT_TRAIN, LIMITING, has_independent_medical_override,
-        is_awareness_only, reported_training_impact,
-    )
-    from .injury_guard import normalize_severity
-
-    if athlete_model.get("injury_mode") in {"medical_hold", "restricted_rehab_only"}:
-        return True
-    flags = set(clean_list(athlete_model.get("readiness_flags", [])))
-    if flags & {"moderate_injury", "high_injury", "significant_injury", "severe_injury", "red_flag_injury"}:
-        return True
-    if _all_active_injuries_surface_only(athlete_model):
-        return False
-    records = [entry for key in ("parsed_injuries", "injury_restrictions")
-               for entry in athlete_model.get(key) or [] if isinstance(entry, dict)]
-    if isinstance(athlete_model.get("guided_injury"), dict):
-        records.append(athlete_model["guided_injury"])
-    for record in records:
-        if has_independent_medical_override(record):
-            return True
-        if is_awareness_only(record):
-            continue
-        if reported_training_impact(record) in {LIMITING, CANT_TRAIN}:
-            return True
-        if (record.get("severity_source") != "fallback_default"
-                and str(record.get("severity") or "").lower() in {"moderate", "high", "severe"}):
-            return True
-    if not records:
-        for text in clean_list(athlete_model.get("injuries", [])):
-            severity, evidence = normalize_severity(text)
-            if evidence and severity in {"moderate", "high"}:
-                return True
-    return False
-
-
 def _boxing_crowded_week_injury_is_moderate_plus(athlete_model: dict) -> bool:
     """Shared severity-aware signal for normal role-budget policies."""
+    if athlete_model.get("injury_mode") in {"medical_hold", "restricted_rehab_only"}:
+        return True
     readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
     if readiness_flags & {
         "moderate_injury",
@@ -2337,15 +2297,22 @@ def _boxing_crowded_week_injury_is_moderate_plus(athlete_model: dict) -> bool:
             entry for entry in injury_restrictions if isinstance(entry, dict)
         )
 
-    from .injury_awareness import reported_training_impact, is_awareness_only
+    from .injury_awareness import (
+        CANT_TRAIN, LIMITING, has_independent_medical_override,
+        reported_training_impact, is_awareness_only,
+    )
+    if any(has_independent_medical_override(entry) for entry in structured_entries):
+        return True
     structured_entries = [entry for entry in structured_entries
                           if not is_awareness_only(entry)]
-    if any(reported_training_impact(entry) == "cant_train" for entry in structured_entries):
+    if any(reported_training_impact(entry) in {LIMITING, CANT_TRAIN} for entry in structured_entries):
         return True
     structured_severities = {
         str(entry.get("severity") or "").strip().lower()
         for entry in structured_entries
+        # A parser fallback is unknown impact, not evidence of global load loss.
         if str(entry.get("severity") or "").strip()
+        and entry.get("severity_source") != "fallback_default"
     }
     if structured_severities:
         return bool(
@@ -2422,7 +2389,7 @@ def _readiness_compression_components(athlete_model: dict) -> _CompressionCompon
     if fatigue == "high":
         compression += 1
     cut_points = _cut_severity_compression_points(athlete_model)
-    if _injury_requires_session_compression(athlete_model):
+    if _active_injury_is_moderate_plus(athlete_model):
         compression += 1
     if compression and _proximity_amplifies_compression(athlete_model, cut_points=cut_points):
         compression += 1
@@ -2819,9 +2786,9 @@ def _build_spar_allocation_reason_codes(
         reason_codes.append("two_hard_spar_days")
     if is_meaningful_cut:
         reason_codes.append("active_weight_cut")
-    if _injury_requires_session_compression(athlete_model):
+    if _active_injury_is_moderate_plus(athlete_model):
         reason_codes.append("injury_management")
-    if (fatigue == "high" or _injury_requires_session_compression(athlete_model)) and (
+    if (fatigue == "high" or _active_injury_is_moderate_plus(athlete_model)) and (
         _proximity_amplifies_compression(
             athlete_model, cut_points=_cut_severity_compression_points(athlete_model)
         )

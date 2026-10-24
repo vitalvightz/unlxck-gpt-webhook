@@ -5,7 +5,6 @@ import datetime as dt
 import pytest
 
 from fightcamp.stage2_role_map import (
-    _active_injury_is_moderate_plus,
     _readiness_compression_floor,
 )
 
@@ -24,9 +23,10 @@ from fightcamp.stage2_role_map import (
 def test_session_compression_uses_existing_impact_and_severity(record, expected):
     athlete = {"injuries": ["Sometimes my left knee hurts"], "parsed_injuries": [record],
                "readiness_flags": ["injury_management"]}
+    before = deepcopy(athlete)
     assert _readiness_compression_floor(athlete) == expected
-    # No change to the conservative movement/contact consumers of this signal.
-    assert _active_injury_is_moderate_plus(athlete)
+    # Budget classification never removes movement-specific injury metadata.
+    assert athlete == before
 
 
 @pytest.mark.parametrize("safety", [
