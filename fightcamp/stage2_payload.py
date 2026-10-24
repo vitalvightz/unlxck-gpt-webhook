@@ -1975,6 +1975,8 @@ def _project_open_goal_coverage(block: dict[str, Any]) -> list[dict[str, Any]]:
         for day in week.get("calendar_days") or []
         if isinstance(day, dict)
     }
+    from .goal_preservation import validate_goal_preservation
+    contract_errors = validate_goal_preservation(block)
     coverage = []
     for entry in block.get("goal_preservation") or []:
         if not isinstance(entry, dict):
@@ -1984,6 +1986,7 @@ def _project_open_goal_coverage(block: dict[str, Any]) -> list[dict[str, Any]]:
             "priority": entry.get("priority"),
             "state": entry.get("state"),
             "satisfied": entry.get("satisfied"),
+            "contract_errors": [error for error in contract_errors if error.get("goal") in {None, entry.get("goal")}],
             "reason_codes": entry.get("reason_codes") or [],
             "constraints": entry.get("constraints") or [],
             "evidence": [

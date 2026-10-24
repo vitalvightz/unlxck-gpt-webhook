@@ -172,3 +172,59 @@ def test_quick_build_impact_cannot_soften_medical_severity():
                               injuries=f'Fractured left knee [training_impact:{impact}]')
         parsed = PlanInput.from_payload(request.to_payload())
         assert parsed.parsed_injuries[0]['severity'] == 'high'
+
+
+def _open_contract_projection(block):
+    from fightcamp.stage2_payload import _project_open_goal_coverage, _project_open_development_block
+    return {'payload_variant': 'open_ongoing_stage2_payload',
+            'athlete_snapshot': block['athlete_snapshot'], 'priority_focus': block['priority_focus'],
+            'open_plan_spec': {'goal_coverage': _project_open_goal_coverage(block),
+                               'weekly_session_plan': _project_open_development_block(block)}}
+
+
+def _secondary_deferral_block():
+    from test_goal_preservation import _brief, _role, _slot, _resolve
+    block = _brief(days=20, roles=[_role(18)],
+                   slots=[_slot('Medicine Ball Rotational Slam', 'anchor_power')])
+    block['weekly_role_map']['weeks'][0]['suppressed_roles'] = [{
+        'category': 'strength', 'role_key': 'primary_strength_day',
+        'compression_reason_codes': ['high_fatigue']}]
+    return _resolve(block)
+
+
+def test_open_allows_canonically_justified_unsatisfied_secondary_deferral():
+    block = _secondary_deferral_block()
+    secondary = next(e for e in block['goal_preservation'] if e['goal'] == 'strength')
+    assert secondary['state'] == 'defer' and secondary['satisfied'] is False
+    assert validate_goal_preservation(block) == []
+    assert validate_goal_preservation(_open_contract_projection(block)) == []
+
+
+def test_open_rejects_deferral_after_its_causal_restriction_disappears():
+    block = _secondary_deferral_block()
+    block['weekly_role_map']['weeks'][0]['suppressed_roles'] = []
+    errors = validate_goal_preservation(_open_contract_projection(block))
+    assert any(error['goal'] == 'strength' for error in errors)
+
+
+def test_open_rejects_unjustified_primary_loss_through_canonical_contract():
+    block = _secondary_deferral_block()
+    block['weekly_role_map']['weeks'][0]['session_roles'][0]['selected_exercise_assignments'] = []
+    assert any(error['goal'] == 'speed' for error in validate_goal_preservation(_open_contract_projection(block)))
+
+
+@pytest.mark.parametrize('change', ['missing_evidence', 'invalid_state', 'missing_contract', 'unsatisfied', 'invalid_evidence'])
+def test_open_rejects_invalid_active_goal_projection(change):
+    projected = _open_contract_projection(_secondary_deferral_block())
+    primary = next(row for row in projected['open_plan_spec']['goal_coverage'] if row['goal'] == 'speed')
+    if change == 'missing_evidence':
+        primary['evidence'] = []
+    elif change == 'invalid_state':
+        primary['state'] = 'optional'
+    elif change == 'missing_contract':
+        primary.pop('contract_errors')
+    elif change == 'invalid_evidence':
+        primary['evidence'][0]['name'] = 'Unassigned exercise'
+    else:
+        primary['satisfied'] = False
+    assert any(error['goal'] == 'speed' for error in validate_goal_preservation(projected))

@@ -20,7 +20,7 @@ import { getSparringConsistency, HARD_SPARRING_DAY_CAP } from "@/lib/training-sc
 import { buildAthleteInjuryTexts } from "@/lib/guided-injury";
 import type { PlanRequest } from "@/lib/types";
 
-import { INJURY_IMPACT_OPTIONS, readInjuryImpact, writeInjuryImpact, type InjuryImpact } from "@/lib/injury-impact";
+import { readInjuryImpact, writeInjuryImpact, type InjuryImpact } from "@/lib/injury-impact";
 
 export const QUICK_BUILD_KEY_GOAL_CAP = 3;
 export const QUICK_BUILD_WEAK_AREA_CAP = 2;
@@ -272,7 +272,6 @@ export function quickBuildToPlanRequest(
     // updates only that report; it never erases the original symptom/avoidance.
     guided_injuries: input.injuries.trim() ? input.guided_injuries?.map(injury => ({
       ...injury,
-      severity: input.injury_impact ? (INJURY_IMPACT_OPTIONS.find(option => option.value === input.injury_impact)?.guidedSeverity ?? injury.severity) : injury.severity,
       notes: input.injury_impact ? writeInjuryImpact(injury.notes ?? "", input.injury_impact) : injury.notes,
     })) : [],
     key_goals: keyGoals,
