@@ -460,6 +460,14 @@ def observed_row(stage="Rejected", observed="Contacted", since=None, confirmed="
     }}
 
 
+def test_missing_confirmed_stage_skips_history_safely():
+    now = datetime(2026, 10, 18, 17, tzinfo=timezone.utc)
+    page = observed_row(stage="Accepted", observed="Accepted",
+                        since=(now - timedelta(minutes=10)).isoformat())
+    del page["properties"]["Confirmed Stage"]
+    assert sync.stage_changes(page, now) == {}
+
+
 def test_debounces_stage_and_remembers_rejection_as_reply():
     now = datetime(2026, 10, 18, 17, tzinfo=timezone.utc)
     initial = sync.stage_changes(observed_row(), now)
