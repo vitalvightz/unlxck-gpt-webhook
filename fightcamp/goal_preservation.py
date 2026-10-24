@@ -1311,8 +1311,8 @@ def _restore_goal_roles(brief: dict, entry: dict, *, enforce_session_budget: boo
 
     Intentional compression and finished tails are immutable. No new exercise,
     role family, dose, extra session capacity or contact rule is invented here.
-    Reconciliation enforces the requested appointment budget for both build
-    and maintenance attempts. Direct legacy callers retain their explicit option.
+    New maintenance retries enforce the requested appointment budget; the
+    existing build-repair reporting policy remains unchanged.
     """
     from .late_camp_role_morph import _apply_late_camp_role_morph_once
     from .pre_hard_contact_strength import apply_pre_hard_contact_strength_exposure_cap
@@ -1512,17 +1512,6 @@ def _restore_goal_roles(brief: dict, entry: dict, *, enforce_session_budget: boo
                     # Repair may reuse capacity, never manufacture another
                     # appointment to satisfy a goal.
                     if enforce_session_budget and appointment_budget_exceeded({"weeks": [trial_week]}, frequency):
-                        # Retain a causal refusal only for a trial that actually
-                        # supplies the missing adaptation. Live capacity is checked
-                        # again before this can justify a deferral.
-                        _, trial_missing = _coverage(entry, trial, collect_goal_evidence(trial))
-                        _, live_missing = _coverage(entry, brief, collect_goal_evidence(brief))
-                        if len(trial_missing) < len(live_missing):
-                            week.setdefault("appointment_budget", {})["requested"] = frequency
-                            refusal = {"role_key": candidate.get("role_key"), "category": candidate.get("category"),
-                                       "compression_reason_codes": ["weekly_appointment_capacity"]}
-                            if refusal not in week.setdefault("suppressed_roles", []):
-                                week["suppressed_roles"].append(refusal)
                         audit.append({"week_index": week.get("week_index"), "d_day": d_day,
                                       "result": "session_cap", "reason_codes": ["calendar_capacity"]})
                         continue
@@ -1806,7 +1795,7 @@ def _reconcile_goal_preservation(brief: dict) -> dict:
     for entry in entries:
         initial_state = entry["state"]
         matching, missing = _coverage(entry, brief, collect_goal_evidence(brief))
-        audit = _restore_goal_roles(brief, entry, enforce_session_budget=True) if missing else []
+        audit = _restore_goal_roles(brief, entry) if missing else []
         if audit:
             apply_effective_conditioning_prescriptions(
                 weekly_role_map=brief.get("weekly_role_map") or {}, athlete_model=_athlete(brief),
