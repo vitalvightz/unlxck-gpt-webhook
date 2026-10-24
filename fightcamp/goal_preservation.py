@@ -1285,11 +1285,13 @@ def _recompose_existing_strength_for_goal(brief: dict, entry: dict) -> dict | No
     return None
 
 
-def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
+def _restore_goal_roles(brief: dict, entry: dict, *, enforce_session_budget: bool = False) -> list[dict]:
     """Try retained planner candidates within their original week and budget.
 
     Intentional compression and finished tails are immutable. No new exercise,
     role family, dose, extra session capacity or contact rule is invented here.
+    New maintenance retries enforce the requested appointment budget; the
+    existing build-repair reporting policy remains unchanged.
     """
     from .late_camp_role_morph import _apply_late_camp_role_morph_once
     from .pre_hard_contact_strength import apply_pre_hard_contact_strength_exposure_cap
@@ -1315,7 +1317,7 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
         # A long camp can require more than one development window. Repair the
         # next uncovered window too; do not stop after the first valid host.
         _, remaining = _coverage(entry, brief, collect_goal_evidence(brief))
-        return [recomposed, *_restore_goal_roles(brief, entry)] if remaining else [recomposed]
+        return [recomposed, *_restore_goal_roles(brief, entry, enforce_session_budget=enforce_session_budget)] if remaining else [recomposed]
     for ordinal, week in enumerate(role_map.get("weeks") or []):
         # A repair belongs to an uncovered cadence window. Re-composing weeks
         # that already met the goal adds no coverage and wastes bounded trials.
@@ -1486,9 +1488,12 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                                 traded_role = funding_role
                                 break
                             trial_week["session_roles"].insert(funding_index, funding_role)
-                    # Keep one conditioning appointment and all coach/tail roles.
-                    # Frequency remains the allocator's target, not a medical
-                    # dose cap; accepted overages retain its explicit warning.
+                    # Repair may reuse capacity, never manufacture another
+                    # appointment to satisfy a goal.
+                    if enforce_session_budget and appointment_budget_exceeded({"weeks": [trial_week]}, frequency):
+                        audit.append({"week_index": week.get("week_index"), "d_day": d_day,
+                                      "result": "session_cap", "reason_codes": ["calendar_capacity"]})
+                        continue
                 # A trial must face the same realised-load governor as the main
                 # pipeline, after membership and effective doses are knowable.
                 apply_realised_load_calendar_revalidation(
@@ -1554,7 +1559,7 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                               "displaced_fillers": [roles[i].get("role_key") for i in displaced],
                               **({"appointment_tradeoff": "compatible_work_above_requested_target"} if over_target and traded_role is None else {}),
                               **({"capacity_trade": traded_role.get("role_key")} if traded_role else {})})
-                return audit + _restore_goal_roles(brief, entry) if missing_after else audit
+                return audit + _restore_goal_roles(brief, entry, enforce_session_budget=enforce_session_budget) if missing_after else audit
         # Reaching here means no candidate could be restored into this week -
         # for ANY reason: no candidate matched the goal, the week held its
         # authority (compression, hard suppression, contact rules), the session
@@ -1779,11 +1784,20 @@ def _reconcile_goal_preservation(brief: dict) -> dict:
             # Prefer retaining a maintenance promise over deferring a primary.
             maintained = {**entry, "state": "maintain"}
             maintenance_evidence, maintenance_missing = _coverage(maintained, brief, collect_goal_evidence(brief))
-            if entry["state"] == "build" and not maintenance_missing:
-                entry["state"] = "maintain"
-                matching, missing = maintenance_evidence, []
-            else:
-                entry["state"] = "defer"
+            if entry["state"] == "build" and maintenance_missing:
+                # A legal maintenance exposure may survive where development
+                # cannot. Try the same closed-candidate/calendar owners before
+                # accepting a complete loss of the selected adaptation.
+                audit.extend(_restore_goal_roles(brief, maintained, enforce_session_budget=True))
+                maintenance_evidence, maintenance_missing = _coverage(maintained, brief, collect_goal_evidence(brief))
+                matching, missing = _coverage(entry, brief, collect_goal_evidence(brief))
+                constraints = _deferral_constraints(entry, brief, missing) if missing else []
+            if missing and constraints:
+                if entry["state"] == "build" and not maintenance_missing:
+                    entry["state"] = "maintain"
+                    matching, missing = maintenance_evidence, []
+                else:
+                    entry["state"] = "defer"
             entry["reason_codes"] = list(dict.fromkeys([*entry["reason_codes"], *(c["reason_code"] for c in constraints)]))
         entry.update(initial_state=initial_state, evidence=matching, constraints=constraints, repair_attempts=audit,
                      coverage_requirements=_requirements({**entry, "state": initial_state} if entry["state"] == "defer" else entry, brief), missing_coverage=missing,

@@ -2268,6 +2268,8 @@ def _active_injury_is_moderate_plus(athlete_model: dict) -> bool:
 
 def _boxing_crowded_week_injury_is_moderate_plus(athlete_model: dict) -> bool:
     """Shared severity-aware signal for normal role-budget policies."""
+    if athlete_model.get("injury_mode") in {"medical_hold", "restricted_rehab_only"}:
+        return True
     readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
     if readiness_flags & {
         "moderate_injury",
@@ -2295,15 +2297,22 @@ def _boxing_crowded_week_injury_is_moderate_plus(athlete_model: dict) -> bool:
             entry for entry in injury_restrictions if isinstance(entry, dict)
         )
 
-    from .injury_awareness import reported_training_impact, is_awareness_only
+    from .injury_awareness import (
+        CANT_TRAIN, LIMITING, has_independent_medical_override,
+        reported_training_impact, is_awareness_only,
+    )
+    if any(has_independent_medical_override(entry) for entry in structured_entries):
+        return True
     structured_entries = [entry for entry in structured_entries
                           if not is_awareness_only(entry)]
-    if any(reported_training_impact(entry) == "cant_train" for entry in structured_entries):
+    if any(reported_training_impact(entry) in {LIMITING, CANT_TRAIN} for entry in structured_entries):
         return True
     structured_severities = {
         str(entry.get("severity") or "").strip().lower()
         for entry in structured_entries
+        # A parser fallback is unknown impact, not evidence of global load loss.
         if str(entry.get("severity") or "").strip()
+        and entry.get("severity_source") != "fallback_default"
     }
     if structured_severities:
         return bool(
