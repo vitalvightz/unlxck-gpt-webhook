@@ -248,7 +248,7 @@ def test_replied_stage_copies_early_preview_before_due():
     p["Details Sent At"] = sync.date_patch("2026-10-18T12:00:00+01:00")
     p["Warm Next DM"]["formula"]["string"] = "WAIT: due 21 Oct 2026"
     changes = sync.get_changes(page, date(2026, 10, 19))
-    assert get_copy(changes) == "Hey mate, just checking you got the beta link."
+    assert get_copy(changes) == sync.WARM_MESSAGES["Replied"][0]
 
 
 def test_accepted_and_activated_preview_appears_before_due():
@@ -266,7 +266,7 @@ def test_accepted_and_activated_preview_appears_before_due():
     assert get_copy(sync.get_changes(activated, date(2026, 10, 14))).startswith("How have your")
 
     activated["properties"]["Next DM to Copy"]["formula"]["string"] = "WAIT: due 17 Oct 2026"
-    assert sync.get_changes(activated, date(2026, 10, 14))["Copy Follow-Up"] == {"rich_text": []}
+    assert sync.plain({**activated["properties"], **sync.get_changes(activated, date(2026, 10, 14))}, "Copy Follow-Up") == ""
 
 
 def test_undated_accepted_does_not_copy_early_preview():
@@ -597,7 +597,6 @@ def test_warm_initial_poll_baselines_counters_without_inventing_send_dates():
     changes = sync.get_warm_changes(page, datetime(2026, 10, 20, 20, tzinfo=timezone.utc))
     assert changes == {
         "Synced Signup Nudges Sent": {"number": 0},
-        "Synced Onboarding Nudges Sent": {"number": 0},
     }
 
 
@@ -650,17 +649,16 @@ def test_signup_nudge_progression_stamps_first_and_last_automatically():
     assert last["Warm Last Nudge At"]["date"]["start"] != first["Warm Last Nudge At"]["date"]["start"]
 
 
-def test_onboarding_nudges_are_independent_of_previous_signup_counter():
-    page = row(stage="Accepted")
+def test_legacy_onboarding_counter_is_read_only_and_requires_review():
+    page = warm_row("Accepted")
     p = page["properties"]
-    p["Signup Nudges Sent"]["select"] = {"name": "2"}
-    p["Synced Signup Nudges Sent"]["number"] = 2
     p["Onboarding Nudges Sent"]["select"] = {"name": "1"}
     p["Synced Onboarding Nudges Sent"]["number"] = 0
-    changes = sync.get_warm_changes(page, datetime(2026, 10, 20, 20, tzinfo=timezone.utc))
-    assert changes["Synced Onboarding Nudges Sent"] == {"number": 1}
-    assert "Onboarding Nudge 1 At" in changes
-    assert "Synced Signup Nudges Sent" not in changes
+    changes = sync.get_changes(page, OBSERVED_NOW)
+    assert "Synced Onboarding Nudges Sent" not in changes
+    assert "Onboarding Nudge 1 At" not in changes
+    assert sync.date_value({**p, **changes}, "Safe Next Due") is None
+    assert "legacy onboarding" in sync.plain(changes, "Follow-Up Timing")
 
 
 def test_historical_warm_count_or_skipped_increment_never_fabricates_dates():
@@ -711,7 +709,7 @@ def apply_patch(page, changes):
 def warm_row(stage="Replied", *, count="0", checkpoint=0, first=None):
     page = row(stage=stage, synced=0)
     p = page["properties"]
-    prefix = "Signup" if stage == "Replied" else "Onboarding"
+    prefix = "Signup"
     flag = "Details Sent"
     p[flag]["checkbox"] = True
     p[flag + " At"] = sync.date_patch("2026-10-15T12:00:00+01:00")
@@ -773,7 +771,7 @@ def test_stage_entry_alone_does_not_claim_details_or_instructions_sent(stage):
 def test_first_nudge_records_time_and_next_due_four_days_later(stage):
     page = warm_row(stage, count="1", checkpoint=0)
     changes = sync.get_changes(page, OBSERVED_NOW)
-    prefix = "Signup" if stage == "Replied" else "Onboarding"
+    prefix = "Signup"
     assert changes[prefix + " Nudge 1 At"] == sync.date_patch(OBSERVED_NOW.isoformat())
     assert changes["Warm Last Nudge At"] == sync.date_patch(OBSERVED_NOW.isoformat())
     assert changes["Safe Next Due"] == sync.date_patch("2026-10-24T20:00:00+01:00")
@@ -812,8 +810,7 @@ def test_unknown_or_inconsistent_history_has_no_next_due(count, checkpoint, firs
 def test_contacted_records_baseline_warm_counters_before_stage_entry():
     page = row(stage="Contacted")
     changes = sync.get_warm_changes(page, OBSERVED_NOW)
-    assert changes == {"Synced Signup Nudges Sent": {"number": 0},
-                       "Synced Onboarding Nudges Sent": {"number": 0}}
+    assert changes == {"Synced Signup Nudges Sent": {"number": 0}}
     apply_patch(page, changes)
     page["properties"]["Stage (AI Fills First)"]["select"] = {"name": "Accepted"}
     page["properties"]["Signup Nudges Sent"]["select"] = {"name": "1"}
@@ -1041,15 +1038,16 @@ def test_one_signup_and_one_getting_started_followup_complete_the_shared_sequenc
     original_details = copy.deepcopy(p["Details Sent At"])
     p["Stage (AI Fills First)"]["select"] = {"name": "Accepted"}
     apply_patch(page, sync.get_changes(page, OBSERVED_NOW + timedelta(minutes=2)))
-    p["Onboarding Nudges Sent"]["select"] = {"name": "1"}
+    p["Signup Nudges Sent"]["select"] = {"name": "2"}
     changes = sync.get_changes(page, OBSERVED_NOW + timedelta(days=4))
-    assert changes["Onboarding Nudge 1 At"] == sync.date_patch("2026-10-24T20:00:00+01:00")
+    assert "Onboarding Nudge 1 At" not in changes
+    assert changes["Warm Last Nudge At"] == sync.date_patch("2026-10-24T20:00:00+01:00")
     assert changes["Safe Next Due"] == sync.date_patch(None)
     apply_patch(page, changes)
     assert p["Signup Nudge 1 At"] == original_first
     assert p["Details Sent At"] == original_details
-    assert p["Signup Nudges Sent"]["select"]["name"] == "1"
-    assert p["Onboarding Nudges Sent"]["select"]["name"] == "1"
+    assert p["Signup Nudges Sent"]["select"]["name"] == "2"
+    assert p["Onboarding Nudges Sent"]["select"] is None
     assert sync.get_changes(page, OBSERVED_NOW + timedelta(days=10)) == {}
 
 
@@ -1118,3 +1116,40 @@ def test_erasing_a_known_details_date_during_a_checkbox_edit_does_not_stamp_toda
     changes = sync.get_changes(page, OBSERVED_NOW, previous=previous)
     assert "Details Sent At" not in changes
     assert "Needs Review" in sync.plain(changes, "Follow-Up Timing")
+
+
+@pytest.mark.parametrize("stage", ["Replied", "Accepted"])
+@pytest.mark.parametrize("count", [0, 1, 2])
+def test_shared_count_selects_approved_copy_despite_stale_formula(stage, count):
+    page = warm_row(stage, count=str(count), checkpoint=count,
+                    first="2026-10-16T12:00:00+01:00" if count else None)
+    page["properties"]["Next DM to Copy"]["formula"] = {"type": "string", "string": "stale first message"}
+    changes = sync.get_changes(page, OBSERVED_NOW)
+    actual = {**page["properties"], **changes}
+    assert sync.plain(actual, "Copy Follow-Up") == (sync.WARM_MESSAGES[stage][count] if count < 2 else "")
+
+
+@pytest.mark.parametrize("stage", ["Replied", "Accepted"])
+def test_historical_mismatch_quarantine_survives_retries_and_stage_switch(stage, monkeypatch):
+    page = warm_row(stage, count="1", checkpoint=0)
+    identity = sync.hashlib.sha256(page["id"].encode()).hexdigest()
+    monkeypatch.setattr(sync, "WARM_REVIEW_IDS", {identity})
+    for next_stage in (stage, "Accepted", "Replied"):
+        page["properties"]["Stage (AI Fills First)"]["select"] = {"name": next_stage}
+        changes = sync.get_changes(page, OBSERVED_NOW)
+        assert "Signup Nudge 1 At" not in changes
+        assert "Warm Last Nudge At" not in changes
+        assert "Synced Signup Nudges Sent" not in changes
+        apply_patch(page, changes)
+        assert sync.date_value(page["properties"], "Safe Next Due") is None
+        assert sync.plain(page["properties"], "Copy Follow-Up") == ""
+        assert sync.plain(page["properties"], "Follow-Up Timing") == sync.WARM_REVIEW
+
+
+def test_shared_counter_works_without_retired_onboarding_fields():
+    page = warm_row("Accepted", count="1", checkpoint=0)
+    for name in ("Onboarding Nudges Sent", "Synced Onboarding Nudges Sent", "Onboarding Nudge 1 At"):
+        page["properties"].pop(name)
+    changes = sync.get_changes(page, OBSERVED_NOW)
+    assert changes["Synced Signup Nudges Sent"] == {"number": 1}
+    assert changes["Signup Nudge 1 At"] == sync.date_patch(OBSERVED_NOW.isoformat())
