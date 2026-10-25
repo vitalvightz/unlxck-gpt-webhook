@@ -1,0 +1,21 @@
+create role anon; create role authenticated; create role service_role bypassrls;
+create extension if not exists pg_cron;
+create schema private;
+create schema auth;
+create function auth.role() returns text language sql stable as $$ select current_setting('request.jwt.claim.role',true) $$;
+grant usage on schema auth to authenticated;
+ create table auth.users(id uuid primary key);
+create table public.profiles (
+ id uuid primary key, email text, username text,role text,full_name text,technical_style text[],tactical_style text[],stance text,professional_status text,record_summary text,athlete_timezone text,athlete_locale text,appearance_mode text,onboarding_draft jsonb,nutrition_profile jsonb,created_at timestamptz,updated_at timestamptz,access_status text,starting_path text,date_of_birth date);
+create table public.plans(id uuid primary key,athlete_id uuid,created_at timestamptz,status text);
+create table public.session_completions(id uuid primary key,athlete_id uuid,started_at timestamptz,completed_at timestamptz,status text,plan_id uuid);
+create table public.external_training_sessions(id uuid primary key,athlete_id uuid,created_at timestamptz,deleted_at timestamptz);
+create table public.sparring_logs(id uuid primary key,athlete_id uuid,created_at timestamptz);
+create table public.today_checkins(id uuid primary key,athlete_id uuid,created_at timestamptz);
+create table public.daily_checkins(id uuid primary key,athlete_id uuid,created_at timestamptz);
+create table public.session_logs(id uuid primary key,athlete_id uuid,created_at timestamptz,completed boolean,plan_id uuid);
+create table public.custom_training_plans(id uuid primary key,athlete_id uuid,created_at timestamptz);
+create table public.beta_feedback(id uuid primary key,submitted_by_profile_id uuid,created_at timestamptz,surface text);
+create table public.generation_jobs(id uuid primary key,athlete_id uuid,created_at timestamptz,status text);
+grant usage on schema public to service_role;
+grant select on all tables in schema public to service_role;

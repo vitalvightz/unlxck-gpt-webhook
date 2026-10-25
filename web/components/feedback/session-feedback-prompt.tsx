@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useId, useRef, useState } from "react";
 
-import { submitSessionFeedback } from "@/lib/api";
+import { trackProductEvent, productEventIdentity, submitSessionFeedback } from "@/lib/api";
 import {
   SESSION_DIFFICULTY_OPTIONS,
   SESSION_FEEDBACK_INTRO,
@@ -87,6 +87,10 @@ export function SessionFeedbackPrompt({
   trainingDay?: string;
   onDismiss: () => void;
 }>) {
+  useEffect(() => {
+    void productEventIdentity(`feedback:${planId}:${sessionId}:${trainingDay ?? new Date().toISOString().slice(0,10)}`)
+      .then(id => trackProductEvent(token, "feedback_prompt_shown", "feedback", id, id)).catch(() => {});
+  }, [token, planId, sessionId, trainingDay]);
   const fieldId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const [answers, setAnswers] = useState<SessionFeedbackAnswers>({});

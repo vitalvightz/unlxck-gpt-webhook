@@ -103,6 +103,8 @@ def build_profile_router(*, require_profile, get_store) -> APIRouter:
         if update.training_habits is not None and update.training_habits.enabled:
             require_health_feature_access(profile)
         updated = _map_profile_row(store.update_profile(profile.athlete_id, update))
+        if update.starting_path is not None:
+            store.record_onboarding_stage(profile.athlete_id, completed=True)
         return _build_me_with_activation_xp(updated, store)
 
     @router.post("/api/me/compliance", response_model=MeResponse)
@@ -172,6 +174,7 @@ def build_profile_router(*, require_profile, get_store) -> APIRouter:
             profile.athlete_id,
             ProfileUpdateRequest(**update_data),
         )
+        store.record_onboarding_stage(profile.athlete_id)
         updated_at = (updated or {}).get("updated_at")
         return {"ok": True, "updated_at": str(updated_at or "")}
 

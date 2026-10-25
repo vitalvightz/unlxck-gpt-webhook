@@ -1891,6 +1891,7 @@ class MeResponse(BaseModel):
 
 
 class AdminAthleteRecord(BaseModel):
+    last_meaningful_activity_at: str | None = None
     athlete_id: str
     email: str
     role: UserRole

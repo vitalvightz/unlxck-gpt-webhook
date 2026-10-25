@@ -186,7 +186,7 @@ export const PRIVACY_NOTICE: LegalDocument = {
   slug: "privacy-notice",
   title: "Privacy Notice",
   version: PRIVACY_NOTICE_VERSION,
-  lastUpdated: "29 September 2026",
+  lastUpdated: "25 October 2026",
   status: "Not ready for publication: the trading address is still to be inserted.",
   intro:
     "UNLXCK uses personal data to create, adapt and deliver personalised training guidance. This notice explains what we use, why, who receives it and your rights.",
@@ -227,9 +227,10 @@ export const PRIVACY_NOTICE: LegalDocument = {
     {
       heading: "Lawful bases",
       paragraphs: [
-        "We rely on three lawful bases, depending on what the processing is for.",
+        "We rely on four lawful bases, depending on what the processing is for.",
         "Article 6(1)(b) UK GDPR (contract): for the personal data we need in order to provide the service you have asked for: your account, profile, intake, plans, sessions and training history.",
         "Article 6(1)(f) UK GDPR (legitimate interests): for keeping UNLXCK secure and available, preventing abuse of signup and login, investigating faults, and improving the service. Our interests are running a secure, reliable product and making it work better for athletes. We have weighed those interests against your rights, and you can object to this processing at any time.",
+        "Article 6(1)(a) UK GDPR (consent): optional product analytics for adults, such as feature opens, timer actions and successful saves. This is off by default. You can enable or withdraw it in Settings → Privacy without losing any feature. We record only the feature, action, account identifier, time and a retry/run identifier, not health details, notes or nutrition contents. We do not add analytics cookies, device identifiers or session replay, or send these events to an external analytics provider. Optional events are deleted after 180 days; account deletion also removes them. Existing saved service records and fault monitoring remain subject to their existing purposes and your rights.",
         "Article 9(2)(a) UK GDPR (explicit consent): for health information: injuries, pain, soreness, fatigue, sleep, readiness and bodyweight, used for personalised training and safety features. This consent is asked for separately, is optional, and can be withdrawn at any time.",
         "We do not use your health information to improve UNLXCK, and we do not use it to train AI models. It is used only to build and adapt your own training and to apply safety rules to it. Where we look at how the product is performing, or decide what to build next, we do that without using health information at all. This applies to aggregated and anonymised forms of it too.",
         "Withdrawing consent does not affect processing already carried out lawfully, but UNLXCK may be unable to provide features that require health data afterwards.",

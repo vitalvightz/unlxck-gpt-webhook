@@ -529,6 +529,15 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
         durationMs,
       });
     }
+    if (init?.token && !path.startsWith("/api/admin/") && !path.startsWith("/api/analytics/")) {
+      const token = init.token;
+      if (/^\/api\/plans\/[^/]+$/.test(path) && method === "GET") void trackProductEvent(token, "plan_opened", "plans", undefined, path.split("/").at(-1));
+      if (path.startsWith("/api/training/history") && method === "GET") void trackProductEvent(token, "history_opened", "history");
+      if (path === "/api/nutrition/current") void trackProductEvent(token, method === "GET" ? "nutrition_opened" : "nutrition_saved", "nutrition");
+      if (path.startsWith("/api/custom-plans/") && method === "PUT") void trackProductEvent(token, "plan_edited", "plans");
+      if (/^\/api\/custom-plans\/[^/]+$/.test(path) && method === "GET") void trackProductEvent(token, "plan_editor_opened", "plans");
+      if (path.endsWith("/set-active") && method === "POST") void trackProductEvent(token, "plan_replaced", "plans");
+    }
     return data;
   } catch (parseError) {
     if (shouldLogApiDetails()) {
@@ -1645,4 +1654,43 @@ export function withdrawCommunityExercise(token: string, revision: string) {
 }
 export function reportCommunityExercise(token: string, revision: string, reason: string) {
   return requestVoid(`/api/community-exercises/revisions/${revision}/report`, { token, method: 'POST', body: JSON.stringify({ reason }) });
+}
+
+// Optional first-party interaction measurement. Preference is account scoped,
+// held only in memory and never presumed enabled when it cannot be loaded.
+const analyticsPreferences = new Map<string, { enabled: boolean; expires: number }>();
+export async function getAnalyticsPreference(token: string): Promise<{ enabled: boolean }> {
+  const cached = analyticsPreferences.get(token);
+  if (cached && cached.expires > Date.now()) return { enabled: cached.enabled };
+  const result = await readJson<{ enabled: boolean }>("/api/analytics/preference", { token });
+  analyticsPreferences.set(token, { ...result, expires: Date.now() + 30_000 });
+  return result;
+}
+export async function setAnalyticsPreference(token: string, enabled: boolean) {
+  const result = await readJson<{ enabled: boolean }>("/api/analytics/preference", { token, method: "PUT", body: JSON.stringify({ enabled }) });
+  analyticsPreferences.clear();
+  analyticsPreferences.set(token, { ...result, expires: Date.now() + 30_000 });
+  return result;
+}
+export async function trackProductEvent(token: string, event_name: string, feature: string, request_id?: string, flow_id?: string) {
+  try {
+    if (analyticsPreferences.get(token)?.enabled !== true) return;
+    await readJson("/api/analytics/events", { token, method: "POST", body: JSON.stringify({ event_name, feature, request_id: request_id ?? crypto.randomUUID(), flow_id }) });
+  } catch { /* Analytics must never prevent training or replace Sentry. */ }
+}
+
+export function getProductAnalytics(token: string, query: string, signal?: AbortSignal) {
+  return readJson<import("./product-analytics").ProductReport>(`/api/admin/product-analytics?${query}`, { token, signal });
+}
+export function getAthleteActivity(token: string, id: string, offset = 0, signal?: AbortSignal) {
+  return readJson<import("./product-analytics").AthleteActivity>(`/api/admin/athletes/${encodeURIComponent(id)}/activity?offset=${offset}`, { token, signal });
+}
+
+/** Stable retry identities without persisting browser identifiers or event payloads. */
+export async function productEventIdentity(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  const bytes = new Uint8Array(digest).slice(0,16);
+  bytes[6] = (bytes[6] & 15) | 64; bytes[8] = (bytes[8] & 63) | 128;
+  const hex = Array.from(bytes, b => b.toString(16).padStart(2,'0')).join('');
+  return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
 }

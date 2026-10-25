@@ -1,4 +1,5 @@
 "use client";
+import { AthleteActivityPanel } from "@/components/product-analytics";
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -644,6 +645,7 @@ export default function AdminAthletePage() {
       ) : (
         <section className="panel athlete-profile-panel">
           <AthleteProfileHero athlete={athlete} />
+          <AthleteActivityPanel athleteId={athlete.athlete_id} />
 
           <div className="plan-summary-actions">
             <Link href="/admin" className="ghost-button">

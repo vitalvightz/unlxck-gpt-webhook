@@ -636,6 +636,7 @@ export default function AdminPage() {
           <div className="admin-dashboard-copy">
             <p className="kicker">Admin</p>
             <h1>Fight camp control room</h1>
+            <Link href="/admin/analytics" className="secondary-button">Product Analytics</Link>
             <p className="muted">Live generation queues, athlete risk signals, and plan-review decisions in one operator view.</p>
             <div className="admin-priority-rail" role="region" aria-label="Admin priority status">
               <span className="admin-priority-label">{adminActionLabel}</span>

@@ -909,6 +909,7 @@ export type MeResponse = {
 };
 
 export type AdminAthleteRecord = {
+  last_meaningful_activity_at?: string | null;
   athlete_id: string;
   email: string;
   role: UserRole;

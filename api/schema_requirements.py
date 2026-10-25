@@ -33,6 +33,7 @@ from typing import Iterable, Mapping, Sequence
 INTAKES_TABLE = "athlete_intakes"
 
 REQUIRED_TABLES: tuple[str, ...] = (
+    "product_events", "product_analytics_preferences", "product_analytics_excluded_emails",
     "profiles",
     "plans",
     "generation_jobs",
@@ -189,6 +190,7 @@ REQUIRED_GENERATION_JOBS_COLUMNS: tuple[str, ...] = (
 )
 
 REQUIRED_PROFILES_COLUMNS: tuple[str, ...] = (
+    "analytics_excluded", "onboarding_started_at", "onboarding_completed_at",
     "starting_path",
     "training_habits",
     "training_habits_revision",
@@ -508,6 +510,11 @@ REQUIRED_NOTIFICATION_EVALUATIONS_COLUMNS: tuple[str, ...] = (
 
 # Map of table -> required columns, used by the checker.
 REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
+    "product_analytics_excluded_emails": ("email",),
+    "product_events": ("id", "athlete_id", "event_name", "feature", "request_id", "flow_id", "created_at"),
+    "product_analytics_preferences": ("athlete_id", "enabled", "consent_version", "updated_at"),
+    "product_activity": ("id", "athlete_id", "occurred_at", "feature", "action", "meaningful", "flow_id"),
+    "admin_athlete_rollups": ("last_meaningful_activity_at",),
     "injury_episode_events": ("id", "athlete_id", "injury_id", "injury_episode_id", "event_type", "payload", "created_at", "clinical_capture"),
     "rehab_exposures": ("id", "athlete_id", "injury_id", "injury_episode_id", "drill_id", "body_region", "side",
                         "demand", "prescribed_dose", "completed_dose", "response", "event_json", "response_group_id",
@@ -556,6 +563,9 @@ REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
 # Stored schema-qualified for clear reporting; comparison is done on the bare
 # proname within the ``public`` schema.
 REQUIRED_FUNCTIONS: tuple[str, ...] = (
+    "public.product_analytics_facts", "public.ingest_product_event", "public.prune_product_events",
+    "public.record_onboarding_stage", "public.set_product_analytics_preference", "public.product_analytics_retention_health",
+    "private.prevent_client_product_analytics_profile_writes",
     "public.change_profile_username",
     "public.try_parse_timestamptz",
     "public.check_plan_generation_short_window_limit",
@@ -636,6 +646,10 @@ class IndexRequirement:
 
 
 INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
+    IndexRequirement(label="product event retry uniqueness", accepted_names=("product_events_athlete_id_event_name_request_id_key",)),
+    IndexRequirement(label="product event daily deduplication", accepted_names=("product_event_discovery_daily",)),
+    IndexRequirement(label="product event athlete timeline", accepted_names=("product_events_athlete_time",)),
+    IndexRequirement(label="product event expiry", accepted_names=("product_events_retention",)),
     IndexRequirement(label="one delayed response per exposure", accepted_names=("injury_episode_events_delayed_once_idx",)),
     IndexRequirement(
         label="generation_jobs active job uniqueness/lock",
@@ -751,6 +765,7 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
 # ---------------------------------------------------------------------------
 
 RLS_REQUIRED_TABLES: tuple[str, ...] = (
+    "product_events", "product_analytics_preferences", "product_analytics_excluded_emails",
     "private_video_assets",
     "private_exercise_media",
     "private_media_budget",

@@ -837,6 +837,7 @@ def _map_admin_athlete(row: dict[str, Any], latest_intake: dict[str, Any] | None
         updated_at=str(row.get("updated_at") or ""),
         plan_count=int(row.get("plan_count") or 0),
         latest_plan_created_at=row.get("latest_plan_created_at"),
+        last_meaningful_activity_at=row.get("last_meaningful_activity_at"),
         first_usable_plan_at=row.get("first_usable_plan_at"),
         time_to_first_usable_plan_seconds=time_to_first_usable_plan_seconds(row),
     )

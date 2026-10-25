@@ -1,6 +1,6 @@
 # UNLXCK Privacy Notice
 
-_Last updated: 29 September 2026_
+_Last updated: 25 October 2026_
 
 UNLXCK uses personal data to create, adapt and deliver personalised training guidance. This notice explains what we use, why, who receives it and your rights.
 
@@ -32,11 +32,13 @@ We use personal data to:
 UNLXCK is a performance and wellbeing service. It is not intended to diagnose, treat or replace professional medical care.
 
 ## Lawful bases
-We rely on three lawful bases, depending on what the processing is for.
+We rely on four lawful bases, depending on what the processing is for.
 
 **Article 6(1)(b) UK GDPR (contract):** for the personal data we need in order to provide the service you have asked for: your account, profile, intake, plans, sessions and training history.
 
 **Article 6(1)(f) UK GDPR (legitimate interests):** for keeping UNLXCK secure and available, preventing abuse of signup and login, investigating faults, and improving the service. Our interests are running a secure, reliable product and making it work better for athletes. We have weighed those interests against your rights, and you can object to this processing at any time.
+
+Article 6(1)(a) UK GDPR (consent): optional product analytics for adults, such as feature opens, timer actions and successful saves. This is off by default. You can enable or withdraw it in Settings → Privacy without losing any feature. We record only the feature, action, account identifier, time and a retry/run identifier, not health details, notes or nutrition contents. We do not add analytics cookies, device identifiers or session replay, or send these events to an external analytics provider. Optional events are deleted after 180 days; account deletion also removes them. Existing saved service records and fault monitoring remain subject to their existing purposes and your rights.
 
 **Article 9(2)(a) UK GDPR (explicit consent):** for health information: injuries, pain, soreness, fatigue, sleep, readiness and bodyweight, used for personalised training and safety features. This consent is asked for separately, is optional, and can be withdrawn at any time.
 
