@@ -14,7 +14,7 @@ import { SafetyNote } from "@/components/safety-note";
 import { useToast } from "@/components/toast-provider";
 import { WEIGHT_CUT_SAFETY } from "@/lib/safety-copy";
 import { LevelSlider, type LevelValue } from "@/components/rating-controls";
-import { getNutritionCurrent, updateNutritionCurrent } from "@/lib/api";
+import { getNutritionCurrent, updateNutritionCurrent, trackProductEvent } from "@/lib/api";
 import {
   formatBodyweightDate,
   formatTargetGapLabel,
@@ -193,6 +193,7 @@ export function NutritionWorkspaceScreen() {
     getNutritionCurrent(session.access_token)
       .then((nextWorkspace) => {
         if (!active) return;
+        void trackProductEvent(session.access_token, "nutrition_opened", "nutrition");
         setWorkspace(nextWorkspace);
         setForm(normalizeTrainingSelections(toUpdateRequest(nextWorkspace)));
       })

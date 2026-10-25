@@ -45,7 +45,22 @@ def build_product_analytics_router():
             .eq("athlete_id", profile.athlete_id)
             .execute()
         )
-        return {"enabled": bool(result.data and result.data[0]["enabled"])}
+        enabled = bool(result.data and result.data[0]["enabled"])
+        if enabled:
+            internal = (
+                store.client.table("product_analytics_excluded_emails")
+                .select("email")
+                .eq("email", getattr(profile, "email", "").strip().lower())
+                .limit(1)
+                .execute()
+                .data
+            )
+            enabled = (
+                not internal
+                and getattr(profile, "email", "").strip().lower()
+                not in store.admin_emails
+            )
+        return {"enabled": enabled}
 
     @router.put("/api/analytics/preference")
     def save_preference(
@@ -93,7 +108,7 @@ def build_product_analytics_router():
         return {"accepted": bool(result.data)}
 
     def facts(store, athlete_id=None):
-        return (
+        result = (
             store.client.rpc(
                 "product_analytics_facts",
                 {
@@ -104,6 +119,16 @@ def build_product_analytics_router():
             .execute()
             .data
         )
+        if (
+            not isinstance(result, dict)
+            or not {"optional_coverage", "training_records", "error_returns"}
+            <= result.keys()
+        ):
+            raise HTTPException(
+                503,
+                "Analytics schema update pending. Apply the corrective migration before deploying this API.",
+            )
+        return result
 
     @router.get("/api/admin/product-analytics")
     def report(
@@ -169,6 +194,7 @@ def build_product_analytics_router():
         return {
             "summary": result["athletes"][0],
             "features": result["features"],
+            "session_metrics": result["session_metrics"],
             "sessions_started": result["sessions_started"],
             "sessions_completed": result["sessions_completed"],
             "timeline": timeline,

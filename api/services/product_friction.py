@@ -31,6 +31,7 @@ def install_product_friction(app):
                         ("/api/today/checkin", "recovery"),
                         ("/api/today/sparring", "sparring"),
                         ("/api/custom-plans", "plans"),
+                        ("/api/feedback/session", "feedback"),
                         ("/api/plans/generate", "plans"),
                     )
                     if path.startswith(prefix)

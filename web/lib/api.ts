@@ -531,11 +531,8 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
     }
     if (init?.token && !path.startsWith("/api/admin/") && !path.startsWith("/api/analytics/")) {
       const token = init.token;
-      if (/^\/api\/plans\/[^/]+$/.test(path) && method === "GET") void trackProductEvent(token, "plan_opened", "plans", undefined, path.split("/").at(-1));
-      if (path.startsWith("/api/training/history") && method === "GET") void trackProductEvent(token, "history_opened", "history");
-      if (path === "/api/nutrition/current") void trackProductEvent(token, method === "GET" ? "nutrition_opened" : "nutrition_saved", "nutrition");
-      if (path.startsWith("/api/custom-plans/") && method === "PUT") void trackProductEvent(token, "plan_edited", "plans");
-      if (/^\/api\/custom-plans\/[^/]+$/.test(path) && method === "GET") void trackProductEvent(token, "plan_editor_opened", "plans");
+      if (path === "/api/nutrition/current" && method === "PUT") void trackProductEvent(token, "nutrition_saved", "nutrition");
+      if (/^\/api\/custom-plans\/[^/]+$/.test(path) && method === "PUT") void productEventIdentity(path).then(flow => trackProductEvent(token, "plan_edited", "plans", undefined, flow)).catch(() => {});
       if (path.endsWith("/set-active") && method === "POST") void trackProductEvent(token, "plan_replaced", "plans");
     }
     return data;
