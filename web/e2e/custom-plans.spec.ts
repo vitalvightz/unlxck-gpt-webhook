@@ -3,7 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { setup, entries } from "./custom-plan-fixture";
 test.afterEach(async ({ page }) => { await page.unrouteAll({ behavior: "wait" }); });
 
-for (const width of [320, 390, 1280]) {
+for (const width of [320, 390, 1280, 1600]) {
   test(`Saved links, mixed exercises and compact doses (${width}px)`, async ({ page, baseURL }) => {
     await page.setViewportSize({ width, height: 844 });
     const errors: string[] = [];
@@ -50,6 +50,20 @@ for (const width of [320, 390, 1280]) {
     await page.getByLabel("Reps", { exact: true }).fill("8");
     await page.getByLabel("Rest (sec)", { exact: true }).fill("120");
     await page.getByLabel("Weight", { exact: true }).fill("80");
+    const weight = await page.getByLabel('Weight', { exact: true }).boundingBox();
+    const unit = await page.getByLabel('Weight unit', { exact: true }).boundingBox();
+    expect(weight!.width).toBeGreaterThan(100);
+    expect(weight!.x + weight!.width).toBeLessThanOrEqual(unit!.x + 1);
+    if (width >= 900) {
+      const dialog = page.getByRole('dialog', { name: entries[0].name, exact: true });
+      const bounds = await dialog.boundingBox();
+      expect(bounds!.width).toBeGreaterThan(900);
+      const context = await dialog.getByRole('region', { name: 'Exercise details', exact: true }).boundingBox();
+      const prescription = await dialog.getByRole('region', { name: 'Exercise prescription', exact: true }).boundingBox();
+      expect(context!.x + context!.width).toBeLessThan(prescription!.x);
+      expect((await new AxeBuilder({ page }).include('[role="dialog"]').analyze()).violations).toEqual([]);
+    }
+    if (process.env.CUSTOM_QA_DIR) await page.screenshot({ path: `${process.env.CUSTOM_QA_DIR}/custom-dose-${width}.png` });
     await page.getByRole("button", { name: "Done", exact: true }).click();
     await page.getByRole("button", { name: "Add exercise to Strength", exact: true }).click();
     await page.getByRole("button", { name: "Create my exercise", exact: true }).click();
@@ -106,7 +120,12 @@ for (const width of [320, 390, 1280]) {
       animations: "disabled",
       fullPage: true,
     });
+    if (process.env.CUSTOM_QA_DIR) await page.screenshot({ path: `${process.env.CUSTOM_QA_DIR}/custom-builder-${width}.png`, fullPage: true });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    if (width >= 1280) {
+      const bounds = await page.getByRole('region', { name: 'Custom training plan builder', exact: true }).boundingBox();
+      expect(bounds!.width).toBeGreaterThan(880);
+    }
     const saveBounds = await page.getByRole("button", { name: "Save draft", exact: true }).boundingBox();
     expect(saveBounds!.y + saveBounds!.height).toBeLessThan(width < 768 ? 780 : 844);
     expect(
@@ -127,7 +146,7 @@ for (const width of [320, 390, 1280]) {
   });
 }
 
-for (const width of [320, 390, 1280]) {
+for (const width of [320, 390, 1280, 1600]) {
   test(`Private video clip selection, playback and persistence (${width}px)`, async ({ page, baseURL }) => {
     await page.setViewportSize({ width, height: 844 });
     const errors: string[] = [];
@@ -198,8 +217,12 @@ for (const width of [320, 390, 1280]) {
       await page.getByRole("button", { name: "+ Add Session", exact: true }).click();
       const first = await page.getByRole("region", { name: "Session 1", exact: true }).boundingBox();
       const second = await page.getByRole("region", { name: "Session 2", exact: true }).boundingBox();
-      expect(second!.x).toBeGreaterThan(first!.x + first!.width);
-      expect(second!.y).toBe(first!.y);
+      if (width >= 1600) {
+        expect(second!.x).toBeGreaterThan(first!.x + first!.width);
+        expect(second!.y).toBe(first!.y);
+      } else {
+        expect(second!.y).toBeGreaterThanOrEqual(first!.y + first!.height);
+      }
       await page.screenshot({ path: `${process.env.TEMP ?? "/tmp"}/unlxck-private-builder-${width}.png`, fullPage: true });
     }
     await page.getByRole("button", { name: "Save draft", exact: true }).click();

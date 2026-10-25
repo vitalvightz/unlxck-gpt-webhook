@@ -642,6 +642,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
       {sessionEdit ? (
         <InjuryDetailSheet
           title="Edit session"
+          panelClassName={styles.editorPanel}
           onClose={() => {
             const original = draft.sessions.find((s) => s.id === sessionEdit.id);
             if (JSON.stringify(original) === JSON.stringify(sessionEdit) || window.confirm("Discard session edits?")) {
@@ -651,7 +652,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
           }}
         >
           <form
-            className={styles.sheet}
+            className={`${styles.sheet} ${styles.sessionSheet}`}
             onSubmit={(e) => {
               e.preventDefault();
               sessionChange(sessionEdit.id, () => sessionEdit);
@@ -738,6 +739,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
       {editing ? (
         <InjuryDetailSheet
           title={editing.fresh ? "Create my exercise" : nameOf(editing.exercise)}
+          panelClassName={`${styles.editorPanel} ${styles.exercisePanel}`}
           onClose={() => {
             if (
               (JSON.stringify(editing.original) === JSON.stringify(editing.exercise) &&
@@ -751,7 +753,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
           }}
         >
           <form
-            className={styles.sheet}
+            className={`${styles.sheet} ${styles.exerciseEditor}`}
             onSubmit={(event) => {
               event.preventDefault();
               const { sessionId, exercise, fresh, position } = editing;
@@ -764,6 +766,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
               setEditing(undefined);
             }}
           >
+            <section className={styles.exerciseContext} aria-label="Exercise details"><h3>Exercise details</h3>
             {editing.exercise.origin === "manual" ? (
               <>
                 {(["name", "equipment", "notes"] as const).map((field) => (
@@ -857,6 +860,8 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                 })() : null}
               </>
             )}
+            </section>
+            <section className={styles.exercisePrescription} aria-label="Exercise prescription"><h3>Training prescription</h3>
             {!editing.fresh && draft.sessions.find((s) => s.id === editing.sessionId)!.exercises.length > 1 ? (
               <label>
                 <span>Position in session</span>
@@ -895,6 +900,8 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                   ...editing.exercise, [field]: event.target.value.split("\n"),
                 } })} />
             </label>)}
+            </section>
+            <div className={styles.editorActions}>
             <button className="cta">{editing.fresh ? "Add exercise" : "Done"}</button>
             {!editing.fresh ? (
               <>
@@ -929,6 +936,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                 </button>
               </>
             ) : null}
+            </div>
           </form>
         </InjuryDetailSheet>
       ) : null}

@@ -99,16 +99,17 @@ export function ExerciseDetails({ exercise, asOf, token, cache, onDismiss }: {
     finally { loadingMore.current = false; if (alive.current) setBusy(false); }
   }
   const result = exerciseResult(exercise);
-  return <dialog ref={dialog} className={sheet.dialog} aria-labelledby={heading}
+  return <dialog ref={dialog} className={`${sheet.dialog} ${sheet.workspace}`} aria-labelledby={heading}
     onCancel={event => { event.preventDefault(); onDismiss(); }}
     onClick={event => { if (event.target === event.currentTarget) {
       const bounds = event.currentTarget.getBoundingClientRect();
       if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onDismiss();
     } }}>
-    <header className={sheet.header}><div><p className={sheet.eyebrow}>Exercise record</p><h2 id={heading}>{exercise.name}</h2>
-      <p className={styles.resultLabel}>{result.label}</p><strong className={styles.detailResult}>{result.value}</strong></div>
+    <header className={sheet.header}><div className={styles.detailHeading}><div><p className={sheet.eyebrow}>Exercise record</p><h2 id={heading}>{exercise.name}</h2></div>
+      <div><p className={styles.resultLabel}>{result.label}</p><strong className={styles.detailResult}>{result.value}</strong></div></div>
       <button type="button" className={sheet.close} aria-label="Close exercise history" onClick={onDismiss}>×</button></header>
     <div className={sheet.body} tabIndex={0} role="region" aria-label="Exercise performance record">
+      <div className={sheet.exerciseLayout}><div className={sheet.analysisColumn}>
       <p className={sheet.quiet}>{exercise.identity_kind === "legacy" ? "One original legacy record. Movement identity across other dates is unknown."
         : exercise.identity_kind === "personal" ? "An exercise you named, from training you logged. Only you can see it. These are not individual set records."
         : "Saved results from your plans and the training you logged. These are not individual set records."}</p>
@@ -117,13 +118,15 @@ export function ExerciseDetails({ exercise, asOf, token, cache, onDismiss }: {
         const target = [...(timeline.current?.children ?? [])].find(element => (element as HTMLElement).dataset.performance === id) as HTMLElement | undefined;
         target?.scrollIntoView({ block: "start", behavior: "instant" }); target?.focus({ preventScroll: true });
       }} /> : null}
-      <section className={sheet.section}><h3>Performance history</h3>
+      </div>
+      <section className={`${sheet.section} ${sheet.performanceColumn}`}><h3>Performance history</h3>
         {!data && !error ? <p role="status">Loading exercise history…</p> : null}
         {data ? <ol ref={timeline} className={sheet.blocks}>{data.performances.map((item, index) => <TrainingBlock key={item.id} block={item.block} index={index} heading={formatAppDate(item.training_day)} recordId={item.id} />)}</ol> : null}
         {data?.performances.length === 0 ? <p className={sheet.quiet}>No remaining records for this exercise.</p> : null}
         {error ? <div role="alert"><p>{data ? "Unable to load earlier records. Your loaded records are still available." : "Unable to load exercise records. Try again."}</p><button type="button" className="secondary-button" onClick={() => { setError(false); if (data?.next_cursor) void more(); else setAttempt(value => value + 1); }}>Retry</button></div> : null}
         {data?.next_cursor && !error ? <button type="button" className="secondary-button" disabled={busy} onClick={() => void more()}>{busy ? "Loading…" : "Load earlier performances"}</button> : null}
       </section>
+      </div>
     </div>
   </dialog>;
 }
