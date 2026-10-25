@@ -74,3 +74,9 @@ Validated results for this corrective PR:
 - PostgreSQL 17 forward migration, new accuracy assertions, existing ingestion/RLS/deduplication/caps/expiry assertions, eight-check read-only rollout verifier and the two-connection withdrawal race passed against disposable data. No hosted migration was applied.
 - TypeScript, production Next build, generated API contract check, Python import/compile and changed Python lint passed. Targeted ESLint: zero errors, three existing effect-state warnings.
 - The complete repository suites were not rerun. The broad frontend baseline failures recorded in #3039 are not claimed fixed by this scoped correction.
+
+## Web CI follow-up
+
+The Web Build job on the first corrective commit stopped at three exercise-row assertions, identically on Main. The Plan revert restored older header expectations while leaving the compact-header formatter intact. `exercise-row.test.tsx` now expects the compact headers and separately verifies that rounds, rest and per-movement loads remain in the expanded prescription. No prescription renderer or athlete-facing layout is changed.
+
+Running the next web gate also identified critical advisories in the existing Next.js and Sentry pins. The existing packages are updated to Next.js 16.4.3 and @sentry/nextjs 10.76.2, with the npm lockfile regenerated and verified through a clean npm ci. No direct dependency or tracking configuration is added. The patched runtime audit reports zero vulnerabilities; TypeScript, full ESLint (warnings only) and the production build pass. Full unit/browser results and the subsequent GitHub run are recorded in the PR.
