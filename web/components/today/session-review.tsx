@@ -33,7 +33,6 @@ export type SessionReviewDetails = {
  */
 export function SessionReview({
   title,
-  closeLabel = "Back to Today",
   sessions,
   logging,
   blocks,
@@ -47,7 +46,6 @@ export function SessionReview({
   onSave,
 }: {
   title: string;
-  closeLabel?: string;
   /** The day's sessions, as the card shows them (the day is logged as one). */
   sessions: readonly StructuredSession[];
   logging: ExerciseLogging | null;
@@ -186,7 +184,7 @@ export function SessionReview({
             className="today-review-close"
             onClick={onClose}
             disabled={busy}
-            aria-label={closeLabel}
+            aria-label="Back to Today"
           >
             ×
           </button>

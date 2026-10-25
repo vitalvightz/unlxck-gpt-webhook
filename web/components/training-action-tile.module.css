@@ -14,11 +14,3 @@
 @media (min-width: 600px) { .actions { gap: var(--space-3); } .tile { padding: 20px; align-items: center; } .icon { flex-basis: 38px; width: 38px; height: 38px; } .copy strong { font-size: var(--type-body-lg); } .copy > span { font-size: var(--type-body); } }
 @media (max-width: 360px) { .tile { padding: 14px 10px; gap: 7px; } .icon { flex-basis: 24px; width: 24px; height: 24px; } .copy strong { font-size: 12px; } .copy > span { font-size: 11px; } .chevron { display: none; } }
 @media (prefers-reduced-motion: reduce) { .tile { transition: none; } }
-@media (max-width: 599px) {
-  .tile { min-height: 48px; padding: 8px 12px; align-items: center; }
-  .copy > span { display: none; }
-  .copy strong { font-size: 14px; }
-}
-/* Neutral quick actions leave the next prescribed session as the primary CTA. */
-.log { border-color: var(--border-default); background: var(--bg-panel); }
-.log .icon { color: var(--text-primary); background: transparent; }

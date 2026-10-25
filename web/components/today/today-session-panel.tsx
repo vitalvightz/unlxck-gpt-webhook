@@ -440,7 +440,6 @@ export function TodaySessionBlocks({
  */
 export function TodaySessionPanel({
   state,
-  presentation,
   structuredPlan,
   planSchedule,
   rehabLabelPolicy,
@@ -454,8 +453,6 @@ export function TodaySessionPanel({
   onPlanSessionChanged,
 }: {
   state: TodayCommandView;
-  /** Reuse authoritative start/resume/review controls inside a Plan session. */
-  presentation?: "controls";
   /** Applies an athlete's exercise change to the shown plan (see useTodayCommand). */
   onPlanSessionChanged?: (date: string, session: StructuredSession | null) => void;
   /** From the athlete's profile: the guided visualisation says their first name. */
@@ -1185,7 +1182,7 @@ export function TodaySessionPanel({
     return (
       <section
         id="today-session"
-        className={`today-card today-session-card${presentation === "controls" ? " today-session-controls" : ""}`}
+        className="today-card today-session-card"
         data-tone={cardTone}
         aria-labelledby="today-session-heading"
       >
@@ -1201,7 +1198,7 @@ export function TodaySessionPanel({
             </h2>
           </div>
         </div>
-        {showStructuredBlocks && presentation !== "controls" ? (
+        {showStructuredBlocks ? (
           <TodaySessionBlocks
             planId={state.active_plan?.id}
             current={current}
@@ -1298,7 +1295,7 @@ export function TodaySessionPanel({
   return (
     <section
       id="today-session"
-      className={`today-card today-session-card${presentation === "controls" ? " today-session-controls" : ""}`}
+      className="today-card today-session-card"
       data-tone={cardTone}
       aria-labelledby="today-session-heading"
     >
@@ -1322,7 +1319,7 @@ export function TodaySessionPanel({
         </div>
       </div>
       {injuryText && !safeSession && !isSessionPreview ? (
-        <a href={presentation === "controls" ? "/today#today-injury" : "#today-injury"} className="today-injury-strip">
+        <a href="#today-injury" className="today-injury-strip">
           <ToolIcon name="shield" />
           <span className="today-injury-strip-text">
             <span className="today-injury-strip-title">Injury-aware session</span>
@@ -1362,7 +1359,7 @@ export function TodaySessionPanel({
           )}
         </div>
       ) : null}
-      {presentation !== "controls" && isSessionPreview && showStructuredBlocks && !safeSession ? (
+      {isSessionPreview && showStructuredBlocks && !safeSession ? (
         <div className="today-session-actions today-action-tray">
           <button
             type="button"
@@ -1377,7 +1374,7 @@ export function TodaySessionPanel({
       ) : null}
       {safeSession ? (
         <SafeSessionCard view={safeSession} />
-      ) : presentation === "controls" ? null : showStructuredBlocks ? (
+      ) : showStructuredBlocks ? (
         // A previewed day is read on its own screen; today's work stays here.
         isSessionPreview ? (
           previewOpen ? (
@@ -1482,7 +1479,7 @@ export function TodaySessionPanel({
             {terminalStatusCopy}
           </p>
           {severeInjuryBlocksCurrentSession ? (
-            <a href={presentation === "controls" ? "/today#today-injury" : "#today-injury"} className="secondary-button today-terminal-action">
+            <a href="#today-injury" className="secondary-button today-terminal-action">
               Open injury check-in
             </a>
           ) : null}
@@ -1614,7 +1611,6 @@ export function TodaySessionPanel({
       {reviewOpen && canCompleteSession && status === "started" ? (
         <SessionReview
           title={headline}
-          closeLabel={presentation === "controls" ? "Back to session" : "Back to Today"}
           sessions={showStructuredBlocks ? current.sessions : []}
           logging={exerciseLogging}
           hint={

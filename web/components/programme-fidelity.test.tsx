@@ -33,7 +33,7 @@ test("the real programme renders all four hard-sparring appointments on Saturday
     const html = renderToStaticMarkup(<StructuredPlanRenderer plan={{ ...plan, weeks: [{ ...week, days: [day] }] }} />);
     assert.match(html, /Hard sparring/i);
     assert.ok(html.includes(`D-${offset}`));
-    assert.match(html, />Sat\b/);
+    assert.match(html, />Sat</);
   }
   for (const offset of [40, 26]) {
     assert.equal(dayAt(offset).weekday, "Mon");

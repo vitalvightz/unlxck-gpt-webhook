@@ -174,7 +174,7 @@ export function DotsIcon() {
 type Panel = "menu" | "swap" | "edit" | null;
 
 /** The discreet three-dot control on an exercise row. */
-export function ExerciseActions({ block, title, variant }: { block: StructuredBlock; title: string; variant?: "detail" }) {
+export function ExerciseActions({ block, title }: { block: StructuredBlock; title: string }) {
   const scope = useContext(SessionScopeContext);
   const [panel, setPanel] = useState<Panel>(null);
   const [busy, setBusy] = useState(false);
@@ -213,10 +213,6 @@ export function ExerciseActions({ block, title, variant }: { block: StructuredBl
 
   return (
     <>
-      {variant === "detail" ? <div className="ex-detail-action-bar">
-        <button type="button" className={styles.secondary} disabled={busy} onClick={() => setPanel("edit")}>Edit prescription</button>
-        <button type="button" className={styles.secondary} disabled={busy} onClick={() => setPanel("swap")}>Replace exercise</button>
-      </div> : null}
       <button
         type="button"
         className={styles.dots}
