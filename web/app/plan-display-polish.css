@@ -250,3 +250,55 @@
 .cm-calendar { min-width: 0; grid-template-columns: repeat(7, minmax(44px, 1fr)); overflow-x: auto; padding-bottom: 4px; }
 .cm-calendar button:disabled { cursor: default; opacity: .7; }
 .cm-calendar button[aria-pressed="true"] { color: #fff; }
+
+/* Match Today's preview rhythm without changing either screen's training flow. */
+.page:has(> .plan-page-title) { gap: 20px; }
+.cm-week-section .plan-detail-hero { gap: 12px; }
+html[data-app-surface="workspace"][data-theme="dark"] .plan-experience .plan-text-panel,
+html[data-app-surface="workspace"][data-theme="dark"] .cm-week-section .plan-detail-hero {
+  background: transparent;
+  box-shadow: none;
+}
+.cm-week-section .plan-detail-hero .kicker { margin-bottom: 0; }
+.cm-week-section .plan-detail-hero .section-heading > div:first-child { gap: 8px; }
+.cm-week-section .cm-week-pill-selected {
+  background: color-mix(in srgb, var(--brand-red) 14%, var(--bg-panel));
+  border-color: var(--brand-red);
+}
+.cm-week-section .cm-week-pill-selected .cm-week-pill-index { color: var(--danger-ink); }
+.cm-schedule-title h2 { margin: 0; font-size: 22px; }
+.cm-session-link { display: grid; grid-template-columns: minmax(0, 1fr) auto 16px; gap: 8px; }
+.cm-session-link-copy { display: contents; }
+.cm-session-link-copy strong { grid-column: 1; grid-row: 1; }
+.cm-session-link-copy > span { grid-column: 1 / -1; }
+.cm-session-link-copy .cm-next-action { margin-top: 4px; }
+.cm-session-link > .cm-session-status { grid-column: 2; grid-row: 1; }
+.cm-session-link > svg { grid-column: 3; grid-row: 1; }
+.cm-session-screen-body { gap: 16px; }
+.cm-session-screen-body .sp-session-head { align-items: flex-start; gap: 8px; margin-bottom: 12px; }
+.cm-session-screen-body .sp-session-head > div:empty { display: none; }
+.cm-session-screen-body .sp-session-meta { justify-content: flex-start; }
+.cm-session-screen-body .sp-session-meta .sp-tag { padding: 0; background: none; border: 0; border-radius: 0; font-size: 12px; letter-spacing: .06em; }
+.cm-exercise-list-heading h3 { font-size: 22px; letter-spacing: -.025em; }
+.sp-session[data-layout="focused"] .ex-row-head { gap: 12px; padding: 16px 0; align-items: flex-start; }
+.sp-session[data-layout="focused"] .ex-row-thumb { flex: 0 0 48px; width: 48px; height: 48px; border-radius: 10px; margin-top: 4px; }
+.sp-session[data-layout="focused"] .cm-exercise-ordinal { display: grid; place-items: center; width: 48px; height: 48px; margin-top: 4px; padding: 0; font: 500 14px/1.5 var(--font-mono); }
+.sp-session[data-layout="focused"] .ex-row-head:has(.ex-row-thumb) .cm-exercise-ordinal { display: none; }
+.sp-session[data-layout="focused"] .ex-row-toggle { min-height: 0; padding: 0; }
+.sp-session[data-layout="focused"] .ex-row-title { font-size: 17px; letter-spacing: -.015em; }
+.sp-session[data-layout="focused"] .ex-row-meta { display: block; margin-top: 6px; }
+.sp-session[data-layout="focused"] .ex-row-summary { font-size: 15px; line-height: 1.5; }
+.sp-session[data-layout="focused"] .ex-row-stop { display: block; margin-top: 8px; font-size: 13px; line-height: 1.5; }
+.sp-session[data-layout="focused"] .ex-row-stop .sp-stat-label { display: inline; margin-right: 4px; color: var(--danger-ink); font: 600 13px/1.5 var(--font-sans); letter-spacing: normal; text-transform: none; }
+.sp-session[data-layout="focused"] [data-exercise-actions] { align-self: flex-start; }
+.sp-session[data-layout="focused"] .ex-row-chevron { align-self: flex-start; margin-top: 18px; }
+.sp-session[data-layout="focused"] .ex-row-head:has([data-exercise-actions]) .ex-row-chevron { display: none; }
+.cm-exercise-screen .ex-detail { gap: 20px; }
+.cm-exercise-screen .ex-prescription-band .sp-stat { font-variant-numeric: tabular-nums; }
+.cm-exercise-screen .ex-detail-stop { border-width: 0 0 0 2px; border-radius: 0; padding: 8px 12px; background: none; }
+@media (max-width: 360px) {
+  .sp-session[data-layout="focused"] .ex-row-head { gap: 8px; }
+  .sp-session[data-layout="focused"] .ex-row-thumb { flex-basis: 40px; width: 40px; height: 40px; }
+  .sp-session[data-layout="focused"] .cm-exercise-ordinal { width: 40px; height: 40px; }
+  .sp-session[data-layout="focused"] .ex-row-title { font-size: 16px; }
+}

@@ -802,12 +802,11 @@ export function ExerciseRow({
           </span> : null}
           {/* What was logged for it today; open, the log panel below says so. */}
           {rowCollapsed ? <ExerciseLogBadge block={block} /> : null}
-          {/* Stop criteria are safety instructions: never hidden behind the tap.
-              Collapsed, the row carries it; open, the full card below does.
-              Rows that open a sheet leave it to the sheet, which leads with it. */}
+          {/* Stop criteria stay visible before opening an exercise. The focused
+              detail also carries the rule while that screen is open. */}
           {!open && compactStopRule ? (
             <span className="ex-row-stop">
-              <span className="sp-stat-label">Stop rule</span>
+              <span className="sp-stat-label">{ordinal ? "Stop if" : "Stop rule"}</span>
               {compactStopRule}
             </span>
           ) : null}
@@ -824,8 +823,7 @@ export function ExerciseRow({
               alt=""
               loading="lazy"
               onError={(event) => {
-                // No thumbnail (restricted or removed video): keep the dark tile
-                // and play glyph rather than a broken-image icon.
+                // A restricted/removed thumbnail must not leave a broken image.
                 event.currentTarget.style.display = "none";
               }}
             />
