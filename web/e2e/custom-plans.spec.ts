@@ -110,7 +110,10 @@ for (const width of [320, 390, 1280, 1600]) {
     await page.goBack();
     await expect(page.getByText("My renamed rounds", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Save draft", exact: true }).click();
-    await expect(page.getByText("Unsaved changes", { exact: true })).toHaveCount(0);
+    // Wait for the saved result, including release of the unsaved-history guard.
+    // "Unsaved changes" is only part of a status line, never an exact text node.
+    await expect(page.getByRole("status").filter({ hasText: /Plan saved\.|Draft saved\./ })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Unsaved changes" })).toHaveCount(0);
     await page.goBack();
     await expect(page).toHaveURL(/\/plans(?:#custom-plans)?$/);
     await page.goForward();
