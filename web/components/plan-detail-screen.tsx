@@ -152,6 +152,7 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
 
   return (
     <RequireAuth>
+      <h1 className="plan-page-title">Your Plan</h1>
       <div className={actionStyles.actions}>
         {(!plan || plan.athlete_id === me?.profile.athlete_id) ? <LogTraining accessToken={session?.access_token ?? null} variant="tile" /> : null}
         <TrainingLibraryLink variant="tile" />

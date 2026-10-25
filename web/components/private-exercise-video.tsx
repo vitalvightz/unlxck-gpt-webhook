@@ -64,7 +64,6 @@ export function PrescribedPrivateVideoThumbnail({ id, community = false }: { id:
     ) : media?.url ? (
       <video src={`${media.url}#t=0.1`} muted playsInline preload="metadata" tabIndex={-1} />
     ) : null}
-    <span className="ex-demo-play-glyph ex-demo-play-glyph-sm" />
   </span>;
 }
 export function PrescribedPrivateVideo({ id, name, community = false }: { id: string; name: string; community?: boolean }) {
