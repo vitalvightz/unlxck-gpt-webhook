@@ -83,7 +83,9 @@ test("pause, resume, edits and interrupted playback keep one correctly aligned t
   await expect(page.locator(".st-audio-status")).toContainText("Round audio playing");
   const media = page.locator("audio[data-round-audio]");
   await page.getByRole("button", { name: "Pause timer", exact: true }).click();
-  await expect(media).toHaveCount(0);
+  // Keep one silent paused element for Safari Now Playing's Resume control.
+  await expect(media).toHaveCount(1);
+  expect(await media.evaluate((audio: HTMLAudioElement) => audio.paused)).toBe(true);
   const paused = await page.locator(".st-clock-digits").textContent();
   await page.waitForTimeout(1100);
   await expect(page.locator(".st-clock-digits")).toHaveText(paused!);

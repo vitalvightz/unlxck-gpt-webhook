@@ -1,4 +1,4 @@
-// Real renderer and anonymised saved contact fixture; native disclosure layout QA.
+// Real renderer and anonymised saved contact fixture; visible instruction QA.
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
@@ -6,7 +6,7 @@ import { CampDayCard, SessionCard } from "../components/structured-plan-renderer
 const saved = JSON.parse(readFileSync("../tests/fixtures/sparring_contact/production_contact_days.json", "utf8"));
 const day = saved.find(day => day.countdown_label === "D-35");
 day.today_card.coach_led_contact = "Hard sparring";
-// Apply the new two-minute reflection dose to this retained historical card.
+// Retain a legacy synthetic dose: prompt-driven reflection must not show a timer.
 day.sessions[0].planned_duration = { value: 2, unit: "minutes" };
 day.sessions[0].blocks[0].coaching_cues[0] = "2 minutes, RPE 1 max.";
 const session = (title, duration, instruction) => ({ session_id: title, title, session_type: "skill",

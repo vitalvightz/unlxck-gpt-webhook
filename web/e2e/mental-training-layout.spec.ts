@@ -6,7 +6,7 @@ const markup = execFileSync(process.execPath, ["--import", "tsx", "--import", ".
   "test/render-mental-training.mjs"], { encoding: "utf8" });
 const css = readFileSync("app/globals.css", "utf8");
 for (const width of [375, 1280]) {
-  test(`mental tasks keep contact visible and details accessible at ${width}px`, async ({ page }) => {
+  test(`mental tasks keep contact and all authored instructions visible at ${width}px`, async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
     await page.setViewportSize({ width, height: 850 });
@@ -14,20 +14,23 @@ for (const width of [375, 1280]) {
     await page.addStyleTag({ content: css });
     await expect(page).toHaveTitle("Mental training QA");
     await expect(page.getByText("Hard sparring", { exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Visualise · 5 min" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Analyse · 7 min" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Reflect · 2 min" })).toBeVisible();
-    await expect(page.locator('[data-mental-category="reflect"] > .sp-session-instruction')).toContainText("Review the last clean technical work.");
+    await expect(page.getByRole("heading", { name: "Fight Visualisation · 5 min", exact: true })).toBeVisible();
+    // Tactical analysis/reflection are prompt-driven: legacy synthetic doses
+    // must not become timers, and the original session names stay intact.
+    await expect(page.getByRole("heading", { name: "Tactical Focus", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Self-Review Cues", exact: true })).toBeVisible();
+    for (const category of ["analyse", "reflect"]) {
+      const task = page.locator(`[data-mental-category="${category}"]`);
+      await expect(task.getByRole("heading")).not.toContainText(/min/);
+      await expect(task.locator("details")).toHaveCount(0);
+    }
+    await expect(page.locator('[data-mental-category="reflect"] li')).toHaveText(
+      "Review the last clean technical work. Write three cues only: one entry, one defensive reset, one composure cue.");
     const task = page.locator('[data-mental-category="visualise"]');
-    await expect(task.locator("details")).not.toHaveAttribute("open");
-    await expect(task.locator(":scope > .sp-session-instruction")).toHaveText("Enter behind your jab, cut off the exit and reset calmly.");
-    await expect(task.locator("details .sp-session-objective").filter({ hasText: "Follow the selected scenario. Keep the picture familiar and calm." })).not.toBeVisible();
-    await task.locator("summary").click();
-    await expect(task.locator("details")).toHaveAttribute("open");
-    await expect(task.locator("details .sp-session-objective").filter({ hasText: "Follow the selected scenario. Keep the picture familiar and calm." })).toBeVisible();
-    await task.locator("summary").focus();
-    await page.keyboard.press("Enter");
-    await expect(task.locator("details")).not.toHaveAttribute("open");
+    await expect(task.locator("details")).toHaveCount(0);
+    await expect(task.getByRole("listitem")).toHaveText("Enter behind your jab, cut off the exit and reset calmly.");
+    await expect(page.locator('[data-mental-category="analyse"] li')).toHaveText(
+      "Review how your opponent exits after the jab. Choose one adjustment for the next session.");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(errors).toEqual([]);
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);

@@ -246,11 +246,19 @@ for (const width of [320, 390, 1280]) {
     // Home keeps its layout, filled from what was logged; no redirect to Today.
     await page.goto("/");
     await expect(page).toHaveURL(/\/$/);
+    await expect(page.locator("html")).toHaveAttribute("data-app-surface", "workspace");
     // Not checked in yet, so the check-in leads; the logged session fills the strip and summary.
     await expect(page.getByRole("heading", { name: "How are you today?", level: 1 })).toBeVisible();
     await expect(page.getByLabel("Training status")).toContainText("1 session");
     await expect(page.getByRole("region", { name: "Training summary" })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    // Measure settled colours after the brand-to-workspace transition. Keep
+    // every contrast check; an in-flight fade is not the final reading state.
+    await page.evaluate(async () => {
+      await Promise.all(document.getAnimations()
+        .filter(animation => animation.effect && animation.effect.getTiming().iterations !== Infinity)
+        .map(animation => animation.finished.catch(() => {})));
+    });
     expect((await new AxeBuilder({ page }).include("main").analyze()).violations).toEqual([]);
     await page.screenshot({ path: test.info().outputPath(`tracking-home-${width}.png`) });
     await page.getByRole("link", { name: "Generate my S&C plan" }).first().click();
