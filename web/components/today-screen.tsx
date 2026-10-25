@@ -20,7 +20,6 @@ import { TodaySessionPanel } from "@/components/today/today-session-panel";
 import { useTodayCommand } from "@/components/today/use-today-command";
 import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { isOpenOngoingPlan } from "@/lib/plan-format";
-import { getTodayNextStep } from "@/lib/today-next-step";
 import { rehabExerciseTarget } from "@/lib/rehab-exercise-guide";
 import {
   getCompletionLabel,
@@ -279,7 +278,6 @@ export function TodayScreen() {
     return <TodayLoadingState />;
   }
   const resolvedDecision = resolveTodayDecision(state);
-  const nextStep = getTodayNextStep(state, resolvedDecision);
   const availableRehabInjuries = new Set((state.open_injuries ?? []).filter(injury => {
     const decision = injury.rehab_decision;
     return decision?.outcome === "prescribed_rehab" && (decision.schedule?.state === "due"
@@ -371,7 +369,7 @@ export function TodayScreen() {
           sessionHref={resolvedDecision.displayTier === "preview" ? undefined : "#today-session"}
         />
         {rehabBlocks.length ? <nav className={styles.rehabAccess} aria-label="Your rehab">
-          <p className={styles.nextStepTitle}>Your rehab</p>
+          <p className={styles.rehabAccessTitle}>Your rehab</p>
           {rehabBlocks.map(block => <a key={block.block_id}
             href={`#${encodeURIComponent(rehabExerciseTarget(block)!)}`}>
             <span>{block.display_name}</span><strong>View rehab <span aria-hidden="true">→</span></strong>
@@ -393,15 +391,6 @@ export function TodayScreen() {
           risks={commandRisks}
           hasActiveInjury={(state.open_injuries?.length ?? 0) > 0}
         />
-        {nextStep && !isRefreshing && !error ? (
-          <div className={styles.nextStep} role="status">
-            <div>
-              <p className={styles.nextStepTitle}>{nextStep.title}</p>
-              <p className={styles.nextStepDetail}>{nextStep.detail}</p>
-            </div>
-            <Link href={nextStep.href}>{nextStep.action} <span aria-hidden="true">→</span></Link>
-          </div>
-        ) : null}
       </section>
 
       {resolvedDecision.useSafeReplacement ? (
