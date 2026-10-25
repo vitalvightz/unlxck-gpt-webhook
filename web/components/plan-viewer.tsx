@@ -2717,6 +2717,9 @@ export function PlanViewer({
       <summary className="ghost-button">Manage</summary>
       <div className="plan-action-menu-popover">
         {integrateOverview ? <Link href="/plans" className="ghost-button">All plans</Link> : null}
+        {integrateOverview && plan.custom_plan_id && plan.athlete_id === viewerProfileId ? (
+          <Link className="ghost-button" href={`/plans/custom?plan=${plan.custom_plan_id}`}>Edit Plan</Link>
+        ) : null}
         <p className="plan-created-at muted">Created {formatPlanTimestamp(plan.created_at)}</p>
         {canManagePlan && !archivedPreview ? (
           <>
@@ -2846,7 +2849,7 @@ export function PlanViewer({
             </button>
           ) : null}
           {!integrateOverview ? <Link href="/plans" className="ghost-button">All plans</Link> : null}
-          {plan.custom_plan_id && plan.athlete_id === viewerProfileId ? (
+          {!integrateOverview && plan.custom_plan_id && plan.athlete_id === viewerProfileId ? (
             <Link className="ghost-button" href={`/plans/custom?plan=${plan.custom_plan_id}`}>Edit Plan</Link>
           ) : null}
           {archivedPreview && viewerRole === "athlete" ? (

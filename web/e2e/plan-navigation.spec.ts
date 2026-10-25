@@ -69,6 +69,11 @@ for (const custom of [false, true])
             await management.click();
             await expect(page.locator('.plan-detail-hero').getByRole('link', { name: 'All plans', exact: true })).toBeVisible();
             await expect(page.locator('.plan-detail-hero').getByRole('button', { name: 'Rename', exact: true })).toBeVisible();
+            if (custom) {
+                const editPlan = page.locator('.plan-detail-hero').getByRole('link', { name: 'Edit Plan', exact: true });
+                await expect(editPlan).toBeVisible();
+                await expect(editPlan).toHaveAttribute('href', '/plans/custom?plan=custom-review-plan');
+            }
             await management.click();
             const link = page.locator('.cm-session-link').first();
             await link.scrollIntoViewIfNeeded();

@@ -254,6 +254,11 @@
 /* Match Today's preview rhythm without changing either screen's training flow. */
 .page:has(> .plan-page-title) { gap: 20px; }
 .cm-week-section .plan-detail-hero { gap: 12px; }
+.cm-week-section .cm-week-intent { display: block; margin: 0; }
+.cm-week-section .cm-week-intent > summary { display: flex; align-items: center; gap: 8px; list-style: none; }
+.cm-week-section .cm-week-intent > summary::-webkit-details-marker { display: none; }
+.cm-week-section .cm-week-intent > summary::before { content: ""; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); }
+.cm-week-section .cm-week-intent[open] > summary::before { transform: rotate(45deg); }
 html[data-app-surface="workspace"][data-theme="dark"] .plan-experience .plan-text-panel,
 html[data-app-surface="workspace"][data-theme="dark"] .cm-week-section .plan-detail-hero {
   background: transparent;
