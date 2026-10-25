@@ -1,4 +1,3 @@
-import {renderPlanSessionViews} from "../test/render-plan-session-views";
 // What the athlete actually sees when the deterministic fallback IS the card.
 //
 // Production commonly stores structured_plan = NULL, so the card rendered here
@@ -80,13 +79,14 @@ const day = (countdown: string, date: string, sessions: StructuredSession[]): St
   sessions,
 });
 
-async function render(plan: StructuredPlan): Promise<string> {
-  return await renderPlanSessionViews(
-    <StructuredPlanRenderer plan={plan} today={new Date("2026-10-06T12:00:00")} />);
+function render(plan: StructuredPlan): string {
+  return renderToStaticMarkup(
+    <StructuredPlanRenderer plan={plan} today={new Date("2026-10-06T12:00:00")} />,
+  );
 }
 
-test("a blockless instruction card reads as the instruction, not as a Why", async () => {
-  const markup = await render(planWith([day("D-10", "2026-10-05", [jointPrep])]));
+test("a blockless instruction card reads as the instruction, not as a Why", () => {
+  const markup = render(planWith([day("D-10", "2026-10-05", [jointPrep])]));
 
   assert.match(markup, /Joint Prep/);
   assert.match(markup, /Neck CARs, shoulder CARs/);
@@ -97,7 +97,7 @@ test("a blockless instruction card reads as the instruction, not as a Why", asyn
   assert.equal(/>Recovery</.test(markup), false);
 });
 
-test("a low-load task prints no Cue / Reset / Coach cue lines", async () => {
+test("a low-load task prints no Cue / Reset / Coach cue lines", () => {
   // The Fight Visualisation bank carries one trusted cue. Replicating it into
   // every mindset slot printed the same sentence three times on the card.
   const visualisationWithCue: StructuredSession = {
@@ -109,17 +109,17 @@ test("a low-load task prints no Cue / Reset / Coach cue lines", async () => {
       confidence_anchor: "Take the space, do not chase it.",
     },
   };
-  const markup = await render(planWith([day("D-9", "2026-10-06", [visualisationWithCue])]));
+  const markup = render(planWith([day("D-9", "2026-10-06", [visualisationWithCue])]));
 
   // Low-load cards show the steps only; mindset slots are not restated.
   assert.equal(markup.includes("Take the space, do not chase it"), false);
   assert.equal(markup.includes('sp-stat-label">Cue'), false);
 });
 
-test("a bank cue emitted by the server is not printed on a low-load task", async () => {
+test("a bank cue emitted by the server is not printed on a low-load task", () => {
   // Mirrors api/structured_plan_locked_merge._mindset_anchor for a bank entry
   // that carries a single `cue` and no four-part mindset block.
-  const markup = await render(
+  const markup = render(
     planWith([
       day("D-9", "2026-10-06", [
         {
@@ -141,26 +141,26 @@ test("a bank cue emitted by the server is not printed on a low-load task", async
   assert.equal(markup.includes(">Reset</span>"), false);
 });
 
-test("an instruction-only card renders its prescription as a panel", async () => {
-  const markup = await render(planWith([day("D-10", "2026-10-05", [jointPrep])]));
+test("an instruction-only card renders its prescription as a panel", () => {
+  const markup = render(planWith([day("D-10", "2026-10-05", [jointPrep])]));
 
   assert.match(markup, /sp-session-instruction/);
   // A card with real work below keeps the plain Why subtitle.
-  const withBlocks = await render(planWith([day("D-9", "2026-10-06", [pressureStepCut])]));
+  const withBlocks = render(planWith([day("D-9", "2026-10-06", [pressureStepCut])]));
   assert.equal(withBlocks.includes("sp-session-instruction"), false);
 });
 
-test("mobility support is chipped Mobility, never the clinical Rehab", async () => {
+test("mobility support is chipped Mobility, never the clinical Rehab", () => {
   // `rehab` is the schema's home for mobility work, but the athlete-facing chip
   // must not claim rehab on a joint-prep card with no injury behind it.
-  const markup = await render(planWith([day("D-10", "2026-10-05", [jointPrep])]));
+  const markup = render(planWith([day("D-10", "2026-10-05", [jointPrep])]));
 
   assert.match(markup, /Mobility/);
   assert.equal(/>Rehab</.test(markup), false);
   assert.equal(/>Prehab</.test(markup), false);
 });
 
-test("real rehab work keeps its clinical chip, through the region policy", async () => {
+test("real rehab work keeps its clinical chip, through the region policy", () => {
   const rehabSession: StructuredSession = {
     session_id: "deterministic-14-mobility_rehab-0",
     session_type: "rehab",
@@ -177,7 +177,7 @@ test("real rehab work keeps its clinical chip, through the region policy", async
   };
   const plan = planWith([day("D-14", "2026-10-01", [rehabSession])]);
 
-  const live = await renderPlanSessionViews(
+  const live = renderToStaticMarkup(
     <StructuredPlanRenderer
       plan={plan}
       today={new Date("2026-10-06T12:00:00")}
@@ -185,25 +185,27 @@ test("real rehab work keeps its clinical chip, through the region policy", async
         default_mode: "prehab",
         active_regions: [{ region: "shoulder", terms: ["shoulder"] }],
       }}
-    />);
-  const cleared = await renderPlanSessionViews(
+    />,
+  );
+  const cleared = renderToStaticMarkup(
     <StructuredPlanRenderer
       plan={plan}
       today={new Date("2026-10-06T12:00:00")}
       rehabLabelPolicy={{ default_mode: "prehab", active_regions: [] }}
-    />);
+    />,
+  );
 
   assert.match(live, />Rehab</);
   assert.match(cleared, />Prehab</);
   assert.equal(/>Mobility</.test(cleared), false);
 });
 
-test("a parsed drill card keeps Why, prescription, cues and its stop rule", async () => {
-  const markup = await render(planWith([day("D-9", "2026-10-06", [pressureStepCut])]));
+test("a parsed drill card keeps Why, prescription, cues and its stop rule", () => {
+  const markup = render(planWith([day("D-9", "2026-10-06", [pressureStepCut])]));
 
   // The Why kicker is correct here: there IS work below for it to explain.
   assert.match(markup, /sp-session-why-label/);
-  assert.match(markup, /Read the opponent(?:&#x27;|')s exit lane/);
+  assert.match(markup, /Read the opponent&#x27;s exit lane/);
   // No "WHY Why:" duplication of the source label.
   assert.equal(/Why<\/span>\s*Why:/.test(markup), false);
   // The current Plan day starts with compact exercise rows. The safety rule
@@ -228,9 +230,9 @@ test("a parsed drill card keeps Why, prescription, cues and its stop rule", asyn
   assert.match(markup, /Skill/);
 });
 
-test("same-day support and physical work coexist, counted once", async () => {
+test("same-day support and physical work coexist, counted once", () => {
   const d9 = day("D-9", "2026-10-06", [breathingReset, pressureStepCut, visualisation]);
-  const markup = await render(planWith([d9]));
+  const markup = render(planWith([d9]));
 
   assert.match(markup, /Breathing Reset/);
   assert.match(markup, /Pressure Step-Cut Reset/);
@@ -248,13 +250,13 @@ test("same-day support and physical work coexist, counted once", async () => {
   assert.equal(dayCompletion(d9).total, 1);
 });
 
-test("a day with no sessions still renders as rest", async () => {
-  const markup = await render(
+test("a day with no sessions still renders as rest", () => {
+  const markup = render(
     planWith([
       day("D-9", "2026-10-06", [pressureStepCut]),
       { date: "2026-10-08", countdown_label: "D-7", day_type: "rest", sessions: [] },
     ]),
   );
 
-  assert.match(renderToStaticMarkup(<StructuredPlanRenderer plan={planWith([day("D-9", "2026-10-23", [])])} />), /cm-rest-day/);
+  assert.match(markup, /cm-rest-day/);
 });
