@@ -8,9 +8,9 @@ grant usage on schema auth to authenticated;
 create table public.profiles (
  id uuid primary key, email text, username text,role text,full_name text,technical_style text[],tactical_style text[],stance text,professional_status text,record_summary text,athlete_timezone text,athlete_locale text,appearance_mode text,onboarding_draft jsonb,nutrition_profile jsonb,created_at timestamptz,updated_at timestamptz,access_status text,starting_path text,date_of_birth date);
 create table public.plans(id uuid primary key,athlete_id uuid,created_at timestamptz,status text);
-create table public.session_completions(id uuid primary key,athlete_id uuid,started_at timestamptz,completed_at timestamptz,status text,plan_id uuid);
+create table public.session_completions(id uuid primary key,athlete_id uuid,started_at timestamptz,completed_at timestamptz,status text,plan_id uuid,session_id text,training_day date);
 create table public.external_training_sessions(id uuid primary key,athlete_id uuid,created_at timestamptz,deleted_at timestamptz);
-create table public.sparring_logs(id uuid primary key,athlete_id uuid,created_at timestamptz);
+create table public.sparring_logs(id uuid primary key,athlete_id uuid,created_at timestamptz,external_session_id uuid,plan_id uuid,session_id text,training_day date);
 create table public.today_checkins(id uuid primary key,athlete_id uuid,created_at timestamptz);
 create table public.daily_checkins(id uuid primary key,athlete_id uuid,created_at timestamptz);
 create table public.session_logs(id uuid primary key,athlete_id uuid,created_at timestamptz,completed boolean,plan_id uuid);

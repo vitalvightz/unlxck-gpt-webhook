@@ -11,6 +11,7 @@ import {
   listInjuryFlags,
   getExerciseLibrary,
   getTrainingHistory,
+  trackProductEvent,
   deleteExternalTraining,
   listSparringLogHistory,
   listTodayCheckinHistory,
@@ -656,6 +657,7 @@ function HistoryContent() {
         );
         if (!cancelled) {
           set({ rows, error: null });
+          void trackProductEvent(token, "history_opened", "history");
         }
       } catch (error) {
         if (!cancelled) {

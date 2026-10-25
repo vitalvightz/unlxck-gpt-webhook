@@ -1,0 +1,809 @@
+{
+  "friction_followup": [],
+  "as_of": "2026-10-25T12:00:00+00:00",
+  "coverage": {
+    "status": "not_measured",
+    "measurable_athletes": 0,
+    "eligible_athletes": 27,
+    "fully_measured_athletes": 0
+  },
+  "plan_funnel": {
+    "generated": 3,
+    "generating_athletes": 1,
+    "usable": 2,
+    "review_required": 1,
+    "pending": 0,
+    "unusable": 1,
+    "immature_usable": 1,
+    "observed_opened": null,
+    "mature_usable": 1,
+    "trained_within_7d": 1,
+    "percent": 100.0
+  },
+  "session_metrics": {
+    "planned_started": 1,
+    "planned_completed": 0,
+    "planned_modified": 1,
+    "manual_logged": 1,
+    "distinct_recorded": 2,
+    "matched_completed": 1
+  },
+  "days": 30,
+  "registered": 27,
+  "ever_active": 1,
+  "active": 1,
+  "previous_active": 0,
+  "dau": 0,
+  "wau": 1,
+  "mau": 1,
+  "stickiness": 0.0,
+  "new_active": 1,
+  "returning_active": 0,
+  "average_active_days": 0.07,
+  "sessions_started": 1,
+  "sessions_completed": 1,
+  "observed_session_abandonments": 0,
+  "inactive": {
+    "7": 0,
+    "14": 0,
+    "30": 0
+  },
+  "never_active": 26,
+  "retention": {
+    "1": {
+      "eligible": 27,
+      "returned": 0,
+      "percent": 0.0
+    },
+    "7": {
+      "eligible": 27,
+      "returned": 0,
+      "percent": 0.0
+    },
+    "30": {
+      "eligible": 0,
+      "returned": 0,
+      "percent": null
+    }
+  },
+  "cohorts": [
+    {
+      "week": "2026-09-28",
+      "signups": 27,
+      "retention": {
+        "1": {
+          "eligible": 27,
+          "returned": 0,
+          "percent": 0.0
+        },
+        "7": {
+          "eligible": 27,
+          "returned": 0,
+          "percent": 0.0
+        },
+        "30": {
+          "eligible": 0,
+          "returned": 0,
+          "percent": null
+        }
+      }
+    }
+  ],
+  "trend": [
+    {
+      "day": "2026-09-26",
+      "athletes": 0
+    },
+    {
+      "day": "2026-09-27",
+      "athletes": 0
+    },
+    {
+      "day": "2026-09-28",
+      "athletes": 0
+    },
+    {
+      "day": "2026-09-29",
+      "athletes": 0
+    },
+    {
+      "day": "2026-09-30",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-01",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-02",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-03",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-04",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-05",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-06",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-07",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-08",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-09",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-10",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-11",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-12",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-13",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-14",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-15",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-16",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-17",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-18",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-19",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-20",
+      "athletes": 1
+    },
+    {
+      "day": "2026-10-21",
+      "athletes": 1
+    },
+    {
+      "day": "2026-10-22",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-23",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-24",
+      "athletes": 0
+    },
+    {
+      "day": "2026-10-25",
+      "athletes": 0
+    }
+  ],
+  "funnel": [
+    {
+      "label": "signup \u2192 onboarding started",
+      "eligible": 27,
+      "converted": null,
+      "percent": null,
+      "median_seconds": null,
+      "measurement_note": "Onboarding workflow timestamps are not measured for this signup cohort."
+    },
+    {
+      "label": "onboarding started \u2192 onboarding completed",
+      "eligible": 0,
+      "converted": null,
+      "percent": null,
+      "median_seconds": null,
+      "measurement_note": "Onboarding workflow timestamps are not measured for this signup cohort."
+    },
+    {
+      "label": "onboarding completed \u2192 first action",
+      "eligible": 0,
+      "converted": null,
+      "percent": null,
+      "median_seconds": null,
+      "measurement_note": "Onboarding workflow timestamps are not measured for this signup cohort."
+    },
+    {
+      "label": "first action \u2192 repeat activity",
+      "eligible": 1,
+      "converted": 1,
+      "percent": 100.0,
+      "median_seconds": 86400.0
+    }
+  ],
+  "features": [
+    {
+      "feature": "plans",
+      "coverage": {
+        "status": "not_measured",
+        "measurable_athletes": 0,
+        "eligible_athletes": 27,
+        "fully_measured_athletes": 0
+      },
+      "athletes": 1,
+      "percent": 3.7,
+      "uses": 1,
+      "repeat_athletes": 0,
+      "discovered": null,
+      "actions": {
+        "plan_used_in_training": 1
+      },
+      "completion": {
+        "started": 1,
+        "completed": 1,
+        "percent": 100.0
+      },
+      "completion_label": "Mature usable plans with training within 7 days"
+    },
+    {
+      "feature": "strength",
+      "coverage": null,
+      "athletes": 1,
+      "percent": 3.7,
+      "uses": 1,
+      "repeat_athletes": 0,
+      "discovered": null,
+      "actions": {
+        "session_completed": 1
+      },
+      "completion": {
+        "started": 1,
+        "completed": 1,
+        "percent": 100.0
+      }
+    },
+    {
+      "feature": "manual",
+      "coverage": null,
+      "athletes": 1,
+      "percent": 3.7,
+      "uses": 1,
+      "repeat_athletes": 0,
+      "discovered": null,
+      "actions": {
+        "session_completed": 1
+      },
+      "completion": null
+    },
+    {
+      "feature": "timer",
+      "coverage": {
+        "status": "not_measured",
+        "measurable_athletes": 0,
+        "eligible_athletes": 27,
+        "fully_measured_athletes": 0
+      },
+      "athletes": null,
+      "percent": null,
+      "uses": null,
+      "repeat_athletes": null,
+      "discovered": null,
+      "actions": {},
+      "completion": null,
+      "observed_early_exits": null
+    },
+    {
+      "feature": "sparring",
+      "coverage": null,
+      "athletes": 0,
+      "percent": 0.0,
+      "uses": 0,
+      "repeat_athletes": 0,
+      "discovered": null,
+      "actions": {},
+      "completion": null
+    },
+    {
+      "feature": "history",
+      "coverage": {
+        "status": "not_measured",
+        "measurable_athletes": 0,
+        "eligible_athletes": 27,
+        "fully_measured_athletes": 0
+      },
+      "athletes": null,
+      "percent": null,
+      "uses": null,
+      "repeat_athletes": null,
+      "discovered": null,
+      "actions": {},
+      "completion": null
+    },
+    {
+      "feature": "recovery",
+      "coverage": null,
+      "athletes": 0,
+      "percent": 0.0,
+      "uses": 0,
+      "repeat_athletes": 0,
+      "discovered": null,
+      "actions": {},
+      "completion": null
+    },
+    {
+      "feature": "nutrition",
+      "coverage": {
+        "status": "not_measured",
+        "measurable_athletes": 0,
+        "eligible_athletes": 27,
+        "fully_measured_athletes": 0
+      },
+      "athletes": null,
+      "percent": null,
+      "uses": null,
+      "repeat_athletes": null,
+      "discovered": null,
+      "actions": {},
+      "completion": null
+    },
+    {
+      "feature": "feedback",
+      "coverage": {
+        "status": "not_measured",
+        "measurable_athletes": 0,
+        "eligible_athletes": 27,
+        "fully_measured_athletes": 0
+      },
+      "athletes": 0,
+      "percent": 0.0,
+      "uses": 0,
+      "repeat_athletes": 0,
+      "discovered": null,
+      "actions": {},
+      "completion": null,
+      "completion_label": "Prompted athletes subsequently submitting feedback"
+    }
+  ],
+  "conversions": [
+    {
+      "label": "Signup \u2192 onboarding started (observed)",
+      "eligible": 27,
+      "converted": null,
+      "percent": null,
+      "median_seconds": null,
+      "measurement_note": "Onboarding workflow timestamps are not measured for this signup cohort."
+    },
+    {
+      "label": "Signup \u2192 onboarding completed (observed)",
+      "eligible": 27,
+      "converted": null,
+      "percent": null,
+      "median_seconds": null,
+      "measurement_note": "Onboarding workflow timestamps are not measured for this signup cohort."
+    },
+    {
+      "label": "Onboarded plan-first \u2192 usable plan",
+      "eligible": 0,
+      "converted": null,
+      "percent": null,
+      "median_seconds": null,
+      "measurement_note": "Onboarding workflow timestamps are not measured for this signup cohort."
+    },
+    {
+      "label": "Signup \u2192 first meaningful action",
+      "eligible": 27,
+      "converted": 1,
+      "percent": 3.7,
+      "median_seconds": 1641600.0
+    },
+    {
+      "label": "First action \u2192 second active day",
+      "eligible": 1,
+      "converted": 1,
+      "percent": 100.0,
+      "median_seconds": null
+    },
+    {
+      "label": "Observed session starts \u2192 completed",
+      "eligible": 1,
+      "converted": 1,
+      "percent": 100.0,
+      "median_seconds": null
+    },
+    {
+      "label": "Observed free timer starts \u2192 completed",
+      "eligible": null,
+      "converted": null,
+      "percent": null,
+      "median_seconds": null,
+      "coverage": {
+        "status": "not_measured",
+        "measurable_athletes": 0,
+        "eligible_athletes": 27,
+        "fully_measured_athletes": 0
+      }
+    },
+    {
+      "label": "Generated plans \u2192 currently usable",
+      "eligible": 3,
+      "converted": 2,
+      "percent": 66.67,
+      "median_seconds": null
+    },
+    {
+      "label": "Mature usable plans \u2192 training within 7 days",
+      "eligible": 1,
+      "converted": 1,
+      "percent": 100.0,
+      "median_seconds": null
+    }
+  ],
+  "dropoffs": {
+    "observed_onboarding_not_completed_24h": 0,
+    "observed_onboarded_no_action_24h": 0,
+    "repeated_feature_discovery_no_action_24h": null,
+    "observed_plan_opened_no_action": null,
+    "first_day_no_return_7d": 0
+  },
+  "errors": [],
+  "segments": {
+    "professional_status": [
+      "unknown"
+    ],
+    "sports": [
+      "unknown"
+    ],
+    "acquisition": "Unavailable"
+  },
+  "athletes": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "full_name": "Example Athlete",
+      "email": "named@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": "2026-10-20T12:00:00+00:00",
+      "last_activity": "2026-10-21T12:00:00+00:00",
+      "active_days_7": 2,
+      "active_days_30": 2,
+      "inactivity_days": 4
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "full_name": null,
+      "email": "fallback@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "abcdef00-0000-4000-8000-000000000003",
+      "full_name": null,
+      "email": null,
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "full_name": "Example Athlete 4",
+      "email": "example4@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "full_name": "Example Athlete 5",
+      "email": "example5@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "full_name": "Example Athlete 6",
+      "email": "example6@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000007",
+      "full_name": "Example Athlete 7",
+      "email": "example7@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000008",
+      "full_name": "Example Athlete 8",
+      "email": "example8@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000009",
+      "full_name": "Example Athlete 9",
+      "email": "example9@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000010",
+      "full_name": "Example Athlete 10",
+      "email": "example10@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000011",
+      "full_name": "Example Athlete 11",
+      "email": "example11@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000012",
+      "full_name": "Example Athlete 12",
+      "email": "example12@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000013",
+      "full_name": "Example Athlete 13",
+      "email": "example13@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000014",
+      "full_name": "Example Athlete 14",
+      "email": "example14@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000015",
+      "full_name": "Example Athlete 15",
+      "email": "example15@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000016",
+      "full_name": "Example Athlete 16",
+      "email": "example16@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000017",
+      "full_name": "Example Athlete 17",
+      "email": "example17@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000018",
+      "full_name": "Example Athlete 18",
+      "email": "example18@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000019",
+      "full_name": "Example Athlete 19",
+      "email": "example19@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000020",
+      "full_name": "Example Athlete 20",
+      "email": "example20@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000021",
+      "full_name": "Example Athlete 21",
+      "email": "example21@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000022",
+      "full_name": "Example Athlete 22",
+      "email": "example22@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000023",
+      "full_name": "Example Athlete 23",
+      "email": "example23@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000024",
+      "full_name": "Example Athlete 24",
+      "email": "example24@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000025",
+      "full_name": "Example Athlete 25",
+      "email": "example25@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000026",
+      "full_name": "Example Athlete 26",
+      "email": "example26@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000027",
+      "full_name": "Example Athlete 27",
+      "email": "example27@example.test",
+      "registered_at": "2026-10-01T12:00:00+00:00",
+      "signals": [],
+      "first_activity": null,
+      "last_activity": null,
+      "active_days_7": 0,
+      "active_days_30": 0,
+      "inactivity_days": null
+    }
+  ],
+  "athlete_total": 27,
+  "offset": 0
+}

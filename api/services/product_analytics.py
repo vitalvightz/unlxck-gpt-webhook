@@ -106,6 +106,48 @@ def summarize(
             "percent": ratio(returned, len(eligible)),
         }
 
+    coverage_start = max(
+        datetime.combine(start, datetime.min.time(), tzinfo=timezone.utc),
+        min((parse_utc_datetime(p["created_at"]) for p in athletes), default=now),
+    )
+    enabled_since = {
+        str(c["athlete_id"]): parse_utc_datetime(c["since"])
+        for c in data.get("optional_coverage", [])
+        if str(c["athlete_id"]) in ids and parse_utc_datetime(c["since"]) <= now
+    }
+    event_ids = {
+        str(f["athlete_id"])
+        for f in selected
+        if f["action"] in (*EVENT_FEATURES, "frontend_error", "operation_failed")
+    }
+    event_ids.update(
+        str(t["athlete_id"])
+        for t in data.get("timer_flows", [])
+        if str(t["athlete_id"]) in ids
+        and t.get("started_at")
+        and start <= parse_utc_datetime(t["started_at"]).date() <= today
+        and parse_utc_datetime(t["started_at"]) <= now
+    )
+    measurable = set(enabled_since) | event_ids
+    fully_measured = {
+        aid
+        for aid, since in enabled_since.items()
+        if since <= coverage_start and coverage_start >= now - timedelta(days=180)
+    }
+    coverage = {
+        "status": "insufficient"
+        if not athletes
+        else (
+            "not_measured"
+            if not measurable
+            else ("measured" if len(fully_measured) == len(athletes) else "partial")
+        ),
+        "measurable_athletes": len(measurable),
+        "eligible_athletes": len(athletes),
+        "fully_measured_athletes": len(fully_measured),
+    }
+    optional_available = bool(measurable)
+
     conversions = []
 
     def conversion(label, eligible, converted, durations=None):
@@ -185,6 +227,11 @@ def summarize(
                     )
             if not stage.get(before):
                 continue
+            if (
+                before == "first_action"
+                and parse_utc_datetime(stage[before]).date() >= today
+            ):
+                continue  # A second UTC active day has not yet been observable.
             eligible.append(p)
             if stage.get(after) and parse_utc_datetime(
                 stage[after]
@@ -205,17 +252,56 @@ def summarize(
                 "median_seconds": median(durations) if durations else None,
             }
         )
+    if signups:
+        for metric in (*conversions, *funnel):
+            if (
+                "onboarding" in metric["label"].lower()
+                or "onboarded" in metric["label"].lower()
+            ):
+                if not started:
+                    metric.update(
+                        converted=None,
+                        percent=None,
+                        measurement_note="Onboarding workflow timestamps are not measured for this signup cohort.",
+                    )
+                elif len(started) < len(signups):
+                    metric["measurement_note"] = (
+                        "Partial workflow timestamp coverage; historical completion may be unmeasured."
+                    )
+    sessions = data.get("sessions", [])
+    sessions = list(
+        {
+            s.get("id", i): s
+            for i, s in enumerate(sessions)
+            if str(s["athlete_id"]) in ids
+        }.values()
+    )
+    known_plans = {
+        (str(p["athlete_id"]), str(p["id"]))
+        for p in data.get("plans_used", [])
+        if p.get("id")
+    }
     feature_rows = []
     for feature in FEATURES:
-        rows = [
-            f
-            for f in selected
-            if f["feature"] == feature
-            or (
-                feature == "history"
-                and f["action"] in ("session_completed", "session_modified")
-            )
-        ]
+        rows = [f for f in selected if f["feature"] == feature]
+        if feature == "plans":
+            # A verified completed planned session is evidence of using its
+            # plan, not proof of visiting the plan screen. Do not copy events.
+            rows += [
+                dict(
+                    athlete_id=s["athlete_id"],
+                    day=parse_utc_datetime(s["completed_at"]).date().isoformat(),
+                    action="plan_used_in_training",
+                    meaningful=True,
+                    count=1,
+                )
+                for s in sessions
+                if (str(s["athlete_id"]), str(s.get("plan_id"))) in known_plans
+                and s["status"] in ("done", "modified")
+                and s.get("completed_at")
+                and start <= parse_utc_datetime(s["completed_at"]).date() <= today
+                and parse_utc_datetime(s["completed_at"]) <= now
+            ]
         used = {str(f["athlete_id"]) for f in rows if f["meaningful"]}
         counts = defaultdict(int)
         actions = defaultdict(int)
@@ -225,36 +311,49 @@ def summarize(
             if f["meaningful"]:
                 counts[str(f["athlete_id"])] += f["count"]
                 feature_days[str(f["athlete_id"])].add(f["day"])
+        usage_measured = feature != "history" and (
+            feature not in ("timer", "nutrition") or optional_available
+        )
         feature_rows.append(
             {
                 "feature": feature,
-                "athletes": len(used),
-                "percent": ratio(len(used), len(athletes)),
-                "uses": sum(counts.values()),
-                "repeat_athletes": sum(len(v) >= 2 for v in feature_days.values()),
+                "coverage": coverage
+                if feature in ("plans", "timer", "history", "nutrition", "feedback")
+                else None,
+                "athletes": len(used) if usage_measured else None,
+                "percent": ratio(len(used), len(athletes)) if usage_measured else None,
+                "uses": sum(counts.values()) if usage_measured else None,
+                "repeat_athletes": sum(len(v) >= 2 for v in feature_days.values())
+                if usage_measured
+                else None,
                 "discovered": len(
                     {
                         str(f["athlete_id"])
                         for f in rows
                         if f["action"].endswith("_opened")
                     }
-                ),
+                )
+                if optional_available and feature in ("plans", "history", "nutrition")
+                else None,
                 "actions": dict(actions),
             }
         )
     # Session completion rate is matched by persisted completion identity, supplied by SQL separately below.
-    sessions = data.get("sessions", [])
-    sessions = [s for s in sessions if str(s["athlete_id"]) in ids]
     starts = [
         s
         for s in sessions
         if s.get("started_at")
         and start <= parse_utc_datetime(s["started_at"]).date() <= today
+        and parse_utc_datetime(s["started_at"]) <= now
     ]
     done = [
         s
         for s in starts
-        if s.get("completed_at") and s["status"] in ("done", "modified")
+        if s.get("completed_at")
+        and s["status"] in ("done", "modified")
+        and parse_utc_datetime(s["started_at"])
+        <= parse_utc_datetime(s["completed_at"])
+        <= now
     ]
     abandoned = [
         s
@@ -270,9 +369,94 @@ def summarize(
         and t.get("started_at")
         and start <= parse_utc_datetime(t["started_at"]).date() <= today
     ]
-    timer_done = [t for t in timers if t.get("completed_at")]
-    timer_exit = [t for t in timers if t.get("exited_at")]
-    conversion("Observed timer starts → completed", timers, timer_done)
+    timer_done = [
+        t
+        for t in timers
+        if t.get("completed_at")
+        and parse_utc_datetime(t["started_at"])
+        <= parse_utc_datetime(t["completed_at"])
+        <= now
+    ]
+    timer_exit = [
+        t
+        for t in timers
+        if t.get("exited_at")
+        and parse_utc_datetime(t["started_at"])
+        <= parse_utc_datetime(t["exited_at"])
+        <= now
+    ]
+    conversion("Observed free timer starts → completed", timers, timer_done)
+    conversions[-1]["coverage"] = coverage
+    if not optional_available and athletes:
+        conversions[-1].update(eligible=None, converted=None)
+    generated = [
+        p
+        for p in data.get("plans_used", [])
+        if str(p["athlete_id"]) in ids
+        and start <= parse_utc_datetime(p["created_at"]).date() <= today
+        and parse_utc_datetime(p["created_at"]) <= now
+    ]
+    usable = [
+        p for p in generated if p.get("status") in ("ready", "publishable_with_flags")
+    ]
+    mature = [
+        p
+        for p in usable
+        if parse_utc_datetime(p["created_at"]) + timedelta(days=7) <= now
+    ]
+    trained = [p for p in mature if p.get("completed_within_7d") is True]
+    plan_funnel = {
+        "generated": len(generated),
+        "generating_athletes": len({str(p["athlete_id"]) for p in generated}),
+        "usable": len(usable),
+        "review_required": sum(
+            p.get("status") in ("review_required", "held_for_review", "needs_review")
+            for p in generated
+        ),
+        "pending": sum(p.get("status") == "generated" for p in generated),
+        "unusable": sum(
+            p.get("status") not in ("generated", "ready", "publishable_with_flags")
+            for p in generated
+        ),
+        "immature_usable": len(usable) - len(mature),
+        "observed_opened": sum(bool(p.get("opened_at")) for p in generated)
+        if optional_available
+        else None,
+        "mature_usable": len(mature),
+        "trained_within_7d": len(trained),
+        "percent": ratio(len(trained), len(mature)),
+    }
+    conversion("Generated plans → currently usable", generated, usable)
+    conversion("Mature usable plans → training within 7 days", mature, trained)
+    completed = [
+        s
+        for s in sessions
+        if s.get("completed_at")
+        and s["status"] in ("done", "modified")
+        and start <= parse_utc_datetime(s["completed_at"]).date() <= today
+        and parse_utc_datetime(s["completed_at"]) <= now
+    ]
+    manual_logged = sum(
+        f["count"]
+        for f in selected
+        if f["feature"] == "manual" and f["action"] == "session_completed"
+    )
+    session_metrics = {
+        "planned_started": len(starts),
+        "planned_completed": sum(s["status"] == "done" for s in completed),
+        "planned_modified": sum(s["status"] == "modified" for s in completed),
+        "manual_logged": manual_logged,
+        "distinct_recorded": len(
+            {
+                r["id"]
+                for r in data.get("training_records", [])
+                if str(r["athlete_id"]) in ids
+                and start <= parse_utc_datetime(r["occurred_at"]).date() <= today
+                and parse_utc_datetime(r["occurred_at"]) <= now
+            }
+        ),
+        "matched_completed": len(done),
+    }
     for feature in feature_rows:
         feature["completion"] = None
         if feature["feature"] == "feedback":
@@ -297,6 +481,8 @@ def summarize(
                 "Prompted athletes subsequently submitting feedback"
             )
 
+        if feature["feature"] == "feedback" and not optional_available:
+            feature["completion"] = None
         if feature["feature"] == "strength":
             feature["completion"] = {
                 "started": len(starts),
@@ -310,19 +496,18 @@ def summarize(
                 "percent": ratio(len(timer_done), len(timers)),
             }
             feature["observed_early_exits"] = len(timer_exit)
+        if feature["feature"] == "timer" and not optional_available:
+            feature["completion"] = None
+            feature["observed_early_exits"] = None
         if feature["feature"] == "plans":
-            generated = [
-                p
-                for p in data.get("plans_used", [])
-                if str(p["athlete_id"]) in ids
-                and start <= parse_utc_datetime(p["created_at"]).date() <= today
-            ]
-            used = sum(p["used"] for p in generated)
             feature["completion"] = {
-                "started": len(generated),
-                "completed": used,
-                "percent": ratio(used, len(generated)),
+                "started": len(mature),
+                "completed": len(trained),
+                "percent": ratio(len(trained), len(mature)),
             }
+            feature["completion_label"] = (
+                "Mature usable plans with training within 7 days"
+            )
 
     cohorts = defaultdict(list)
     for p in signups:
@@ -385,16 +570,24 @@ def summarize(
             if not failures:
                 continue  # Generation job aggregates lack exact terminal error timestamps.
             failure_at = max(parse_utc_datetime(f["last_at"]) for f in failures)
-            if failure_at + timedelta(days=7) >= now:
+            if failure_at + timedelta(days=7) > now:
+                continue
+            observed_return = next(
+                (
+                    r["returned"]
+                    for r in data.get("error_returns", [])
+                    if str(r["athlete_id"]) == aid
+                    and r["feature"] == feature
+                    and r["action"] == category
+                    and parse_utc_datetime(r["error_at"]) == failure_at
+                ),
+                None,
+            )
+            # Daily first/last facts cannot prove absence inside a seven-day interval.
+            if observed_return is None:
                 continue
             eligible_ids.add(aid)
-            if not any(
-                f["meaningful"]
-                and failure_at
-                < parse_utc_datetime(f["last_at"])
-                <= failure_at + timedelta(days=7)
-                for f in by_athlete[aid]
-            ):
+            if not observed_return:
                 no_return_ids.add(aid)
         friction_followup.append(
             {
@@ -431,6 +624,8 @@ def summarize(
         if any(str(s["athlete_id"]) == aid for s in abandoned):
             signals.append("Observed session start unresolved for 24h")
         for feature in FEATURES:
+            if feature == "history":
+                continue  # History is discovery-only; it has no completion flow.
             rows = [f for f in by_athlete[aid] if f["feature"] == feature]
             if sum(
                 f["count"]
@@ -446,6 +641,9 @@ def summarize(
     return {
         "friction_followup": friction_followup,
         "as_of": now.isoformat(),
+        "coverage": coverage,
+        "plan_funnel": plan_funnel,
+        "session_metrics": session_metrics,
         "days": days,
         "registered": len(athletes),
         "ever_active": len(first),
@@ -465,11 +663,7 @@ def summarize(
         if athletes
         else None,
         "sessions_started": len(starts),
-        "sessions_completed": sum(
-            f["count"]
-            for f in selected
-            if f["action"] in ("session_completed", "session_modified")
-        ),
+        "sessions_completed": len(completed),
         "observed_session_abandonments": len(abandoned),
         "inactive": {
             str(n): sum(
@@ -489,15 +683,9 @@ def summarize(
         ],
         "trend": trend,
         "funnel": funnel,
-        "features": sorted(feature_rows, key=lambda f: -f["athletes"]),
+        "features": sorted(feature_rows, key=lambda f: -(f["athletes"] or 0)),
         "conversions": conversions,
         "dropoffs": {
-            "generated_plans_without_observed_interaction": sum(
-                not p.get("interacted", False)
-                for p in data.get("plans_used", [])
-                if str(p["athlete_id"]) in ids
-                and start <= parse_utc_datetime(p["created_at"]).date() <= today
-            ),
             "observed_onboarding_not_completed_24h": sum(
                 "onboarding_started" in staged[str(p["id"])]
                 and parse_utc_datetime(staged[str(p["id"])]["onboarding_started"])
@@ -512,21 +700,27 @@ def summarize(
                 for p in onboarded
             ),
             "repeated_feature_discovery_no_action_24h": sum(
-                sum(
-                    f["count"]
-                    for f in selected
-                    if str(f["athlete_id"]) == str(p["id"])
-                    and f["action"].endswith("_opened")
-                    and parse_utc_datetime(f["last_at"]) < now - timedelta(hours=24)
-                )
-                >= 2
-                and not any(
-                    f["meaningful"]
-                    for f in selected
-                    if str(f["athlete_id"]) == str(p["id"])
+                any(
+                    sum(
+                        f["count"]
+                        for f in selected
+                        if str(f["athlete_id"]) == str(p["id"])
+                        and f["feature"] == feature
+                        and f["action"].endswith("_opened")
+                        and parse_utc_datetime(f["last_at"]) < now - timedelta(hours=24)
+                    )
+                    >= 2
+                    and not any(
+                        f["meaningful"] and f["feature"] == feature
+                        for f in by_athlete[str(p["id"])]
+                    )
+                    for feature in FEATURES
+                    if feature != "history"
                 )
                 for p in athletes
-            ),
+            )
+            if optional_available
+            else None,
             "observed_plan_opened_no_action": sum(
                 any(
                     f["action"] == "plan_opened"
@@ -536,7 +730,9 @@ def summarize(
                 )
                 and str(p["id"]) not in first
                 for p in athletes
-            ),
+            )
+            if optional_available
+            else None,
             "first_day_no_return_7d": sum(
                 len(active[aid]) == 1
                 and parse_utc_datetime(first[aid]).date() >= start
@@ -570,6 +766,8 @@ def summarize(
         "athletes": [
             {
                 "id": str(p["id"]),
+                "full_name": (p.get("full_name") or "").strip() or None,
+                "email": (p.get("email") or "").strip() or None,
                 "registered_at": p["created_at"],
                 "signals": athlete_signals(str(p["id"])),
                 "first_activity": first.get(str(p["id"])),

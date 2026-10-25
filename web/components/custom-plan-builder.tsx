@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { deleteCustomPlan, getCommunityExercise, getCustomDoseSuggestion, getCustomPlan, getExerciseLibrary, publishCustomPlan, saveCustomPlan } from "@/lib/api";
+import { trackProductEvent, productEventIdentity, deleteCustomPlan, getCommunityExercise, getCustomDoseSuggestion, getCustomPlan, getExerciseLibrary, publishCustomPlan, saveCustomPlan } from "@/lib/api";
 import type { MeResponse, StructuredBlock } from "@/lib/types";
 import { ExerciseRow } from "./structured-plan-renderer";
 import { DotsIcon } from "./exercise-customisation";
@@ -134,6 +134,9 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
   const suggestionRequest = useRef(0);
   // Read only once an exercise is open, for last time's weight.
   const past = usePastExercises(editing ? accessToken : null);
+  useEffect(() => {
+    if (!planId) void trackProductEvent(accessToken, "plan_editor_opened", "plans");
+  }, [accessToken, planId]);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -163,6 +166,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
         if (active) {
           loaded.current = true;
           setOpened(true);
+          void productEventIdentity(planId).then(flow => trackProductEvent(accessToken, "plan_editor_opened", "plans", undefined, flow)).catch(() => {});
           setError(undefined);
           const repaired = orderedDraft({ ...plan, sessions: plan.sessions.map(s => prepareCustomSession(s, onboarding)) });
           setDraft(repaired);

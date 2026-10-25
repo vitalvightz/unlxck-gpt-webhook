@@ -1,6 +1,35 @@
+export type Coverage = {
+  status: "not_measured" | "partial" | "measured" | "insufficient";
+  measurable_athletes: number;
+  eligible_athletes: number;
+  fully_measured_athletes: number;
+};
+export type SessionMetrics = {
+  planned_started: number;
+  planned_completed: number;
+  planned_modified: number;
+  manual_logged: number;
+  distinct_recorded: number;
+  matched_completed: number;
+};
+export type PlanFunnel = {
+  generated: number;
+  generating_athletes: number;
+  usable: number;
+  review_required: number;
+  pending: number;
+  unusable: number;
+  immature_usable: number;
+  observed_opened: number | null;
+  mature_usable: number;
+  trained_within_7d: number;
+  percent: number | null;
+};
 export type ActivitySummary = {
   signals?: string[];
   id: string;
+  full_name?: string | null;
+  email?: string | null;
   registered_at: string;
   first_activity: string | null;
   last_activity: string | null;
@@ -9,19 +38,20 @@ export type ActivitySummary = {
   inactivity_days: number | null;
 };
 export type FeatureUsage = {
+  coverage?: Coverage | null;
   completion_label?: string;
   completion?: {
     started: number;
     completed: number;
     percent: number | null;
   } | null;
-  observed_early_exits?: number;
+  observed_early_exits?: number | null;
   feature: string;
-  athletes: number;
+  athletes: number | null;
   percent: number | null;
-  uses: number;
-  repeat_athletes: number;
-  discovered: number;
+  uses: number | null;
+  repeat_athletes: number | null;
+  discovered: number | null;
   actions: Record<string, number>;
 };
 export type Retention = {
@@ -30,6 +60,9 @@ export type Retention = {
   percent: number | null;
 };
 export type ProductReport = {
+  coverage: Coverage;
+  session_metrics: SessionMetrics;
+  plan_funnel: PlanFunnel;
   as_of: string;
   days: number;
   registered: number;
@@ -57,20 +90,24 @@ export type ProductReport = {
   trend: { day: string; athletes: number }[];
   features: FeatureUsage[];
   funnel: {
+    coverage?: Coverage;
+    measurement_note?: string;
     label: string;
     eligible: number;
-    converted: number;
+    converted: number | null;
     percent: number | null;
     median_seconds: number | null;
   }[];
   conversions: {
+    coverage?: Coverage;
+    measurement_note?: string;
     label: string;
-    eligible: number;
-    converted: number;
+    eligible: number | null;
+    converted: number | null;
     percent: number | null;
     median_seconds: number | null;
   }[];
-  dropoffs: Record<string, number>;
+  dropoffs: Record<string, number | null>;
   errors: {
     feature: string;
     category: string;
@@ -94,6 +131,7 @@ export type ProductReport = {
   offset: number;
 };
 export type AthleteActivity = {
+  session_metrics: SessionMetrics;
   summary: ActivitySummary;
   features: FeatureUsage[];
   sessions_started: number;
@@ -114,3 +152,18 @@ export type AthleteActivity = {
 export const humanize = (value: string) => value.replaceAll("_", " ");
 export const percent = (value: number | null) =>
   value === null ? "Insufficient data" : `${value.toFixed(1)}%`;
+
+export const athleteIdentity = (
+  athlete: Pick<ActivitySummary, "id" | "full_name" | "email">,
+) =>
+  athlete.full_name?.trim() || athlete.email?.trim() || athlete.id.slice(0, 8);
+export const measurementLabel = (coverage?: Coverage | null) =>
+  coverage?.status === "not_measured"
+    ? "Not measured"
+    : coverage?.status === "partial"
+      ? "Partial coverage"
+      : coverage?.status === "insufficient"
+        ? "Insufficient data"
+        : "Measured";
+export const coverageExplanation = (coverage: Coverage) =>
+  `${measurementLabel(coverage)}: optional interactions can be measured for ${coverage.measurable_athletes} / ${coverage.eligible_athletes} athletes in this period. Earlier gaps and withdrawn consent cannot be reconstructed; events expire after 180 days.`;

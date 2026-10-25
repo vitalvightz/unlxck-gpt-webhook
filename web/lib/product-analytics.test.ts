@@ -63,3 +63,68 @@ test("empty denominators remain distinct from measured zero", () => {
   assert.equal(percent(null), "Insufficient data");
   assert.equal(percent(0), "0.0%");
 });
+
+test("admin athlete identity uses trimmed name, email, then a UUID fallback", async () => {
+  const { athleteIdentity } = await import("./product-analytics");
+  const id = "00000000-0000-4000-8000-000000000001";
+  assert.equal(
+    athleteIdentity({
+      id,
+      full_name: " Example Athlete ",
+      email: "name@example.test",
+    }),
+    "Example Athlete",
+  );
+  assert.equal(
+    athleteIdentity({ id, full_name: "  ", email: " fallback@example.test " }),
+    "fallback@example.test",
+  );
+  assert.equal(
+    athleteIdentity({ id, full_name: null, email: " " }),
+    "00000000",
+  );
+});
+
+test("background plan, history and bodyweight reads do not manufacture feature opens", async () => {
+  const {
+    getPlan,
+    getTrainingHistory,
+    getNutritionCurrent,
+    updateNutritionCurrent,
+  } = await import("./api");
+  const original = globalThis.fetch;
+  const events: unknown[] = [];
+  let fail = false;
+  globalThis.fetch = async (input, init) => {
+    const path = String(input);
+    if (path.endsWith("/events")) events.push(JSON.parse(String(init?.body)));
+    return new Response(
+      JSON.stringify(path.endsWith("/preference") ? { enabled: true } : {}),
+      {
+        status: fail && path.endsWith("/nutrition/current") ? 422 : 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  };
+  try {
+    await setAnalyticsPreference("read-background", true);
+    await getPlan("read-background", "00000000-0000-4000-8000-000000000001");
+    await getTrainingHistory("read-background");
+    await getNutritionCurrent("read-background");
+    assert.equal(events.length, 0);
+    fail = true;
+    await assert.rejects(
+      updateNutritionCurrent(
+        "read-background",
+        {} as Parameters<typeof updateNutritionCurrent>[1],
+      ),
+    );
+    assert.equal(
+      events.length,
+      0,
+      "a failed save is not a successful nutrition action",
+    );
+  } finally {
+    globalThis.fetch = original;
+  }
+});

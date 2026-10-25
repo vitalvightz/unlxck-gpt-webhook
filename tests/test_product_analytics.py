@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from uuid import uuid4
+import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from api.services.product_analytics import summarize
@@ -254,6 +255,15 @@ def test_failure_followup_requires_full_window_and_does_not_claim_causality():
             fact("2026-10-01", action="operation_failed", meaningful=False),
             fact("2026-10-20"),
         ],
+        error_returns=[
+            dict(
+                athlete_id="a",
+                feature="strength",
+                action="operation_failed",
+                error_at="2026-10-01T12:00:00+00:00",
+                returned=False,
+            )
+        ],
     )
     assert r["friction_followup"][0]["eligible_athletes"] == 1
     assert r["friction_followup"][0]["no_recorded_return_7d"] == 1
@@ -270,7 +280,13 @@ def test_admin_pagination_and_filters_are_validated():
     )
     store.client.rpc = lambda name, args: SimpleNamespace(
         execute=lambda: SimpleNamespace(
-            data=dict(athletes=[athlete("a"), athlete("b")], facts=[])
+            data=dict(
+                athletes=[athlete("a"), athlete("b")],
+                facts=[],
+                optional_coverage=[],
+                training_records=[],
+                error_returns=[],
+            )
         )
     )
     response = c.get("/api/admin/product-analytics?days=7&offset=1&limit=1")
@@ -326,7 +342,11 @@ def test_observed_signals_identify_athletes_without_guessing_unobserved_intent()
     assert r["athletes"][1]["signals"] == []
 
 
-def test_failed_feature_write_is_observed_without_copying_error_text():
+@pytest.mark.parametrize(
+    "path,feature",
+    [("/api/training/sessions", "manual"), ("/api/feedback/session", "feedback")],
+)
+def test_failed_feature_write_is_observed_without_copying_error_text(path, feature):
     from fastapi import Request
     from fastapi.responses import JSONResponse
     from api.services.product_friction import install_product_friction
@@ -335,7 +355,7 @@ def test_failed_feature_write_is_observed_without_copying_error_text():
     store = SimpleNamespace(client=Client())
     app.state.store = store
 
-    @app.post("/api/training/sessions")
+    @app.post(path)
     def fail(request: Request):
         request.state.athlete_id = "verified-owner"
         request.state.request_id = "request-identity"
@@ -344,12 +364,12 @@ def test_failed_feature_write_is_observed_without_copying_error_text():
         )
 
     install_product_friction(app)
-    response = TestClient(app).post("/api/training/sessions")
+    response = TestClient(app).post(path)
     assert response.status_code == 503
     name, args = store.client.calls[0]
     assert name == "ingest_product_event"
     assert args["p_athlete_id"] == "verified-owner"
-    assert args["p_event_name"] == "operation_failed" and args["p_feature"] == "manual"
+    assert args["p_event_name"] == "operation_failed" and args["p_feature"] == feature
     assert "Private operational error text" not in str(args)
 
 
@@ -376,3 +396,381 @@ def test_unhealthy_retention_refuses_optin_but_allows_withdrawal():
     assert c.put("/api/analytics/preference", json={"enabled": True}).status_code == 503
     response = c.put("/api/analytics/preference", json={"enabled": False})
     assert response.status_code == 200 and response.json() == {"enabled": False}
+
+
+def test_history_discovery_is_not_training_recorded():
+    r = report(
+        [athlete()],
+        [
+            fact("2026-10-20"),
+            fact("2026-10-21", feature="manual"),
+            fact(
+                "2026-10-22",
+                action="history_opened",
+                feature="history",
+                meaningful=False,
+            ),
+        ],
+    )
+    history = next(f for f in r["features"] if f["feature"] == "history")
+    assert history["athletes"] is None and history["uses"] is None
+    assert history["discovered"] == 1
+    assert next(f for f in r["features"] if f["feature"] == "strength")["athletes"] == 1
+
+
+def test_absent_partial_and_measurable_zero_coverage():
+    empty = report([athlete()])
+    assert empty["coverage"]["status"] == "not_measured"
+    assert next(f for f in empty["features"] if f["feature"] == "timer")["uses"] is None
+    assert empty["plan_funnel"]["observed_opened"] is None
+    partial = report(
+        [athlete(), athlete("b")],
+        optional_coverage=[dict(athlete_id="a", since="2026-10-20T00:00:00Z")],
+    )
+    assert partial["coverage"]["status"] == "partial"
+    assert partial["coverage"]["measurable_athletes"] == 1
+    assert "optional_coverage" not in partial
+    measured = report(
+        [athlete()],
+        optional_coverage=[dict(athlete_id="a", since="2026-10-01T12:00:00Z")],
+    )
+    assert measured["coverage"]["status"] == "measured"
+    timer = next(f for f in measured["features"] if f["feature"] == "timer")
+    assert timer["uses"] == 0 and timer["percent"] == 0
+    # An event remains positive evidence even after withdrawal; no past interval is invented.
+    withdrawn = report(
+        [athlete()], [fact("2026-10-20", feature="nutrition", action="nutrition_saved")]
+    )
+    assert withdrawn["coverage"]["status"] == "partial"
+
+
+def test_plan_funnel_only_mature_usable_and_unique_generators():
+    plans = [
+        dict(
+            id="mature",
+            athlete_id="a",
+            status="ready",
+            created_at="2026-10-18T12:00:00Z",
+            completed_within_7d=True,
+        ),
+        dict(
+            id="edge",
+            athlete_id="a",
+            status="publishable_with_flags",
+            created_at="2026-10-18T12:00:00.000001Z",
+            completed_within_7d=True,
+        ),
+        dict(
+            id="late",
+            athlete_id="a",
+            status="ready",
+            created_at="2026-10-17T12:00:00Z",
+            completed_within_7d=False,
+        ),
+        dict(
+            id="review",
+            athlete_id="a",
+            status="review_required",
+            created_at="2026-10-10T12:00:00Z",
+            completed_within_7d=True,
+        ),
+        dict(
+            id="pending",
+            athlete_id="a",
+            status="generated",
+            created_at="2026-10-10T12:00:00Z",
+        ),
+        dict(
+            id="failed",
+            athlete_id="a",
+            status="failed",
+            created_at="2026-10-10T12:00:00Z",
+        ),
+    ]
+    f = report([athlete()], plans_used=plans)["plan_funnel"]
+    assert (f["generated"], f["generating_athletes"], f["usable"]) == (6, 1, 3)
+    assert (
+        f["pending"] + f["unusable"],
+        f["review_required"],
+        f["immature_usable"],
+    ) == (
+        3,
+        1,
+        1,
+    )
+    assert (f["trained_within_7d"], f["mature_usable"], f["percent"]) == (1, 2, 50)
+    assert report([athlete()], plans_used=plans[1:2])["plan_funnel"]["percent"] is None
+
+
+def test_planned_and_manual_session_populations_are_separate():
+    sessions = [
+        dict(
+            id="same",
+            athlete_id="a",
+            started_at="2026-10-20T12:00:00Z",
+            completed_at="2026-10-20T13:00:00Z",
+            status="done",
+        )
+    ]
+    sessions += sessions.copy()  # retry cannot duplicate a persisted identity
+    sessions += [
+        dict(
+            id="modified",
+            athlete_id="a",
+            started_at=None,
+            completed_at="2026-10-20T13:00:00Z",
+            status="modified",
+        )
+    ]
+    r = report(
+        [athlete()],
+        [fact("2026-10-20", feature="manual", count=3)],
+        sessions=sessions,
+        training_records=[
+            dict(id="manual:1", athlete_id="a", occurred_at="2026-10-20T12:00:00Z")
+        ]
+        * 2,
+    )
+    assert r["session_metrics"] == dict(
+        planned_started=1,
+        planned_completed=1,
+        planned_modified=1,
+        manual_logged=3,
+        distinct_recorded=1,
+        matched_completed=1,
+    )
+    assert (
+        next(
+            c
+            for c in r["conversions"]
+            if c["label"] == "Observed session starts → completed"
+        )["percent"]
+        == 100
+    )
+
+
+def test_utc_cohort_maturity_on_midnight_and_selected_signup_period():
+    data = dict(
+        athletes=[
+            athlete("a", "2026-10-17T23:30:00-01:00"),
+            athlete("b", "2026-09-01T00:00:00Z"),
+        ],
+        facts=[fact("2026-10-25"), fact("2026-10-24", "b")],
+    )
+    r = summarize(data, days=30, now=NOW)
+    assert r["retention"]["7"]["eligible"] == 0  # signup UTC Oct18 -> D7 today
+    r = summarize(data, days=0, now=datetime(2026, 10, 26, tzinfo=timezone.utc))
+    assert r["retention"]["7"] == dict(eligible=2, returned=1, percent=50)
+
+
+def test_repeat_and_segmentation_do_not_count_refreshes_or_other_athletes():
+    r = summarize(
+        dict(
+            athletes=[
+                athlete(technical_style=["boxing"]),
+                athlete("b", technical_style=["mma"]),
+            ],
+            facts=[
+                fact("2026-10-20", feature="sparring", count=9),
+                fact("2026-10-21", "b", feature="sparring"),
+            ],
+            optional_coverage=[dict(athlete_id="b", since="2026-10-01T00:00:00Z")],
+        ),
+        now=NOW,
+        days=7,
+        sport="boxing",
+    )
+    f = next(f for f in r["features"] if f["feature"] == "sparring")
+    assert f["athletes"] == 1 and f["repeat_athletes"] == 0 and f["percent"] == 100
+    assert r["coverage"]["measurable_athletes"] == 0
+
+
+def test_identity_projection_is_admin_only_and_consent_stays_aggregate():
+    c, store = api_client()
+    payload = dict(
+        athletes=[
+            athlete(full_name=" Example Athlete ", email=" example@example.test ")
+        ],
+        facts=[],
+        optional_coverage=[],
+        training_records=[],
+        error_returns=[],
+    )
+    store.client.rpc = lambda *_: SimpleNamespace(
+        execute=lambda: SimpleNamespace(data=payload)
+    )
+    assert c.get("/api/admin/product-analytics").status_code == 403
+    c.app.dependency_overrides[require_admin] = lambda: SimpleNamespace(
+        athlete_id="admin"
+    )
+    data = c.get("/api/admin/product-analytics").json()
+    assert data["athletes"][0]["full_name"] == "Example Athlete"
+    assert data["athletes"][0]["email"] == "example@example.test"
+    assert all("since" not in p and "enabled" not in p for p in data["athletes"])
+    assert set(
+        c.post(
+            "/api/analytics/events",
+            json=dict(
+                event_name="timer_started", feature="timer", request_id=str(uuid4())
+            ),
+        ).json()
+    ) == {"accepted"}
+
+
+def test_exact_error_return_evidence_is_required():
+    facts = [
+        fact("2026-10-10", action="operation_failed", meaningful=False),
+        fact("2026-10-17"),
+    ]
+    r = report([athlete()], facts)
+    assert r["friction_followup"][0]["eligible_athletes"] == 0
+    r = report(
+        [athlete()],
+        facts,
+        error_returns=[
+            dict(
+                athlete_id="a",
+                feature="strength",
+                action="operation_failed",
+                error_at="2026-10-10T12:00:00Z",
+                returned=True,
+            )
+        ],
+    )
+    assert r["friction_followup"][0]["eligible_athletes"] == 1
+    assert r["friction_followup"][0]["no_recorded_return_7d"] == 0
+
+
+def test_deleting_evidence_changes_history_without_backfill():
+    before = report([athlete()], [fact("2026-10-20")])
+    after_plan_delete = report([athlete()])
+    after_account_delete = report()
+    assert before["ever_active"] == 1
+    assert (
+        after_plan_delete["ever_active"] == 0
+        and after_plan_delete["athletes"][0]["last_activity"] is None
+    )
+    assert after_account_delete["registered"] == 0
+
+
+def test_api_refuses_old_projection_instead_of_inventing_zeroes():
+    c, store = api_client()
+    c.app.dependency_overrides[require_admin] = lambda: SimpleNamespace(
+        athlete_id="admin"
+    )
+    store.client.rpc = lambda *_: SimpleNamespace(
+        execute=lambda: SimpleNamespace(data=dict(athletes=[], facts=[]))
+    )
+    assert c.get("/api/admin/product-analytics").status_code == 503
+
+
+def test_internal_preference_is_disabled_without_exposing_identity():
+    c, store = api_client()
+    c.app.dependency_overrides[require_profile] = lambda: SimpleNamespace(
+        athlete_id="owner", email=" internal@example.test "
+    )
+
+    class Query:
+        def __init__(self, table):
+            self.table = table
+
+        def select(self, *_):
+            return self
+
+        def eq(self, *_):
+            return self
+
+        def limit(self, *_):
+            return self
+
+        def execute(self):
+            return SimpleNamespace(
+                data=[{"enabled": True}]
+                if self.table == "product_analytics_preferences"
+                else [{"email": "internal@example.test"}]
+            )
+
+    store.client.table = Query
+    response = c.get("/api/analytics/preference")
+    assert response.status_code == 200 and response.json() == {"enabled": False}
+
+
+def test_weekly_cohorts_use_monday_and_per_athlete_maturity():
+    r = summarize(
+        dict(
+            athletes=[
+                athlete("a", "2026-10-12T12:00:00Z"),
+                athlete("b", "2026-10-13T12:00:00Z"),
+                athlete("c", "2026-10-19T12:00:00Z"),
+            ],
+            facts=[fact("2026-10-19"), fact("2026-10-14", "b")],
+        ),
+        now=NOW,
+        days=0,
+    )
+    cohorts = {c["week"]: c for c in r["cohorts"]}
+    assert cohorts["2026-10-12"]["retention"]["7"] == dict(
+        eligible=2, returned=1, percent=50
+    )
+    assert cohorts["2026-10-19"]["retention"]["7"] == dict(
+        eligible=0, returned=0, percent=None
+    )
+
+
+def test_three_active_windows_use_unique_athletes_and_distinct_days():
+    r = report(
+        [athlete(), athlete("b"), athlete("c", "2026-09-01T00:00:00Z")],
+        [
+            fact("2026-10-25", count=10),
+            fact("2026-10-25", feature="manual"),
+            fact("2026-10-19", "b"),
+            fact("2026-09-28", "c"),
+        ],
+    )
+    assert (r["dau"], r["wau"], r["mau"], r["stickiness"]) == (1, 2, 3, 33.33)
+    assert r["average_active_days"] == 1
+
+
+def test_missing_historical_onboarding_is_not_a_measured_failure():
+    r = report([athlete()])
+    stage = next(
+        c
+        for c in r["conversions"]
+        if c["label"] == "Signup → onboarding completed (observed)"
+    )
+    assert stage["converted"] is None and stage["percent"] is None
+    assert "not measured" in stage["measurement_note"]
+    today = report([athlete()], [fact("2026-10-25")])
+    repeat = next(
+        c for c in today["funnel"] if c["label"] == "first action → repeat activity"
+    )
+    assert repeat["eligible"] == 0
+
+
+def test_completed_training_proves_linked_plan_use_but_not_a_plan_or_history_visit():
+    plans = [
+        dict(id="p1", athlete_id="a", created_at="2026-10-10T12:00:00Z", status="ready")
+    ]
+    sessions = [
+        dict(
+            id="s1",
+            athlete_id="a",
+            plan_id="p1",
+            started_at=None,
+            completed_at="2026-10-20T12:00:00Z",
+            status="done",
+        ),
+        dict(
+            id="s2",
+            athlete_id="a",
+            plan_id="foreign",
+            started_at=None,
+            completed_at="2026-10-21T12:00:00Z",
+            status="done",
+        ),
+    ]
+    r = report([athlete()], sessions=sessions, plans_used=plans)
+    plan = next(f for f in r["features"] if f["feature"] == "plans")
+    assert plan["athletes"] == 1 and plan["uses"] == 1 and plan["repeat_athletes"] == 0
+    assert plan["discovered"] is None
+    assert next(f for f in r["features"] if f["feature"] == "history")["uses"] is None

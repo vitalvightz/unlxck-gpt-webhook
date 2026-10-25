@@ -6,6 +6,9 @@ import { getProductAnalytics, getAthleteActivity } from "@/lib/api";
 import { formatAppDateTime } from "@/lib/date-format";
 import {
   humanize,
+  athleteIdentity,
+  measurementLabel,
+  coverageExplanation,
   percent,
   type ProductReport,
   type AthleteActivity,
@@ -185,7 +188,9 @@ export function ProductAnalytics() {
               Optional browser events require consent and expire after 180 days.
               Discovery, plan edit and nutrition save counts are deduplicated
               per feature, resource and UTC day. Counts represent recorded
-              evidence and may undercount usage.
+              evidence and may undercount usage. Historical figures can change
+              when underlying records, plans or accounts are deleted; existing
+              deletion and privacy rules are preserved.
             </p>
             <p>
               Period filters use today and the preceding N−1 UTC days.
@@ -227,14 +232,29 @@ export function ProductAnalytics() {
                 definition="Meaningful athlete-days in the period / all eligible registered athletes."
               />
               <Metric
-                label="Sessions started"
-                value={data.sessions_started}
+                label="Planned sessions started"
+                value={data.session_metrics.planned_started}
                 definition="Persisted strength sessions whose observed start falls in the period."
               />
               <Metric
-                label="Sessions completed"
-                value={data.sessions_completed}
-                definition="Completed or modified strength sessions and saved manual training logs in the period."
+                label="Planned sessions completed"
+                value={data.session_metrics.planned_completed}
+                definition="Planned strength sessions saved as done in the period. Modified completions are shown separately."
+              />
+              <Metric
+                label="Planned sessions completed with modifications"
+                value={data.session_metrics.planned_modified}
+                definition="Planned strength sessions saved as modified in the period."
+              />
+              <Metric
+                label="Manual training logged"
+                value={data.session_metrics.manual_logged}
+                definition="Saved manual training logs in the period; these have no observed start."
+              />
+              <Metric
+                label="Distinct training recorded"
+                value={data.session_metrics.distinct_recorded}
+                definition="Completed planned sessions, manual logs and unlinked sparring logs. Verified links count once. Legacy logs without reliable cross-source identity are excluded."
               />
             </div>
           </section>
@@ -351,24 +371,55 @@ export function ProductAnalytics() {
               Ranked by unique meaningful athletes / all {data.registered}{" "}
               eligible athletes. Discovery is separate from successful use.
             </p>
+            <p className="muted">
+              {coverageExplanation(data.coverage)} Free round timer only:
+              planned-session timer transitions are not measured; persisted
+              session starts and completions remain separate.
+            </p>
             {data.features.map((f) => (
               <div key={f.feature} className={styles.feature}>
-                <progress
-                  max={100}
-                  value={f.percent ?? 0}
-                  aria-label={`${f.feature} adoption`}
-                />
+                {f.percent !== null ? (
+                  <progress
+                    max={100}
+                    value={f.percent}
+                    aria-label={`${f.feature} adoption`}
+                  />
+                ) : null}
                 <details>
                   <summary>
                     <span>{humanize(f.feature)}</span>
                     <span>
-                      {f.athletes} athletes · {percent(f.percent)}
+                      {f.athletes === null
+                        ? f.feature === "history"
+                          ? "Discovery only"
+                          : measurementLabel(f.coverage)
+                        : `${f.athletes} recorded athletes · ${percent(f.percent)}`}
+                      {f.coverage?.status === "partial"
+                        ? " · Partial coverage"
+                        : ""}
                     </span>
                   </summary>
                   <p>
-                    {f.uses} actions · {f.repeat_athletes} repeat athletes ·{" "}
-                    {f.discovered} athletes opened feature
+                    {f.uses === null
+                      ? f.feature === "history"
+                        ? "History has no separate completion action. Training logs do not establish a History visit."
+                        : measurementLabel(f.coverage)
+                      : `${f.uses} meaningful actions · ${f.repeat_athletes} repeat athletes`}
+                    {" · "}
+                    {f.discovered === null
+                      ? "Feature opens not measured"
+                      : `${f.discovered} athletes with an observed open`}
+                    {f.coverage
+                      ? ` · ${measurementLabel(f.coverage)} for optional interactions`
+                      : ""}
                   </p>
+                  {f.feature === "plans" ? (
+                    <p>
+                      Usage includes custom plan creation/edit and completed
+                      training linked to a plan. It does not imply a plan screen
+                      visit.
+                    </p>
+                  ) : null}
                   {Object.entries(f.actions).map(([a, n]) => (
                     <p key={a}>
                       {humanize(a)}: {n}
@@ -379,18 +430,19 @@ export function ProductAnalytics() {
                       {f.completion_label
                         ? f.completion_label
                         : f.feature === "plans"
-                          ? "Generated plans subsequently completed in training"
+                          ? "Mature usable plans with training within 7 days"
                           : "Matched starts completed"}
                       : {f.completion.completed} / {f.completion.started} ·{" "}
                       {percent(f.completion.percent)}
                     </p>
                   ) : (
                     <p>
-                      Completion rate unavailable: no separate observed start
-                      for this saved action.
+                      {f.coverage?.status === "not_measured"
+                        ? "Optional completion flow: Not measured."
+                        : "Completion rate unavailable: no separate measured completion flow."}
                     </p>
                   )}
-                  {f.observed_early_exits !== undefined ? (
+                  {f.observed_early_exits != null ? (
                     <p>Observed early exits: {f.observed_early_exits}</p>
                   ) : null}
                   {!f.uses && !f.discovered ? (
@@ -410,13 +462,62 @@ export function ProductAnalytics() {
               workflow timestamps recorded prospectively. Plan-free onboarding
               does not require a generated plan.
             </p>
+            <details open className={styles.note}>
+              <summary>
+                Plan conversion · generated in the selected period
+              </summary>
+              <p>
+                {data.plan_funnel.generated} generated plans ·{" "}
+                {data.plan_funnel.generating_athletes} unique athletes ·{" "}
+                {data.plan_funnel.usable} currently usable
+              </p>
+              <p>
+                Observed plan opens:{" "}
+                {data.plan_funnel.observed_opened === null
+                  ? "Not measured"
+                  : data.plan_funnel.observed_opened}
+                {data.plan_funnel.observed_opened === null
+                  ? ""
+                  : ` · ${measurementLabel(data.coverage)}`}
+                . An unobserved open does not mean a plan was never viewed.
+              </p>
+              <p>
+                {data.plan_funnel.pending} pending · {data.plan_funnel.unusable}{" "}
+                unusable (including {data.plan_funnel.review_required} requiring
+                review) · {data.plan_funnel.immature_usable} usable plans
+                awaiting seven full days
+              </p>
+              <p>
+                Training within seven days: {data.plan_funnel.trained_within_7d}{" "}
+                / {data.plan_funnel.mature_usable} mature usable plans ·{" "}
+                {percent(data.plan_funnel.percent)}
+              </p>
+              <p className="muted">
+                Only ready or publishable plans with seven elapsed 24-hour days
+                enter the denominator. A linked done/modified session must
+                complete from creation up to, but excluding, day seven.
+                Usability uses current status; historical ready-state timestamps
+                are unavailable.
+              </p>
+            </details>
             <div className={styles.grid}>
               {[...data.conversions, ...data.funnel].map((c) => (
                 <Metric
                   key={c.label}
                   label={c.label}
-                  value={percent(c.percent)}
-                  definition={`${c.converted} / ${c.eligible} eligible${c.median_seconds === null ? "" : ` · median ${Math.round(c.median_seconds / 60)} minutes`}`}
+                  value={
+                    c.converted === null ||
+                    c.coverage?.status === "not_measured"
+                      ? "Not measured"
+                      : percent(c.percent)
+                  }
+                  definition={
+                    c.measurement_note
+                      ? `${c.measurement_note}${c.converted === null ? "" : ` ${c.converted} / ${c.eligible} recorded.`}`
+                      : c.eligible === null
+                        ? "Optional interactions are not measured for this population."
+                        : `${c.converted} / ${c.eligible} eligible${c.median_seconds === null ? "" : ` · median ${Math.round(c.median_seconds / 60)} minutes`}`
+                  }
                 />
               ))}
             </div>
@@ -424,7 +525,7 @@ export function ProductAnalytics() {
               <summary>Observed drop-offs</summary>
               {Object.entries(data.dropoffs).map(([k, v]) => (
                 <p key={k}>
-                  {humanize(k)}: {v}
+                  {humanize(k)}: {v === null ? "Not measured" : v}
                 </p>
               ))}
               <p>
@@ -458,7 +559,7 @@ export function ProductAnalytics() {
                     <tr key={p.id}>
                       <td>
                         <Link href={`/admin/athletes/${p.id}`}>
-                          {p.id.slice(0, 8)}
+                          {athleteIdentity(p)}
                         </Link>
                       </td>
                       <td>{stamp(p.first_activity)}</td>
@@ -495,7 +596,8 @@ export function ProductAnalytics() {
               Failed generation jobs use existing diagnostics. Other operation
               failures are observed prospectively; Sentry remains the source for
               frontend exceptions. No failure or abandonment is inferred from
-              missing events.
+              missing events. Optional feature error coverage:{" "}
+              {measurementLabel(data.coverage)}.
             </p>
             {data.errors.length ? (
               data.errors.map((e) => (
@@ -555,6 +657,7 @@ export function AthleteActivityPanel({ athleteId }: { athleteId: string }) {
   return (
     <article className={`step-card ${styles.root}`}>
       <h2>Activity</h2>
+      {data ? <p className="muted">{athleteIdentity(data.summary)}</p> : null}
       {error ? (
         <p role="alert">{error}</p>
       ) : loading ? (
@@ -583,9 +686,14 @@ export function AthleteActivityPanel({ athleteId }: { athleteId: string }) {
               definition="Distinct UTC days with meaningful activity."
             />
             <Metric
-              label="Sessions started / completed"
-              value={`${data.sessions_started} / ${data.sessions_completed}`}
-              definition="Observed strength starts / completed strength and manual training logs, all time."
+              label="Planned sessions started / completed"
+              value={`${data.session_metrics.planned_started} / ${data.session_metrics.planned_completed + data.session_metrics.planned_modified}`}
+              definition="Recorded planned starts / done or modified completions, all time. Manual logs are separate; conversion uses matched starts only."
+            />
+            <Metric
+              label="Manual training logged"
+              value={data.session_metrics.manual_logged}
+              definition="Saved manual logs, all time; no observed starts inferred."
             />
             <Metric
               label="Inactivity days"
@@ -608,7 +716,12 @@ export function AthleteActivityPanel({ athleteId }: { athleteId: string }) {
             <summary>Feature usage counts</summary>
             {data.features.map((f) => (
               <p key={f.feature}>
-                {humanize(f.feature)}: {f.uses} meaningful actions
+                {humanize(f.feature)}:{" "}
+                {f.uses === null
+                  ? f.feature === "history"
+                    ? "Discovery only"
+                    : measurementLabel(f.coverage)
+                  : `${f.uses} meaningful actions`}
               </p>
             ))}
           </details>

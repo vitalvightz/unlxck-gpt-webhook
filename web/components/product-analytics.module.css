@@ -77,6 +77,8 @@
   justify-content: space-between;
   gap: 1rem;
   cursor: pointer;
+}
+.feature summary span:first-child {
   text-transform: capitalize;
 }
 .feature progress {

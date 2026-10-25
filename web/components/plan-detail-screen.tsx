@@ -10,7 +10,7 @@ import { TrainingLibraryLink } from "@/components/training-library-link";
 import actionStyles from "@/components/training-action-tile.module.css";
 import { PlanViewer } from "@/components/plan-viewer";
 import { LogTraining } from "@/components/log-training";
-import { ApiError, getPlan } from "@/lib/api";
+import { ApiError, getPlan, trackProductEvent } from "@/lib/api";
 import { isNetworkFailure } from "@/lib/connectivity";
 import type { PlanDetail } from "@/lib/types";
 
@@ -120,6 +120,7 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
           const loaded = await getPlan(token, planId);
           if (!cancelled) {
             setPlan(loaded);
+            void trackProductEvent(token, "plan_opened", "plans", undefined, loaded.plan_id);
           }
           return;
         } catch (planError) {
