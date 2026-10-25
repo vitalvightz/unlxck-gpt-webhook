@@ -2768,7 +2768,7 @@ export function PlanViewer({
         <QuickBuildRefinementBanner planId={plan.plan_id} planSource={plan.plan_source ?? null} />
         <div className="section-heading">
           <div>
-            <p className="kicker">{openOngoing ? "Training plan" : "Fight camp"}</p>
+            <p className="kicker">{openOngoing || plan.custom_plan_id ? "Training plan" : "Fight camp"}</p>
             <h2>{planDetailTitle}</h2>
             {completedFightCamp || isTriageBlocked || !hasPublishedPlan ? (
               <p className="muted">{heroSummary}</p>

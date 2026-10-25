@@ -15,7 +15,7 @@
 @media (max-width: 360px) { .tile { padding: 14px 10px; gap: 7px; } .icon { flex-basis: 24px; width: 24px; height: 24px; } .copy strong { font-size: 12px; } .copy > span { font-size: 11px; } .chevron { display: none; } }
 @media (prefers-reduced-motion: reduce) { .tile { transition: none; } }
 @media (max-width: 599px) {
-  .tile { min-height: 56px; padding: 12px; align-items: center; }
+  .tile { min-height: 48px; padding: 8px 12px; align-items: center; }
   .copy > span { display: none; }
   .copy strong { font-size: 14px; }
 }

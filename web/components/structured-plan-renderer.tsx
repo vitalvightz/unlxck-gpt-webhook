@@ -2348,6 +2348,7 @@ function WeekStrip({
 function WeekOverview({
   week,
   weekNumber,
+  weekCount,
   completionIndex,
   openOngoing,
   scheduleContext,
@@ -2357,6 +2358,7 @@ function WeekOverview({
   week: StructuredWeek;
   /** 1-based position of the viewed week; drives the open-plan week intent. */
   weekNumber: number;
+  weekCount: number;
   completionIndex?: CompletionIndex;
   openOngoing: boolean;
   scheduleContext?: PlanScheduleContext | null;
@@ -2387,13 +2389,8 @@ function WeekOverview({
     week.week_index,
     scheduleContext?.current_week_number,
   );
-  const openWeekHeading = baseHeading.replace(
-    /^Week(?:\s+\d+)?/i,
-    `Week ${openWeekNumber} of 4`,
-  );
-  const heading = openOngoing
-    ? `Block ${scheduleContext?.block_number ?? 1} · ${openWeekHeading}`
-    : `Week ${weekNumber}`;
+  const heading = `Week ${openOngoing ? openWeekNumber : weekNumber} of ${weekCount}`;
+  const weekGoal = baseHeading.replace(/^Week(?:\s+\d+)?(?::\s*)?/i, "").trim();
   const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber, getDays(week).some(d => getSessions(d).some(s => s.prescription_source === "athlete"))) : null;
   // The pill only names the phase (GPP / SPP / Taper); the selected week's
   // heading is where it gets explained, one tap away.
@@ -2403,14 +2400,15 @@ function WeekOverview({
   return (
     <div className="cm-week-overview">
       <div className="cm-week-phase-progress">
-        <h2>{heading}{phaseEntry ? <> · {phaseLabel || phaseEntry.term} <GlossaryTooltip term={phaseEntry.term} /></> : null}</h2>
-        <span className="cm-completion-label" role="status" aria-live="polite">{progressReady ? `${completion.done}/${completion.total} app done` : progressStatus === "loading" ? "Syncing progress…" : "Progress unavailable"}</span>
+        <h2>{heading}</h2>
+        <p className="cm-week-phase">{openOngoing ? `Block ${scheduleContext?.block_number ?? 1}${weekGoal ? ` · ${weekGoal}` : ""}` : <>{phaseLabel}{phaseEntry ? <GlossaryTooltip term={phaseEntry.term} /> : null}</>}</p>
       </div>
+      <div className="cm-week-progress-heading"><span>Weekly progress</span><span className="cm-completion-label" role="status" aria-live="polite">{progressReady ? `${completion.done}/${completion.total} app sessions` : progressStatus === "loading" ? "Syncing progress…" : "Progress unavailable"}</span></div>
       {progressStatus !== "unavailable" ? <progress className="cm-completion-track" aria-label="App sessions completed" value={progressReady ? completion.done : undefined} max={completion.total || 1} /> : null}
       {!progressReady ? null : completion.total === 0 ? <p className="muted">No app sessions scheduled</p> : completion.done === completion.total ? <p className="cm-week-done">Week complete</p> : null}
       {navigation}
       {dateRange || countdownRange ? <p className="cm-week-dates"><span>{dateRange}</span><span>{countdownRange}</span></p> : null}
-      {weekIntent ? <details className="cm-week-intent"><summary>{weekIntent.label}</summary><p>{weekIntent.summary}</p></details> : null}
+      {weekIntent ? <details className="cm-week-intent"><summary>Week guidance</summary><p><strong>{weekIntent.label}</strong> · {weekIntent.summary}</p></details> : null}
       {sessionSummary.coachLedSessions > 0 || sessionSummary.supportSessions > 0 ? <p className="cm-week-sources">
         {sessionSummary.coachLedSessions > 0 ? `${sessionSummary.coachLedSessions} coach/gym days · tracked separately` : null}
         {sessionSummary.coachLedSessions > 0 && sessionSummary.supportSessions > 0 ? " · " : null}
@@ -2701,7 +2699,7 @@ export function StructuredPlanRenderer({
           ) : null}
           <section className="cm-week-section" aria-label="Week navigation and progress">
             {overview}
-            {selectedWeek ? <WeekOverview week={selectedWeek} weekNumber={safePos + 1}
+            {selectedWeek ? <WeekOverview week={selectedWeek} weekNumber={safePos + 1} weekCount={weeks.length}
               completionIndex={completionIndex} openOngoing={openOngoing} scheduleContext={scheduleContext}
               navigation={<WeekStrip weeks={weeks} selectedPos={safePos} currentPos={activeWeekPos}
                 onSelect={pos => { setCalendarEntry(null); handleSelectWeek(pos); }} completionIndex={completionIndex} openOngoing={openOngoing} />} /> : null}

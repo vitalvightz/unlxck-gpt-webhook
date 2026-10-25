@@ -413,7 +413,8 @@ test("open ongoing renderer uses renewable block labels instead of fight-camp ph
   assert.equal(html.includes("General prep"), false);
   assert.equal(html.includes(">Taper<"), false);
   assert.equal(html.includes(">Load</span>"), false);
-  assert.equal(html.includes("Block 1 · Week 1 of 4"), true);
+  assert.equal(html.includes("<h2>Week 1 of 4</h2>"), true);
+  assert.equal(html.includes("Block 1 · Baseline"), true);
 });
 
 test("open ongoing renderer falls back when schedule and week numbers are non-finite", () => {
@@ -444,7 +445,7 @@ test("open ongoing renderer falls back when schedule and week numbers are non-fi
     />,
   );
 
-  assert.equal(html.includes("Week 1 of 4"), true);
+  assert.equal(html.includes("Week 1 of 1"), true);
   assert.equal(html.includes("NaN"), false);
 });
 
@@ -1970,9 +1971,9 @@ test("week overview separates app sessions, coach-led days, and app completion",
 
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 18)} />);
 
-  assert.equal(html.includes("1/2 app done"), true);
+  assert.equal(html.includes("1/2 app sessions"), true);
   assert.equal(html.includes("3 coach/gym days"), true);
-  assert.equal(html.includes("1/2 app done"), true);
+  assert.equal(html.includes("1/2 app sessions"), true);
   assert.equal(html.includes("1/2 app"), true);
   assert.equal(html.includes("tracked separately"), true);
   assert.equal(html.includes("Load</span>"), false);
@@ -2010,8 +2011,8 @@ test("week overview shows one completion count and only relevant supporting sour
       sessions: [{ session_id: "s1", title: "Strength primer", blocks: [] }],
     },
   ]);
-  assert.equal(appOnlyHtml.includes("0/1 app done"), true);
-  assert.equal(appOnlyHtml.includes("0/1 app done"), true);
+  assert.equal(appOnlyHtml.includes("0/1 app sessions"), true);
+  assert.equal(appOnlyHtml.includes("0/1 app sessions"), true);
   assert.equal(appOnlyHtml.includes("coach/gym days"), false);
   // The app-vs-coach note only earns its place when both counts are showing.
   assert.equal(appOnlyHtml.includes("cm-week-count-note"), false);
@@ -2024,7 +2025,7 @@ test("week overview shows one completion count and only relevant supporting sour
     },
   ]);
   assert.equal(coachOnlyHtml.includes("1 coach/gym days"), true);
-  assert.equal(coachOnlyHtml.includes("0/0 app done"), true);
+  assert.equal(coachOnlyHtml.includes("0/0 app sessions"), true);
   assert.equal(coachOnlyHtml.includes("App completed</span>"), false);
 
   const emptyHtml = renderDays([

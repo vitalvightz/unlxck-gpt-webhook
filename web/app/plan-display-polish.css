@@ -78,8 +78,8 @@
 .cm-completion-label { flex-shrink: 0; font-size: 13px; color: var(--text-secondary); }
 .cm-completion-track { appearance: none; width: 100%; height: 6px; border: 0; border-radius: 6px; overflow: hidden; background: var(--border-default); accent-color: var(--brand-red); }
 .cm-completion-track::-webkit-progress-bar { background: var(--border-default); }
-.cm-completion-track::-webkit-progress-value { background: var(--brand-red); border-radius: 6px; }
-.cm-completion-track::-moz-progress-bar { background: var(--brand-red); border-radius: 6px; }
+.cm-completion-track::-webkit-progress-value { background: var(--progress-gold); border-radius: 6px; }
+.cm-completion-track::-moz-progress-bar { background: var(--progress-gold); border-radius: 6px; }
 .cm-week-done { color: var(--success-ink); margin: 0; }
 .cm-week-navigation { min-height: 0; margin: 0; }
 .cm-week-navigation-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
@@ -252,7 +252,7 @@
 .cm-calendar button[aria-pressed="true"] { color: #fff; }
 
 /* Match Today's preview rhythm without changing either screen's training flow. */
-.page:has(> .plan-page-title) { gap: 20px; }
+.page:has(> .plan-page-title) { gap: 16px; }
 .cm-week-section .plan-detail-hero { gap: 12px; }
 .cm-week-section .cm-week-intent { display: block; margin: 0; }
 .cm-week-section .cm-week-intent > summary { display: flex; align-items: center; gap: 8px; list-style: none; }
@@ -267,10 +267,10 @@ html[data-app-surface="workspace"][data-theme="dark"] .cm-week-section .plan-det
 .cm-week-section .plan-detail-hero .kicker { margin-bottom: 0; }
 .cm-week-section .plan-detail-hero .section-heading > div:first-child { gap: 8px; }
 .cm-week-section .cm-week-pill-selected {
-  background: color-mix(in srgb, var(--brand-red) 14%, var(--bg-panel));
-  border-color: var(--brand-red);
+  background: var(--brand-red);
+  border-color: transparent;
 }
-.cm-week-section .cm-week-pill-selected .cm-week-pill-index { color: var(--danger-ink); }
+.cm-week-section .cm-week-pill-selected .cm-week-pill-index { color: #fff; }
 .cm-schedule-title h2 { margin: 0; font-size: 22px; }
 .cm-session-link { display: grid; grid-template-columns: minmax(0, 1fr) auto 16px; gap: 8px; }
 .cm-session-link-copy { display: contents; }
@@ -301,7 +301,27 @@ html[data-app-surface="workspace"][data-theme="dark"] .cm-week-section .plan-det
 .cm-exercise-screen .ex-detail { gap: 20px; }
 .cm-exercise-screen .ex-prescription-band .sp-stat { font-variant-numeric: tabular-nums; }
 .cm-exercise-screen .ex-detail-stop { border-width: 0 0 0 2px; border-radius: 0; padding: 8px 12px; background: none; }
+.cm-week-phase-progress { display: grid; gap: 4px; }
+.cm-week-phase-progress h2 { font-size: 20px; letter-spacing: -.02em; }
+.cm-week-phase-progress .cm-week-phase { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
+.cm-week-phase:empty { display: none; }
+.cm-week-progress-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--text-secondary); }
+.cm-week-overview { gap: 12px; }
+.cm-completion-track { accent-color: var(--progress-gold); }
+.cm-completion-label { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.cm-week-section .cm-week-strip[data-scroll="true"] { scrollbar-width: thin; scrollbar-color: var(--border-default) transparent; padding-bottom: 6px; }
+.cm-week-section .cm-week-strip[data-scroll="true"]::-webkit-scrollbar { display: block; height: 3px; }
+.cm-week-section .cm-week-strip[data-scroll="true"]::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 3px; }
+.cm-week-section .cm-week-strip[data-scroll="true"] .cm-week-pill { flex-basis: max(48px, calc((100% - 44px) / 4)); }
+.cm-schedule-switch { gap: 2px; padding: 2px; background: transparent; }
+.cm-schedule-switch button { padding: 8px 10px; font-size: 12px; }
+.cm-day-current .cm-session-link-copy strong { font-size: 26px; letter-spacing: -.025em; }
+.cm-schedule-day.cm-day-current { background: #1c1f25; }
+.cm-day-current .cm-session-status { color: var(--text-primary); }
+.cm-week-section .cm-week-intent > summary { font-size: 13px; color: var(--text-secondary); }
 @media (max-width: 360px) {
+  .cm-schedule-title h2 { font-size: 20px; }
+  .cm-schedule-switch button { padding-inline: 8px; }
   .sp-session[data-layout="focused"] .ex-row-head { gap: 8px; }
   .sp-session[data-layout="focused"] .ex-row-thumb { flex-basis: 40px; width: 40px; height: 40px; }
   .sp-session[data-layout="focused"] .cm-exercise-ordinal { width: 40px; height: 40px; }

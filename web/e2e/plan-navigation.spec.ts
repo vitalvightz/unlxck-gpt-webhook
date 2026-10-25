@@ -13,7 +13,8 @@ for (const custom of [false, true])
             const errors: string[] = [];
             page.on('pageerror', e => errors.push(e.message));
             const source = coaching[0].card.weeks[0];
-            const plan = { ...coaching[0].card, plan_metadata: { title: 'Fight camp', plan_type: 'fight_camp' }, weeks: [{ week_index: 1, phase_label: 'GPP', days: [{ date: '2026-10-06', sessions: [] }] }, { ...source, week_index: 2, phase_label: 'GPP', start_date: '2026-10-12', end_date: '2026-10-18', days: [source.days[0], { date: '2026-10-14', day_type: 'rest', sessions: [] }, source.days[1]] }], red_flag_rules: [{ severity: 'red', display_text: 'Chest pain or unusual breathlessness stops training.' }] } as unknown as StructuredPlan;
+            const plan = { ...coaching[0].card, plan_metadata: { title: 'Fight camp', plan_type: 'fight_camp' }, weeks: [{ week_index: 1, phase_label: 'GPP', days: [{ date: '2026-10-06', sessions: [] }] }, { ...source, week_index: 2, phase_label: 'GPP', start_date: '2026-10-12', end_date: '2026-10-18', days: [source.days[0], { date: '2026-10-14', day_type: 'rest', sessions: [] }, source.days[1]] }, { week_index: 3, phase_label: 'SPP', start_date: '2026-10-19', end_date: '2026-10-25', days: [] }, { week_index: 4, phase_label: 'Taper', start_date: '2026-10-26', end_date: '2026-11-01', days: [] }], red_flag_rules: [{ severity: 'red', display_text: 'Chest pain or unusual breathlessness stops training.' }] } as unknown as StructuredPlan;
+            if (!custom) plan.weeks!.push({ week_index: 5, phase_label: 'Taper', start_date: '2026-11-02', end_date: '2026-11-08', days: [] });
             let detail = { plan_id: id, athlete_id: '00000000-0000-4000-8000-000000000001', full_name: 'Carlos', status: 'ready', activation_state: 'active', plan_name: '', fight_date: '2026-11-14', created_at: '2026-10-01T12:00:00Z', technical_style: ['boxing'], advisories: [], structured_card_state: { state: 'live', reasons: [] }, schedule_context: { schedule_mode: 'event_countdown', projection_status: 'not_required', current_training_day: '2026-10-13', plan_start_day: '2026-10-01' }, outputs: { plan_text: '# Released fight camp', structured_plan: plan, exercise_media: { 'exercise:jump-squat': { provider: 'youtube', video_id: 'testVideo01', start_s: 0, end_s: 10, source: 'curated' } } } } as unknown as PlanDetail;
             if (custom) {
                 detail = { ...detail, custom_plan_id: 'custom-review-plan', plan_name: 'Weekly strength', fight_date: '', outputs: { ...detail.outputs, structured_plan: { ...plan, plan_metadata: { ...plan.plan_metadata, prescription_source: 'athlete' } } }, schedule_context: { ...detail.schedule_context!, schedule_mode: 'open_recurring', projection_status: 'projected', current_week_number: 2, block_number: 1 } };
@@ -53,6 +54,18 @@ for (const custom of [false, true])
             await expect(page.getByRole('heading', { name: 'Your Plan', exact: true })).toBeVisible();
             await expect(page.locator('.cm-week-phase-progress')).toContainText(custom ? 'Block 1' : 'General prep');
             await expect(page.locator('.cm-week-phase-progress')).not.toContainText('Specific prep');
+            await expect(page.locator('.cm-week-phase-progress h2')).toHaveText(`Week 2 of ${custom ? 4 : 5}`);
+            await expect(page.locator('.cm-week-strip .cm-week-pill')).toHaveCount(custom ? 4 : 5);
+            for (const label of ['W1', 'W2', 'W3', 'W4'])
+                await expect(page.locator('.cm-week-strip').getByText(label, { exact: true })).toBeInViewport();
+            if (!custom) {
+                await expect(page.locator('.cm-week-strip')).toHaveAttribute('data-scroll', 'true');
+                await page.locator('[data-week-pos="4"]').click();
+                await expect(page.locator('.cm-week-phase-progress h2')).toHaveText('Week 5 of 5');
+                await page.locator('[data-week-pos="1"]').click();
+            }
+            await expect(page.getByRole('progressbar', { name: 'App sessions completed' })).toBeVisible();
+            expect(await page.locator('.cm-completion-track').evaluate(el => el.closest('details') === null)).toBe(true);
             if (process.env.UNLXCK_SCREENSHOTS)
                 await page.screenshot({ style: "nextjs-portal { display: none; }", animations: "disabled", path: `${process.env.UNLXCK_SCREENSHOTS}/plan-initial-${width}.png` });
             expect(await page.locator('iframe, video').count()).toBe(0);
