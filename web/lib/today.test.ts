@@ -571,7 +571,7 @@ test("Today session card uses short preview wording and Next session label", () 
     source.includes("Blocked by an active severe injury."),
     true,
   );
-  assert.equal(source.includes('href="#today-injury"'), true);
+  assert.equal(source.includes('"/today#today-injury" : "#today-injury"'), true);
   assert.equal(source.includes("Open injury check-in"), true);
 });
 

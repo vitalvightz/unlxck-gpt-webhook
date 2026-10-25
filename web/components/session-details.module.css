@@ -44,6 +44,32 @@
 .response { margin-top: 16px; padding-left: 12px; border-left: 2px solid var(--border-default); font-size: 13px; }
 .response > span { color: var(--text-muted); }
 .response p { margin: 8px 0; }
+.sessionSummary h3 { margin: 0 0 16px; font-size: 16px; }
+.sessionFacts { display: flex; flex-wrap: wrap; gap: 16px 24px; margin: 0; }
+.sessionFacts > div { display: grid; gap: 6px; }
+.sessionFacts dt { color: var(--text-muted); font-size: 12px; }
+.sessionFacts dd { margin: 0; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.recordContent, .analysisColumn, .performanceColumn { min-width: 0; }
+.analysisColumn > p + p { margin-top: 8px; }
+.block:focus { outline: 2px solid var(--brand-red); outline-offset: -2px; border-radius: 8px; }
+@media (min-width: 900px) {
+  .workspace { width: min(1320px, calc(100vw - 48px)); max-width: none; height: calc(100dvh - 48px); }
+  .workspace .header { padding: 24px 32px; }
+  .workspace .body { flex: 1; padding: 24px 32px 32px; }
+  .sessionLayout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; align-items: start; }
+  .sessionSummary { padding-right: 24px; border-right: 1px solid var(--border-subtle); }
+  .sessionFacts { flex-direction: column; gap: 24px; }
+  .sessionFacts dd { font-size: 18px; }
+  .recordContent > .section:first-child { margin-top: 0; }
+  .workspace .section h3 { font-size: 20px; letter-spacing: -.02em; }
+  .workspace .blockHeading h4 { font-size: 20px; }
+  .workspace .measurements { font-size: 14px; gap: 12px; }
+}
+@media (min-width: 1100px) {
+  .exerciseLayout:has([aria-label="Selected performance"]) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 32px; align-items: start; }
+  .exerciseLayout:has([aria-label="Selected performance"]) > .performanceColumn { margin-top: 0; border-left: 1px solid var(--border-subtle); padding-left: 32px; }
+  .performanceColumn .comparison { gap: 20px; }
+}
 @media (max-width: 600px) {
   .dialog { position: fixed; inset: auto 0 0; margin: 0; width: 100%; max-width: none; max-height: calc(100dvh - 12px); border-radius: 18px 18px 0 0; border-bottom: 0; }
   .header { padding: 20px; }

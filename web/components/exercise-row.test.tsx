@@ -239,7 +239,7 @@ test("the prescription panel knows its field count and prints times short", () =
   assert.equal(html.includes(">Rest</span>3 min</span>"), true);
   assert.equal(html.includes("seconds"), false);
   // The header line agrees with the panel.
-  assert.equal(summaryText(html, "Heavy-bag technical rounds"), "2 min · 3 rounds · 2 min work · RPE 4 · rest 3 min");
+  assert.equal(summaryText(html, "Heavy-bag technical rounds"), "2 min · RPE 4");
 });
 
 test("adjustments close the card as one group, with the stop rule marked", () => {
@@ -295,7 +295,7 @@ test("a lower-case load reads sentence-case in the panel and the header", () => 
   const html = renderToStaticMarkup(<ExerciseRow block={hold} open onToggle={() => {}} />);
 
   assert.equal(html.includes("</span></span>Bodyweight</span>"), true);
-  assert.equal(summaryText(html, "Staggered Stance Hold"), "Bodyweight · RPE 4 · rest 1 min");
+  assert.equal(summaryText(html, "Staggered Stance Hold"), "Bodyweight · RPE 4");
   assert.equal(html.includes("bodyweight"), false);
 });
 
@@ -316,7 +316,7 @@ const contrastPair: StructuredBlock = {
 
 test("a contrast pair reads as rounds + rest with one row per movement", () => {
   const collapsed = renderToStaticMarkup(<ExerciseRow block={contrastPair} open={false} onToggle={() => {}} />);
-  assert.equal(summaryText(collapsed, "Back Squat → Box Jump"), "3 rounds · rest 4 min · A1: 85% 1RM");
+  assert.equal(summaryText(collapsed, "Back Squat → Box Jump"), "3 rounds · rest 4 min");
 
   const open = renderToStaticMarkup(<ExerciseRow block={contrastPair} open onToggle={() => {}} />);
   assert.equal(countOccurrences(open, 'class="sp-cluster-row"'), 2);

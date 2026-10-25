@@ -64,6 +64,13 @@ for (const width of [390, 1280]) {
     const dialog = page.getByRole("dialog", { name: "Back Squat", exact: true });
     const progress = dialog.getByRole("region", { name: "Exercise progress", exact: true });
     await expect(progress.getByRole("slider", { name: "Inspect performance" })).toBeVisible();
+    if (width >= 1100) {
+      const bounds = await dialog.boundingBox();
+      expect(bounds!.width).toBeGreaterThan(width * .9);
+      const chart = await progress.boundingBox();
+      const records = await dialog.getByRole('heading', { name: 'Performance history', exact: true }).boundingBox();
+      expect(chart!.x + chart!.width).toBeLessThan(records!.x);
+    }
     await progress.getByRole("combobox", { name: "Progress measurement" }).selectOption("reps:reps");
     await expect(progress.locator('[aria-label="Selected performance"]')).toContainText("5 reps");
     await progress.getByRole("combobox", { name: "Progress measurement" }).selectOption("load:kg");

@@ -341,6 +341,9 @@ export function ExerciseRationaleProvider({ children }: { children: ReactNode })
   return <ExerciseRationaleContext.Provider value>{children}</ExerciseRationaleContext.Provider>;
 }
 const PlanSafetyTextContext = createContext<string[]>([]);
+const PlanDetailSafetyContext = createContext<StructuredPlan | null>(null);
+type ProgressStatus = "loading" | "ready" | "unavailable";
+const LiveProgressStatusContext = createContext<ProgressStatus | undefined>(undefined);
 
 /** Relays the Rehab/Prehab policy to the block cards below it. Standalone
  * surfaces that render SessionCard directly (Today) mount this themselves;
@@ -369,9 +372,10 @@ function blockTagLabel(block: StructuredBlock, policy: RehabLabelPolicy | null):
  * Safety Priority card owns stripped. Shared by the exercise row header and the
  * full block card so both always show the same dose and the same stop rule.
  */
-function useBlockPrescription(block: StructuredBlock, sourceCountdown?: string | null) {
+function useBlockPrescription(block: StructuredBlock, sourceCountdown?: string | null, preserveSafety = false) {
   const sourceText = useContext(PlanSourceTextContext);
-  const planSafetyTexts = useContext(PlanSafetyTextContext);
+  const inheritedSafetyTexts = useContext(PlanSafetyTextContext);
+  const planSafetyTexts = preserveSafety ? [] : inheritedSafetyTexts;
   const title = cleanText(block.display_name) || "Block";
   const sourceOverrides = getSourcePrescriptionRangeOverrides(sourceText, title, sourceCountdown);
   // Loads are authored lower-case ("bodyweight", "easy angle"); they sit as a
@@ -432,6 +436,7 @@ export function BlockCard({
   hideStopRule = false,
   hideAdjustments = false,
   hideInstructions = false,
+  presentation,
 }: {
   block: StructuredBlock;
   /** Development-block intent for an explicitly prescribed deload instruction.
@@ -448,6 +453,7 @@ export function BlockCard({
   /** The detail sheet already displays Swaps/Easier/Progress/Stop. */
   hideAdjustments?: boolean;
   hideInstructions?: boolean;
+  presentation?: "detail";
 }) {
   const rehabLabelPolicy = useContext(RehabLabelContext);
   const { title, load, metrics, rest, effort, compactStopRule, progression, sourceVolume } = useBlockPrescription(
@@ -484,7 +490,12 @@ export function BlockCard({
   // movement's row rather than as a block-wide Load stat.
   const components = getBlockComponents(block);
   const blockLoad = components.length > 0 ? null : load;
-  const statCount = metrics.length + [blockLoad, rest, effort].filter(Boolean).length;
+  // Split a simple resolved volume for the detail band; compound prescriptions
+  // and authored ranges retain their existing exact presentation.
+  const volume = presentation === "detail" && components.length === 0 && metrics.length === 1
+    && metrics[0].label === "Volume" ? metrics[0].value.match(/^(\d+) × (\d+(?:[-–]\d+)?)$/) : null;
+  const displayMetrics = volume ? [{ label: "Sets", value: volume[1] }, { label: "Reps", value: volume[2] }] : metrics;
+  const statCount = displayMetrics.length + [blockLoad, rest, effort].filter(Boolean).length;
   const hasAthleteMetrics = block.prescription_source === "athlete"
     && typeof block.athlete_dose?.mode === "string"
     && ["reps", "duration", "intervals", "distance"].includes(block.athlete_dose.mode);
@@ -496,7 +507,7 @@ export function BlockCard({
   ];
 
   return (
-    <div className={embedded ? "sp-block sp-block-embedded" : "sp-block"}>
+    <div className={`${embedded ? "sp-block sp-block-embedded" : "sp-block"}${presentation === "detail" ? " ex-prescription-band" : ""}`}>
       {/* Embedded, the exercise row's header already carries the name and type. */}
       {embedded ? null : (
         <div className="sp-block-head">
@@ -519,7 +530,7 @@ export function BlockCard({
           alongside the same metric tiles used by generated sessions. */}
       {showMetricTiles ? (
         <div className="sp-block-stats" data-count={statCount}>
-          {metrics.map((metric) => (
+          {displayMetrics.map((metric) => (
             <span key={metric.label} className="sp-stat">
               <span className="sp-stat-head">
                 <span className="sp-stat-label">{metric.label}</span>
@@ -531,7 +542,7 @@ export function BlockCard({
             </span>
           ))}
           {blockLoad ? (
-            <span className="sp-stat">
+            <span className="sp-stat" data-metric="load">
               <span className="sp-stat-head">
                 <span className="sp-stat-label">Load</span>
                 <GlossaryTooltip term="Load" />
@@ -707,6 +718,7 @@ export function ExerciseRow({
   sourceCountdown,
   detail = "inline",
   actions,
+  ordinal,
 }: {
   block: StructuredBlock;
   open: boolean;
@@ -714,12 +726,14 @@ export function ExerciseRow({
   /** "sheet" opens the exercise in its own sheet (Today) instead of in place. */
   detail?: "inline" | "sheet";
   actions?: ReactNode;
+  ordinal?: number;
   openWeekIntent?: OpenBlockWeekIntent | null;
   sourceCountdown?: string | null;
 }) {
   const bodyId = useId();
+  const safetyPlan = useContext(PlanDetailSafetyContext);
   const rehabLabelPolicy = useContext(RehabLabelContext);
-  const prescription = useBlockPrescription(block, sourceCountdown);
+  const prescription = useBlockPrescription(block, sourceCountdown, detail === "sheet");
   const { title, compactStopRule } = prescription;
   const blockType = cleanText(block.block_type);
   const tagLabel = blockType ? blockTagLabel(block, rehabLabelPolicy) : null;
@@ -745,6 +759,7 @@ export function ExerciseRow({
           stays one big tap target while the type's glossary "i" (a button of
           its own) can sit in the header without nesting inside it. */}
       <div className="ex-row-head">
+        {ordinal ? <span className="cm-exercise-ordinal">{String(ordinal).padStart(2, "0")}</span> : null}
         {/* Today, once the session is started: one tap logs it as written. */}
         <ExerciseLogTick block={block} onOpen={() => (open ? undefined : onToggle())} />
         <span className="ex-row-text">
@@ -782,14 +797,16 @@ export function ExerciseRow({
               ) : null}
             </span>
           ) : null}
+          {ordinal && (prescription.rest || prescription.load) ? <span className="cm-exercise-rest">
+            {[prescription.rest ? `Rest ${prescription.rest}` : null, prescription.load].filter(Boolean).join(" · ")}
+          </span> : null}
           {/* What was logged for it today; open, the log panel below says so. */}
           {rowCollapsed ? <ExerciseLogBadge block={block} /> : null}
-          {/* Stop criteria are safety instructions: never hidden behind the tap.
-              Collapsed, the row carries it; open, the full card below does.
-              Rows that open a sheet leave it to the sheet, which leads with it. */}
-          {!open && detail === "inline" && compactStopRule ? (
+          {/* Stop criteria stay visible before opening an exercise. The focused
+              detail also carries the rule while that screen is open. */}
+          {!open && compactStopRule ? (
             <span className="ex-row-stop">
-              <span className="sp-stat-label">Stop rule</span>
+              <span className="sp-stat-label">{ordinal ? "Stop if" : "Stop rule"}</span>
               {compactStopRule}
             </span>
           ) : null}
@@ -806,12 +823,10 @@ export function ExerciseRow({
               alt=""
               loading="lazy"
               onError={(event) => {
-                // No thumbnail (restricted or removed video): keep the dark tile
-                // and play glyph rather than a broken-image icon.
+                // A restricted/removed thumbnail must not leave a broken image.
                 event.currentTarget.style.display = "none";
               }}
             />
-            <span className="ex-demo-play-glyph ex-demo-play-glyph-sm" />
           </span>
         ) : rowCollapsed ? (
           // Holds the thumbnail column where Today's section rows show one, so
@@ -825,9 +840,11 @@ export function ExerciseRow({
         <span className="ex-row-chevron" aria-hidden="true" />
       </div>
       {open && detail === "sheet" ? (
-        <InjuryDetailSheet title={title} onClose={onToggle}>
+        <InjuryDetailSheet title={title} onClose={onToggle} variant="screen" closeLabel="Back to session" panelClassName="cm-exercise-screen">
           <div id={bodyId}>
-            <ExerciseDetail block={block} openWeekIntent={openWeekIntent} sourceCountdown={sourceCountdown} />
+            <ExerciseDetail block={block} openWeekIntent={openWeekIntent} sourceCountdown={sourceCountdown}
+              safety={safetyPlan ? <RedFlagsCard plan={safetyPlan} compact /> : null} />
+            <div className="cm-exercise-detail-actions">{actions ?? <ExerciseActions block={block} title={title} variant="detail" />}</div>
           </div>
         </InjuryDetailSheet>
       ) : open ? (
@@ -892,19 +909,20 @@ function ExerciseDetail({
   block,
   openWeekIntent,
   sourceCountdown,
+  safety,
 }: {
   block: StructuredBlock;
+  safety?: ReactNode;
   openWeekIntent?: OpenBlockWeekIntent | null;
   sourceCountdown?: string | null;
 }) {
   const rehabLabelPolicy = useContext(RehabLabelContext);
-  const prescription = useBlockPrescription(block, sourceCountdown);
+  const prescription = useBlockPrescription(block, sourceCountdown, true);
   const { title, compactStopRule, progression } = prescription;
   const blockType = cleanText(block.block_type);
   const tagLabel = blockType ? blockTagLabel(block, rehabLabelPolicy) : null;
   const resolvedMedia = useExerciseMedia(block.display_name, block.exercise_key);
   const media = block.prescription_source === "athlete" && !block.exercise_key ? null : resolvedMedia;
-  const summary = exerciseRowSummary(block, prescription);
   const builds = athleteFacingRationale(block.purpose);
   const whyTodayRaw = athleteFacingRationale(block.why_today);
   const whyToday = sameCopy(builds, whyTodayRaw) ? null : whyTodayRaw;
@@ -934,7 +952,10 @@ function ExerciseDetail({
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
       </svg>
-      <span>Stop if {compactStopRule.replace(/^(?:(?:stop\s+)?(?:if|when|for))\s+/i, "")}</span>
+      <span className={sessionRunning ? undefined : "ex-stop-content"}>
+        {sessionRunning ? "Stop if " : <strong>Stop this exercise if</strong>}
+        <span>{compactStopRule.replace(/^(?:(?:stop\s+)?(?:if|when|for))\s+/i, "")}</span>
+      </span>
     </p>
   ) : null;
 
@@ -943,14 +964,13 @@ function ExerciseDetail({
   if (sessionRunning && block.block_type !== "rehab") {
     return (
       <div className="injury-sheet-body ex-detail ex-detail-logging">
-        {tagLabel || summary ? (
-          <p className="ex-detail-summary">{[tagLabel, summary].filter(Boolean).join(" · ")}</p>
-        ) : null}
+        {tagLabel ? <p className="ex-detail-summary">{tagLabel}</p> : null}
         {stopLine}
+        {safety}
         {steps.length > 0 ? (
           <div className="sp-block-aside ex-detail-steps">
             <span className="sp-stat-label">Steps</span>
-            <ol>{steps.map(step => <li key={step}>{step}</li>)}</ol>
+            <ol className="ex-detail-steps">{steps.map(step => <li key={step}>{step}</li>)}</ol>
           </div>
         ) : null}
         <div className="ex-detail-prescription">
@@ -965,59 +985,31 @@ function ExerciseDetail({
 
   return (
     <div className="injury-sheet-body ex-detail">
-      {tagLabel || summary ? (
-        <p className="ex-detail-summary">{[tagLabel, summary].filter(Boolean).join(" · ")}</p>
-      ) : null}
-      {/* Safety instructions are never behind a tap: one plain line. */}
+      {block.private_media_id || block.community_revision_id ? (
+        <section className="ex-detail-media" aria-label="Demo video">
+          <PrescribedPrivateVideo id={block.private_media_id || block.community_revision_id!} community={!block.private_media_id} name={title} />
+        </section>
+      ) : media ? <section className="ex-detail-media" aria-label="Demo video"><ExerciseDemo media={media} exerciseName={title} /></section> : null}
+      <section className="ex-detail-prescription" aria-label="Full prescription">
+        <BlockCard block={block} openWeekIntent={openWeekIntent} sourceCountdown={sourceCountdown}
+          presentation="detail" embedded hideCues hideStopRule hideAdjustments hideInstructions />
+      </section>
+      {cues.length > 0 || steps.length > 0 || (!media && block.execution_instructions) ? <section className="ex-technique">
+        <h3>Technique</h3>
+        <ExecutionInstructions block={block} />
+        {steps.length > 0 ? <ol className="ex-detail-steps">{steps.map(step => <li key={step}>{step}</li>)}</ol> : null}
+        {cues.map(cue => <p key={cue}>{cue}</p>)}
+      </section> : null}
       {block.block_type === "rehab" && (block.stop_rules?.length || execution.stopRules.length)
         ? <RehabExerciseLimits rules={Array.from(new Set([...getStringList(block.stop_rules), ...execution.stopRules]))} /> : stopLine}
-      {media ? (
-        <details className="ex-detail-section" open={!sessionRunning || block.block_type === "rehab"}>
-          <summary>Demo video</summary>
-          <ExerciseDemo media={media} exerciseName={title} />
-        </details>
-      ) : null}
-      {block.private_media_id || block.community_revision_id ? (
-        <details className="ex-detail-section" open={!sessionRunning}>
-          <summary>Demo video</summary>
-          <PrescribedPrivateVideo id={block.private_media_id || block.community_revision_id!} community={!block.private_media_id} name={title} />
-        </details>
-      ) : null}
-      {builds || whyToday ? (
-        <details className="ex-detail-section">
-          <summary>Why it&apos;s here</summary>
-          {builds ? (
-            <p className="ex-row-why-line">
-              <span className="sp-stat-label">Builds</span>
-              {builds}
-            </p>
-          ) : null}
-          {whyToday ? (
-            <p className="ex-row-why-line ex-row-why-today">
-              <span className="sp-stat-label">Why today</span>
-              {whyToday}
-            </p>
-          ) : null}
-        </details>
-      ) : null}
-      <ExecutionInstructions block={block} />
-      {/* Keep the cue and available adjustments outside nested disclosures. */}
-      {steps.length > 0 ? (
-        <div className="sp-block-aside ex-detail-steps">
-          <span className="sp-stat-label">Steps</span>
-          <ol>{steps.map(step => <li key={step}>{step}</li>)}</ol>
-        </div>
-      ) : null}
-      {cues.map(cue => <p className="sp-block-aside" key={cue}><span className="sp-stat-label">Cue</span>{cue}</p>)}
-      {swap ? <p className="sp-block-aside"><span className="sp-stat-label">Swaps</span>{swap}</p> : null}
-      {easier.map(text => <p className="sp-block-aside" key={text}><span className="sp-stat-label">Easier</span>{text}</p>)}
-      {progression && openWeekIntent?.key !== "deload" ? <p className="sp-block-aside"><span className="sp-stat-label">Progress</span>{progression}</p> : null}
-      <details className="ex-detail-section" open={block.block_type === "rehab" || undefined}>
-        <summary>Full prescription</summary>
-        <BlockCard block={block} openWeekIntent={openWeekIntent}
-          sourceCountdown={sourceCountdown} embedded hideCues hideStopRule hideAdjustments hideInstructions />
-      </details>
-      {/* Renders only where a started session provides logging (Today). */}
+      {safety}
+      {builds || whyToday ? <details className="ex-detail-section">
+        <summary>Why it&apos;s here</summary>
+        {builds ? <p>{builds}</p> : null}{whyToday ? <p>{whyToday}</p> : null}
+      </details> : null}
+      {swap ? <section className="ex-alternative"><h3>Alternative</h3><p>{swap}</p></section> : null}
+      {easier.length > 0 ? <section className="ex-alternative"><h3>Easier option</h3>{easier.map(text => <p key={text}>{text}</p>)}</section> : null}
+      {progression && openWeekIntent?.key !== "deload" ? <section className="ex-alternative"><h3>Progression</h3><p>{progression}</p></section> : null}
       <ExerciseLogPanel block={block} />
     </div>
   );
@@ -1074,7 +1066,7 @@ export function SessionCard({
   occurrenceDate?: string | null;
   /** "section" is Today's numbered session part: every exercise row in view,
    * the rationale and coaching cues behind one disclosure. */
-  layout?: "card" | "section";
+  layout?: "card" | "section" | "focused";
   /** Zero-based position of this session in the day, for the "01 / ..." label. */
   sectionIndex?: number;
   session: StructuredSession;
@@ -1103,7 +1095,8 @@ export function SessionCard({
 }) {
   const detailsId = useId();
   const rehabLabelPolicy = useContext(RehabLabelContext);
-  const [showDetails, setShowDetails] = useState(Boolean(defaultOpenBlocks));
+  const [expandedDetails, setShowDetails] = useState(Boolean(defaultOpenBlocks));
+  const showDetails = layout === "focused" || expandedDetails;
   const userToggledDetails = useRef(false);
   // One exercise open at a time. Today and the current plan day can start with
   // compact rows so a demo does not push the rest of the session below the fold.
@@ -1297,7 +1290,7 @@ export function SessionCard({
   }
 
   return (
-    <article className="sp-session">
+    <article className="sp-session" data-layout={layout === "focused" ? "focused" : undefined}>
       <header className="sp-session-head">
         <div>
           {showDayLabels && (countdown || date) ? (
@@ -1306,7 +1299,7 @@ export function SessionCard({
               {date ? <span className="sp-day-date">{formatAppDate(date)}</span> : null}
             </div>
           ) : null}
-          {hideTitle && !isTechnicalSession ? null : <h3 className="sp-session-title">
+          {(hideTitle || layout === "focused") && !isTechnicalSession ? null : <h3 className="sp-session-title">
             {isDeclaredLightCombat
               ? DECLARED_LIGHT_COMBAT_TITLE
               : isTechnicalSession
@@ -1329,7 +1322,7 @@ export function SessionCard({
             <p
               className={`sp-session-objective${blocks.length > 0 ? "" : " sp-session-instruction"}`}
             >
-              {blocks.length > 0 ? <span className="sp-session-why-label">Why</span> : null}
+              {blocks.length > 0 ? <span className="sp-session-why-label">Purpose</span> : null}
               {objective}
             </p>
           ) : null}
@@ -1403,7 +1396,8 @@ export function SessionCard({
 
       {blocks.length > 0 ? (
         <>
-          <button
+          {layout === "focused" ? <div className="cm-exercise-list-heading"><h3>Exercises</h3><span>{blocksLabel}</span></div> : null}
+          {layout !== "focused" ? <button
             type="button"
             className="sp-more-toggle sp-session-toggle"
             aria-expanded={showDetails}
@@ -1415,7 +1409,7 @@ export function SessionCard({
             }}
           >
             {showDetails ? "Show less" : `Show more (${blocksLabel})`}
-          </button>
+          </button> : null}
 
           {showDetails ? (
             <ExerciseSessionScope date={occurrenceDate ?? day?.date} session={session}>
@@ -1428,6 +1422,8 @@ export function SessionCard({
                     onToggle={() => setOpenBlockIndex((current) => (current === index ? null : index))}
                     openWeekIntent={openWeekIntent}
                     sourceCountdown={sourceCountdown}
+                    detail={layout === "focused" ? "sheet" : "inline"}
+                    ordinal={layout === "focused" ? index + 1 : undefined}
                   />
                 ))}
                 <SessionChangesFoot session={session} />
@@ -1899,6 +1895,8 @@ function RestDayRow({
 }
 
 function CompletionTag({ completion }: { completion: Completion }) {
+  const status = useContext(LiveProgressStatusContext);
+  if (status && status !== "ready") return null;
   if (completion.total === 0) {
     return null;
   }
@@ -1917,10 +1915,9 @@ function CompletionTag({ completion }: { completion: Completion }) {
 }
 
 /**
- * One day of the selected week, as a collapsible card. Collapsed by default
- * except the current/selected day so the athlete lands on what matters today;
- * the current day's session blocks are expanded too. Session-less days reuse the
- * deterministic coach-led / rest classification.
+ * Compact schedule with separate session and exercise screens. The Plan stays
+ * mounted so its selected week and scroll position survive back navigation.
+ * Session-less days retain the shared coach-led / rest classification.
  */
 export function CampDayCard({
   day,
@@ -1930,13 +1927,14 @@ export function CampDayCard({
   weekNumber = 1,
   isCurrent,
   currentLabel = "Today",
-  defaultOpen,
   completionIndex,
+  renderSessionControls,
   currentTrainingDayIso,
   planStartIso,
   onLogSession,
 }: {
   day: StructuredDay;
+  renderSessionControls?: (day: StructuredDay, session: StructuredSession | undefined) => ReactNode;
   /** Truthful calendar date for a recurring weekday match. The stored projected
    * date remains untouched for completion and logging identity. */
   displayDate?: string | null;
@@ -1958,15 +1956,9 @@ export function CampDayCard({
   /** Opens the retro-log form for a past, still-loggable session. */
   onLogSession?: (day: StructuredDay, session: StructuredSession, sessionId: string) => void;
 }) {
-  const [open, setOpen] = useState<boolean>(Boolean(defaultOpen));
-  const userToggledOpen = useRef(false);
-
-  useEffect(() => {
-    if (!userToggledOpen.current) {
-      setOpen(Boolean(defaultOpen));
-    }
-  }, [defaultOpen]);
-
+  const [selectedSession, setSelectedSession] = useState<number | null>(null);
+  const safetyPlan = useContext(PlanDetailSafetyContext);
+  const progressStatus = useContext(LiveProgressStatusContext);
   const sessions = getSessions(day);
   const storedDate = cleanText(day.date);
   const date = cleanText(displayDate) || storedDate;
@@ -1984,10 +1976,10 @@ export function CampDayCard({
   const dayIso = storedDate ? storedDate.slice(0, 10) : null;
 
   const completionInfoFor = (session: StructuredSession): SessionCompletionInfo | undefined => {
-    if (!completionIndex || session.optional === true) {
+    if (session.optional === true || (progressStatus && progressStatus !== "ready")) {
       return undefined;
     }
-    const record = completionForSession(completionIndex, day, session);
+    const record = completionIndex ? completionForSession(completionIndex, day, session) : undefined;
     const sessionId = completionSessionId(day, session);
     // A session with no completion identity (id-less secondary) stays neutral.
     if (!sessionId) {
@@ -2000,77 +1992,61 @@ export function CampDayCard({
     return {
       display,
       completion: record,
-      onLog: canLog ? () => onLogSession?.(day, session, sessionId) : undefined,
+      onLog: completionIndex && canLog ? () => onLogSession?.(day, session, sessionId) : undefined,
     };
   };
 
+  const sessionTitle = (session: StructuredSession) => {
+    const title = stripLeadingWeekday(cleanText(session.title) || titleize(cleanText(session.session_type) || "Session"));
+    return isDeclaredLightCombatTitle(title) ? DECLARED_LIGHT_COMBAT_TITLE : title === "Technical-only combat" ? TECHNICAL_COMBAT_TITLE : title;
+  };
+  const contact = getCoachLedContactView(day)?.title;
+  const selected = selectedSession === null ? null : sessions[selectedSession];
   return (
-    <details
-      className={`sp-week cm-day${isCurrent ? " cm-day-current" : ""}`}
-      open={open}
-      onToggle={(event) => setOpen(event.currentTarget.open)}
-    >
-      <summary
-        className="sp-week-summary cm-day-summary"
-        onClick={() => {
-          userToggledOpen.current = true;
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            userToggledOpen.current = true;
-          }
-        }}
-      >
-        <span className="cm-day-head">
-          {countdown ? (
-            <span className={`sp-countdown cm-day-countdown${isCurrent ? " sp-accent" : ""}`}>
-              {countdown}
-            </span>
-          ) : null}
-          <span className="sp-week-title cm-day-title">{timelineLabel}</span>
-          {isCurrent ? <span className="cm-day-now">{currentLabel}</span> : null}
-        </span>
-
-        <span className="cm-day-meta">
-          <CompletionTag completion={completion} />
-          {completion.total === 0 && sessions.length > 0 ? (
-            // Support-only day (a visualisation, a Tactical Watch): it has work
-            // to open but nothing physical to count, so name it rather than
-            // leave the row's count slot blank.
-            <span className="cm-day-count cm-day-support">
-              Zero load
-              <span className="sr-only"> support only, no physical sessions</span>
-            </span>
-          ) : null}
-        </span>
-      </summary>
-
-      <div className="sp-week-body">
-        {sessions.length > 0 ? <DaySessionContext day={day} /> : null}
-
-        {sessions.length > 0 ? (
-          <div className="sp-sessions">
-            {sessions.map((session, index) => (
-              <SessionCard
-                key={cleanText(session.session_id) || `session-${index}`}
-                session={session}
-                day={index === 0 ? day : undefined}
-                sourceCountdown={day.countdown_label}
-                defaultOpenBlocks={isCurrent}
-                initiallyOpenFirstBlock={false}
-                showDayContext={false}
-                showDayLabels={false}
-                completionInfo={completionInfoFor(session)}
-                openWeekIntent={weekIntent}
-                occurrenceDate={day.date}
-              />
-            ))}
-          </div>
-        ) : (
-          <SessionlessDayCard day={day} showDayLabels={false} />
-        )}
-      </div>
-    </details>
+    <article className={`cm-schedule-day${isCurrent ? " cm-day-current" : ""}`}>
+      <header className="cm-schedule-heading">
+        <span>{date ? formatAppDate(date) : timelineLabel}{countdown ? ` · ${countdown}` : ""}</span>
+        {isCurrent ? <span className="cm-day-now">{currentLabel}</span> : null}
+        <CompletionTag completion={completion} />
+        {completion.total === 0 && sessions.length > 0 ? <span className="cm-day-count cm-day-support">Zero load</span> : null}
+      </header>
+      {contact ? <p className="cm-day-context-contact">{contact} · Coach/gym</p> : null}
+      {sessions.map((session, index) => {
+        const info = completionInfoFor(session);
+        const state = info?.display.state;
+        const status = progressStatus === "loading" ? "Syncing" : progressStatus === "unavailable" ? "Status unavailable" : state === "done" || state === "modified" ? "Completed"
+          : state === "missed" ? "Missed" : state === "skipped" ? "Skipped"
+          : state === "pending" && info?.completion?.status === "started" ? "In progress" : "Upcoming";
+        const activity = getBlocks(session).map(block => cleanText(block.display_name)).filter(Boolean);
+        return <button key={cleanText(session.session_id) || index} type="button"
+          className="cm-session-link" aria-haspopup="dialog" onClick={() => setSelectedSession(index)}>
+          <span className="cm-session-link-copy"><strong>{sessionTitle(session)}</strong>
+            <span>{activity.length ? `${activity.length} ${activity.length === 1 ? "exercise" : "exercises"}${resolveSessionTypeLabel(session, null) ? ` · ${resolveSessionTypeLabel(session, null)}` : ""}` : isZeroLoadSupportSession(session) ? "Tactical / support" : "Training details"}</span>
+            {activity.length ? <span className="cm-session-activities">{activity.slice(0, 2).join(" · ")}{activity.length > 2 ? ` +${activity.length - 2}` : ""}</span> : null}
+            {isCurrent && index === 0 ? <span className="cm-next-action">Open session</span> : null}
+          </span>
+          <span className="cm-session-status" data-tone={info?.display.tone}>{status}</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+        </button>;
+      })}
+      {sessions.length === 0 ? <button type="button" className="cm-session-link" aria-haspopup="dialog" onClick={() => setSelectedSession(0)}>
+        <span className="cm-session-link-copy"><strong>{cleanText(day.today_card?.headline) || "Training details"}</strong><span>View coach/gym guidance</span></span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+      </button> : null}
+      {selectedSession !== null ? <InjuryDetailSheet title={selected ? sessionTitle(selected) : "Training details"}
+        variant="screen" closeLabel="Back to Plan" panelClassName="cm-session-screen" onClose={() => setSelectedSession(null)}>
+        <div className="cm-session-screen-body">
+          <p className="muted">{date ? formatAppDate(date) : timelineLabel}{countdown ? ` · ${countdown}` : ""}</p>
+          {safetyPlan ? <RedFlagsCard plan={safetyPlan} compact /> : null}
+          {selected ? <DaySessionContext day={day} /> : null}
+          {renderSessionControls?.(displayDate ? { ...day, date: displayDate } : day, selected ?? undefined)}
+          {selected ? <SessionCard session={selected} day={day} sourceCountdown={day.countdown_label}
+            layout="focused" defaultOpenBlocks initiallyOpenFirstBlock={false} showDayContext={false}
+            showDayLabels={false} completionInfo={completionInfoFor(selected)} openWeekIntent={weekIntent} occurrenceDate={day.date} />
+            : <SessionlessDayCard day={day} showDayLabels={false} />}
+        </div>
+      </InjuryDetailSheet> : null}
+    </article>
   );
 }
 
@@ -2115,7 +2091,7 @@ export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
       <summary className="sp-collapse-summary">
         <span className="sp-collapse-title">Active notes</span>
         <span className="sp-collapse-action">
-          {open ? "Hide" : "Show"} ({notes.length})
+          {notes.length} <span className="sr-only">notes · {open ? "Hide" : "View all notes"}</span>
         </span>
       </summary>
       <div className="sp-collapse-body">
@@ -2151,7 +2127,7 @@ function severityToneClass(label: string | null): string {
   return "";
 }
 
-export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
+export function RedFlagsCard({ plan, compact = false }: { plan: StructuredPlan; compact?: boolean }) {
   const rules = getDisplayableRedFlags(plan);
   const fallbackNotes = rules.length === 0 ? getFallbackSafetyNotes(plan) : [];
   const hasStopRules = rules.length > 0 || fallbackNotes.length > 0;
@@ -2163,17 +2139,23 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
   // disclaimer, with the stop/report rules above it when present.
   return (
     <details
-      className="sp-collapse sp-redflags"
+      className={`sp-collapse sp-redflags${compact ? " cm-safety-compact" : ""}`}
       aria-label="Red flags and safety actions"
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary className="sp-collapse-summary sp-redflags-summary">
         <span className="sp-redflags-summary-text">
-          <span className="sp-eyebrow">Safety priority</span>
+          <span className="sp-eyebrow">Safety &amp; training limits</span>
           <span className="sp-collapse-title">Red flags - stop &amp; report</span>
         </span>
-        <span className="sp-collapse-action">{open ? "Hide" : "Show"}</span>
+        <span className="sp-collapse-action">{open ? "Hide" : "Details"} ({rules.length + fallbackNotes.length})</span>
+        {!open && hasStopRules ? <span className="cm-safety-preview">
+          {rules.length ? rules.map((rule, index) => {
+            const { text, action, severityLabel } = redFlagView(rule);
+            return <span key={index} className={severityToneClass(severityLabel)}>{severityLabel ? <strong>{severityLabel} · </strong> : null}{text}{action ? ` · ${action}` : ""}</span>;
+          }) : fallbackNotes.map((note, index) => <span key={index}>{note.text}</span>)}
+        </span> : null}
       </summary>
       <div className="sp-collapse-body">
       {hasStopRules ? (
@@ -2330,6 +2312,7 @@ function WeekStrip({
             }`}
             aria-current={current ? "step" : undefined}
             aria-pressed={selected}
+            aria-label={`Week ${index}${phaseLabel ? ` · ${phaseLabel}` : ""} · ${completion.done}/${completion.total} app sessions completed`}
             onClick={() => onSelect(pos)}
           >
             <span className="cm-week-pill-head">
@@ -2365,17 +2348,23 @@ function WeekStrip({
 function WeekOverview({
   week,
   weekNumber,
+  weekCount,
   completionIndex,
   openOngoing,
   scheduleContext,
+  navigation,
 }: {
+  navigation: ReactNode;
   week: StructuredWeek;
   /** 1-based position of the viewed week; drives the open-plan week intent. */
   weekNumber: number;
+  weekCount: number;
   completionIndex?: CompletionIndex;
   openOngoing: boolean;
   scheduleContext?: PlanScheduleContext | null;
 }) {
+  const progressStatus = useContext(LiveProgressStatusContext);
+  const progressReady = !progressStatus || progressStatus === "ready";
   // "App completed" promises app work: a coach-owned combat day carries no app
   // card, so it is reported by the Coach/gym counter, not by this fraction.
   const completion = weekCompletion(week, completionIndex, { includeCoachLed: false });
@@ -2395,94 +2384,45 @@ function WeekOverview({
         ? formatAppDate(startDate || endDate)
         : null;
 
-  const rows = [
-    { label: "Countdown", value: countdownRange },
-    { label: "Dates", value: dateRange, wide: true },
-    {
-      label: "App sessions",
-      value: sessionSummary.appSessions > 0 ? `${sessionSummary.appSessions}` : null,
-    },
-    {
-      label: "Support cards",
-      value: sessionSummary.supportSessions > 0 ? `${sessionSummary.supportSessions}` : null,
-    },
-    {
-      label: "Coach/gym days",
-      value: sessionSummary.coachLedSessions > 0 ? `${sessionSummary.coachLedSessions}` : null,
-    },
-    {
-      label: "App completed",
-      value: completion.total > 0 ? `${completion.done}/${completion.total}` : null,
-      wideMobile: true,
-    },
-  ].filter((row) => Boolean(row.value));
   const baseHeading = weekLabel(week);
   const openWeekNumber = resolveFiniteWeekNumber(
     week.week_index,
     scheduleContext?.current_week_number,
   );
-  const openWeekHeading = baseHeading.replace(
-    /^Week(?:\s+\d+)?/i,
-    `Week ${openWeekNumber} of 4`,
-  );
-  const heading = openOngoing
-    ? `Block ${scheduleContext?.block_number ?? 1} · ${openWeekHeading}`
-    : `Week ${weekNumber}`;
+  const heading = `Week ${openOngoing ? openWeekNumber : weekNumber} of ${weekCount}`;
+  const weekGoal = baseHeading.replace(/^Week(?:\s+\d+)?(?::\s*)?/i, "").trim();
   const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber, getDays(week).some(d => getSessions(d).some(s => s.prescription_source === "athlete"))) : null;
   // The pill only names the phase (GPP / SPP / Taper); the selected week's
   // heading is where it gets explained, one tap away.
   const phaseEntry = openOngoing ? null : glossaryEntry(resolvedWeekPhase(week));
+  const phaseLabel = phaseEntry?.term === "GPP" ? "General prep" : phaseEntry?.term === "SPP" ? "Specific prep" : resolvedWeekPhase(week);
 
   return (
-    <section className="sp-card cm-week-overview">
-      <div className="cm-week-overview-head">
-        <p className="sp-eyebrow">Week overview</p>
-        <h2 className="sp-redflags-title">
-          {heading}
-          {phaseEntry ? (
-            <span className="cm-week-phase">
-              <span className="sp-tag sp-accent">{phaseEntry.term}</span>
-              <GlossaryTooltip term={phaseEntry.term} />
-            </span>
-          ) : null}
-        </h2>
+    <div className="cm-week-overview">
+      <div className="cm-week-phase-progress">
+        <h2>{heading}</h2>
+        <p className="cm-week-phase">{openOngoing ? `Block ${scheduleContext?.block_number ?? 1}${weekGoal ? ` · ${weekGoal}` : ""}` : <>{phaseLabel}{phaseEntry ? <GlossaryTooltip term={phaseEntry.term} /> : null}</>}</p>
       </div>
-
-      {weekIntent ? (
-        <p className="sp-block-purpose cm-week-intent">
-          <span className="sp-tag sp-accent">{weekIntent.label}</span>
-          {weekIntent.summary}
-        </p>
-      ) : null}
-
-      {rows.length > 0 ? (
-        <div className="sp-block-stats cm-week-overview-stats">
-          {rows.map((row) => (
-            <span
-              key={row.label}
-              className="sp-stat"
-              data-wide={row.wide ? "" : undefined}
-              data-wide-mobile={row.wideMobile ? "" : undefined}
-            >
-              <span className="sp-stat-label">{row.label}</span>
-              {row.value}
-            </span>
-          ))}
-        </div>
-      ) : null}
-      {completion.total > 0 && sessionSummary.coachLedSessions > 0 ? (
-        // Training days = app sessions + coach/gym days, so "0/2" beside a
-        // 4-day week needs saying out loud rather than inferring from labels.
-        <p className="muted cm-week-count-note">
-          App completed counts the sessions you run in the app. Coach/gym days are tracked separately.
-        </p>
-      ) : null}
-    </section>
+      <div className="cm-week-progress-heading"><span>Weekly progress</span><span className="cm-completion-label" role="status" aria-live="polite">{progressReady ? `${completion.done}/${completion.total} app sessions` : progressStatus === "loading" ? "Syncing progress…" : "Progress unavailable"}</span></div>
+      {progressStatus !== "unavailable" ? <progress className="cm-completion-track" aria-label="App sessions completed" value={progressReady ? completion.done : undefined} max={completion.total || 1} /> : null}
+      {!progressReady ? null : completion.total === 0 ? <p className="muted">No app sessions scheduled</p> : completion.done === completion.total ? <p className="cm-week-done">Week complete</p> : null}
+      {navigation}
+      {dateRange || countdownRange ? <p className="cm-week-dates"><span>{dateRange}</span><span>{countdownRange}</span></p> : null}
+      {weekIntent ? <details className="cm-week-intent"><summary>Week guidance</summary><p><strong>{weekIntent.label}</strong> · {weekIntent.summary}</p></details> : null}
+      {sessionSummary.coachLedSessions > 0 || sessionSummary.supportSessions > 0 ? <p className="cm-week-sources">
+        {sessionSummary.coachLedSessions > 0 ? `${sessionSummary.coachLedSessions} coach/gym days · tracked separately` : null}
+        {sessionSummary.coachLedSessions > 0 && sessionSummary.supportSessions > 0 ? " · " : null}
+        {sessionSummary.supportSessions > 0 ? `${sessionSummary.supportSessions} support cards` : null}
+      </p> : null}
+    </div>
   );
 }
 
 export function StructuredPlanRenderer({
   plan,
+  progressStatus,
+  overview,
+  renderSessionControls,
   openOngoing = false,
   today,
   createdAt,
@@ -2498,6 +2438,10 @@ export function StructuredPlanRenderer({
   accessToken,
 }: {
   plan: StructuredPlan;
+  progressStatus?: ProgressStatus;
+  overview?: ReactNode;
+  /** Only the active plan may send the athlete to its training controls. */
+  renderSessionControls?: (day: StructuredDay, session: StructuredSession | undefined) => ReactNode;
   /** Renewable four-week plan without a scheduled fight date. */
   openOngoing?: boolean;
   today?: Date;
@@ -2539,6 +2483,8 @@ export function StructuredPlanRenderer({
   exerciseMedia?: Record<string, ExerciseMedia> | null;
   accessToken?: string | null;
 }) {
+  const [scheduleView, setScheduleView] = useState<"list" | "calendar">("list");
+  const [calendarEntry, setCalendarEntry] = useState<number | null>(null);
   const weeks = getWeeks(plan);
   const completionIndex = useMemo(
     () => (completions ? buildCompletionIndex(completions) : undefined),
@@ -2629,6 +2575,7 @@ export function StructuredPlanRenderer({
   if (weekSignature !== prevWeekSignature) {
     setPrevWeekSignature(weekSignature);
     setSelectedPos(null);
+    setCalendarEntry(null);
   }
 
   const handleSelectWeek = (pos: number) => {
@@ -2660,6 +2607,22 @@ export function StructuredPlanRenderer({
     () => buildDayTimeline(dayList, !openOngoing),
     [dayList, openOngoing],
   );
+  // Calendar cells are presentation only. Missing dates stay disabled; never
+  // manufacture recovery sessions or change the authoritative day timeline.
+  const firstCalendarDate = parseIsoDay(selectedWeek?.start_date)
+    ?? parseIsoDay(dayTimeline[0]?.kind === "day" ? dayTimeline[0].day.date : dayTimeline[0]?.dateIso);
+  if (firstCalendarDate && !selectedWeek?.start_date) {
+    firstCalendarDate.setDate(firstCalendarDate.getDate() - ((firstCalendarDate.getDay() + 6) % 7));
+  }
+  const calendarDates = firstCalendarDate ? Array.from({ length: 7 }, (_, offset) => {
+    const date = new Date(firstCalendarDate);
+    date.setDate(date.getDate() + offset);
+    const iso = toLocalIsoDay(date);
+    const entryPos = dayTimeline.findIndex(entry => (entry.kind === "gap" ? entry.dateIso : cleanText(entry.day.date)?.slice(0, 10)) === iso);
+    return { iso, entryPos };
+  }) : dayTimeline.map((entry, entryPos) => ({ iso: entry.kind === "gap" ? entry.dateIso : cleanText(entry.day.date), entryPos }));
+  const selectedCalendarEntry = calendarEntry ?? Math.max(0, dayTimeline.findIndex(entry =>
+    (entry.kind === "gap" ? entry.dateIso : cleanText(entry.day.date)?.slice(0, 10)) === focusProgress.currentDayDate));
   // Calendar day a synthesized gap row should highlight. Gap days never exist
   // in the plan, so focusProgress can't mark them — compare dates directly.
   // Only in the normal (non-advanced) view, though: once the plan advances to a
@@ -2720,6 +2683,8 @@ export function StructuredPlanRenderer({
     <ExerciseMediaProvider media={exerciseMedia}>
     <PlanSourceTextContext.Provider value={rawFallback}>
     <PlanSafetyTextContext.Provider value={safetyOwnershipTexts}>
+    <PlanDetailSafetyContext.Provider value={plan}>
+    <LiveProgressStatusContext.Provider value={progressStatus}>
     <div className="sp-root cm-root">
       {weeks.length > 0 ? (
         <>
@@ -2732,40 +2697,43 @@ export function StructuredPlanRenderer({
               </p>
             </section>
           ) : null}
-          <WeekStrip
-            weeks={weeks}
-            selectedPos={safePos}
-            currentPos={activeWeekPos}
-            onSelect={handleSelectWeek}
-            completionIndex={completionIndex}
-            openOngoing={openOngoing}
-          />
-
-          {selectedWeek ? (
-            <WeekOverview
-              week={selectedWeek}
-              weekNumber={safePos + 1}
-              completionIndex={completionIndex}
-              openOngoing={openOngoing}
-              scheduleContext={scheduleContext}
-            />
-          ) : null}
-
-          <div className="cm-guardrails">
-            <ActiveNotesCard plan={plan} />
-            <RedFlagsCard plan={plan} />
+          <section className="cm-week-section" aria-label="Week navigation and progress">
+            {overview}
+            {selectedWeek ? <WeekOverview week={selectedWeek} weekNumber={safePos + 1} weekCount={weeks.length}
+              completionIndex={completionIndex} openOngoing={openOngoing} scheduleContext={scheduleContext}
+              navigation={<WeekStrip weeks={weeks} selectedPos={safePos} currentPos={activeWeekPos}
+                onSelect={pos => { setCalendarEntry(null); handleSelectWeek(pos); }} completionIndex={completionIndex} openOngoing={openOngoing} />} /> : null}
+          </section>
+          {blockStartsOn ? <p className="sp-today-note cm-block-start" role="status">
+            {`Plan starts ${formatAppDate(blockStartsOn.iso)}`}
+            {blockStartsOn.relative ? ` · ${blockStartsOn.relative.toLowerCase()}` : ""}
+          </p> : null}
+          <div className="cm-schedule-title"><h2>Training schedule</h2>
+            <div className="cm-schedule-switch" role="group" aria-label="Schedule view">
+              <button type="button" aria-pressed={scheduleView === "list"} onClick={() => setScheduleView("list")}>List</button>
+              <button type="button" aria-pressed={scheduleView === "calendar"} onClick={() => setScheduleView("calendar")}>Calendar</button>
+            </div>
           </div>
-
-          {blockStartsOn ? (
-            <p className="sp-today-note cm-block-start" role="status">
-              {`Plan starts ${formatAppDate(blockStartsOn.iso)}`}
-              {blockStartsOn.relative ? ` · ${blockStartsOn.relative.toLowerCase()}` : ""}
-            </p>
-          ) : null}
-
+          {scheduleView === "calendar" ? <nav className="cm-calendar" aria-label="Selected week calendar">
+            {calendarDates.map(({ iso, entryPos }, pos) => {
+              const entry = entryPos >= 0 ? dayTimeline[entryPos] : undefined;
+              const day = entry?.kind === "day" ? entry.day : null;
+              const label = iso ? formatAppDate(iso) : day?.weekday || `Day ${pos + 1}`;
+              const recovery = Boolean(entry) && (!day || isPlainRestDay(day));
+              return <button key={iso || pos} type="button" disabled={!entry}
+                aria-label={`${label} · ${!entry ? "No plan entry" : recovery ? "Recovery" : "Training"}`}
+                aria-pressed={entryPos === selectedCalendarEntry} className={recovery || !entry ? "cm-calendar-recovery" : ""}
+                onClick={() => setCalendarEntry(entryPos)}>
+                <span>{iso ? weekdayLabel(iso) : day?.weekday || `Day ${pos + 1}`}</span>
+                <strong>{iso ? iso.slice(8, 10) : pos + 1}</strong>
+                <span className="cm-calendar-dot" aria-hidden="true" data-training={Boolean(entry) && !recovery} />
+              </button>;
+            })}
+          </nav> : null}
           <div className="sp-weeks cm-days">
             {dayList.length > 0 ? (
-              dayTimeline.map((entry) => {
+              dayTimeline.map((entry, entryPos) => {
+                if (scheduleView === "calendar" && selectedCalendarEntry !== entryPos) return null;
                 if (entry.kind === "gap") {
                   const gapLabel = gapDayLabel(entry.countdown);
                   return (
@@ -2824,7 +2792,7 @@ export function StructuredPlanRenderer({
                     weekNumber={safePos + 1}
                     isCurrent={isCurrent}
                     currentLabel={focusLabel}
-                    defaultOpen={isCurrent || (focusProgress.currentWeekPos == null && index === 0)}
+                    renderSessionControls={renderSessionControls}
                     completionIndex={completionIndex}
                     currentTrainingDayIso={currentTrainingDayIso}
                     planStartIso={planStartIso}
@@ -2835,6 +2803,10 @@ export function StructuredPlanRenderer({
             ) : (
               <p className="sp-muted">No days scheduled this week.</p>
             )}
+          </div>
+          <div className="cm-guardrails">
+            <ActiveNotesCard plan={plan} />
+            <RedFlagsCard plan={plan} />
           </div>
         </>
       ) : null}
@@ -2851,6 +2823,8 @@ export function StructuredPlanRenderer({
         </details>
       ) : null}
     </div>
+    </LiveProgressStatusContext.Provider>
+    </PlanDetailSafetyContext.Provider>
     </PlanSafetyTextContext.Provider>
     </PlanSourceTextContext.Provider>
     </ExerciseMediaProvider>

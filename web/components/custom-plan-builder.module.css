@@ -1,5 +1,6 @@
 .builder {
-  max-width: 880px;
+  width: 100%;
+  max-width: 1320px;
   margin: auto;
   display: grid;
   gap: 20px;
@@ -173,9 +174,13 @@
 
 /* Match Today's desktop two-column rhythm without stretching a single session. */
 @media (min-width: 1024px) {
-  .dayView:has(.session + .session) { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
   .saveBar { position: sticky; width: 100%; left: auto; transform: none; }
+  .saveActions { flex: 0 0 auto; }
+  .saveActions :global(.cta) { flex: 0 0 auto; min-width: 200px; }
   .builder { padding-bottom: 32px; }
+}
+@media (min-width: 1600px) {
+  .dayView:has(.session + .session) { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
 }
 
 .editButton {
@@ -329,3 +334,18 @@
   border: 0;
 }
 .cardAction svg { fill: currentColor; stroke: none; }
+.exerciseContext, .exercisePrescription, .editorActions { display: grid; gap: 16px; min-width: 0; }
+.exerciseContext h3, .exercisePrescription h3 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
+@media (min-width: 900px) {
+  .editorPanel:global(.injury-sheet) { width: min(100%, 800px); border-radius: 18px; animation: none; }
+  .exercisePanel:global(.injury-sheet) { width: min(100%, 1120px); }
+  .editorPanel > :global(.injury-sheet-header) { position: sticky; top: 0; z-index: 2; padding: 20px 28px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-panel); }
+  .editorPanel .sheet { padding: 24px 28px 28px; gap: 24px; }
+  .sessionSheet { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sessionSheet > label:first-child { grid-column: 1 / -1; }
+  .exerciseEditor { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); align-items: start; }
+  .exercisePrescription { border-left: 1px solid var(--border-subtle); padding-left: 24px; }
+  .exerciseEditor > .editorActions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: flex-end; padding-top: 20px; border-top: 1px solid var(--border-subtle); }
+  .editorActions > button { min-height: 48px; }
+  .editorActions > :global(.cta) { min-width: 200px; }
+}

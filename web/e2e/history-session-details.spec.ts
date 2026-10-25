@@ -69,6 +69,12 @@ for (const width of [390, 1280]) {
     await page.keyboard.press("Tab");
     expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true);
     const box = await dialog.boundingBox(); expect(box!.width).toBeLessThanOrEqual(width); expect(box!.x).toBeGreaterThanOrEqual(0);
+    if (width >= 900) {
+      expect(box!.width).toBeGreaterThan(width * .9);
+      const overview = await dialog.getByRole('region', { name: 'Session overview' }).boundingBox();
+      const records = await dialog.getByRole('heading', { name: 'Exercises & training blocks' }).boundingBox();
+      expect(overview!.x + overview!.width).toBeLessThan(records!.x);
+    }
     expect((await new AxeBuilder({ page }).include("dialog").analyze()).violations).toEqual([]);
     await page.keyboard.press("Escape"); await expect(dialog).toHaveCount(0); await expect(trigger).toBeFocused();
     await trigger.click(); await expect(dialog.getByText("Back squat", { exact: true })).toBeVisible();

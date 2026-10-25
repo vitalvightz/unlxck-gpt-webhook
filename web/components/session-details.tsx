@@ -108,7 +108,7 @@ export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = tr
     return () => { cancelled = true; };
   }, [row.id, row.source, token, cache, attempt]);
   const record = details?.session;
-  return <dialog ref={dialog} className={styles.dialog} aria-labelledby={heading}
+  return <dialog ref={dialog} className={`${styles.dialog} ${styles.workspace}`} aria-labelledby={heading}
     onCancel={event => { event.preventDefault(); onDismiss(); }}
     onClick={event => { if (event.target === event.currentTarget) {
       const bounds = event.currentTarget.getBoundingClientRect();
@@ -120,11 +120,18 @@ export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = tr
     <div className={styles.body} tabIndex={0} role="region" aria-label="Session record">
       {!details && !error ? <p role="status">Loading session details…</p> : null}
       {error ? <div role="alert"><p>Unable to load session details. Try again.</p><button type="button" className="secondary-button" onClick={() => { setError(false); setAttempt(value => value + 1); }}>Retry</button></div> : null}
-      {details && record ? <>
-        <div className={styles.meta}><span>{sessionStatusLabel(record.status)}</span><span>{record.source === "external" ? "Added by you" : "Unlxck"}</span>
-          {record.duration_minutes != null ? <span>{record.duration_minutes} min recorded</span> : null}
-          {record.session_rpe != null ? <span>RPE {record.session_rpe}/10</span> : null}
-          {record.effort ? <span>Effort: {record.effort}</span> : null}</div>
+      {details && record ? <div className={styles.sessionLayout}>
+        <section className={styles.sessionSummary} aria-label="Session overview">
+          <h3>Session overview</h3>
+          <dl className={styles.sessionFacts}>
+            <div><dt>Status</dt><dd>{sessionStatusLabel(record.status)}</dd></div>
+            <div><dt>Source</dt><dd>{record.source === "external" ? "Added by you" : "Unlxck"}</dd></div>
+            {record.duration_minutes != null ? <div><dt>Recorded time</dt><dd>{record.duration_minutes} min recorded</dd></div> : null}
+            {record.session_rpe != null ? <div><dt>Session effort</dt><dd>RPE {record.session_rpe}/10</dd></div> : null}
+            {record.effort ? <div><dt>Effort</dt><dd>{record.effort}</dd></div> : null}
+          </dl>
+        </section>
+        <div className={styles.recordContent}>
         {record.source === "external" ? <section className={styles.section}>
           {record.sport || record.session_type ? <dl className={styles.measurements}>
             {record.sport ? <div><dt>Sport</dt><dd>{sportLabel(record.sport)}</dd></div> : null}
@@ -152,7 +159,8 @@ export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = tr
           {record.modification_reason ? <p className={styles.note}>Modification: {record.modification_reason}</p> : null}
           {record.notes ? <p className={styles.note}>{record.notes}</p> : null}
           {record.takeaway ? <p className={styles.note}>Takeaway: {record.takeaway}</p> : null}</section> : null}
-      </> : null}
+        </div>
+      </div> : null}
     </div>
   </dialog>;
 }

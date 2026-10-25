@@ -54,13 +54,12 @@ async function openSheet(sessionRunning: boolean, block: StructuredBlock = tread
 test("in a preview the demo section starts open, paused on its tap-to-play frame", async () => {
   const { sheet, byTitle, others, cleanup } = await openSheet(false);
   try {
-    const demoSection = byTitle("Demo video");
-    assert.ok(demoSection);
-    assert.equal(demoSection.open, true);
+    assert.ok(sheet.querySelector('section[aria-label="Demo video"]'));
+    assert.equal(byTitle("Demo video"), undefined);
     // Paused: the facade (thumbnail + play button) shows; no player is loaded.
     assert.ok(sheet.querySelector('button[aria-label="Play Incline treadmill walk intervals demo"]'));
     assert.equal(sheet.querySelector(".ex-demo-player"), null);
-    assert.ok(others.length > 0);
+    assert.ok(sheet.querySelector('section[aria-label="Full prescription"]'));
     assert.ok(others.every((section) => !section.open));
   } finally {
     await cleanup();
@@ -142,17 +141,16 @@ test("sheet shows saved swaps, Easier and Progress once", async () => {
   });
   try {
     assert.equal(byTitle("Coaching cues"), undefined);
-    const lines = [...sheet.querySelectorAll(".sp-block-aside")];
-    for (const label of ["Cue", "Easier", "Swaps", "Progress"]) {
-      const matching = lines.filter(line => line.querySelector(".sp-stat-label")?.textContent === label);
-      assert.equal(matching.length, 1, label);
-      assert.equal(matching[0].closest("details"), null, label);
+    assert.equal(sheet.querySelectorAll(".ex-technique").length, 1);
+    const sections = [...sheet.querySelectorAll(".ex-alternative")];
+    for (const heading of ["Alternative", "Easier option", "Progression"]) {
+      assert.equal(sections.filter(section => section.querySelector("h3")?.textContent === heading).length, 1);
     }
     assert.equal(sheet.textContent?.split("Stay tall, no rail.").length, 2);
     assert.match(sheet.textContent ?? "", /Next D-28: add 1 round if recovered/);
     assert.ok(sheet.textContent?.includes("Easy bike intervals"));
     assert.match(sheet.querySelector(".ex-detail-stop")?.textContent ?? "", /dizziness/);
-    assert.equal(lines.filter(line => line.querySelector(".sp-stat-label")?.textContent === "Progress").length, 1);
+    assert.equal(sections.filter(section => section.querySelector("h3")?.textContent === "Progression").length, 1);
   } finally { await cleanup(); }
 });
 

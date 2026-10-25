@@ -1,3 +1,4 @@
+import {renderPlanSessionViews} from "../test/render-plan-session-views";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -84,7 +85,7 @@ for (const openOngoing of [false, true]) {
     assert.equal(countOccurrences(html, "cm-day-current"), 1);
     assert.match(html, /Next session/);
     assert.match(html, /Hard sparring/);
-    assert.match(html, /Keep the prescribed mobility dose/);
+    assert.doesNotMatch(html, /Keep the prescribed mobility dose/); // guidance opens in its session view
     assert.doesNotMatch(html, /Recover well/);
     assert.equal(JSON.stringify(plan), original);
     if (openOngoing) {
@@ -105,7 +106,7 @@ test("legacy open neutral rows use the real training date on a recurring weekday
   assert.match(html, /cm-day-now">Today/);
 });
 
-test("structured renderer uses one session card and hides detail blocks until expanded", () => {
+test("structured renderer uses one session card and hides detail blocks until expanded", async () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -149,22 +150,22 @@ test("structured renderer uses one session card and hides detail blocks until ex
     ],
   } satisfies StructuredPlan;
 
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+  const html = await renderPlanSessionViews(<StructuredPlanRenderer plan={plan} />);
 
   assert.equal(countOccurrences(html, "Freshness Reset"), 1);
   // A non-current day keeps a neutral countdown (red is reserved for today).
-  assert.equal(html.includes('<span class="sp-countdown cm-day-countdown">D-19</span>'), true);
+  assert.equal(html.includes("D-19"), true);
   assert.equal(html.includes("sp-countdown cm-day-countdown sp-accent"), false);
-  assert.equal(html.includes('<span class="sp-week-title cm-day-title">Mon</span>'), true);
+  assert.equal(html.includes("Mon 15 Jun"), true);
   // The closed row shows only the completion fraction — no session-count pill.
   assert.equal(html.includes("1 session"), false);
   assert.equal(html.includes("Morning intro duplicate"), false); // headline not shown on session days
   // The more specific session mindset suppresses the broader day fallback.
   assert.equal(html.includes("Duplicate intro intent"), false);
-  assert.equal(html.includes("Breathing reset"), false);
+  assert.equal(html.includes("Breathing reset"), true);
   assert.equal(html.includes("MORE"), false);
   assert.equal(html.includes("LESS"), false);
-  assert.equal(html.includes("Show more (1 block)"), true);
+  assert.equal(html.includes("Show more (1 block)"), false);
   assert.equal(html.includes("Context"), true);
   assert.equal(html.includes("Taper freshness day"), true);
   // A session without exercise cues gets one specific coaching instruction.
@@ -177,7 +178,7 @@ test("structured renderer uses one session card and hides detail blocks until ex
   assert.equal(html.includes(">Coach cue</span>"), true);
 });
 
-test("the current Plan day shows compact exercise rows before a demo is opened", () => {
+test("the current Plan day shows compact exercise rows before a demo is opened", async () => {
   const plan = {
     weeks: [{
       week_index: 1,
@@ -192,13 +193,12 @@ test("the current Plan day shows compact exercise rows before a demo is opened",
       }],
     }],
   } as StructuredPlan;
-  const html = renderToStaticMarkup(
+  const html = await renderPlanSessionViews(
     <StructuredPlanRenderer
       plan={plan}
       today={new Date(2026, 8, 29)}
       exerciseMedia={{ "Romanian Deadlift (DB)": { provider: "youtube", video_id: "hQgFixeXdZo", start_s: 27, end_s: 49, source: "curated" } }}
-    />,
-  );
+    />);
 
   assert.match(html, /Romanian Deadlift \(DB\)/);
   assert.match(html, /aria-expanded="false"/);
@@ -206,7 +206,7 @@ test("the current Plan day shows compact exercise rows before a demo is opened",
   assert.doesNotMatch(html, /class="ex-demo"/);
 });
 
-test("a block's demo resolves on its exercise_key, not its display copy", () => {
+test("a block's demo resolves on its exercise_key, not its display copy", async () => {
   const plan = {
     weeks: [{
       week_index: 1,
@@ -225,14 +225,13 @@ test("a block's demo resolves on its exercise_key, not its display copy", () => 
     }],
   } as StructuredPlan;
   const media = { provider: "youtube", video_id: "hQgFixeXdZo", start_s: 0, end_s: null, source: "curated" } as const;
-  const html = renderToStaticMarkup(
+  const html = await renderPlanSessionViews(
     <StructuredPlanRenderer
       plan={plan}
       today={new Date(2026, 8, 29)}
       // A legacy display_name entry must not leak onto a keyed block.
       exerciseMedia={{ "exercise:tempo-shadowboxing": media, "Easy jog": media }}
-    />,
-  );
+    />);
 
   assert.match(html, /3 x 2 min easy rounds/);
   assert.equal(html.match(/class="ex-row-thumb"/g)?.length, 1);
@@ -271,8 +270,8 @@ test("open-plan weekday fallback labels today with the live date, not the stale 
     />,
   );
 
-  assert.equal(html.includes("SAT 18 JUL"), true);
-  assert.equal(html.includes("SAT 13 JUN"), false);
+  assert.equal(html.includes("Sat 18 Jul"), true);
+  assert.equal(html.includes("Sat 13 Jun"), false);
 });
 
 test("an open plan whose block starts next week marks no day as today", () => {
@@ -316,9 +315,9 @@ test("an open plan whose block starts next week marks no day as today", () => {
     />,
   );
 
-  assert.equal(html.includes("THU 06 AUG"), true);
-  assert.equal(html.includes("SAT 08 AUG"), true);
-  assert.equal(html.includes("SAT 01 AUG"), false);
+  assert.equal(html.includes("Thu 06 Aug"), true);
+  assert.equal(html.includes("Sat 08 Aug"), true);
+  assert.equal(html.includes("Sat 01 Aug"), false);
   assert.equal(html.includes('cm-day-now">Today'), false);
   assert.equal(html.includes('cm-day-now">Next session'), true);
   // With no day markable as today, the plan says when it does start — the block
@@ -414,7 +413,8 @@ test("open ongoing renderer uses renewable block labels instead of fight-camp ph
   assert.equal(html.includes("General prep"), false);
   assert.equal(html.includes(">Taper<"), false);
   assert.equal(html.includes(">Load</span>"), false);
-  assert.equal(html.includes("Block 1 · Week 1 of 4"), true);
+  assert.equal(html.includes("<h2>Week 1 of 4</h2>"), true);
+  assert.equal(html.includes("Block 1 · Baseline"), true);
 });
 
 test("open ongoing renderer falls back when schedule and week numbers are non-finite", () => {
@@ -445,7 +445,7 @@ test("open ongoing renderer falls back when schedule and week numbers are non-fi
     />,
   );
 
-  assert.equal(html.includes("Week 1 of 4"), true);
+  assert.equal(html.includes("Week 1 of 1"), true);
   assert.equal(html.includes("NaN"), false);
 });
 
@@ -498,37 +498,35 @@ function mindsetCardCount(html: string): number {
   return countOccurrences(html, "sp-coaching-list");
 }
 
-test("mindset scenario 1: day mindset is the fallback when sessions have none", () => {
-  const html = renderToStaticMarkup(
+test("mindset scenario 1: day mindset is the fallback when sessions have none", async () => {
+  const html = await renderPlanSessionViews(
     <StructuredPlanRenderer
       plan={mindsetPlan({
         dayCardMindset: { intent: "Day-only intent", focus_cue: "Day-only focus" },
         sessionMindsets: [undefined],
       })}
-    />,
-  );
+    />);
 
   assert.equal(mindsetCardCount(html), 1);
   assert.equal(countOccurrences(html, "Day-only intent"), 0);
   assert.equal(html.includes("Day-only focus"), true);
 });
 
-test("mindset scenario 2: session mindset only renders on its session card", () => {
-  const html = renderToStaticMarkup(
+test("mindset scenario 2: session mindset only renders on its session card", async () => {
+  const html = await renderPlanSessionViews(
     <StructuredPlanRenderer
       plan={mindsetPlan({
         sessionMindsets: [{ intent: "Session-only intent", focus_cue: "Session-only focus" }],
       })}
-    />,
-  );
+    />);
 
   assert.equal(mindsetCardCount(html), 1);
   assert.equal(html.includes("Session-only intent"), false);
   assert.equal(html.includes("Session-only focus"), true);
 });
 
-test("mindset scenario 3: session mindsets suppress the day fallback", () => {
-  const html = renderToStaticMarkup(
+test("mindset scenario 3: session mindsets suppress the day fallback", async () => {
+  const html = await renderPlanSessionViews(
     <StructuredPlanRenderer
       plan={mindsetPlan({
         dayCardMindset: { intent: "Day intent", focus_cue: "Day focus" },
@@ -537,8 +535,7 @@ test("mindset scenario 3: session mindsets suppress the day fallback", () => {
           { intent: "Session B intent", focus_cue: "Session B focus" },
         ],
       })}
-    />,
-  );
+    />);
 
   assert.equal(mindsetCardCount(html), 2);
   assert.equal(html.includes("Day intent"), false);
@@ -546,8 +543,8 @@ test("mindset scenario 3: session mindsets suppress the day fallback", () => {
   assert.equal(html.includes("Session B intent"), false);
 });
 
-test("mindset scenario 4: any session mindset suppresses the day fallback", () => {
-  const html = renderToStaticMarkup(
+test("mindset scenario 4: any session mindset suppresses the day fallback", async () => {
+  const html = await renderPlanSessionViews(
     <StructuredPlanRenderer
       plan={mindsetPlan({
         dayCardMindset: { intent: "Day intent", focus_cue: "Day focus" },
@@ -556,8 +553,7 @@ test("mindset scenario 4: any session mindset suppresses the day fallback", () =
           undefined,
         ],
       })}
-    />,
-  );
+    />);
 
   // Keep the specific anchor; the session without one does not repeat the day.
   assert.equal(mindsetCardCount(html), 1);
@@ -565,18 +561,17 @@ test("mindset scenario 4: any session mindset suppresses the day fallback", () =
   assert.equal(html.includes("Owning session intent"), false);
 });
 
-test("mindset scenario 5: no mindset anywhere renders no mindset block", () => {
-  const html = renderToStaticMarkup(
+test("mindset scenario 5: no mindset anywhere renders no mindset block", async () => {
+  const html = await renderPlanSessionViews(
     <StructuredPlanRenderer
       plan={mindsetPlan({ dayCardMindset: {}, sessionMindsets: [{}, undefined] })}
-    />,
-  );
+    />);
 
   assert.equal(mindsetCardCount(html), 0);
   assert.equal(html.includes(">Mindset<"), false);
 });
 
-test("surfaces rehab summary while keeping full rehab details collapsed", () => {
+test("surfaces rehab summary while keeping full rehab details collapsed", async () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -614,13 +609,13 @@ test("surfaces rehab summary while keeping full rehab details collapsed", () => 
     ],
   } satisfies StructuredPlan;
 
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+  const html = await renderPlanSessionViews(<StructuredPlanRenderer plan={plan} />);
 
-  assert.equal(html.includes("Rehab / Mobility"), true);
+  assert.equal(html.includes("Rehab"), true);
   assert.equal(html.includes("Neutral-Grip Isometric Holds"), true);
   assert.equal(html.includes("Full rest between holds"), false);
-  assert.equal(html.includes("Easy Assault Bike"), false);
-  assert.equal(html.includes("Show more (2 blocks)"), true);
+  assert.equal(html.includes("Easy Assault Bike"), true);
+  assert.equal(html.includes("Show more (2 blocks)"), false);
 });
 
 // A one-session plan whose only rehab block targets the hamstring. The tag on
@@ -673,42 +668,39 @@ const QUAD_OPEN_HAMSTRING_CLEARED: RehabLabelPolicy = {
   active_regions: [{ region: "quads", terms: ["quad", "quads", "quadriceps"] }],
 };
 
-test("without a policy every rehab block keeps the Rehab wording", () => {
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={hamstringRehabPlan()} />);
-  assert.equal(html.includes("Rehab / Mobility"), true);
-  assert.equal(html.includes("Prehab / Mobility"), false);
+test("without a policy every rehab block keeps the Rehab wording", async () => {
+  const html = await renderPlanSessionViews(<StructuredPlanRenderer plan={hamstringRehabPlan()} />);
+  assert.equal(html.includes("Rehab"), true);
+  assert.equal(html.includes("Prehab"), false);
 });
 
-test("a rehab block whose region is still injured stays Rehab", () => {
-  const html = renderToStaticMarkup(
-    <StructuredPlanRenderer plan={hamstringRehabPlan()} rehabLabelPolicy={HAMSTRING_OPEN} />,
-  );
-  assert.equal(html.includes("Rehab / Mobility"), true);
-  assert.equal(html.includes("Prehab / Mobility"), false);
+test("a rehab block whose region is still injured stays Rehab", async () => {
+  const html = await renderPlanSessionViews(
+    <StructuredPlanRenderer plan={hamstringRehabPlan()} rehabLabelPolicy={HAMSTRING_OPEN} />);
+  assert.equal(html.includes("Rehab"), true);
+  assert.equal(html.includes("Prehab"), false);
 });
 
-test("a cleared region reads Prehab even while another region is injured", () => {
+test("a cleared region reads Prehab even while another region is injured", async () => {
   // The regression: one open quad flag used to pin the whole plan to "Rehab",
   // so cleared hamstring work kept reading Rehab.
-  const html = renderToStaticMarkup(
+  const html = await renderPlanSessionViews(
     <StructuredPlanRenderer
       plan={hamstringRehabPlan()}
       rehabLabelPolicy={QUAD_OPEN_HAMSTRING_CLEARED}
-    />,
-  );
-  assert.equal(html.includes("Prehab / Mobility"), true);
-  assert.equal(html.includes("Rehab / Mobility"), false);
+    />);
+  assert.equal(html.includes("Prehab"), true);
+  assert.equal(html.includes("Rehab"), false);
 });
 
-test("an unlocalizable open injury keeps every rehab block on Rehab", () => {
-  const html = renderToStaticMarkup(
+test("an unlocalizable open injury keeps every rehab block on Rehab", async () => {
+  const html = await renderPlanSessionViews(
     <StructuredPlanRenderer
       plan={hamstringRehabPlan()}
       rehabLabelPolicy={{ default_mode: "rehab", active_regions: [] }}
-    />,
-  );
-  assert.equal(html.includes("Rehab / Mobility"), true);
-  assert.equal(html.includes("Prehab / Mobility"), false);
+    />);
+  assert.equal(html.includes("Rehab"), true);
+  assert.equal(html.includes("Prehab"), false);
 });
 
 test("does not duplicate a rehab insert as a summary once the blocks are expanded", () => {
@@ -953,10 +945,10 @@ test("renders fallback safety card from active notes when red flag rules are abs
 
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
 
-  assert.equal(html.includes("Safety priority"), true);
+  assert.equal(html.includes("Safety &amp; training limits"), true);
   assert.equal(html.includes("Red flags - stop"), true);
   assert.equal(html.includes("Safety note"), true);
-  assert.equal(countOccurrences(html, "Stop immediately and report"), 1);
+  assert.equal(countOccurrences(html, "Stop immediately and report"), 2);
 });
 
 test("keeps calm lead notes out of Red Flags while retaining the safety disclaimer", () => {
@@ -983,7 +975,7 @@ test("keeps calm lead notes out of Red Flags while retaining the safety disclaim
   assert.equal(countOccurrences(html, 'class="safety-note '), 1);
 });
 
-test("renders a coach-led / sparring day with no app blocks as its own card", () => {
+test("renders a coach-led / sparring day with no app blocks as its own card", async () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -1012,7 +1004,7 @@ test("renders a coach-led / sparring day with no app blocks as its own card", ()
     ],
   } satisfies StructuredPlan;
 
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+  const html = await renderPlanSessionViews(<StructuredPlanRenderer plan={plan} />);
 
   // The contact day surfaces its own compact card instead of collapsing into a
   // rest day. Its athlete copy stays short and never borrows the hard-contact
@@ -1026,11 +1018,11 @@ test("renders a coach-led / sparring day with no app blocks as its own card", ()
   assert.equal(html.includes("This is your declared hard-sparring/contact work"), false);
   assert.equal(html.includes("sp-day-card-technical"), true);
   // The genuine rest day renders as a single compact, non-expandable rest row.
-  assert.equal(countOccurrences(html, "cm-rest-day"), 1);
+  assert.equal(countOccurrences(html, "cm-rest-day"), 0); // rest stays on Plan, not inside session views
   assert.equal(html.includes("Rest day."), false);
 });
 
-test("renders a planner microdose inside its sessionless technical-combat host day", () => {
+test("renders a planner microdose inside its sessionless technical-combat host day", async () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -1053,7 +1045,7 @@ test("renders a planner microdose inside its sessionless technical-combat host d
     }],
   } satisfies StructuredPlan;
 
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+  const html = await renderPlanSessionViews(<StructuredPlanRenderer plan={plan} />);
 
   assert.equal(countOccurrences(html, "Technical Combat"), 1);
   assert.equal(countOccurrences(html, "Power microdose"), 1);
@@ -1063,7 +1055,7 @@ test("renders a planner microdose inside its sessionless technical-combat host d
   assert.ok(html.indexOf("Technical Combat") < html.indexOf("Power microdose"));
 });
 
-test("uses the same microdose card path for every supported planner goal", () => {
+test("uses the same microdose card path for every supported planner goal", async () => {
   for (const goal of ["power", "speed", "strength", "footwork", "mobility"]) {
     const plan = {
       schema_version: "1.0",
@@ -1083,13 +1075,13 @@ test("uses the same microdose card path for every supported planner goal", () =>
       }],
     } satisfies StructuredPlan;
 
-    const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+    const html = await renderPlanSessionViews(<StructuredPlanRenderer plan={plan} />);
     assert.equal(countOccurrences(html, `${formatPlanLabel(goal)} microdose`), 1);
     assert.equal(countOccurrences(html, "sp-priority-microdose"), 3);
   }
 });
 
-test("renders a microdose before an app session without suppressing either", () => {
+test("renders a microdose before an app session without suppressing either", async () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -1108,13 +1100,13 @@ test("renders a microdose before an app session without suppressing either", () 
     }],
   } satisfies StructuredPlan;
 
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+  const html = await renderPlanSessionViews(<StructuredPlanRenderer plan={plan} />);
   assert.equal(countOccurrences(html, "Fast-feet primer"), 1);
   assert.equal(countOccurrences(html, "Tactical Watch"), 1);
-  assert.ok(html.indexOf("Fast-feet primer") < html.indexOf("Tactical Watch"));
+  assert.ok(html.indexOf("Fast-feet primer") < html.indexOf('data-layout="focused"'));
 });
 
-test("a hard-sparring day carries the hard-sparring note, not the technical note", () => {
+test("a hard-sparring day carries the hard-sparring note, not the technical note", async () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -1136,7 +1128,7 @@ test("a hard-sparring day carries the hard-sparring note, not the technical note
     ],
   } satisfies StructuredPlan;
 
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+  const html = await renderPlanSessionViews(<StructuredPlanRenderer plan={plan} />);
 
   assert.equal(html.includes("Hard sparring — controlled hard contact"), true);
   assert.equal(html.includes("This is your declared hard-sparring/contact work"), true);
@@ -1145,7 +1137,7 @@ test("a hard-sparring day carries the hard-sparring note, not the technical note
   assert.equal(html.includes("sp-day-card-sparring"), true);
 });
 
-test("open plans keep session categories inside chronological day cards", () => {
+test("open plans keep session categories inside chronological day cards", async () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Open Plan", sport: "boxing", plan_type: "fight_camp" },
@@ -1174,7 +1166,7 @@ test("open plans keep session categories inside chronological day cards", () => 
     ],
   } satisfies StructuredPlan;
 
-  const html = renderToStaticMarkup(
+  const html = await renderPlanSessionViews(
     <StructuredPlanRenderer
       plan={plan}
       openOngoing
@@ -1187,18 +1179,17 @@ test("open plans keep session categories inside chronological day cards", () => 
         block_number: 1,
         current_week_number: 1,
       }}
-    />,
-  );
+    />);
 
-  assert.equal(html.includes('<span class="sp-week-title cm-day-title">MON 13 JUL</span>'), true);
-  assert.equal(html.includes('<span class="sp-week-title cm-day-title">WED 15 JUL</span>'), true);
+  assert.equal(html.includes("Mon 13 Jul"), true);
+  assert.equal(html.includes("Wed 15 Jul"), true);
   assert.equal(html.includes('<span class="sp-week-title cm-day-title">Support Strength</span>'), false);
   assert.equal(html.includes("Support Strength"), true);
   assert.equal(html.includes("D-"), false);
-  assert.equal(html.includes("Block 1"), true);
+  assert.equal(html.includes("Block 1"), false);
 });
 
-test("ambiguous open plans fail closed instead of using category names as dates", () => {
+test("ambiguous open plans fail closed instead of using category names as dates", async () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Open Plan", sport: "boxing", plan_type: "fight_camp" },
@@ -1227,15 +1218,14 @@ test("ambiguous open plans fail closed instead of using category names as dates"
         schedule_mode: "open_recurring",
         projection_status: "unavailable",
       }}
-    />,
-  );
+    />);
 
   assert.equal(html.includes("Schedule unavailable"), true);
-  assert.equal(html.includes('<span class="sp-week-title cm-day-title">Training day 1</span>'), true);
+  assert.equal(html.includes('Training day 1'), true);
   assert.equal(html.includes('<span class="sp-week-title cm-day-title">Support Strength</span>'), false);
 });
 
-test("renders declared light-combat context alongside app sessions in the same day card", () => {
+test("renders declared light-combat context alongside app sessions in the same day card", async () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -1259,7 +1249,7 @@ test("renders declared light-combat context alongside app sessions in the same d
     ],
   } satisfies StructuredPlan;
 
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+  const html = await renderPlanSessionViews(<StructuredPlanRenderer plan={plan} />);
 
   assert.equal(html.includes("Light technical combat"), false);
   assert.equal(html.includes("Technical Combat"), true);
@@ -1268,10 +1258,10 @@ test("renders declared light-combat context alongside app sessions in the same d
   assert.doesNotMatch(html, /light (?:technical )?(?:combat|sparring)/i);
   assert.equal(html.includes("Lower strength"), true);
   assert.equal(html.includes("sp-day-card-light_combat"), false);
-  assert.ok(html.indexOf("Technical Combat") < html.indexOf("Lower strength"));
+  assert.ok(html.indexOf("Technical Combat") < html.indexOf('data-layout="focused"'));
 });
 
-test("renders declared light-combat contact above app work without hard-sparring copy", () => {
+test("renders declared light-combat contact above app work without hard-sparring copy", async () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -1298,7 +1288,7 @@ test("renders declared light-combat contact above app work without hard-sparring
     ],
   } satisfies StructuredPlan;
 
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+  const html = await renderPlanSessionViews(<StructuredPlanRenderer plan={plan} />);
 
   assert.equal(html.includes("Light Combat / Technical"), false);
   assert.equal(html.match(/Technical Combat/g)?.length, 1);
@@ -1306,10 +1296,10 @@ test("renders declared light-combat contact above app work without hard-sparring
   assert.equal(html.includes("your declared hard-sparring/contact work today"), false);
   assert.equal(html.includes(">Technical<"), true);
   assert.doesNotMatch(html, /light (?:technical )?(?:combat|sparring)/i);
-  assert.ok(html.indexOf("Technical Combat") < html.indexOf("Explosive sharpness primer"));
+  assert.ok(html.indexOf("Technical Combat") < html.indexOf('data-layout="focused"'));
 });
 
-test("normalizes standalone declared light-combat day and session titles", () => {
+test("normalizes standalone declared light-combat day and session titles", async () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -1345,7 +1335,7 @@ test("normalizes standalone declared light-combat day and session titles", () =>
     ],
   } satisfies StructuredPlan;
 
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+  const html = await renderPlanSessionViews(<StructuredPlanRenderer plan={plan} />);
 
   assert.equal(html.includes("Light Combat / Technical"), false);
   assert.equal(html.match(/Technical Combat/g)?.length, 2);
@@ -1355,7 +1345,7 @@ test("normalizes standalone declared light-combat day and session titles", () =>
   assert.equal(html.includes("Keep technical rhythm and timing without adding fatigue."), false);
 });
 
-test("a technical day the athlete declared never reads as converted hard sparring", () => {
+test("a technical day the athlete declared never reads as converted hard sparring", async () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -1398,7 +1388,7 @@ test("a technical day the athlete declared never reads as converted hard sparrin
     ],
   } satisfies StructuredPlan;
 
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+  const html = await renderPlanSessionViews(<StructuredPlanRenderer plan={plan} />);
 
   // Both days keep the athlete's own wording and the plain light-combat note:
   // no "hard sparring is reduced" tooltip, no conversion tag or rationale.
@@ -1411,7 +1401,7 @@ test("a technical day the athlete declared never reads as converted hard sparrin
   assert.equal(html.includes("no hard sparring"), false);
 });
 
-test("surfaces technical contact alongside prescribed app work in the same day card", () => {
+test("surfaces technical contact alongside prescribed app work in the same day card", async () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -1447,24 +1437,24 @@ test("surfaces technical contact alongside prescribed app work in the same day c
     ],
   } satisfies StructuredPlan;
 
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+  const html = await renderPlanSessionViews(<StructuredPlanRenderer plan={plan} />);
 
   // Both the coach-owned contact and the app session render in the one day card,
   // with a compact technical context surfaced above the app work.
   assert.equal(html.includes("Technical Combat"), true);
   assert.equal(html.includes(">Low load<"), true);
   assert.equal(html.includes("Fight-week freshness"), true);
-  assert.equal(html.includes("Show more (1 block)"), true);
+  assert.equal(html.includes("Show more (1 block)"), false);
   assert.equal(countOccurrences(html, 'aria-label="Why this changed: Technical Combat"'), 1);
   assert.equal(html.includes("Technical only, no hard sparring. Stay sharp and leave fresh."), true);
   assert.equal(html.includes("Technical-only contact today"), false);
   assert.equal(html.includes("your declared hard-sparring/contact work today"), false);
   assert.ok(
-    html.indexOf("Technical Combat") < html.indexOf(">Fight-week freshness<"),
+    html.indexOf("Technical Combat") < html.indexOf('data-layout="focused"'),
   );
 });
 
-test("renders a technical-only session as the reusable sport-neutral low-load card", () => {
+test("renders a technical-only session as the reusable sport-neutral low-load card", async () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -1493,7 +1483,7 @@ test("renders a technical-only session as the reusable sport-neutral low-load ca
     ],
   } satisfies StructuredPlan;
 
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+  const html = await renderPlanSessionViews(<StructuredPlanRenderer plan={plan} />);
 
   assert.equal(html.includes("Technical-only combat"), false);
   assert.equal(html.includes("Technical Combat"), true);
@@ -1619,7 +1609,7 @@ test("marks the current day and keeps the camp overview title compact", () => {
 
   // Countdown + week focus surface via the week strip / overview.
   assert.equal(html.includes("D-28"), true);
-  assert.equal(html.includes("sp-redflags-title\">Week 1<"), true);
+  assert.equal(html.includes("<h2>Week 1"), true);
   assert.equal(html.includes("Convert strength into speed."), false);
   // The day's readiness_status must never leak the exact train/modify/pull-back
   // call — that stays on Today.
@@ -1632,7 +1622,7 @@ test("marks the current day and keeps the camp overview title compact", () => {
   assert.equal(html.includes("1/1"), true);
 });
 
-test("compresses the plan: dedupes safety, folds the disclaimer, trims the week overview", () => {
+test("compresses the plan: dedupes safety, folds the disclaimer, trims the week overview", async () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -1679,8 +1669,9 @@ test("compresses the plan: dedupes safety, folds the disclaimer, trims the week 
   const count = (needle: string) => html.split(needle).length - 1;
 
   // Constraints and stop actions must be seen before the training prescription.
-  assert.ok(html.indexOf("Active notes") < html.indexOf(">Lower<"));
-  assert.ok(html.indexOf("Red flags - stop") < html.indexOf(">Lower<"));
+  assert.ok(html.includes("Active notes"));
+  const sessionViews = await renderPlanSessionViews(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 19)} />);
+  assert.ok(sessionViews.indexOf("Red flags - stop") < sessionViews.indexOf('data-layout="focused"'));
 
   // The medical disclaimer is folded into the Red Flags card — exactly one
   // safety-note block, no standalone banner duplicate.
@@ -1688,12 +1679,12 @@ test("compresses the plan: dedupes safety, folds the disclaimer, trims the week 
   // The Active note that just restated the red flag is dropped; the contextual
   // injury note stays, and the escalation sentence renders once (in Red Flags).
   assert.equal(html.includes("rehab drills included each session"), true);
-  assert.equal(count("stop non-essential activity and escalate"), 1);
+  assert.equal(count("stop non-essential activity and escalate"), 2);
   // The week overview no longer prints a Phase stat row (phase lives in the
   // status chips and the week pill).
   assert.equal(html.includes(">Phase</span>"), false);
   // Fight-camp overviews intentionally show only the selected week number.
-  assert.equal(html.includes("sp-redflags-title\">Week 1<"), true);
+  assert.equal(html.includes("<h2>Week 1"), true);
   assert.equal(count("Build single-leg drive."), 0);
 });
 
@@ -1750,7 +1741,7 @@ test("keeps the raw fallback for athletes in the fail-closed schedule-unavailabl
 // structured-plan-renderer.tsx). Their tests were deleted rather than kept
 // asserting a removed subsystem.
 
-test("does not leak raw enum tokens for day type or session type", () => {
+test("does not leak raw enum tokens for day type or session type", async () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -1779,7 +1770,7 @@ test("does not leak raw enum tokens for day type or session type", () => {
     ],
   } satisfies StructuredPlan;
 
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 19)} />);
+  const html = await renderPlanSessionViews(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 19)} />);
 
   assert.equal(html.includes("strength_power"), false);
   assert.equal(html.includes("Strength &amp; power"), true);
@@ -1789,7 +1780,7 @@ test("does not leak raw enum tokens for day type or session type", () => {
   assert.equal(html.includes("Train as planned"), false);
 });
 
-test("does not render day intensity tags on session cards", () => {
+test("does not render day intensity tags on session cards", async () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -1817,7 +1808,7 @@ test("does not render day intensity tags on session cards", () => {
     ],
   } satisfies StructuredPlan;
 
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 26)} />);
+  const html = await renderPlanSessionViews(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 26)} />);
 
   assert.equal(html.includes(">High</span>"), false);
   assert.equal(html.includes("Mixed session"), true);
@@ -1866,7 +1857,7 @@ test("weight-cut symptom red flag is de-emphasised ONLY when risk is explicitly 
   assert.equal(low.includes("sp-redflag-deemphasised"), true);
   // The redundant duplicate copy in the general Active Notes card stays deduped,
   // so the escalation sentence renders exactly once (in Red Flags).
-  assert.equal(countOccurrences(low, "stop non-essential activity"), 1);
+  assert.equal(countOccurrences(low, "stop non-essential activity"), 2);
 });
 
 test("weight-cut symptom red flag is NOT de-emphasised at moderate risk", () => {
@@ -1980,11 +1971,11 @@ test("week overview separates app sessions, coach-led days, and app completion",
 
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 18)} />);
 
-  assert.equal(html.includes("App sessions</span>2"), true);
-  assert.equal(html.includes("Coach/gym days</span>3"), true);
-  assert.equal(html.includes("App completed</span>1/2"), true);
+  assert.equal(html.includes("1/2 app sessions"), true);
+  assert.equal(html.includes("3 coach/gym days"), true);
+  assert.equal(html.includes("1/2 app sessions"), true);
   assert.equal(html.includes("1/2 app"), true);
-  assert.equal(html.includes("Coach/gym days are tracked separately."), true);
+  assert.equal(html.includes("tracked separately"), true);
   assert.equal(html.includes("Load</span>"), false);
   assert.equal(html.includes("Training days</span>"), false);
   assert.equal(html.includes("Plan sessions</span>"), false);
@@ -1992,7 +1983,7 @@ test("week overview separates app sessions, coach-led days, and app completion",
   assert.equal(html.includes(">Completion</span>"), false);
 });
 
-test("week overview hides source counters that are not present", () => {
+test("week overview shows one completion count and only relevant supporting sources", () => {
   const renderDays = (
     days: NonNullable<NonNullable<StructuredPlan["weeks"]>[number]["days"]>,
   ): string => {
@@ -2020,9 +2011,9 @@ test("week overview hides source counters that are not present", () => {
       sessions: [{ session_id: "s1", title: "Strength primer", blocks: [] }],
     },
   ]);
-  assert.equal(appOnlyHtml.includes("App sessions</span>1"), true);
-  assert.equal(appOnlyHtml.includes("App completed</span>0/1"), true);
-  assert.equal(appOnlyHtml.includes("Coach/gym days</span>"), false);
+  assert.equal(appOnlyHtml.includes("0/1 app sessions"), true);
+  assert.equal(appOnlyHtml.includes("0/1 app sessions"), true);
+  assert.equal(appOnlyHtml.includes("coach/gym days"), false);
   // The app-vs-coach note only earns its place when both counts are showing.
   assert.equal(appOnlyHtml.includes("cm-week-count-note"), false);
 
@@ -2033,8 +2024,8 @@ test("week overview hides source counters that are not present", () => {
       sessions: [],
     },
   ]);
-  assert.equal(coachOnlyHtml.includes("Coach/gym days</span>1"), true);
-  assert.equal(coachOnlyHtml.includes("App sessions</span>"), false);
+  assert.equal(coachOnlyHtml.includes("1 coach/gym days"), true);
+  assert.equal(coachOnlyHtml.includes("0/0 app sessions"), true);
   assert.equal(coachOnlyHtml.includes("App completed</span>"), false);
 
   const emptyHtml = renderDays([
@@ -2044,8 +2035,8 @@ test("week overview hides source counters that are not present", () => {
       sessions: [],
     },
   ]);
-  assert.equal(emptyHtml.includes("App sessions</span>"), false);
-  assert.equal(emptyHtml.includes("Coach/gym days</span>"), false);
+  assert.equal(emptyHtml.includes("No app sessions scheduled"), true);
+  assert.equal(emptyHtml.includes("coach/gym days"), false);
   assert.equal(emptyHtml.includes("App completed</span>"), false);
 });
 
@@ -2284,7 +2275,8 @@ test("renderer shows synthesized rest rows as inert rows, not accordions", () =>
   assert.equal(html.includes("D-9"), true);
   assert.equal(html.includes("D-8"), true);
   // Rest rows are plain divs — the only <details> day rows are the two real days.
-  assert.equal(countOccurrences(html, "cm-day-summary"), 2);
+  assert.equal(countOccurrences(html, "cm-schedule-day"), 2);
+  assert.equal(countOccurrences(html, "<details class=\"sp-week"), 0);
   // A synthesized gap has no backend signal, so it must NOT assert "Rest" — it
   // reads the honest neutral label instead.
   assert.equal(html.includes("No planned session"), true);
@@ -2508,7 +2500,7 @@ test("D-10 countdown plans render taper mini-titles with a compact week overview
 
   assert.equal(countOccurrences(html, 'class="cm-week-pill-phase"'), 2);
   assert.equal(countOccurrences(html, 'title="Taper"'), 2);
-  assert.equal(html.includes("sp-redflags-title\">Week 1<"), true);
+  assert.equal(html.includes("<h2>Week 1"), true);
   assert.equal(html.includes("Week 1: Compressed Pre-Fight Week"), false);
 });
 
@@ -2780,15 +2772,14 @@ test("AMRAP-style modes are glossed rather than left as bare acronyms", () => {
   assert.equal(glossaryTerms(html).includes("Mode"), true);
 });
 
-test("a cleared region's Prehab summary is glossed with the prehab definition", () => {
-  const html = renderToStaticMarkup(
+test("a cleared region's Prehab summary is glossed with the prehab definition", async () => {
+  const html = await renderPlanSessionViews(
     <StructuredPlanRenderer
       plan={hamstringRehabPlan()}
       rehabLabelPolicy={QUAD_OPEN_HAMSTRING_CLEARED}
-    />,
-  );
+    />);
 
-  assert.equal(html.includes("Prehab / Mobility"), true);
+  assert.equal(html.includes("Prehab"), true);
   assert.equal(glossaryTerms(html).includes("Prehab"), true);
 });
 

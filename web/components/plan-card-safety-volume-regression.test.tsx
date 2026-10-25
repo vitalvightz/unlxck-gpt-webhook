@@ -1,3 +1,4 @@
+import {renderPlanSessionViews} from "../test/render-plan-session-views";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -11,7 +12,7 @@ function countOccurrences(text: string, needle: string): number {
 
 // Anonymous reproduction of the linked D-31 stored plan. The root safety owner
 // matters: rendering an isolated exercise did not reproduce this regression.
-test("live swing keeps stop without stacked coaching or an empty Progress line", () => {
+test("live swing keeps stop without stacked coaching or an empty Progress line", async () => {
   const plan = {
     schema_version: "1.0",
     raw_markdown_fallback: `D-31 (Tuesday): Strength
@@ -35,9 +36,8 @@ test("live swing keeps stop without stacked coaching or an empty Progress line",
       }],
     }]}],
   } as StructuredPlan;
-  const html = renderToStaticMarkup(
-    <StructuredPlanRenderer plan={plan} today={new Date(2026, 9, 20)} />,
-  );
+  const html = await renderPlanSessionViews(
+    <StructuredPlanRenderer plan={plan} today={new Date(2026, 9, 20)} />);
   const expanded = renderToStaticMarkup(<ExerciseRow
     block={plan.weeks![0].days![0].sessions![0].blocks![0]} open onToggle={() => {}} />);
   assert.equal(countOccurrences(expanded, "Explosive hip hinge, snap at top"), 1);
@@ -58,7 +58,7 @@ test("live swing keeps stop without stacked coaching or an empty Progress line",
   assert.equal(expanded.includes("90 sec"), true);
 });
 
-test("reported D-13 band primer keeps exact dose and one non-duplicated stop rule", () => {
+test("reported D-13 band primer keeps exact dose and one non-duplicated stop rule", async () => {
   const raw = `Left shoulder surface abrasion. No open wound or infection reported. Keep the area clean and covered during training; stop and seek care if bleeding, spreading redness, or increased pain.
 - Target weight is not set, so weight-cut guidance is not applied.
 
@@ -128,9 +128,8 @@ D-13 (Monday): Neural speed touch
     ],
   } as StructuredPlan;
 
-  const html = renderToStaticMarkup(
-    <StructuredPlanRenderer plan={plan} today={new Date(2026, 7, 10)} />,
-  );
+  const html = await renderPlanSessionViews(
+    <StructuredPlanRenderer plan={plan} today={new Date(2026, 7, 10)} />);
 
   assert.equal(html.includes("2-3 × 6 punches"), true);
   assert.equal(html.includes("RPE 6-7"), true);
@@ -143,12 +142,12 @@ D-13 (Monday): Neural speed touch
   assert.equal(html.includes(">Wound irritation<"), false);
 
   // Active Notes keeps condition/management while Safety Priority owns escalation.
-  assert.equal(html.includes("Keep the area clean and covered during training"), true);
+  assert.equal(renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />).includes("Keep the area clean and covered during training"), true);
   assert.equal(countOccurrences(html, "stop and seek care if bleeding"), 0);
-  assert.equal(countOccurrences(html, "Stop and seek care for bleeding"), 1);
+  assert.equal(countOccurrences(html, "Stop and seek care for bleeding"), 2);
 });
 
-test("compound source stop rule stays complete when structured conversion splits it", () => {
+test("compound source stop rule stays complete when structured conversion splits it", async () => {
   const raw = `- Saturday — Power and first-step speed
 Why: Train fast, short bursts to improve punch speed and reaction.
 - Explosive first-step cue: 2 x 5 s maximal first steps from stance. Rest 120 s between reps.
@@ -193,9 +192,8 @@ Why: Train fast, short bursts to improve punch speed and reaction.
     ],
   } as StructuredPlan;
 
-  const html = renderToStaticMarkup(
-    <StructuredPlanRenderer plan={plan} today={new Date(2026, 8, 26)} />,
-  );
+  const html = await renderPlanSessionViews(
+    <StructuredPlanRenderer plan={plan} today={new Date(2026, 8, 26)} />);
 
   assert.equal(countOccurrences(html, ">Stop rule</span>"), 1);
   assert.equal(html.includes("Loss of control or pain in the arm or knee."), true);

@@ -40,6 +40,10 @@ import {
 } from "@/lib/push";
 import { QuickBuildRefinementBanner } from "@/components/quick-build-refinement-banner";
 import { ContextualFeedback } from "@/components/feedback/contextual-feedback";
+import { useAppSession } from "@/components/auth-provider";
+import { hasHealthDataConsent } from "@/lib/compliance";
+import { TodaySessionPanel } from "@/components/today/today-session-panel";
+import type { TodayCommandView } from "@/lib/types";
 import { StructuredPlanRenderer } from "@/components/structured-plan-renderer";
 import { ExerciseCustomisationProvider, type ExerciseCustomisation } from "@/components/exercise-customisation";
 import { patchPlanSession } from "@/lib/exercise-customisation";
@@ -1644,6 +1648,8 @@ type PlanOperationalState = {
   nextSessionFocusDate?: Date;
   nextSessionAction: TodaySession | null;
   planCompletions: PlanCompletionsResponse | null;
+  command: TodayCommandView | null;
+  commandUnavailable?: boolean;
 };
 
 export function PlanViewer({
@@ -1662,6 +1668,7 @@ export function PlanViewer({
   onPlanDeleted?: () => Promise<void> | void;
 }) {
   const router = useRouter();
+  const { me } = useAppSession();
   const canUseAdminOutputs = canUseAdminPlanControls(viewerRole, Boolean(plan.admin_outputs));
   const isViewerAdmin = isAdminRole(viewerRole);
   const canManagePlan = viewerRole === "admin" || viewerRole === "athlete";
@@ -2013,6 +2020,7 @@ export function PlanViewer({
             activeEndpointResolved: activeResult.status === "fulfilled",
             activeEndpointPlanId: activeFromEndpoint,
           }),
+          command: isThisActivePlan ? state : null,
           nextSessionAction: isThisActivePlan && next ? next : null,
           nextSessionFocusDate:
             parsed && !Number.isNaN(parsed.getTime()) ? parsed : undefined,
@@ -2385,7 +2393,10 @@ export function PlanViewer({
         nextSessionFocusDate:
           current?.planId === plan.plan_id ? current.nextSessionFocusDate : undefined,
         planCompletions: current?.planId === plan.plan_id ? current.planCompletions : null,
+        command: null, // Activation must resolve fresh readiness before starting.
+
       }));
+      void refreshSessionControls().catch(() => undefined);
       requestXpRefresh();
       setShowActiveConflict(false);
     } catch (error) {
@@ -2669,21 +2680,104 @@ export function PlanViewer({
     },
   ];
 
-  return (
-    <div className="page">
+  async function refreshSessionControls() {
+    if (!accessToken) return;
+    try {
+      const [command, completions] = await Promise.all([getToday(accessToken), getPlanCompletions(accessToken, plan.plan_id)]);
+      setPlanOperationalState(current => current?.planId === plan.plan_id ? {
+        ...current,
+        command: command.active_plan.id === plan.plan_id ? command : null,
+        commandUnavailable: false,
+        nextSessionAction: command.active_plan.id === plan.plan_id ? command.today.next_session : null,
+        planCompletions: completions,
+      } : current);
+    } catch (error) {
+      setPlanOperationalState(current => current?.planId === plan.plan_id ? { ...current, commandUnavailable: true } : current);
+      throw error;
+    }
+  }
+  const renderSessionControls = (day: StructuredDay, session: StructuredSession | undefined) => {
+    const command = currentOperationalState?.command;
+    if (!accessToken || !isCurrentActivePlan || archivedPreview || !command
+      || day.date?.slice(0, 10) !== command.today.training_day
+      || (session && session.session_id !== command.today.next_session.session_id)) return null;
+    return <TodaySessionPanel presentation="controls" state={command} commandUnavailable={currentOperationalState?.commandUnavailable}
+      structuredPlan={plan.outputs.structured_plan ?? null}
+      planSchedule={{ scheduleContext: plan.schedule_context ?? null, createdAt: plan.created_at }}
+      rehabLabelPolicy={rehabLabelPolicy} exerciseMedia={plan.outputs.exercise_media}
+      token={accessToken} onRefresh={refreshSessionControls} painReasonAllowed={hasHealthDataConsent(me)}
+      professionalStatus={me?.profile.professional_status}
+      onPlanSessionChanged={exerciseCustomisation?.onSessionChanged} athleteFullName={plan.full_name} />;
+  };
+
+  const integrateOverview = hasPublishedPlan && !isTriageBlocked && useSavedStructuredPlan
+    && Boolean(plan.outputs.structured_plan?.weeks?.length);
+  const planManagement = canManagePlan || isViewerAdmin || hasPublishedPlan ? (
+    <details className="plan-action-menu">
+      <summary className="ghost-button">Manage</summary>
+      <div className="plan-action-menu-popover">
+        {integrateOverview ? <Link href="/plans" className="ghost-button">All plans</Link> : null}
+        {integrateOverview && plan.custom_plan_id && plan.athlete_id === viewerProfileId ? (
+          <Link className="ghost-button" href={`/plans/custom?plan=${plan.custom_plan_id}`}>Edit Plan</Link>
+        ) : null}
+        <p className="plan-created-at muted">Created {formatPlanTimestamp(plan.created_at)}</p>
+        {canManagePlan && !archivedPreview ? (
+          <>
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={handleRenamePlan}
+              disabled={planActionPending !== null}
+            >
+              {planActionPending === "rename" ? "Renaming..." : "Rename"}
+            </button>
+            <button
+              type="button"
+              className="ghost-button danger-button"
+              onClick={handleArchiveOwnPlan}
+              disabled={planActionPending !== null}
+            >
+              {planActionPending === "archive" ? "Archiving..." : "Archive"}
+            </button>
+          </>
+        ) : null}
+        {hasPublishedPlan && athletePlanText ? (
+          <QuickCopyButton text={athletePlanText} artifactKey="athlete-plan" />
+        ) : null}
+        {isViewerAdmin ? (
+          <button
+            type="button"
+            className="ghost-button danger-button"
+            onClick={handlePermanentDelete}
+            disabled={planActionPending !== null}
+          >
+            {planActionPending === "permanent-delete" ? "Deleting..." : "Permanent delete"}
+          </button>
+        ) : null}
+        {isViewerAdmin && plan.athlete_id ? (
+          <Link href={`/admin/athletes/${plan.athlete_id}`} className="ghost-button">
+            View athlete profile
+          </Link>
+        ) : null}
+      </div>
+    </details>
+  ) : null;
+
+  const planOverview = (
       <section className="panel plan-detail-hero">
         <QuickBuildRefinementBanner planId={plan.plan_id} planSource={plan.plan_source ?? null} />
         <div className="section-heading">
           <div>
-            <p className="kicker">{openOngoing ? "Training plan" : "Fight camp"}</p>
-            <h1>{planDetailTitle}</h1>
+            <p className="kicker">{openOngoing || plan.custom_plan_id ? "Training plan" : "Fight camp"}</p>
+            <h2>{planDetailTitle}</h2>
             {completedFightCamp || isTriageBlocked || !hasPublishedPlan ? (
               <p className="muted">{heroSummary}</p>
             ) : null}
-            {fightDateLabel || openBlockLabel ? (
+            {fightDateLabel || (!integrateOverview && openBlockLabel) ? (
               <p className="plan-detail-meta">{fightDateLabel || openBlockLabel}</p>
             ) : null}
           </div>
+          {integrateOverview ? planManagement : null}
           <div className="plan-detail-status">
             <p className="sr-only">Plan status</p>
             <h2 className="plan-summary-title">
@@ -2720,7 +2814,7 @@ export function PlanViewer({
           </div>
         ) : null}
 
-        {isCurrentActivePlan && nextSessionAction ? (
+        {!integrateOverview && isCurrentActivePlan && nextSessionAction ? (
           <div className="plan-next-session" role="region" aria-label={nextSessionRelation}>
             <div className="plan-next-session-copy">
               <p className="label">{nextSessionRelation}</p>
@@ -2754,10 +2848,8 @@ export function PlanViewer({
               {setActivePending ? "Setting active..." : "Set active"}
             </button>
           ) : null}
-          <Link href="/plans" className="ghost-button">
-            All plans
-          </Link>
-          {plan.custom_plan_id && plan.athlete_id === viewerProfileId ? (
+          {!integrateOverview ? <Link href="/plans" className="ghost-button">All plans</Link> : null}
+          {!integrateOverview && plan.custom_plan_id && plan.athlete_id === viewerProfileId ? (
             <Link className="ghost-button" href={`/plans/custom?plan=${plan.custom_plan_id}`}>Edit Plan</Link>
           ) : null}
           {archivedPreview && viewerRole === "athlete" ? (
@@ -2766,52 +2858,8 @@ export function PlanViewer({
             </Link>
           ) : null}
 
-          {canManagePlan || isViewerAdmin || hasPublishedPlan ? (
-            <details className="plan-action-menu">
-              <summary className="ghost-button">Manage</summary>
-              <div className="plan-action-menu-popover">
-                <p className="plan-created-at muted">Created {formatPlanTimestamp(plan.created_at)}</p>
-                {canManagePlan && !archivedPreview ? (
-                  <>
-                    <button
-                      type="button"
-                      className="ghost-button"
-                      onClick={handleRenamePlan}
-                      disabled={planActionPending !== null}
-                    >
-                      {planActionPending === "rename" ? "Renaming..." : "Rename"}
-                    </button>
-                    <button
-                      type="button"
-                      className="ghost-button danger-button"
-                      onClick={handleArchiveOwnPlan}
-                      disabled={planActionPending !== null}
-                    >
-                      {planActionPending === "archive" ? "Archiving..." : "Archive"}
-                    </button>
-                  </>
-                ) : null}
-                {hasPublishedPlan && athletePlanText ? (
-                  <QuickCopyButton text={athletePlanText} artifactKey="athlete-plan" />
-                ) : null}
-                {isViewerAdmin ? (
-                  <button
-                    type="button"
-                    className="ghost-button danger-button"
-                    onClick={handlePermanentDelete}
-                    disabled={planActionPending !== null}
-                  >
-                    {planActionPending === "permanent-delete" ? "Deleting..." : "Permanent delete"}
-                  </button>
-                ) : null}
-                {isViewerAdmin && plan.athlete_id ? (
-                  <Link href={`/admin/athletes/${plan.athlete_id}`} className="ghost-button">
-                    View athlete profile
-                  </Link>
-                ) : null}
-              </div>
-            </details>
-          ) : null}
+
+          {!integrateOverview ? planManagement : null}
         </div>
         {planActionMessage ? <div className="success-banner">{planActionMessage}</div> : null}
         {planActionError ? <div className="error-banner">{planActionError}</div> : null}
@@ -2826,6 +2874,12 @@ export function PlanViewer({
         ) : null}
         {setActiveError ? <div className="error-banner">{setActiveError}</div> : null}
       </section>
+
+  );
+
+  return (
+    <div className={`page${integrateOverview ? " plan-experience" : ""}`}>
+      {!integrateOverview ? planOverview : null}
 
       <div className={`plan-detail-layout${canUseAdminOutputs ? "" : " plan-detail-layout-single"}`}>
         {canUseAdminOutputs ? (
@@ -3003,6 +3057,9 @@ export function PlanViewer({
                 <ExerciseCustomisationProvider value={exerciseCustomisation}>
                 <StructuredPlanRenderer
                   plan={plan.outputs.structured_plan}
+                  overview={integrateOverview ? planOverview : undefined}
+                  progressStatus={canManagePlan && accessToken ? !currentOperationalState ? "loading" : planCompletions ? "ready" : "unavailable" : undefined}
+                  renderSessionControls={renderSessionControls}
                   openOngoing={openOngoing}
                   focusDay={nextSessionFocusDate}
                   currentDayLabel={nextSessionFocusDate ? "Next session" : "Today"}

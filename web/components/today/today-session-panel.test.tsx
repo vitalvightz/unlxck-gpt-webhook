@@ -441,11 +441,11 @@ test("a previewed multi-part day is named by its parts and opens on its own prev
     assert.equal(sheet.querySelector("h2")?.textContent, "Slow-Lowered Pull-Up");
     // Rows leave the stop rule to the sheet, which states it as one plain line.
     assert.equal(screen.querySelector(".ex-row-stop"), null);
-    assert.equal(sheet.querySelector(".ex-detail-stop")?.textContent, "Stop if any sharp chest pain.");
+    assert.equal(sheet.querySelector(".ex-detail-stop .ex-stop-content > span")?.textContent, "any sharp chest pain.");
     const sections = [...sheet.querySelectorAll<HTMLDetailsElement>("details.ex-detail-section")];
     assert.deepEqual(
       sections.map((section) => section.querySelector("summary")?.textContent),
-      ["Why it's here", "Full prescription"],
+      ["Why it's here"],
     );
     assert.ok(sections.every((section) => !section.open));
 
@@ -1407,4 +1407,15 @@ test("without a head-impact notice the same contact day is unchanged", () => {
   const state = contactDayState("green");
   state.today.primary_safety_notice = { ...HEAD_IMPACT_NOTICE, code: "skin_care", chip: "SKIN CARE", tone: "amber" };
   assert.match(renderPanel(state), />Start hard sparring</);
+});
+
+test('Plan controls reuse readiness gates without mounting another prescription tree', () => {
+  for (const tier of ['green', 'not_checked_in'] as const) {
+    const state=contactDayState(tier);
+    const html=renderToStaticMarkup(<AuthProvider><ToastProvider><TodaySessionPanel state={state}
+      structuredPlan={null} token="token" onRefresh={async()=>{}} presentation="controls" /></ToastProvider></AuthProvider>);
+    assert.match(html,/today-session-controls/);
+    assert.equal(/>Start session<|>Start hard sparring</.test(html),tier==='green');
+    assert.doesNotMatch(html,/class="ex-rows"|class="today-session-summary"/);
+  }
 });
