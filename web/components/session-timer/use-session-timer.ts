@@ -1,4 +1,7 @@
 "use client";
+import { useContext } from "react";
+import { AppSessionContext } from "@/components/auth-provider";
+import { trackProductEvent, productEventIdentity } from "@/lib/api";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -11,6 +14,7 @@ import {
 } from "@/lib/session-timer/audio";
 import {
   advance,
+  metPlan,
   calloutForEvents,
   createTimerState,
   crossedCues,
@@ -167,6 +171,8 @@ export function useSessionTimer({
    */
   keepFinishedRun?: boolean;
 }): SessionTimerController {
+  const analyticsSession = useContext(AppSessionContext);
+  const analyticsToken = analyticsSession?.session?.access_token;
   const [state, setState] = useState<TimerState>(
     () => loadSavedRun(storageKey, items) ?? createTimerState(items),
   );
@@ -221,6 +227,22 @@ export function useSessionTimer({
       if (!samePhaseRun(stateRef.current, next)) {
         lastRemainingRef.current = cueRemainingMs(viewAt(next, Date.now()));
       }
+      const previous = stateRef.current;
+      if (storageKey === "unlxck.session-timer.free" && analyticsToken && next.startedAt !== null) {
+        const emit = async (name: string, suffix: string) => {
+          const flow = await productEventIdentity(`${storageKey}:${next.startedAt}`);
+          await trackProductEvent(analyticsToken, name, "timer", await productEventIdentity(`${flow}:${suffix}`), flow);
+        };
+        if (previous.startedAt === null) void emit("timer_started", "start").catch(() => {});
+        next.completed.forEach((count, index) => {
+          for (let round = (previous.completed[index] ?? 0) + 1; round <= count; round++) {
+            void emit("timer_round_completed", `${index}:${round}`).catch(() => {});
+          }
+        });
+        if (next.endedAt !== null && previous.endedAt === null) {
+          void emit(metPlan(next) ? "timer_completed" : "timer_exited", "end").catch(() => {});
+        }
+      }
       stateRef.current = next;
       setState(next);
       if (next.phase === "done" && next.endedAt !== null && !keepFinishedRun) {
@@ -229,7 +251,7 @@ export function useSessionTimer({
         saveRun(storageKey, next);
       }
     },
-    [storageKey, keepFinishedRun],
+    [storageKey, keepFinishedRun, analyticsToken],
   );
 
   const run = useCallback(

@@ -24,6 +24,19 @@ Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   tracesSampleRate: process.env.NODE_ENV === "development" ? 1.0 : 0.1,
   enableLogs: true,
+  beforeSend(event) {
+    // Count only; Sentry remains the sole exception store. No exception text,
+    // URL, user metadata or medical content enters the behavioural table.
+    const feature = Object.entries({ '/timer': 'timer', '/plans': 'plans', '/today': 'strength', '/nutrition': 'nutrition', '/history': 'history', '/onboarding': 'onboarding' }).find(([prefix]) => location.pathname.startsWith(prefix))?.[1];
+    if (feature && event.exception) {
+      void Promise.all([import('./lib/api'), import('./lib/supabase')]).then(async ([api, sb]) => {
+        const session = (await sb.getSupabaseBrowserClient().auth.getSession()).data.session;
+        if (session) await api.trackProductEvent(session.access_token, 'frontend_error', feature,
+          event.event_id ? await api.productEventIdentity(event.event_id) : undefined);
+      }).catch(() => {});
+    }
+    return event;
+  },
 });
 
 document.addEventListener("click", (event) => {

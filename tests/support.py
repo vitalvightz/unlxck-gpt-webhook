@@ -702,6 +702,12 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         profile["updated_at"] = now
         return profile
 
+    def record_onboarding_stage(self, athlete_id: str, *, completed: bool = False) -> None:
+        row = self.profiles[athlete_id]
+        row.setdefault("onboarding_started_at", datetime.now(timezone.utc).isoformat())
+        if completed:
+            row.setdefault("onboarding_completed_at", datetime.now(timezone.utc).isoformat())
+
     def update_profile(self, athlete_id: str, update: ProfileUpdateRequest) -> dict:
         profile = self.profiles[athlete_id]
         if update.training_habits is not None and update.training_habits_revision != profile.get("training_habits_revision", 0):

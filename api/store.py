@@ -1517,6 +1517,12 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
             ) from exc
 
     @_invalidates_profile_cache()
+    def record_onboarding_stage(self, athlete_id: str, *, completed: bool = False) -> None:
+        try:
+            self.client.rpc("record_onboarding_stage", {"p_athlete_id": athlete_id, "p_completed": completed}).execute()
+        except _STORE_CLIENT_ERRORS:
+            logger.warning("Onboarding workflow timestamp could not be recorded")
+
     def update_profile(self, athlete_id: str, update: ProfileUpdateRequest) -> dict[str, Any]:
         try:
             fields = update.model_dump(mode="json", exclude_none=True)

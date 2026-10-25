@@ -64,6 +64,7 @@ export type ActiveInjuryRegion = {
 };
 
 export type AdminAthleteRecord = {
+  last_meaningful_activity_at: string | null;
   athlete_id: string;
   email: string;
   role: "admin" | "athlete" | "coach" | "gym_owner";
@@ -673,6 +674,13 @@ export type EquipmentRequirements = {
   row_revision: string;
   audit_decisions: string[];
   evidence: string;
+};
+
+export type Event = {
+  event_name: string;
+  feature: "feedback" | "history" | "manual" | "nutrition" | "onboarding" | "plans" | "recovery" | "sparring" | "strength" | "timer";
+  request_id: string;
+  flow_id?: string | null;
 };
 
 /** The event the plan counts down to (Section D). */
@@ -1881,6 +1889,10 @@ export type PlanSummary = {
   activation_state: "eligible" | "fight_date_passed" | "status_ineligible";
   pdf_url: string | null;
   review_reason: string | null;
+};
+
+export type Preference = {
+  enabled: boolean;
 };
 
 /**

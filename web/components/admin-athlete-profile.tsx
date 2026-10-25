@@ -303,7 +303,7 @@ export function AthleteProfileHero({ athlete }: { athlete: AdminAthleteRecord })
         <article className="athlete-profile-metric athlete-profile-metric-accent">
           <p className="plan-meta-label">Latest activity</p>
           <p className="athlete-profile-metric-value athlete-profile-metric-value-small">
-            {formatTimestamp(athlete.latest_plan_created_at || athlete.updated_at)}
+            {athlete.last_meaningful_activity_at ? formatTimestamp(athlete.last_meaningful_activity_at) : "No recorded activity"}
           </p>
         </article>
         <article className="athlete-profile-metric">

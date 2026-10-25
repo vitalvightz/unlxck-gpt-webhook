@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 
-import { ApiError, getMe } from "@/lib/api";
+import { ApiError, getAnalyticsPreference, getMe } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { APPEARANCE_STORAGE_KEY, type AppearanceMode, type MeResponse } from "@/lib/types";
 
@@ -59,10 +59,17 @@ function applyAppearanceMode(mode: AppearanceMode) {
 }
 
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
+  // Load the optional choice once per authenticated account/token. Interaction
+  // hooks stay silent until an explicit opt-in has been loaded.
   const [isReady, setIsReady] = useState(false);
   const [isMeHydrated, setIsMeHydrated] = useState(false);
   const [session, setSession] = useState<AppSession | null>(null);
   const [me, setMe] = useState<MeResponse | null>(null);
+  useEffect(() => {
+    if (session?.access_token && me?.profile.role === "athlete" && !me.profile.is_minor) {
+      void getAnalyticsPreference(session.access_token).catch(() => {});
+    }
+  }, [session?.access_token, me?.profile.role, me?.profile.is_minor]);
   const [hasTransientMeError, setHasTransientMeError] = useState(false);
   const [appearancePreview, setAppearancePreview] = useState<AppearanceMode | null>(null);
   const handledAccessTokenRef = useRef<string | null>(null);

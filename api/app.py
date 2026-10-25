@@ -62,6 +62,7 @@ from .generation_job_helpers import (
     _triage_job_has_resume_approval as _triage_job_has_resume_approval,
     _triage_plan_has_resume_approval as _triage_plan_has_resume_approval,
 )
+from .routes.product_analytics import build_product_analytics_router
 from .routes.admin import build_admin_router
 from .routes.training_library import build_training_library_router
 from .routes.custom_plans import build_custom_plans_router
@@ -766,6 +767,9 @@ def create_app(
     )
 
     app.include_router(build_admin_router())
+    app.include_router(build_product_analytics_router())
+    from .services.product_friction import install_product_friction
+    install_product_friction(app)
 
     return app
 

@@ -1,4 +1,5 @@
 "use client";
+import { AnalyticsPreference } from "@/components/analytics-preference";
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -86,6 +87,7 @@ export function StartingPathScreen() {
         <span className={styles.action} aria-hidden="true">{saving === "tracking_first" ? "Saving…" : "›"}</span>
       </button>
     </div>
+    <details><summary>Optional product analytics</summary><AnalyticsPreference /></details>
     {error ? <p role="alert" className={styles.error}>{error}</p> : null}
   </section>;
 }

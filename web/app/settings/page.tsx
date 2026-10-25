@@ -1,4 +1,5 @@
 "use client";
+import { AnalyticsPreference } from "@/components/analytics-preference";
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -1306,6 +1307,7 @@ export default function SettingsPage() {
         </article>
 
         <article id="privacy" className="step-card settings-card">
+          <AnalyticsPreference />
           <div className="form-section-header">
             <p className="kicker">Privacy</p>
             <h2 className="form-section-title">Data and consent</h2>
