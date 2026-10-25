@@ -351,3 +351,28 @@ def test_failed_feature_write_is_observed_without_copying_error_text():
     assert args["p_athlete_id"] == "verified-owner"
     assert args["p_event_name"] == "operation_failed" and args["p_feature"] == "manual"
     assert "Private operational error text" not in str(args)
+
+
+def test_consent_write_uses_authenticated_actor_and_atomic_rpc():
+    c, store = api_client()
+    response = c.put("/api/analytics/preference", json={"enabled": True})
+    assert response.status_code == 200
+    name, args = store.client.calls[-1]
+    assert name == "set_product_analytics_preference"
+    assert args == {"p_athlete_id": "owner", "p_enabled": True}
+    assert (
+        c.put(
+            "/api/analytics/preference", json={"enabled": True, "athlete_id": "other"}
+        ).status_code
+        == 422
+    )
+
+
+def test_unhealthy_retention_refuses_optin_but_allows_withdrawal():
+    c, store = api_client()
+    store.client.rpc = lambda *_: SimpleNamespace(
+        execute=lambda: SimpleNamespace(data=False)
+    )
+    assert c.put("/api/analytics/preference", json={"enabled": True}).status_code == 503
+    response = c.put("/api/analytics/preference", json={"enabled": False})
+    assert response.status_code == 200 and response.json() == {"enabled": False}

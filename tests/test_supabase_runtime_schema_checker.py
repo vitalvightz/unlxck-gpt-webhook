@@ -165,6 +165,8 @@ def test_index_requirement_satisfied_by_constraint_alias():
     # The athlete/client-request requirement accepts either the unique index or
     # the uniqueness constraint name.
     present = {
+        "product_events_athlete_id_event_name_request_id_key",
+        "product_event_discovery_daily", "product_events_athlete_time", "product_events_retention",
         "generation_jobs_one_active_job_per_athlete",
         "generation_jobs_athlete_client_request_key",  # constraint form
         "plan_generation_rate_limits_athlete_created_idx",
@@ -362,3 +364,36 @@ def test_rehab_deploy_gate_requires_all_persistence_and_history_columns():
         columns = {table: list(cols) for table, cols in REQUIRED_COLUMNS.items()}
         columns["rehab_exposures"].remove(missing)
         assert f"rehab_exposures.{missing}" in find_missing_columns(columns)
+
+
+def test_analytics_migration_and_privacy_objects_are_required():
+    payload = _valid_payload()
+    payload["tables"].remove("product_events")
+    payload["columns"]["profiles"].remove("analytics_excluded")
+    payload["functions"].remove("set_product_analytics_preference")
+    result = evaluate_payload(payload)
+    assert not result.ok
+    report = result.format_report()
+    assert "product_events" in report and "analytics_excluded" in report
+    assert "set_product_analytics_preference" in report
+
+
+def test_live_deploy_gate_rejects_inactive_retention_job(monkeypatch):
+    from types import SimpleNamespace
+    import tools.check_supabase_runtime_schema as checker
+
+    class Client:
+        def rpc(self, name, args=None):
+            data = (
+                _valid_payload()
+                if name == checker.INTROSPECTION_RPC
+                else {"configured": False, "healthy": False}
+            )
+            return SimpleNamespace(execute=lambda: SimpleNamespace(data=data))
+
+    monkeypatch.setattr(
+        checker, "_require_env", lambda: ("https://local.example", "not-a-secret")
+    )
+    monkeypatch.setattr(checker, "_build_client", lambda *_: Client())
+    with pytest.raises(checker.RuntimeSchemaCheckError, match="retention job"):
+        checker.run_check()

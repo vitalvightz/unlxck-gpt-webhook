@@ -1,3 +1,21 @@
+-- Deployment prerequisite: optional collection must never silently omit expiry.
+do $$ begin
+ if not exists(select 1 from pg_extension where extname='pg_cron') then
+  raise exception 'Enable pg_cron before applying athlete product analytics; daily expiry is required';
+ end if;
+end $$;
+-- Durable internal-account configuration. No profile FK: deleting/recreating
+-- a profile must never remove its email exclusion. Service-role only.
+create table public.product_analytics_excluded_emails (
+ email text primary key check (email=lower(btrim(email)) and email<>'' and length(email)<=320)
+);
+alter table public.product_analytics_excluded_emails enable row level security;
+revoke all on public.product_analytics_excluded_emails from anon,authenticated;
+grant select,insert,update,delete on public.product_analytics_excluded_emails to service_role;
+insert into public.product_analytics_excluded_emails(email) values
+ ('vitalvightz@gmail.com'),('michaelokafor@gmail.com'),('michaelokafor@tutanota.com'),
+ ('thevital1@tutanota.com'),('frankribery@mailfence.com'),('jjjjjjj@hotmail.com'),('vitalvightz@proton.me');
+
 -- Only missing interactions; no payload, URLs, device IDs, notes or health data.
 create table public.product_events (
  id uuid primary key default gen_random_uuid(),
@@ -68,7 +86,8 @@ returns jsonb language sql stable security invoker set search_path=public,pg_tem
  select p.id, p.created_at, p.professional_status, p.technical_style, p.starting_path,
  (select min(created_at) from public.plans where athlete_id=p.id and status in ('ready','publishable_with_flags')) first_usable_plan_at
  from public.profiles p where (p_athlete_id is null and p.role='athlete' and not p.analytics_excluded
- and not (lower(p.email)=any(p_excluded_emails))) or p.id=p_athlete_id
+ and not (lower(btrim(p.email))=any(p_excluded_emails))
+ and not exists(select 1 from public.product_analytics_excluded_emails x where x.email=lower(btrim(p.email)))) or p.id=p_athlete_id
  ), facts as (
  select a.athlete_id, (a.occurred_at at time zone 'UTC')::date as day, a.feature, a.action, a.meaningful,
  count(*) as count, min(a.occurred_at) as first_at, max(a.occurred_at) as last_at
@@ -109,17 +128,61 @@ grant execute on function public.prune_product_events() to service_role;
 create table public.product_analytics_preferences (
  athlete_id uuid primary key references public.profiles(id) on delete cascade,
  enabled boolean not null default false,
+ consent_version text not null default 'product-analytics-v1',
  updated_at timestamptz not null default now()
 );
 alter table public.product_analytics_preferences enable row level security;
 revoke all on public.product_analytics_preferences from anon,authenticated;
 grant all on public.product_analytics_preferences to service_role;
+-- This tightly restricted catalog reader needs the scheduler owner's view of
+-- cron jobs/run history. It exposes no commands, user records or write access.
+create function public.product_analytics_retention_health()
+returns jsonb language sql stable security definer set search_path=pg_catalog,pg_temp as $$
+ with job as (
+  select jobid from cron.job where jobname='product-events-retention'
+    and active and schedule='17 3 * * *' and database=current_database()
+    and command='select public.prune_product_events()'
+ ), success as (
+  select max(r.end_time) last_success_at from cron.job_run_details r join job j using(jobid)
+  where r.status='succeeded'
+ ), state as (
+  select exists(select 1 from job) configured,success.last_success_at,
+  (select status from cron.job_run_details r join job j using(jobid) order by r.start_time desc limit 1) last_status
+  from success
+ ) select jsonb_build_object('configured',configured,'last_success_at',last_success_at,'last_status',last_status,
+  'healthy',configured and (
+   coalesce(last_success_at>=now()-interval '36 hours',false) or
+   (last_success_at is null and not exists(select 1 from public.product_events where created_at<now()-interval '36 hours'))
+  )) from state;
+$$;
+revoke all on function public.product_analytics_retention_health() from public,anon,authenticated;
+grant execute on function public.product_analytics_retention_health() to service_role;
+
+-- Consent changes take the same lock as ingestion. A completed withdrawal
+-- therefore cannot race an already-checked insert into storing a later event.
+create function public.set_product_analytics_preference(p_athlete_id uuid,p_enabled boolean)
+returns boolean language plpgsql security invoker set search_path=public,pg_temp as $$
+begin
+ perform pg_advisory_xact_lock(hashtextextended(p_athlete_id::text,0));
+ if p_enabled and (not coalesce((public.product_analytics_retention_health()->>'healthy')::boolean,false)
+  or not exists(select 1 from public.profiles where id=p_athlete_id and date_of_birth<=((now() at time zone 'UTC')::date-interval '18 years')::date)) then return false; end if;
+ insert into public.product_analytics_preferences(athlete_id,enabled,consent_version,updated_at)
+ values(p_athlete_id,p_enabled,'product-analytics-v1',now())
+ on conflict(athlete_id) do update set enabled=excluded.enabled,consent_version=excluded.consent_version,updated_at=excluded.updated_at;
+ return p_enabled;
+end $$;
+revoke all on function public.set_product_analytics_preference(uuid,boolean) from public,anon,authenticated;
+grant execute on function public.set_product_analytics_preference(uuid,boolean) to service_role;
+
 create function public.ingest_product_event(p_athlete_id uuid,p_event_name text,p_feature text,p_request_id uuid,p_flow_id uuid default null)
 returns boolean language plpgsql security invoker set search_path=public,pg_temp as $$
 begin
  -- Serialize the cap per athlete, including concurrent requests.
  perform pg_advisory_xact_lock(hashtextextended(p_athlete_id::text,0));
  if not exists(select 1 from public.product_analytics_preferences where athlete_id=p_athlete_id and enabled) then return false; end if;
+ if exists(select 1 from public.profiles p join public.product_analytics_excluded_emails x on x.email=lower(btrim(p.email)) where p.id=p_athlete_id) then return false; end if;
+ if not coalesce((public.product_analytics_retention_health()->>'healthy')::boolean,false) then return false; end if;
+ if not exists(select 1 from public.profiles where id=p_athlete_id and date_of_birth<=((now() at time zone 'UTC')::date-interval '18 years')::date) then return false; end if;
  if (select count(*) from public.product_events where athlete_id=p_athlete_id and created_at>now()-interval '1 minute')>=120 then return false; end if;
  if (select count(*) from public.product_events where athlete_id=p_athlete_id and created_at >= date_trunc('day',now() at time zone 'UTC') at time zone 'UTC')>=1000 then return false; end if;
  insert into public.product_events(athlete_id,event_name,feature,request_id,flow_id)
@@ -129,7 +192,7 @@ end $$;
 revoke all on function public.ingest_product_event(uuid,text,text,uuid,uuid) from public,anon,authenticated;
 grant execute on function public.ingest_product_event(uuid,text,text,uuid,uuid) to service_role;
 create index product_events_retention on public.product_events(created_at);
--- Use the existing Supabase scheduler when installed; no new scheduler dependency.
+-- Use the required existing Supabase scheduler; no new scheduler dependency.
 do $outer$ begin
  if exists(select 1 from pg_extension where extname='pg_cron') then
  perform cron.schedule('product-events-retention','17 3 * * *','select public.prune_product_events()');

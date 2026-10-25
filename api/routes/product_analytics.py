@@ -55,16 +55,20 @@ def build_product_analytics_router():
             raise HTTPException(
                 403, "Optional product analytics is available to adults only"
             )
-        from datetime import datetime, timezone
-
-        store.client.table("product_analytics_preferences").upsert(
+        result = store.client.rpc(
+            "set_product_analytics_preference",
             {
-                "athlete_id": profile.athlete_id,
-                "enabled": body.enabled,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            }
+                "p_athlete_id": profile.athlete_id,
+                "p_enabled": body.enabled,
+            },
         ).execute()
-        return {"enabled": body.enabled}
+        enabled = bool(result.data)
+        if body.enabled and not enabled:
+            raise HTTPException(
+                503,
+                "Optional product analytics is temporarily unavailable. Try again later.",
+            )
+        return {"enabled": enabled}
 
     @router.post("/api/analytics/events", status_code=202)
     def ingest(body: Event, profile=Depends(require_profile), store=Depends(get_store)):

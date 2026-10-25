@@ -142,7 +142,25 @@ def run_check() -> SchemaCheckResult:
     client = _build_client(url, key)
     payload = fetch_introspection(client)
     try:
-        return evaluate_payload(payload)
+        result = evaluate_payload(payload)
+        if result.ok:
+            try:
+                health = (
+                    client.rpc("product_analytics_retention_health", {}).execute().data
+                )
+            except Exception as exc:
+                raise RuntimeSchemaCheckError(
+                    "Could not verify product analytics retention health"
+                ) from exc
+            if (
+                not isinstance(health, dict)
+                or health.get("configured") is not True
+                or health.get("healthy") is not True
+            ):
+                raise RuntimeSchemaCheckError(
+                    "Product analytics retention job is missing, inactive or overdue; deployment blocked"
+                )
+        return result
     except SchemaIntrospectionError as exc:
         raise RuntimeSchemaCheckError(
             f"Could not interpret the introspection payload: {exc}"
