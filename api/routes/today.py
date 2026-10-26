@@ -169,6 +169,40 @@ def _checkin_record(row: dict[str, Any]) -> TodayCheckinRecord:
     return TodayCheckinRecord(**{**row, "recommendation_triggers": list(triggers)})
 
 
+def _saved_session_title(completion: Mapping[str, Any]) -> str | None:
+    """Read owned historical evidence, never current-plan content.
+
+    Older snapshots omit identity metadata; when supplied, it must match the
+    completion. Malformed or incomplete snapshots use the existing fallback.
+    """
+    snapshot = completion.get("prescription_snapshot")
+    if not isinstance(snapshot, Mapping):
+        return None
+    session = snapshot.get("session")
+    if not isinstance(session, Mapping):
+        return None
+    for source, key in ((snapshot, "plan_id"), (snapshot, "training_day"), (session, "session_id")):
+        if source.get(key) is not None and str(source[key]) != str(completion.get(key)):
+            return None
+    title = session.get("title")
+    return title if isinstance(title, str) and title.strip() else None
+
+
+def _history_title(store: AppStore, athlete_id: str, completion: Mapping[str, Any], plans: dict) -> str | None:
+    title = _saved_session_title(completion)
+    if title is not None:
+        return title
+    plan_id = str(completion.get("plan_id") or "")
+    if not plan_id:
+        return None
+    if plan_id not in plans:
+        plan = store.get_training_plan_for_athlete(plan_id, athlete_id)
+        structured = resolve_effective_structured_plan(plan) if plan else None
+        plans[plan_id] = (plan, structured) if plan and structured else None
+    resolved = plans[plan_id]
+    return _session_history_title(*resolved, completion) if resolved else None
+
+
 def _session_history_title(
     plan_row: Mapping[str, Any],
     structured_plan: Mapping[str, Any],
@@ -271,15 +305,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         for row in rows:
             if row["source"] == "external":
                 continue
-            plan_id = str(row.get("plan_id") or "")
-            if plan_id not in plans:
-                plan = store.get_plan_for_athlete(plan_id, profile.athlete_id)
-                structured = resolve_effective_structured_plan(plan) if plan else None
-                plans[plan_id] = (plan, structured) if plan and structured else None
-            resolved = plans[plan_id]
-            frozen = row.get("prescription_snapshot") or {}
-            row["title"] = (frozen.get("session") or {}).get("title") or (
-                _session_history_title(*resolved, row) if resolved else None) or "Unlxck session"
+            row["title"] = _history_title(store, profile.athlete_id, row, plans) or "Unlxck session"
             row["id"] = str(row.get("id") or row.get("session_id"))
         counts = store.count_manual_exercises(profile.athlete_id, [str(row["id"]) for row in rows if row["source"] == "external"])
         for row in rows:
@@ -430,13 +456,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         plans: dict[str, tuple[dict[str, Any], dict[str, Any]] | None] = {}
         history = []
         for row in rows:
-            plan_id = str(row.get("plan_id") or "")
-            if plan_id and plan_id not in plans:
-                plan_row = store.get_plan_for_athlete(plan_id, profile.athlete_id)
-                structured = resolve_effective_structured_plan(plan_row) if plan_row else None
-                plans[plan_id] = (plan_row, structured) if plan_row and structured else None
-            plan = plans.get(plan_id)
-            title = _session_history_title(*plan, row) if plan else None
+            title = _history_title(store, profile.athlete_id, row, plans)
             history.append(SessionCompletionHistoryResponse(**row, session_title=title))
         return history
 
@@ -479,7 +499,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> LandingResponse:
-        has_interacted = store.get_latest_plan(profile.athlete_id) is not None
+        has_interacted = store.get_latest_plan_status(profile.athlete_id) is not None
         decision = resolve_today_landing(
             store,
             athlete_id=profile.athlete_id,

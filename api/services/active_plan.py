@@ -247,14 +247,8 @@ def _active_plan_overlap(
     if not is_active_plan_eligible(current, current_training_day=current_training_day):
         return None
 
-    # The resolver may have selected from a summary projection. Re-read the row
-    # before comparing dates so planning_brief / structured_plan can be used.
-    current_id = str(current.get("id") or "")
-    if current_id:
-        full_current = store.get_plan_for_athlete(current_id, athlete_id)
-        if full_current:
-            current = full_current
-
+    # The resolver already returned this owned row with both timeline inputs.
+    # No writes occur between resolution and overlap evaluation.
     current_range = plan_date_range(current)
     candidate_range = plan_date_range(candidate)
     from api.services.open_plan_timeline import open_plan_spec

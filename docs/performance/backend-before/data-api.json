@@ -1,0 +1,6329 @@
+{
+  "source": "synthetic-real-Supabase-query-builder-mock-transport",
+  "scope": "Selected Data API methods; authentication/bootstrap and unrelated reads remain in-memory; no SQL/network timing",
+  "repetitions": 20,
+  "scenarios": [
+    {
+      "scenario": "history_frozen",
+      "runs": [
+        {
+          "duration_ms": 79.7792909997952,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 70.439,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 11.223,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 1.177,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.427,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 5.328,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.29,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 70.439,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        },
+        {
+          "duration_ms": 51.990886999647046,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 46.754,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.023,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.47,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.291,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.814,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.448,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 46.754,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        },
+        {
+          "duration_ms": 54.35600600003454,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 49.111,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.725,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.659,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.309,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.882,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.874,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 49.111,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        },
+        {
+          "duration_ms": 50.29663799996342,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 47.0,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.334,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.435,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.313,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.492,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.093,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 47.0,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        },
+        {
+          "duration_ms": 55.83875000002081,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 52.504,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.724,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.619,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.305,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.697,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.104,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 52.504,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        },
+        {
+          "duration_ms": 54.38631600009103,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 50.679,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.442,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.839,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.803,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.928,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.871,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 50.679,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        },
+        {
+          "duration_ms": 51.85734200040315,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 48.986,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.624,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.427,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.292,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.511,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.393,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 48.986,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        },
+        {
+          "duration_ms": 51.51969300004566,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 48.109,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.646,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.479,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.303,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.783,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 5.082,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 48.109,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        },
+        {
+          "duration_ms": 53.18838799985315,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 49.718,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.944,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.509,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.427,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.8,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.207,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 49.718,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        },
+        {
+          "duration_ms": 285.56283500029167,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 281.822,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.029,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.656,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.424,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.367,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.583,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 281.822,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        },
+        {
+          "duration_ms": 57.891250000011496,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 54.345,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.064,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.652,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.325,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.892,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.195,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 54.345,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        },
+        {
+          "duration_ms": 47.44374499978221,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 44.316,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.609,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.433,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.323,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.886,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.967,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 44.316,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        },
+        {
+          "duration_ms": 46.52284099984172,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 43.632,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.345,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.437,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.429,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.605,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.874,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 43.632,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        },
+        {
+          "duration_ms": 53.8321559997712,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 49.851,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 10.346,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.465,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.471,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.508,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.901,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 49.851,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        },
+        {
+          "duration_ms": 51.01868900010231,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 47.668,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.43,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.536,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.29,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.387,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 5.216,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 47.668,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        },
+        {
+          "duration_ms": 46.54893199995058,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 43.563,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.464,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.407,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.481,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.559,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.019,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 43.563,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        },
+        {
+          "duration_ms": 56.7565809997177,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 53.732,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.677,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.467,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.418,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.683,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.109,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 53.732,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        },
+        {
+          "duration_ms": 52.44574800008195,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 49.304,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.483,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.51,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.469,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.502,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.003,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 49.304,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        },
+        {
+          "duration_ms": 49.607947999902535,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 46.716,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.691,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.458,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.325,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.135,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.772,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 46.716,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        },
+        {
+          "duration_ms": 53.39456799993059,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 50.291,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 10.124,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.461,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.303,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 5.772,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.589,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 50.291,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1637
+        }
+      ],
+      "p50_ms": 52.81706799996755,
+      "p95_ms": 79.7792909997952
+    },
+    {
+      "scenario": "history_legacy",
+      "runs": [
+        {
+          "duration_ms": 77.82051000003776,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 72.558,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 11.572,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 1.125,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.446,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 5.336,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.665,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 72.558,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        },
+        {
+          "duration_ms": 56.25229199995374,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 53.053,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 11.451,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 1.044,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.319,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.857,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 5.231,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 53.053,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        },
+        {
+          "duration_ms": 58.93323199961742,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 55.648,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 10.011,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.855,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.382,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.697,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.077,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 55.648,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        },
+        {
+          "duration_ms": 63.782159999846044,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 59.609,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.261,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.486,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.417,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.27,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.089,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 59.609,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        },
+        {
+          "duration_ms": 78.40616300018155,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 75.212,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 15.914,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.883,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 1.091,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 9.458,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.483,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 75.212,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        },
+        {
+          "duration_ms": 63.70155700005853,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 59.915,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 11.0,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.49,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.51,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.902,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 6.098,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 59.915,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        },
+        {
+          "duration_ms": 53.77453500022966,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 49.887,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.798,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.666,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.352,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.158,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.621,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 49.887,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        },
+        {
+          "duration_ms": 54.500443000051746,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 49.821,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.845,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.59,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.304,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.994,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.957,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 49.821,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        },
+        {
+          "duration_ms": 50.686388000031,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 47.659,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.177,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.589,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.295,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.669,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.623,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 47.659,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        },
+        {
+          "duration_ms": 51.08844699998372,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 48.317,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.655,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.468,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.549,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.846,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.793,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 48.317,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        },
+        {
+          "duration_ms": 52.358726000420575,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 49.672,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.676,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.788,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.487,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.752,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.649,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 49.672,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        },
+        {
+          "duration_ms": 45.62908299976698,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 43.112,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 7.824,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.42,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.325,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.574,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.505,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 43.112,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        },
+        {
+          "duration_ms": 48.734750999756216,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 45.497,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 7.85,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.448,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.297,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.424,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.682,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 45.497,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        },
+        {
+          "duration_ms": 53.48349599989888,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 48.886,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.1,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.422,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.313,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.552,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.813,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 48.886,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        },
+        {
+          "duration_ms": 53.31072600029074,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 49.781,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.93,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.436,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.337,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.206,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.952,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 49.781,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        },
+        {
+          "duration_ms": 54.442970999843965,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 50.907,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.086,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.409,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.61,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.389,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.679,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 50.907,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        },
+        {
+          "duration_ms": 57.30031600023722,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 53.985,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 10.131,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.416,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.402,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.678,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.636,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 53.985,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        },
+        {
+          "duration_ms": 50.9465140003158,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 47.69,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.091,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.671,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.354,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.942,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.124,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 47.69,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        },
+        {
+          "duration_ms": 49.78106799990201,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 47.085,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.314,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.426,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.287,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.6,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.0,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 47.085,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        },
+        {
+          "duration_ms": 50.559390999751486,
+          "diagnostics": {
+            "route": "/api/training/history",
+            "method": "GET",
+            "backend_ms": 47.628,
+            "operations": 4,
+            "reads": 4,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "external_training_sessions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 7.919,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.435,
+                "failed": false
+              },
+              {
+                "category": "external_training_sessions",
+                "read": true,
+                "duration_ms": 0.325,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.453,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.706,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1741
+            },
+            {
+              "table": "external_training_sessions",
+              "full_row": true,
+              "response_bytes": 2
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 47.628,
+          "endpoint_status": 200,
+          "endpoint_bytes": 1654
+        }
+      ],
+      "p50_ms": 53.62901550006427,
+      "p95_ms": 77.82051000003776
+    },
+    {
+      "scenario": "completion_history_frozen",
+      "runs": [
+        {
+          "duration_ms": 54.105592999803775,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 50.873,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.166,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.453,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.753,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.96,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 50.873,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        },
+        {
+          "duration_ms": 55.85719100008646,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 53.078,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.195,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.437,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.867,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.892,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 53.078,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        },
+        {
+          "duration_ms": 53.52344599987191,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 50.886,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.815,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.45,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.268,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.097,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 50.886,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        },
+        {
+          "duration_ms": 46.5352679998432,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 43.374,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 7.745,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.431,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.424,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.891,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 43.374,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        },
+        {
+          "duration_ms": 45.84354600001461,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 43.062,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.236,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.596,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.517,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.123,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 43.062,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        },
+        {
+          "duration_ms": 48.598856999888085,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 45.051,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 7.829,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.69,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.456,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.683,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 45.051,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        },
+        {
+          "duration_ms": 55.460474000028626,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 52.234,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.785,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.566,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.049,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 5.171,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 52.234,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        },
+        {
+          "duration_ms": 52.37875099965095,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 49.283,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.187,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.48,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.849,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.858,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 49.283,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        },
+        {
+          "duration_ms": 50.283385000057024,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 47.492,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.609,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.642,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.135,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.832,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 47.492,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        },
+        {
+          "duration_ms": 48.865287999888096,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 45.828,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.112,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.564,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.585,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.963,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 45.828,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        },
+        {
+          "duration_ms": 48.91122800017911,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 45.308,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.444,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.597,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.427,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 5.42,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 45.308,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        },
+        {
+          "duration_ms": 47.42605999990701,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 44.355,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 7.821,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.423,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.545,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.853,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 44.355,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        },
+        {
+          "duration_ms": 46.18995700002415,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 43.232,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 7.782,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.41,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.452,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.92,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 43.232,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        },
+        {
+          "duration_ms": 45.875224999690545,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 42.532,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 7.256,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.492,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.289,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.475,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 42.532,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        },
+        {
+          "duration_ms": 46.16496000016923,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 43.144,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 7.501,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.538,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.304,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.659,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 43.144,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        },
+        {
+          "duration_ms": 55.59410600017145,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 52.386,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.873,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.542,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.571,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.76,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 52.386,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        },
+        {
+          "duration_ms": 72.81810399990718,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 68.98,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.302,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.679,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.722,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.901,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 68.98,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        },
+        {
+          "duration_ms": 49.5202550000613,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 46.551,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 7.93,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.477,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.897,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.556,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 46.551,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        },
+        {
+          "duration_ms": 47.66655200000969,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 45.071,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 7.946,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.412,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.01,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.523,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 45.071,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        },
+        {
+          "duration_ms": 55.87648199980322,
+          "diagnostics": {
+            "route": "/api/today/session-completions",
+            "method": "GET",
+            "backend_ms": 52.727,
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "session_completions": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 10.541,
+            "attempts": [
+              {
+                "category": "session_completions",
+                "read": true,
+                "duration_ms": 0.787,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 6.107,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.647,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "session_completions",
+              "full_row": true,
+              "response_bytes": 1865
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 52.727,
+          "endpoint_status": 200,
+          "endpoint_bytes": 2066
+        }
+      ],
+      "p50_ms": 49.2157415001202,
+      "p95_ms": 55.87648199980322
+    },
+    {
+      "scenario": "landing",
+      "runs": [
+        {
+          "duration_ms": 26.870971999869653,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 23.094,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 5.093,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 5.093,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 23.094,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        },
+        {
+          "duration_ms": 25.782361999972636,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 22.57,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 5.873,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 5.873,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 22.57,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        },
+        {
+          "duration_ms": 28.513968999959616,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 23.58,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 4.212,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.212,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 23.58,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        },
+        {
+          "duration_ms": 27.394189999995433,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 23.81,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 4.812,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.812,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 23.81,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        },
+        {
+          "duration_ms": 27.437906000159273,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 22.965,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 4.189,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.189,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 22.965,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        },
+        {
+          "duration_ms": 24.97708999999304,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 21.65,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 4.597,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.597,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 21.65,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        },
+        {
+          "duration_ms": 24.452728999676765,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 21.284,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 4.32,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.32,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 21.284,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        },
+        {
+          "duration_ms": 29.286331000093924,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 25.9,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 5.891,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 5.891,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 25.9,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        },
+        {
+          "duration_ms": 26.267132999691967,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 22.494,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 4.297,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.297,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 22.494,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        },
+        {
+          "duration_ms": 24.172216999886587,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 20.524,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 4.179,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.179,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 20.524,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        },
+        {
+          "duration_ms": 26.334534999932657,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 22.32,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 4.119,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.119,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 22.32,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        },
+        {
+          "duration_ms": 27.048780999848532,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 23.679,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 4.657,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.657,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 23.679,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        },
+        {
+          "duration_ms": 30.305747000056726,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 23.429,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 6.765,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 6.765,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 23.429,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        },
+        {
+          "duration_ms": 42.80690599989612,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 39.136,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 4.296,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.296,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 39.136,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        },
+        {
+          "duration_ms": 27.033245999973587,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 23.073,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 5.108,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 5.108,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 23.073,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        },
+        {
+          "duration_ms": 27.46434999971825,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 22.677,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 4.575,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.575,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 22.677,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        },
+        {
+          "duration_ms": 37.64768900009585,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 33.822,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 5.243,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 5.243,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 33.822,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        },
+        {
+          "duration_ms": 23.779839999860997,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 20.539,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 5.069,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 5.069,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 20.539,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        },
+        {
+          "duration_ms": 28.02544600035617,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 23.739,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 5.124,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 5.124,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 23.739,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        },
+        {
+          "duration_ms": 30.713423999713996,
+          "diagnostics": {
+            "route": "/api/today/landing",
+            "method": "GET",
+            "backend_ms": 26.856,
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "plans": 1
+            },
+            "data_api_attempt_ms": 4.773,
+            "attempts": [
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.773,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": 26.856,
+          "endpoint_status": 200,
+          "endpoint_bytes": 58
+        }
+      ],
+      "p50_ms": 27.221485499921982,
+      "p95_ms": 37.64768900009585
+    },
+    {
+      "scenario": "overlap",
+      "runs": [
+        {
+          "duration_ms": 28.291996000007202,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.265,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.573,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.077,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.615,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 28.585249000116164,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.153,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.51,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.638,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.005,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 39.51610400008576,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.266,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.444,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.979,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.842,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 30.206109000118886,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 7.9,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.449,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.44,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.011,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 29.534778000197548,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.32,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.439,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.183,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.698,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 30.468766000012693,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.686,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.739,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.022,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.925,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 43.098380000174075,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 13.22,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.464,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.731,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 9.024,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 29.610192000291136,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.025,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.58,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.844,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.601,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 29.122657999778312,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 7.397,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.406,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.256,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.735,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 33.43400099993232,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.288,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.459,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.655,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.175,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 31.41876699964996,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.715,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.718,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.185,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.812,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 28.859912999905646,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 7.733,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.498,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.243,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.993,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 35.67718100021011,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.089,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.424,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.801,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.864,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 34.239695999986,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 9.06,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.65,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.65,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.76,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 29.634809000071982,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.495,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.717,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.727,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.052,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 32.20194599998649,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 7.19,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.388,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.457,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.345,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 29.51913600008993,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 7.829,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.542,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.469,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.818,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 29.239212999982556,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 7.586,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.416,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.649,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.52,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 30.785403000209044,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 8.462,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.641,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 4.288,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.532,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 31.804658000055497,
+          "diagnostics": {
+            "operations": 3,
+            "reads": 3,
+            "failures": 0,
+            "repeated_reads": 1,
+            "reads_by_category": {
+              "profiles": 1,
+              "plans": 2
+            },
+            "data_api_attempt_ms": 7.959,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.436,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.712,
+                "failed": false
+              },
+              {
+                "category": "plans",
+                "read": true,
+                "duration_ms": 3.811,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": false,
+              "response_bytes": 59
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            },
+            {
+              "table": "plans",
+              "full_row": true,
+              "response_bytes": 1053737
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        }
+      ],
+      "p50_ms": 30.33743750006579,
+      "p95_ms": 39.51610400008576
+    },
+    {
+      "scenario": "consent",
+      "runs": [
+        {
+          "duration_ms": 4.603114000019559,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 2.841,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 2.841,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 1.3950519996797084,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 0.555,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.555,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 0.952424999923096,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 0.463,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.463,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 1.7544929996802239,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 0.528,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.528,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 1.588211999660416,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 0.416,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.416,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 3.2330399999409565,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 0.507,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.507,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 1.7379979999532225,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 0.512,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.512,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 0.9270169998671918,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 0.473,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.473,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 1.0033110002041212,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 0.411,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.411,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 1.2533879998954944,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 0.514,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.514,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 1.3905350001550687,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 0.509,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.509,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 0.9250530001736479,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 0.508,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.508,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 0.8491690000482777,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 0.452,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.452,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 0.9293989996876917,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 0.528,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.528,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 1.0979740000038873,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 0.517,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.517,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 1.2424120000105177,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 0.52,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.52,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 3.303946999949403,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 0.437,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.437,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 1.6270209998765495,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 0.524,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.524,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 1.4730090001648932,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 0.816,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.816,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        },
+        {
+          "duration_ms": 0.8551480000278389,
+          "diagnostics": {
+            "operations": 1,
+            "reads": 1,
+            "failures": 0,
+            "repeated_reads": 0,
+            "reads_by_category": {
+              "profiles": 1
+            },
+            "data_api_attempt_ms": 0.389,
+            "attempts": [
+              {
+                "category": "profiles",
+                "read": true,
+                "duration_ms": 0.389,
+                "failed": false
+              }
+            ]
+          },
+          "queries": [
+            {
+              "table": "profiles",
+              "full_row": true,
+              "response_bytes": 66347
+            }
+          ],
+          "backend_ms": null,
+          "endpoint_status": null,
+          "endpoint_bytes": null
+        }
+      ],
+      "p50_ms": 1.3219615000252816,
+      "p95_ms": 3.303946999949403
+    }
+  ]
+}
