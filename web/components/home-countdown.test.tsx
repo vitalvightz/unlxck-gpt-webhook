@@ -11,6 +11,7 @@ import { XpContext } from "./xp-provider";
 import HomePage from "../app/page";
 import messages from "../messages/en.json";
 import { createFreshXpProgress } from "@/lib/xp-progress";
+import { clearSharedReads } from "@/lib/shared-reads";
 import type { MeResponse } from "@/lib/types";
 
 function pendingResponse() {
@@ -49,6 +50,8 @@ async function mountHome(latestId: string) {
   ));
   return { host, cleanup: async () => {
     await act(async () => root.unmount()); host.remove();
+    // Each test is a new session: one test's plan read must not serve the next.
+    clearSharedReads();
     if (originalFrame) globalThis.requestAnimationFrame = originalFrame; else Reflect.deleteProperty(globalThis, "requestAnimationFrame");
     if (originalCancel) globalThis.cancelAnimationFrame = originalCancel; else Reflect.deleteProperty(globalThis, "cancelAnimationFrame");
   } };
