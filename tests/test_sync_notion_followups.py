@@ -453,6 +453,31 @@ def test_scorecard_refreshes_existing_success_stamp_when_counts_unchanged(monkey
     assert writes[0][:2] == ("PATCH", "/blocks/success")
 
 
+@pytest.mark.parametrize("label", ["ACTIVATION RATE ", "\tACTIVATION RATE\n", "\u00a0ACTIVATION RATE\u00a0"])
+def test_scorecard_accepts_label_whitespace_without_rewriting_label(monkeypatch, scorecard_tree, label):
+    # Live Notion's bold activation label has a trailing space. Rich-text
+    # formatting can split the label into multiple spans without changing it.
+    paragraph = scorecard_tree["card-2"][1]["paragraph"]
+    paragraph["rich_text"] = [{"plain_text": label[:10]}, {"plain_text": label[10:]}]
+    monkeypatch.setattr(sync, "scorecard_rows", lambda: iter([]))
+    writes = []
+    monkeypatch.setattr(sync, "request", lambda *args: writes.append(args))
+    assert sync.sync_scorecard() == (0, 1)
+    assert [path for _, path, _ in writes] == ["/blocks/count-2", "/blocks/page/children"]
+    assert sync.block_text(scorecard_tree["card-2"][1]) == label
+
+
+def test_scorecard_rejects_duplicate_card_with_padded_label(monkeypatch, scorecard_tree):
+    duplicate = copy.deepcopy(scorecard_tree["card-2"])
+    duplicate[1]["paragraph"]["rich_text"] = [{"plain_text": "ACTIVATION RATE "}]
+    scorecard_tree["column-2"].append({"id": "duplicate", "type": "callout"})
+    scorecard_tree["duplicate"] = duplicate
+    monkeypatch.setattr(sync, "scorecard_rows", lambda: iter([]))
+    monkeypatch.setattr(sync, "request", lambda *_: pytest.fail("Duplicate cards must prevent all writes"))
+    with pytest.raises(ValueError, match="Duplicate scorecard card: ACTIVATION RATE"):
+        sync.sync_scorecard()
+
+
 @pytest.mark.parametrize("failure", ["query", "card", "timestamp", "duplicate"])
 def test_failed_scorecard_does_not_publish_success(monkeypatch, scorecard_tree, failure):
     old_text = sync.SCORECARD_SUCCESS_PREFIX + "2026-10-01T12:00:00+00:00"
