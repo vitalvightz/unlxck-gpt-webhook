@@ -2608,6 +2608,33 @@ export function PlanViewer({
     ? `Block ${plan.schedule_context?.block_number ?? 1} · Week ${openWeekNumber} of 4`
     : null;
 
+  const showStatusLabel = !isCurrentActivePlan || completedFightCamp || isTriageBlocked || !hasPublishedPlan;
+  // At most one primary action sits under the hero; everything secondary
+  // (All plans, Edit Plan, Rename, Archive…) lives in the ••• menu.
+  const heroPrimaryAction =
+    canManagePlan && !completedFightCamp && !activePlanStateResolved ? (
+      <button type="button" className="cta" disabled>
+        Checking plan state…
+      </button>
+    ) : canManagePlan && isCurrentActivePlan && !nextSessionAction ? (
+      <Link href="/today" className="cta">
+        Open Today
+      </Link>
+    ) : canManagePlan && activePlanStateResolved && !isCurrentActivePlan && canSetActivePlan(plan.activation_state) ? (
+      <button
+        type="button"
+        className="cta"
+        onClick={() => void handleSetActive()}
+        disabled={setActivePending}
+      >
+        {setActivePending ? "Setting active..." : "Set active"}
+      </button>
+    ) : archivedPreview && viewerRole === "athlete" ? (
+      <Link href="/create" className="ghost-button">
+        Create a plan
+      </Link>
+    ) : null;
+
   const adminSections = [
     {
       artifactKey: "draft",
@@ -2690,7 +2717,9 @@ export function PlanViewer({
           <div className="plan-detail-status">
             <p className="sr-only">Plan status</p>
             <h2 className="plan-summary-title">
-              {statusLabel}
+              {/* The ACTIVE badge already says a live plan is ready, so the
+                  status text only shows when it adds something. */}
+              {showStatusLabel ? statusLabel : <span className="sr-only">{statusLabel}</span>}
               {isCurrentActivePlan ? (
                 <span className="badge status-badge-success cm-active-badge">ACTIVE</span>
               ) : canManagePlan && !activePlanStateResolved ? (
@@ -2699,6 +2728,58 @@ export function PlanViewer({
             </h2>
             {isTriageBlocked ? <p className="muted">Stage 2 was skipped intentionally.</p> : null}
           </div>
+          <details className="plan-action-menu plan-hero-menu">
+            <summary className="ghost-button" aria-label="Plan options">
+              <span aria-hidden="true">•••</span>
+            </summary>
+            <div className="plan-action-menu-popover">
+              <Link href="/plans" className="ghost-button">
+                All plans
+              </Link>
+              {plan.custom_plan_id && plan.athlete_id === viewerProfileId ? (
+                <Link className="ghost-button" href={`/plans/custom?plan=${plan.custom_plan_id}`}>Edit Plan</Link>
+              ) : null}
+              {canManagePlan && !archivedPreview ? (
+                <>
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    onClick={handleRenamePlan}
+                    disabled={planActionPending !== null}
+                  >
+                    {planActionPending === "rename" ? "Renaming..." : "Rename"}
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost-button danger-button"
+                    onClick={handleArchiveOwnPlan}
+                    disabled={planActionPending !== null}
+                  >
+                    {planActionPending === "archive" ? "Archiving..." : "Archive"}
+                  </button>
+                </>
+              ) : null}
+              {hasPublishedPlan && athletePlanText ? (
+                <QuickCopyButton text={athletePlanText} artifactKey="athlete-plan" />
+              ) : null}
+              {isViewerAdmin ? (
+                <button
+                  type="button"
+                  className="ghost-button danger-button"
+                  onClick={handlePermanentDelete}
+                  disabled={planActionPending !== null}
+                >
+                  {planActionPending === "permanent-delete" ? "Deleting..." : "Permanent delete"}
+                </button>
+              ) : null}
+              {isViewerAdmin && plan.athlete_id ? (
+                <Link href={`/admin/athletes/${plan.athlete_id}`} className="ghost-button">
+                  View athlete profile
+                </Link>
+              ) : null}
+              <p className="plan-created-at muted">Created {formatPlanTimestamp(plan.created_at)}</p>
+            </div>
+          </details>
         </div>
 
         {archivedPreview ? (
@@ -2730,92 +2811,15 @@ export function PlanViewer({
               <h2>{nextSessionTitle}</h2>
               {nextSessionDate ? <p className="muted">{nextSessionDate}</p> : null}
             </div>
-            <Link href="/today" className="cta plan-next-session-cta">
-              {openSessionLabel}
+            <Link href="/today" className="cta plan-next-session-cta" aria-label={openSessionLabel}>
+              Open
             </Link>
           </div>
         ) : null}
 
-        <div className={`plan-summary-actions plan-detail-actions${plan.custom_plan_id && plan.athlete_id === viewerProfileId ? " plan-detail-actions-custom" : ""}`}>
-          {canManagePlan && !completedFightCamp && !activePlanStateResolved ? (
-            <button type="button" className="cta" disabled>
-              Checking plan state…
-            </button>
-          ) : null}
-          {canManagePlan && isCurrentActivePlan && !nextSessionAction ? (
-            <Link href="/today" className="cta">
-              Open Today
-            </Link>
-          ) : null}
-          {canManagePlan && activePlanStateResolved && !isCurrentActivePlan && canSetActivePlan(plan.activation_state) ? (
-            <button
-              type="button"
-              className="cta"
-              onClick={() => void handleSetActive()}
-              disabled={setActivePending}
-            >
-              {setActivePending ? "Setting active..." : "Set active"}
-            </button>
-          ) : null}
-          <Link href="/plans" className="ghost-button">
-            All plans
-          </Link>
-          {plan.custom_plan_id && plan.athlete_id === viewerProfileId ? (
-            <Link className="ghost-button" href={`/plans/custom?plan=${plan.custom_plan_id}`}>Edit Plan</Link>
-          ) : null}
-          {archivedPreview && viewerRole === "athlete" ? (
-            <Link href="/create" className="ghost-button">
-              Create a plan
-            </Link>
-          ) : null}
-
-          {canManagePlan || isViewerAdmin || hasPublishedPlan ? (
-            <details className="plan-action-menu">
-              <summary className="ghost-button">Manage</summary>
-              <div className="plan-action-menu-popover">
-                <p className="plan-created-at muted">Created {formatPlanTimestamp(plan.created_at)}</p>
-                {canManagePlan && !archivedPreview ? (
-                  <>
-                    <button
-                      type="button"
-                      className="ghost-button"
-                      onClick={handleRenamePlan}
-                      disabled={planActionPending !== null}
-                    >
-                      {planActionPending === "rename" ? "Renaming..." : "Rename"}
-                    </button>
-                    <button
-                      type="button"
-                      className="ghost-button danger-button"
-                      onClick={handleArchiveOwnPlan}
-                      disabled={planActionPending !== null}
-                    >
-                      {planActionPending === "archive" ? "Archiving..." : "Archive"}
-                    </button>
-                  </>
-                ) : null}
-                {hasPublishedPlan && athletePlanText ? (
-                  <QuickCopyButton text={athletePlanText} artifactKey="athlete-plan" />
-                ) : null}
-                {isViewerAdmin ? (
-                  <button
-                    type="button"
-                    className="ghost-button danger-button"
-                    onClick={handlePermanentDelete}
-                    disabled={planActionPending !== null}
-                  >
-                    {planActionPending === "permanent-delete" ? "Deleting..." : "Permanent delete"}
-                  </button>
-                ) : null}
-                {isViewerAdmin && plan.athlete_id ? (
-                  <Link href={`/admin/athletes/${plan.athlete_id}`} className="ghost-button">
-                    View athlete profile
-                  </Link>
-                ) : null}
-              </div>
-            </details>
-          ) : null}
-        </div>
+        {heroPrimaryAction ? (
+          <div className="plan-summary-actions plan-detail-actions">{heroPrimaryAction}</div>
+        ) : null}
         {planActionMessage ? <div className="success-banner">{planActionMessage}</div> : null}
         {planActionError ? <div className="error-banner">{planActionError}</div> : null}
         {showActiveConflict ? (

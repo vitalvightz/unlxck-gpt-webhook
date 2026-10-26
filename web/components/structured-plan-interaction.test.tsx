@@ -291,3 +291,59 @@ test("the rail does not scroll (or throw) when it fits without overflow", async 
     cleanup(container, root);
   }
 });
+
+test("calendar view opens the tapped day back in the list", async () => {
+  const { container, root } = mount();
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        days: [{ date: "2026-06-15", sessions: [{ session_id: "a", title: "Strength A", blocks: [] }] }],
+      },
+      {
+        week_id: "wk-2",
+        week_index: 2,
+        days: [
+          { date: "2026-06-22", sessions: [{ session_id: "b", title: "Strength B", blocks: [] }] },
+          { date: "2026-06-24", sessions: [{ session_id: "c", title: "Conditioning C", blocks: [] }] },
+        ],
+      },
+    ],
+  } as StructuredPlan;
+  try {
+    window.localStorage.removeItem("unlxck.plan-view");
+    await act(async () => {
+      root.render(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 15)} />);
+    });
+    const toggle = (label: string) =>
+      Array.from(container.querySelectorAll<HTMLButtonElement>(".cm-view-toggle-option")).find(
+        (button) => button.textContent === label,
+      );
+    assert.equal(toggle("List")?.getAttribute("aria-pressed"), "true");
+
+    await act(async () => toggle("Calendar")?.click());
+    assert.ok(container.querySelector(".cm-calendar"));
+    assert.equal(container.querySelector(".cm-week-strip"), null);
+    assert.equal(container.querySelector(".cm-days"), null);
+    assert.equal(window.localStorage.getItem("unlxck.plan-view"), "calendar");
+
+    // Wed 24 Jun is week 2, day 1.
+    const cell = Array.from(container.querySelectorAll<HTMLButtonElement>("button.cm-cal-cell")).find(
+      (button) => (button.textContent ?? "").includes("Wed 24 Jun 2026"),
+    );
+    assert.ok(cell, "expected a tappable Wed 24 Jun cell");
+    await act(async () => cell.click());
+
+    assert.equal(container.querySelector(".cm-calendar"), null);
+    assert.equal(container.querySelector(".cm-week-pill-selected")?.getAttribute("data-week-pos"), "1");
+    const opened = container.querySelector<HTMLDetailsElement>('.cm-days [data-day-index="1"]');
+    assert.equal(opened?.open, true);
+    assert.equal(window.localStorage.getItem("unlxck.plan-view"), "list");
+  } finally {
+    window.localStorage.removeItem("unlxck.plan-view");
+    cleanup(container, root);
+  }
+});

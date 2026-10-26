@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { ExerciseGlyphIcon, type ExerciseGlyphName } from "./exercise-glyph";
 import { rehabExerciseTarget } from "@/lib/rehab-exercise-guide";
 
@@ -42,7 +42,6 @@ import {
   resolvedWeekPhase,
   selectBlockMetric,
   shouldShowRest,
-  weekLabel,
   type SessionlessDayKind,
 } from "@/lib/structured-plan";
 import {
@@ -76,6 +75,8 @@ import {
 import { useTrainingDay } from "@/lib/use-training-day";
 import { describeRelativeDay, formatAppDate, formatAppDateRange } from "@/lib/date-format";
 import { resolveFiniteWeekNumber } from "@/lib/plan-format";
+import { buildPlanCalendar } from "@/lib/plan-calendar";
+import { PlanCalendar } from "@/components/plan-calendar";
 import {
   DECLARED_LIGHT_COMBAT_TITLE,
   formatPlanLabel,
@@ -1935,6 +1936,7 @@ export function CampDayCard({
   currentTrainingDayIso,
   planStartIso,
   onLogSession,
+  dayIndex,
 }: {
   day: StructuredDay;
   /** Truthful calendar date for a recurring weekday match. The stored projected
@@ -1957,6 +1959,8 @@ export function CampDayCard({
   planStartIso?: string | null;
   /** Opens the retro-log form for a past, still-loggable session. */
   onLogSession?: (day: StructuredDay, session: StructuredSession, sessionId: string) => void;
+  /** Position in the week's day list; lets the calendar scroll to this card. */
+  dayIndex?: number;
 }) {
   const [open, setOpen] = useState<boolean>(Boolean(defaultOpen));
   const userToggledOpen = useRef(false);
@@ -2007,6 +2011,7 @@ export function CampDayCard({
   return (
     <details
       className={`sp-week cm-day${isCurrent ? " cm-day-current" : ""}`}
+      data-day-index={dayIndex}
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
@@ -2255,6 +2260,7 @@ function WeekStrip({
   onSelect,
   completionIndex,
   openOngoing,
+  controls,
 }: {
   weeks: StructuredWeek[];
   selectedPos: number;
@@ -2262,6 +2268,8 @@ function WeekStrip({
   onSelect: (pos: number) => void;
   completionIndex?: CompletionIndex;
   openOngoing: boolean;
+  /** Extra controls for the navigation row (the List / Calendar switch). */
+  controls?: ReactNode;
 }) {
   const stripRef = useRef<HTMLElement>(null);
   const scrollable = weeks.length > WEEK_STRIP_FIT_LIMIT;
@@ -2294,11 +2302,14 @@ function WeekStrip({
       <p className="cm-week-navigation-label" aria-live="polite" aria-atomic="true">
         Week {selectedPos + 1} of {weeks.length}
       </p>
-      {currentPos !== null && currentPos !== selectedPos ? (
-        <button type="button" className="cm-current-week" onClick={() => onSelect(currentPos)}>
-          Current week
-        </button>
-      ) : null}
+      <div className="cm-week-nav-actions">
+        {currentPos !== null && currentPos !== selectedPos ? (
+          <button type="button" className="cm-current-week" onClick={() => onSelect(currentPos)}>
+            Current week
+          </button>
+        ) : null}
+        {controls}
+      </div>
     </div>
     <nav
       ref={stripRef}
@@ -2359,9 +2370,9 @@ function WeekStrip({
   );
 }
 
-/** The selected week's countdown/dates, work sources and app completion.
- *  The week goal is already shown in the heading via weekLabel, and the phase is
- *  already visible in the week pill, so this overview avoids repeating it. */
+/** The selected week's heading, intent, and one summary line of dates, work
+ *  sources and app completion. The phase is already visible in the week pill,
+ *  so this overview avoids repeating it. */
 function WeekOverview({
   week,
   weekNumber,
@@ -2395,38 +2406,37 @@ function WeekOverview({
         ? formatAppDate(startDate || endDate)
         : null;
 
-  const rows = [
-    { label: "Countdown", value: countdownRange },
-    { label: "Dates", value: dateRange, wide: true },
+  // One plain line of facts rather than a grid of bordered tiles: the tiles
+  // read as buttons and pushed the training days below the fold.
+  const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+  const facts = [
+    { key: "dates", text: dateRange },
+    { key: "countdown", text: countdownRange },
     {
-      label: "App sessions",
-      value: sessionSummary.appSessions > 0 ? `${sessionSummary.appSessions}` : null,
+      key: "app",
+      text: sessionSummary.appSessions > 0 ? plural(sessionSummary.appSessions, "app session", "app sessions") : null,
     },
     {
-      label: "Support cards",
-      value: sessionSummary.supportSessions > 0 ? `${sessionSummary.supportSessions}` : null,
+      key: "coach",
+      text: sessionSummary.coachLedSessions > 0
+        ? plural(sessionSummary.coachLedSessions, "coach/gym day", "coach/gym days")
+        : null,
     },
     {
-      label: "Coach/gym days",
-      value: sessionSummary.coachLedSessions > 0 ? `${sessionSummary.coachLedSessions}` : null,
+      key: "support",
+      text: sessionSummary.supportSessions > 0
+        ? plural(sessionSummary.supportSessions, "support card", "support cards")
+        : null,
     },
-    {
-      label: "App completed",
-      value: completion.total > 0 ? `${completion.done}/${completion.total}` : null,
-      wideMobile: true,
-    },
-  ].filter((row) => Boolean(row.value));
-  const baseHeading = weekLabel(week);
+  ].filter((fact): fact is { key: string; text: string } => Boolean(fact.text));
   const openWeekNumber = resolveFiniteWeekNumber(
     week.week_index,
     scheduleContext?.current_week_number,
   );
-  const openWeekHeading = baseHeading.replace(
-    /^Week(?:\s+\d+)?/i,
-    `Week ${openWeekNumber} of 4`,
-  );
+  // The week's goal is already carried by the intent line below, so the
+  // heading stays short instead of truncating a sentence.
   const heading = openOngoing
-    ? `Block ${scheduleContext?.block_number ?? 1} · ${openWeekHeading}`
+    ? `Block ${scheduleContext?.block_number ?? 1} · Week ${openWeekNumber} of 4`
     : `Week ${weekNumber}`;
   const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber, getDays(week).some(d => getSessions(d).some(s => s.prescription_source === "athlete"))) : null;
   // The pill only names the phase (GPP / SPP / Taper); the selected week's
@@ -2436,7 +2446,6 @@ function WeekOverview({
   return (
     <section className="sp-card cm-week-overview">
       <div className="cm-week-overview-head">
-        <p className="sp-eyebrow">Week overview</p>
         <h2 className="sp-redflags-title">
           {heading}
           {phaseEntry ? (
@@ -2455,29 +2464,60 @@ function WeekOverview({
         </p>
       ) : null}
 
-      {rows.length > 0 ? (
-        <div className="sp-block-stats cm-week-overview-stats">
-          {rows.map((row) => (
-            <span
-              key={row.label}
-              className="sp-stat"
-              data-wide={row.wide ? "" : undefined}
-              data-wide-mobile={row.wideMobile ? "" : undefined}
-            >
-              <span className="sp-stat-label">{row.label}</span>
-              {row.value}
-            </span>
+      {facts.length > 0 || completion.total > 0 ? (
+        <p className="cm-week-summary">
+          {facts.map((fact) => (
+            <span key={fact.key} className="cm-week-fact">{fact.text}</span>
           ))}
-        </div>
-      ) : null}
-      {completion.total > 0 && sessionSummary.coachLedSessions > 0 ? (
-        // Training days = app sessions + coach/gym days, so "0/2" beside a
-        // 4-day week needs saying out loud rather than inferring from labels.
-        <p className="muted cm-week-count-note">
-          App completed counts the sessions you run in the app. Coach/gym days are tracked separately.
+          {completion.total > 0 ? (
+            // Counts app work only, so it is labelled as such; coach/gym days
+            // are listed beside it but never logged here.
+            <span className="cm-week-fact cm-week-fact-done">
+              {`${completion.done}/${completion.total} app done`}
+            </span>
+          ) : null}
         </p>
       ) : null}
     </section>
+  );
+}
+
+type PlanViewMode = "list" | "calendar";
+const PLAN_VIEW_STORAGE_KEY = "unlxck.plan-view";
+
+const subscribeToNothing = () => () => {};
+
+function readStoredPlanView(): PlanViewMode {
+  try {
+    return window.localStorage.getItem(PLAN_VIEW_STORAGE_KEY) === "calendar" ? "calendar" : "list";
+  } catch {
+    // Storage blocked (private mode, previews): stay on the list.
+    return "list";
+  }
+}
+
+/** List / Calendar switch for the plan's week area. */
+function PlanViewToggle({
+  view,
+  onChange,
+}: {
+  view: PlanViewMode;
+  onChange: (view: PlanViewMode) => void;
+}) {
+  return (
+    <div className="cm-view-toggle" role="group" aria-label="Plan view">
+      {(["list", "calendar"] as const).map((mode) => (
+        <button
+          key={mode}
+          type="button"
+          className="cm-view-toggle-option"
+          aria-pressed={view === mode}
+          onClick={() => onChange(mode)}
+        >
+          {mode === "list" ? "List" : "Calendar"}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -2631,8 +2671,42 @@ export function StructuredPlanRenderer({
     setSelectedPos(null);
   }
 
+  // List is the default (and the server render); a remembered Calendar choice
+  // takes over on the client, and an explicit tap this visit wins over both.
+  const storedView = useSyncExternalStore(subscribeToNothing, readStoredPlanView, () => "list" as const);
+  const [chosenView, setChosenView] = useState<PlanViewMode | null>(null);
+  const view = chosenView ?? storedView;
+  const changeView = (next: PlanViewMode) => {
+    setChosenView(next);
+    try {
+      window.localStorage.setItem(PLAN_VIEW_STORAGE_KEY, next);
+    } catch {
+      // Not persisting is fine; the choice still applies for this visit.
+    }
+  };
+  // A day picked on the calendar: opened (and scrolled to) once the list shows.
+  const [requestedDay, setRequestedDay] = useState<{ weekPos: number; dayIndex: number } | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!requestedDay || view !== "list") {
+      return;
+    }
+    const card = rootRef.current?.querySelector<HTMLElement>(
+      `.cm-days [data-day-index="${requestedDay.dayIndex}"]`,
+    );
+    if (card && typeof card.scrollIntoView === "function") {
+      card.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
+  }, [requestedDay, view]);
+
   const handleSelectWeek = (pos: number) => {
     setSelectedPos(pos);
+    setRequestedDay(null);
+  };
+  const handleCalendarDay = (weekPos: number, dayIndex: number) => {
+    setSelectedPos(weekPos);
+    setRequestedDay({ weekPos, dayIndex });
+    changeView("list");
   };
 
   const effectivePos = selectedPos ?? focusProgress.currentWeekPos ?? 0;
@@ -2714,13 +2788,32 @@ export function StructuredPlanRenderer({
     weeks,
   ]);
 
+  const calendarTodayIso =
+    cleanText(currentTrainingDayIso)?.slice(0, 10) ??
+    cleanText(scheduleContext?.current_training_day)?.slice(0, 10) ??
+    (calendarDay ? toLocalIsoDay(calendarDay) : null);
+  const calendarRows = useMemo(
+    () =>
+      view === "calendar"
+        ? buildPlanCalendar(weeks, {
+            completionIndex,
+            currentDayIso: calendarTodayIso,
+            planStartIso,
+            anchorIso: scheduleContext?.anchor_date,
+            currentWeekPos: activeWeekPos,
+          })
+        : [],
+    [view, weeks, completionIndex, calendarTodayIso, planStartIso, scheduleContext?.anchor_date, activeWeekPos],
+  );
+  const viewToggle = <PlanViewToggle view={view} onChange={changeView} />;
+
   return (
     <RehabLabelProvider policy={rehabLabelPolicy}>
     <PrivateExerciseMediaProvider token={accessToken}>
     <ExerciseMediaProvider media={exerciseMedia}>
     <PlanSourceTextContext.Provider value={rawFallback}>
     <PlanSafetyTextContext.Provider value={safetyOwnershipTexts}>
-    <div className="sp-root cm-root">
+    <div className="sp-root cm-root" ref={rootRef}>
       {weeks.length > 0 ? (
         <>
           {openOngoing && scheduleContext?.projection_status === "unavailable" ? (
@@ -2732,24 +2825,40 @@ export function StructuredPlanRenderer({
               </p>
             </section>
           ) : null}
-          <WeekStrip
-            weeks={weeks}
-            selectedPos={safePos}
-            currentPos={activeWeekPos}
-            onSelect={handleSelectWeek}
-            completionIndex={completionIndex}
-            openOngoing={openOngoing}
-          />
+          {view === "calendar" ? (
+            <>
+              <div className="cm-week-navigation">
+                <p className="cm-week-navigation-label">
+                  {openOngoing ? `Block ${scheduleContext?.block_number ?? 1}` : "Camp"} · {weeks.length}{" "}
+                  {weeks.length === 1 ? "week" : "weeks"}
+                </p>
+                <div className="cm-week-nav-actions">{viewToggle}</div>
+              </div>
+              <PlanCalendar rows={calendarRows} selectedWeekPos={safePos} onSelectDay={handleCalendarDay} />
+            </>
+          ) : (
+            <>
+              <WeekStrip
+                weeks={weeks}
+                selectedPos={safePos}
+                currentPos={activeWeekPos}
+                onSelect={handleSelectWeek}
+                completionIndex={completionIndex}
+                openOngoing={openOngoing}
+                controls={viewToggle}
+              />
 
-          {selectedWeek ? (
-            <WeekOverview
-              week={selectedWeek}
-              weekNumber={safePos + 1}
-              completionIndex={completionIndex}
-              openOngoing={openOngoing}
-              scheduleContext={scheduleContext}
-            />
-          ) : null}
+              {selectedWeek ? (
+                <WeekOverview
+                  week={selectedWeek}
+                  weekNumber={safePos + 1}
+                  completionIndex={completionIndex}
+                  openOngoing={openOngoing}
+                  scheduleContext={scheduleContext}
+                />
+              ) : null}
+            </>
+          )}
 
           <div className="cm-guardrails">
             <ActiveNotesCard plan={plan} />
@@ -2763,6 +2872,7 @@ export function StructuredPlanRenderer({
             </p>
           ) : null}
 
+          {view === "list" ? (
           <div className="sp-weeks cm-days">
             {dayList.length > 0 ? (
               dayTimeline.map((entry) => {
@@ -2824,7 +2934,12 @@ export function StructuredPlanRenderer({
                     weekNumber={safePos + 1}
                     isCurrent={isCurrent}
                     currentLabel={focusLabel}
-                    defaultOpen={isCurrent || (focusProgress.currentWeekPos == null && index === 0)}
+                    defaultOpen={
+                      isCurrent ||
+                      (focusProgress.currentWeekPos == null && index === 0) ||
+                      (requestedDay?.weekPos === safePos && requestedDay.dayIndex === index)
+                    }
+                    dayIndex={index}
                     completionIndex={completionIndex}
                     currentTrainingDayIso={currentTrainingDayIso}
                     planStartIso={planStartIso}
@@ -2836,6 +2951,7 @@ export function StructuredPlanRenderer({
               <p className="sp-muted">No days scheduled this week.</p>
             )}
           </div>
+          ) : null}
         </>
       ) : null}
 

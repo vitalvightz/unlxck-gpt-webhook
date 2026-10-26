@@ -5955,7 +5955,7 @@ button.mobile-step-rail-item {
 }
 
 .plan-detail-meta {
-  margin: 12px 0 0;
+  margin: 2px 0 0;
   color: var(--text-primary);
   font-size: 12px;
   font-weight: 800;
@@ -5964,8 +5964,30 @@ button.mobile-step-rail-item {
 }
 
 .plan-detail-hero .section-heading {
-  align-items: center;
-  gap: 12px 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: start;
+  gap: 8px 12px;
+}
+
+.plan-detail-hero .section-heading > div:first-child {
+  gap: 4px;
+}
+
+/* Overflow menu (•••) in the hero corner: All plans, Edit Plan, Rename… */
+.plan-hero-menu > summary.ghost-button {
+  min-width: 44px;
+  min-height: 40px;
+  padding: 0 10px;
+  letter-spacing: 0.08em;
+}
+
+.plan-hero-menu > summary::after {
+  display: none;
+}
+
+.plan-hero-menu .plan-action-menu-popover {
+  width: min(260px, calc(100vw - 48px));
 }
 
 .plan-detail-hero h1 {
@@ -5998,8 +6020,8 @@ button.mobile-step-rail-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 18px;
-  padding: 16px 18px;
+  gap: 12px;
+  padding: 12px 14px;
   border: 1px solid rgba(181, 18, 43, 0.28);
   border-left: 3px solid var(--brand-red);
   border-radius: var(--radius-support);
@@ -6011,14 +6033,14 @@ button.mobile-step-rail-item {
 
 .plan-next-session-copy {
   display: grid;
-  gap: 5px;
+  gap: 2px;
   min-width: 0;
 }
 
 .plan-next-session-copy h2 {
   margin: 0;
   color: var(--text-primary);
-  font-size: clamp(19px, 2vw, 24px);
+  font-size: clamp(17px, 2vw, 22px);
   line-height: 1.08;
   letter-spacing: -0.025em;
 }
@@ -6028,31 +6050,13 @@ button.mobile-step-rail-item {
 }
 
 .plan-next-session-cta {
-  min-width: 180px;
+  min-width: 96px;
+  min-height: 44px;
+  padding-inline: 18px;
 }
 
 .plan-detail-actions {
   align-items: flex-start;
-}
-
-.plan-detail-actions-custom {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.plan-detail-actions-custom > .cta {
-  grid-column: 1 / -1;
-}
-
-.plan-detail-actions-custom > .ghost-button,
-.plan-detail-actions-custom > .plan-action-menu > summary {
-  width: 100%;
-  min-width: 0;
-  min-height: 44px;
-  padding: 10px 6px;
-  font-size: 0.8125rem;
-  white-space: nowrap;
 }
 
 .plan-action-menu {
@@ -10597,59 +10601,13 @@ html[data-theme="light"] .today-injury-other-warning {
     grid-template-columns: 1fr;
   }
 
-  .plan-next-session {
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
-
-  .plan-next-session-cta {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .plan-detail-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    /* The open Manage menu sits in flow here; stretching would grow its
-       neighbour ("All plans") to the full height of the menu. */
-    align-items: start;
-  }
-
-  .plan-detail-actions > .cta {
-    grid-column: 1 / -1;
+  .plan-next-session-copy .muted {
+    font-size: 13px;
   }
 
   .plan-detail-actions > .cta,
-  .plan-detail-actions > .ghost-button,
-  .plan-detail-actions > .plan-action-menu,
-  .plan-detail-actions > .plan-action-menu > summary {
+  .plan-detail-actions > .ghost-button {
     width: 100%;
-  }
-
-  .plan-detail-actions > .plan-action-menu > summary {
-    padding-inline: 12px;
-  }
-
-  .plan-action-menu-popover {
-    position: static;
-    width: 100%;
-    min-width: 0;
-    margin-top: 8px;
-  }
-
-  .plan-detail-actions-custom {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .plan-detail-actions-custom > .plan-action-menu > summary {
-    padding-inline: 6px;
-  }
-
-  .plan-detail-actions-custom .plan-action-menu-popover {
-    position: absolute;
-    width: min(260px, calc(100vw - 64px));
-    margin-top: 0;
   }
 
   .onboarding-panel {
@@ -20419,7 +20377,7 @@ video.ex-demo-player {
   flex: 1 1 0;
   min-width: 0;
   min-height: 56px;
-  padding: 9px 11px;
+  padding: 9px 8px;
   border-radius: 12px;
   border: 1px solid var(--border-subtle);
   background: var(--bg-surface);
@@ -20508,7 +20466,9 @@ video.ex-demo-player {
   letter-spacing: 0.02em;
   min-height: 2.8em;
   line-height: 1.4;
-  overflow-wrap: anywhere;
+  /* Break between words first; only split a word that cannot fit at all. */
+  overflow-wrap: break-word;
+  hyphens: auto;
   white-space: normal;
 }
 
@@ -20569,34 +20529,254 @@ video.ex-demo-player {
   margin: 0 0 6px;
 }
 
-.cm-week-overview-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.cm-week-count-note {
-  margin: 8px 0 0;
-  font-size: 0.78rem;
-  line-height: 1.45;
-}
-
-.cm-week-overview-stats .sp-stat {
-  min-width: 0;
-  padding: 9px 10px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-stat);
-  background: var(--bg-stat);
+/* One muted line of week facts ("Mon 26 Oct – Sun 01 Nov · 6 app sessions ·
+   3 coach/gym days · 1/6 app done") in place of a grid of bordered tiles. */
+.cm-week-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 0;
+  margin: 2px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.5;
   font-variant-numeric: tabular-nums;
 }
 
-/* The Dates tile carries the longest value (a full date range); give it a
-   double-width column so the compact range stays on a single line instead of
-   wrapping and unbalancing the row. On the ≤720px 2-col grid this becomes a
-   full-width row, which reads cleanly. */
-.cm-week-overview-stats .sp-stat[data-wide] {
-  grid-column: span 2;
+.cm-week-fact + .cm-week-fact::before {
+  content: "·";
+  padding-inline: 7px;
+  color: var(--text-muted);
+}
+
+.cm-week-fact-done {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.cm-week-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+
+/* List / Calendar segmented switch. */
+.cm-view-toggle {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--bg-surface);
+}
+
+.cm-view-toggle-option {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cm-view-toggle-option[aria-pressed="true"] {
+  background: var(--bg-surface-alt);
+  color: var(--text-primary);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+.cm-view-toggle-option:focus-visible {
+  outline: 2px solid var(--border-active);
+  outline-offset: 2px;
+}
+
+/* Block calendar: weeks as rows, Monday first. */
+.cm-calendar {
+  padding: 12px;
+}
+
+.cm-cal-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 4px;
+  table-layout: fixed;
+}
+
+.cm-cal-caption {
+  padding: 0 4px 6px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.cm-cal-week-head,
+.cm-cal-week {
+  width: 30px;
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.cm-cal-weekday {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.cm-cal-weekday abbr {
+  text-decoration: none;
+}
+
+.cm-cal-row-selected .cm-cal-week {
+  color: var(--text-primary);
+}
+
+.cm-cal-row-selected .cm-cal-cell {
+  border-color: var(--border-strong);
+}
+
+.cm-cal-cell {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+button.cm-cal-cell {
+  cursor: pointer;
+}
+
+button.cm-cal-cell:hover {
+  border-color: var(--border-active);
+}
+
+button.cm-cal-cell:focus-visible {
+  outline: 2px solid var(--border-active);
+  outline-offset: 2px;
+}
+
+td[data-state="rest"] .cm-cal-cell {
+  background: transparent;
+  color: var(--text-muted);
+  border-style: dashed;
+}
+
+td[data-state="outside"] .cm-cal-cell {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+  opacity: 0.45;
+}
+
+.cm-cal-today {
+  border-color: var(--brand-red);
+  box-shadow: inset 0 0 0 1px var(--brand-red);
+}
+
+.cm-cal-today .cm-cal-num {
+  color: var(--brand-red);
+  font-weight: 700;
+}
+
+.cm-cal-num {
+  line-height: 1;
+}
+
+.cm-cal-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.cm-cal-dot[data-state="done"] {
+  background: var(--success-ink);
+}
+
+.cm-cal-dot[data-state="missed"] {
+  background: var(--danger-ink);
+}
+
+.cm-cal-dot[data-state="planned"] {
+  box-shadow: inset 0 0 0 1.5px var(--text-primary);
+}
+
+.cm-cal-dot[data-state="coach"] {
+  border-radius: 2px;
+  background: var(--text-muted);
+}
+
+.cm-cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 8px 4px 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.cm-cal-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The safety card stays one tap away, but as a single slim row: eyebrow and
+   title side by side, a chevron instead of a SHOW pill. */
+.sp-collapse.sp-redflags > .sp-collapse-summary {
+  flex-direction: row;
+  align-items: center;
+  padding-block: 10px;
+}
+
+.sp-collapse.sp-redflags .sp-redflags-summary-text {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+}
+
+.sp-collapse.sp-redflags .sp-collapse-action {
+  border: 0;
+  padding: 0;
+  font-size: 0;
+}
+
+.sp-collapse.sp-redflags .sp-collapse-action::after {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin: 0 4px 3px;
+  border-right: 1.5px solid var(--text-muted);
+  border-bottom: 1.5px solid var(--text-muted);
+  transform: rotate(45deg);
+  transition: transform var(--transition-fast);
+}
+
+.sp-collapse.sp-redflags[open] .sp-collapse-action::after {
+  margin-bottom: -2px;
+  transform: rotate(225deg);
 }
 
 .cm-guardrails {
@@ -20837,17 +21017,17 @@ video.ex-demo-player {
 }
 
 @media (max-width: 720px) {
-  /* No min-width floor here: in the ≤4-week fill layout the cards must be free
-     to share the strip width evenly. The scroll layout carries its own readable
-     floor via max() above. */
-  .cm-week-overview-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .cm-calendar {
+    padding: 8px 6px;
   }
 
-  /* Completion is scoped to app sessions, so it closes the compact source
-     summary on its own row instead of leaving a single orphaned tile. */
-  .cm-week-overview-stats .sp-stat[data-wide-mobile] {
-    grid-column: span 2;
+  .cm-cal-table {
+    border-spacing: 3px;
+  }
+
+  .cm-cal-week-head,
+  .cm-cal-week {
+    width: 24px;
   }
 }
 
