@@ -1,4 +1,5 @@
 import { completeApiMeasurement, measuredApiFetch } from "./api-measurements";
+import { beginSharedReadWrite, sharedRead } from "./shared-reads";
 import {
   OFFLINE_NETWORK_MESSAGE,
   RETRYABLE_NETWORK_MESSAGE,
@@ -325,7 +326,23 @@ type ExecutedRequest = {
   requestId: string | null;
 };
 
+// Product analytics events change no training, plan or history data.
+function isNeutralWrite(path: string): boolean {
+  return path.startsWith("/api/analytics/");
+}
+
 async function executeRequest(path: string, init?: ApiRequestInit): Promise<ExecutedRequest> {
+  const method = init?.method ?? "GET";
+  // Any other write ends request sharing until it settles (see shared-reads.ts).
+  const endWrite = method === "GET" || method === "HEAD" || isNeutralWrite(path) ? null : beginSharedReadWrite();
+  try {
+    return await sendRequest(path, method, init);
+  } finally {
+    endWrite?.();
+  }
+}
+
+async function sendRequest(path: string, method: string, init?: ApiRequestInit): Promise<ExecutedRequest> {
   const headers = new Headers(init?.headers ?? {});
   if (init?.body && !(typeof FormData !== "undefined" && init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
@@ -340,7 +357,6 @@ async function executeRequest(path: string, init?: ApiRequestInit): Promise<Exec
     headers.set("X-Plan-Source", init.planSource);
   }
 
-  const method = init?.method ?? "GET";
   const url = `${getApiBaseUrl()}${path}`;
   const startedAt = Date.now();
   const timeoutMs = getApiRequestTimeoutMs();
@@ -562,7 +578,9 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
 
 export function getTrainingHistory(token: string, includeSkipped = false, beforeDay?: string): Promise<TrainingHistoryPage> {
   const before = beforeDay ? `&before_day=${encodeURIComponent(beforeDay)}` : "";
-  return readJson(includeSkipped ? `/api/training/history?include_skipped=true&limit=200${before}` : "/api/training/history", { token });
+  const path = includeSkipped ? `/api/training/history?include_skipped=true&limit=200${before}` : "/api/training/history";
+  // Shared while in flight only: History edits must show on the next read.
+  return sharedRead(token, path, signal => readJson<TrainingHistoryPage>(path, { token, signal }));
 }
 
 export function getSessionDetails(token: string, source: TrainingHistorySession["source"], id: string): Promise<SessionDetails> {
@@ -828,12 +846,23 @@ export function cancelGenerationJob(token: string, jobId: string): Promise<Gener
   });
 }
 
+/** Reuse policy for presentation reads: see shared-reads.ts. */
+export type ReadReuse = { reuseForMs?: number };
+
 export function listPlans(token: string): Promise<PlanSummary[]> {
-  return withTransientRetries(() => readJson<PlanSummary[]>("/api/plans", { token }));
+  return sharedRead(token, "/api/plans", signal =>
+    withTransientRetries(() => readJson<PlanSummary[]>("/api/plans", { token, signal }), { signal }));
 }
 
-export function getActivePlan(token: string): Promise<PlanSummary> {
-  return withTransientRetries(() => readJson<PlanSummary>("/api/plans/active", { token }));
+/**
+ * Plans reads this fresh; the Viewer, which only labels its own plan, may reuse
+ * a result from the last few seconds. Any activation, archive or other write
+ * discards held results first.
+ */
+export function getActivePlan(token: string, { reuseForMs }: ReadReuse = {}): Promise<PlanSummary> {
+  return sharedRead(token, "/api/plans/active", signal =>
+    withTransientRetries(() => readJson<PlanSummary>("/api/plans/active", { token, signal }), { signal }),
+    { hold: true, reuseForMs });
 }
 
 export function setActivePlan(
@@ -851,24 +880,28 @@ export function setActivePlan(
   );
 }
 
+/**
+ * The saved plan. Home, Today and Plan Detail present the same plan, so they
+ * pass `reuseForMs` to share a recent read; background upgrade polls and
+ * post-change refreshes omit it and always reach the server.
+ */
 export function getPlan(
   token: string,
   planId: string,
-  options: { signal?: AbortSignal } = {},
+  options: { signal?: AbortSignal } & ReadReuse = {},
 ): Promise<PlanDetail> {
-  const { signal } = options;
-  return withTransientRetries(
-    () => readJson<PlanDetail>(`/api/plans/${encodeURIComponent(planId)}`, { token, signal }),
-    { signal },
-  );
+  const { signal, reuseForMs } = options;
+  const path = `/api/plans/${encodeURIComponent(planId)}`;
+  return sharedRead(token, path, shared =>
+    withTransientRetries(() => readJson<PlanDetail>(path, { token, signal: shared }), { signal: shared }),
+    { signal, hold: true, reuseForMs });
 }
 
+/** Completion rows are shared only while in flight: every visit reads them fresh. */
 export function getPlanCompletions(token: string, planId: string): Promise<PlanCompletionsResponse> {
-  return withTransientRetries(() =>
-    readJson<PlanCompletionsResponse>(`/api/plans/${encodeURIComponent(planId)}/completions`, {
-      token,
-    }),
-  );
+  const path = `/api/plans/${encodeURIComponent(planId)}/completions`;
+  return sharedRead(token, path, signal =>
+    withTransientRetries(() => readJson<PlanCompletionsResponse>(path, { token, signal }), { signal }));
 }
 
 export function renamePlan(token: string, planId: string, planName: string): Promise<PlanDetail> {
@@ -1370,8 +1403,16 @@ export function undoExerciseChange(
   ));
 }
 
-export function getToday(token: string): Promise<TodayCommandView> {
-  return withTransientRetries(() => readJson<TodayCommandView>("/api/today", { token }));
+/**
+ * The authoritative Today command view. Home and Today always read it fresh
+ * (joining at most an identical read already in flight). Only screens that
+ * merely label the active plan pass `reuseForMs`: a reused view never decides
+ * readiness, training permission, holds or whether a save succeeded.
+ */
+export function getToday(token: string, { reuseForMs }: ReadReuse = {}): Promise<TodayCommandView> {
+  return sharedRead(token, "/api/today", signal =>
+    withTransientRetries(() => readJson<TodayCommandView>("/api/today", { token, signal }), { signal }),
+    { hold: true, reuseForMs });
 }
 
 export function submitTodayCheckin(

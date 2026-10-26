@@ -18,6 +18,7 @@ import { TrainingSummaryCard } from "@/components/training-summary-card";
 import { useXp } from "@/components/xp-provider";
 import { getPlan, getToday, getTrainingHistory } from "@/lib/api";
 import { describeLoadFailure } from "@/lib/connectivity";
+import { SHARED_READ_MAX_AGE_MS } from "@/lib/shared-reads";
 import { hasHealthDataConsent } from "@/lib/compliance";
 import { getTrackingHome } from "@/lib/tracking-home";
 import type { TrainingHistorySession } from "@/lib/training-history";
@@ -405,7 +406,7 @@ export default function HomePage() {
     let cancelled = false;
     let request = calendarRequest.current;
     if (!request || request.token !== token || request.id !== calendarPlanId) {
-      request = { token, id: calendarPlanId, promise: getPlan(token, calendarPlanId) };
+      request = { token, id: calendarPlanId, promise: getPlan(token, calendarPlanId, { reuseForMs: SHARED_READ_MAX_AGE_MS }) };
       calendarRequest.current = request;
     }
     request.promise

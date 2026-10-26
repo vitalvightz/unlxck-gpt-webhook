@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 
 import { ApiError, getAnalyticsPreference, getMe } from "@/lib/api";
+import { clearSharedReads } from "@/lib/shared-reads";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { APPEARANCE_STORAGE_KEY, type AppearanceMode, type MeResponse } from "@/lib/types";
 
@@ -160,6 +161,9 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       clearRetryTimer();
       setHasTransientMeError(false);
       setMe(nextMe);
+      // Set now, not after the render commits: the auth-change and getSession
+      // paths both load at startup, and the later one must see this result.
+      latestMeRef.current = nextMe;
       hydratedAccessTokenRef.current = nextSession.access_token;
       setSession(nextSession);
     } catch (err) {
@@ -320,6 +324,8 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         return;
       }
       handledAccessTokenRef.current = nextToken;
+      // Reads are keyed by token already; this just drops the old session's.
+      clearSharedReads();
       setSession(mappedSession);
       void loadMe(mappedSession);
     });
@@ -367,6 +373,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     }
     handledAccessTokenRef.current = null;
     hydratedAccessTokenRef.current = null;
+    clearSharedReads();
     clearRetryTimer();
     setHasTransientMeError(false);
     setAppearancePreview(null);
