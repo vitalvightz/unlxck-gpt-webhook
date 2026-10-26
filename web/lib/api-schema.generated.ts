@@ -1478,6 +1478,13 @@ export type NutritionBodyweightLogEntryRequest = {
   notes?: string | null;
 };
 
+/** One day's scale reading and the smoothed trend through it (an estimate). */
+export type NutritionBodyweightTrendPoint = {
+  date: string;
+  scale_weight_kg: number;
+  trend_weight_kg: number;
+};
+
 export type NutritionCoachControlsInput = {
   coach_override_enabled: boolean;
   athlete_override_enabled: boolean;
@@ -1500,6 +1507,8 @@ export type NutritionDerivedState = {
   days_until_fight: number | null;
   weight_cut_pct: number;
   weight_cut_risk: boolean;
+  weight_cut_risk_band: "high" | "moderate" | "none" | "severe";
+  weight_cut_supervision_required: boolean;
   aggressive_weight_cut: boolean;
   high_pressure_weight_cut: boolean;
   short_notice: boolean;
@@ -1508,6 +1517,9 @@ export type NutritionDerivedState = {
   fight_week_override_band: "final_day_protocol" | "micro_taper_protocol" | "mini_taper_protocol" | "none";
   current_phase_effective: string | null;
   rolling_7_day_average_weight: number | null;
+  rolling_7_day_weigh_in_days: number;
+  weekly_pace_kg: number | null;
+  bodyweight_trend: NutritionBodyweightTrendPoint[];
   foundation_status: "complete" | "incomplete" | "sufficient";
   missing_required_fields: string[];
 };

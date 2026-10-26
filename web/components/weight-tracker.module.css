@@ -12,6 +12,11 @@
 .change { display: inline-block; margin-left: 10px; font-size: 0.85rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .card [role="slider"]:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 3px; }
 .targetLine { stroke: var(--progress-gold); stroke-width: 1.2; stroke-dasharray: 5 5; vector-effect: non-scaling-stroke; opacity: .85; }
+.trendLine { fill: none; stroke: var(--text-primary); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; opacity: .85; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 10px 0 0; font-size: 12px; color: var(--text-muted); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legendDot { width: 8px; height: 8px; border: 1.5px solid var(--text-secondary); border-radius: 50%; background: var(--bg-panel); }
+.legendLine { width: 16px; height: 2px; border-radius: 2px; background: var(--text-primary); opacity: .85; }
 .targetLabel { position: absolute; right: 0; transform: translateY(-120%); font-size: 11px; font-weight: 600; color: var(--progress-gold); font-variant-numeric: tabular-nums; pointer-events: none; }
 .listSection { display: grid; gap: 12px; }
 .listSection > :global(.secondary-button) { justify-self: start; }

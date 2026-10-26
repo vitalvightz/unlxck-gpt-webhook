@@ -70,13 +70,6 @@ export function getTargetGap(weightKg: number | null, targetWeightKg: number | n
   return roundToOne(weightKg - targetWeightKg);
 }
 
-export function getSevenDayAverage(entries: NutritionBodyweightLogEntry[]): number | null {
-  const recent = getBodyweightEntriesWithIndex(entries).slice(0, 7);
-  if (!recent.length) return null;
-  const total = recent.reduce((sum, entry) => sum + entry.weight_kg, 0);
-  return roundToOne(total / recent.length);
-}
-
 export function formatWeight(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "--";
   return `${value.toFixed(1)} kg`;

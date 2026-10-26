@@ -3,13 +3,14 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from api.bodyweight_trend import daily_readings, seven_day_average, smoothed_trend, weekly_pace
 from fightcamp.camp_phases import calculate_phase_weeks
-from fightcamp.input_parsing import _compute_days_until_fight, is_short_notice_days
+from fightcamp.input_parsing import _athlete_calendar_now, _compute_days_until_fight, is_short_notice_days
 from fightcamp.mindset_module import classify_mental_block
 from fightcamp.sports import planning_format
 from fightcamp.stage2_payload import _derive_readiness_flags, _is_high_pressure_weight_cut
 from fightcamp.stage2_payload_late_fight import _fight_week_override_band
-from fightcamp.weight_cut import compute_weight_cut_pct
+from fightcamp.weight_cut import compute_weight_cut_pct, weight_cut_risk_band, weight_cut_supervision_required
 
 from .models import (
     AdminAthleteRecord,
@@ -154,14 +155,37 @@ def _latest_bodyweight_log_entry(entries: list[NutritionBodyweightLogEntry]) -> 
     return sorted(entries, key=_sort_key)[-1]
 
 
-def _rolling_7_day_average(entries: list[NutritionBodyweightLogEntry]) -> float | None:
-    if not entries:
-        return None
-    recent = sorted(entries, key=lambda entry: (entry.date, entry.time or ""), reverse=True)[:7]
-    if not recent:
-        return None
-    average = sum(entry.weight_kg for entry in recent) / len(recent)
-    return round(average, 1)
+def _same_weigh_in(left: NutritionBodyweightLogEntry | None, right: NutritionBodyweightLogEntry | None) -> bool:
+    if left is None or right is None:
+        return left is right
+    return (left.date, left.time or "", round(left.weight_kg, 2)) == (right.date, right.time or "", round(right.weight_kg, 2))
+
+
+def sync_current_weight_with_log(
+    *,
+    update: NutritionWorkspaceUpdateRequest,
+    previous_log: list[NutritionBodyweightLogEntry],
+) -> tuple[NutritionWorkspaceUpdateRequest, bool]:
+    """Make the newest weigh-in the camp's current weight when it changes.
+
+    Adding a newer weigh-in, or editing or deleting the newest one, moves the
+    current weight to the newest weigh-in left in the log. Edits to older
+    entries leave it alone, so a weight entered later in Camp Setup is not
+    overwritten by tidying history. An emptied log keeps the last current weight.
+    Returns the update and whether the current weight now comes from the log.
+    """
+    before = _latest_bodyweight_log_entry(previous_log)
+    after = _latest_bodyweight_log_entry(update.nutrition_monitoring.daily_bodyweight_log)
+    if after is None or _same_weigh_in(before, after):
+        return update, False
+    shared = update.shared_camp_context.model_copy(
+        update={
+            "current_weight_kg": round(float(after.weight_kg), 1),
+            "current_weight_source": "latest_bodyweight_log",
+            "current_weight_recorded_at": f"{after.date}T{after.time}" if after.time else after.date,
+        }
+    )
+    return update.model_copy(update={"shared_camp_context": shared}), True
 
 
 def _merge_unique_days(*day_lists: list[str]) -> list[str]:
@@ -586,6 +610,10 @@ def build_nutrition_workspace(
     days_until_fight = _compute_days_out(shared_camp_context.fight_date, profile.athlete_timezone)
     weight_cut_pct = compute_weight_cut_pct(shared_camp_context.current_weight_kg or 0.0, shared_camp_context.target_weight_kg or 0.0)
     weight_cut_risk = weight_cut_pct >= 3.0
+    is_minor = bool(getattr(profile, "is_minor", False))
+    readings = daily_readings(monitoring.daily_bodyweight_log)
+    reference_day = _athlete_calendar_now(profile.athlete_timezone or None).date()
+    average_weight, average_days = seven_day_average(readings, reference_day)
     injuries_for_flags = []
     if shared_camp_context.injuries.strip():
         injuries_for_flags.append(shared_camp_context.injuries.strip())
@@ -636,7 +664,14 @@ def build_nutrition_workspace(
         readiness_flags=readiness_flags,
         fight_week_override_band=_fight_week_override_band(days_until_fight),
         current_phase_effective=effective_phase,
-        rolling_7_day_average_weight=_rolling_7_day_average(monitoring.daily_bodyweight_log),
+        weight_cut_risk_band="none" if is_minor else weight_cut_risk_band(weight_cut_risk, weight_cut_pct, days_until_fight),
+        weight_cut_supervision_required=(
+            False if is_minor else weight_cut_supervision_required(weight_cut_risk, weight_cut_pct, days_until_fight)
+        ),
+        rolling_7_day_average_weight=average_weight,
+        rolling_7_day_weigh_in_days=average_days,
+        weekly_pace_kg=weekly_pace(readings, reference_day),
+        bodyweight_trend=smoothed_trend(readings),
         foundation_status=_foundation_status(
             missing_required_fields=missing_required_fields,
             readiness=readiness,
@@ -664,7 +699,15 @@ def merge_workspace_into_payload(
     base_payload: dict[str, Any] | None,
     workspace: NutritionWorkspaceUpdateRequest,
     profile: ProfileRecord | AdminAthleteRecord,
+    weight_from_log: bool = False,
 ) -> dict[str, Any]:
+    """Fold a workspace update into the stored intake or draft payload.
+
+    The athlete's saved weight normally wins over the workspace copy; with
+    ``weight_from_log`` the workspace's current weight (the newest weigh-in, see
+    :func:`sync_current_weight_with_log`) replaces it, so camp calculations,
+    Camp Setup and the next plan read the same weight as the tracker.
+    """
     merged = dict(base_payload or {})
     raw_athlete = _coerce_dict(merged.get("athlete"))
     shared = workspace.shared_camp_context
@@ -687,7 +730,11 @@ def merge_workspace_into_payload(
         "full_name": _coerce_optional_str(raw_athlete.get("full_name")) or profile.full_name,
         "sex": athlete_sex or workspace.nutrition_profile.sex,
         "age": athlete_age if athlete_age is not None else workspace.nutrition_profile.age,
-        "weight_kg": athlete_weight_kg if athlete_weight_kg is not None else shared.current_weight_kg,
+        "weight_kg": (
+            shared.current_weight_kg
+            if weight_from_log and shared.current_weight_kg is not None
+            else athlete_weight_kg if athlete_weight_kg is not None else shared.current_weight_kg
+        ),
         "target_weight_kg": athlete_target_weight_kg if athlete_target_weight_kg is not None else shared.target_weight_kg,
         "height_cm": athlete_height_cm if athlete_height_cm is not None else workspace.nutrition_profile.height_cm,
         "technical_style": raw_athlete.get("technical_style") or list(profile.technical_style),

@@ -8,6 +8,7 @@ from api.nutrition_workspace import (
     build_nutrition_workspace,
     merge_workspace_into_payload,
     normalize_nutrition_update_request,
+    sync_current_weight_with_log,
 )
 from api.plan_mappers import _map_admin_athlete
 from api.store import AppStore
@@ -65,6 +66,10 @@ def build_nutrition_router(
         )
         validate_schedule_consistency(normalized_update)
         validate_session_type_consistency(normalized_update)
+        normalized_update, weight_from_log = sync_current_weight_with_log(
+            update=normalized_update,
+            previous_log=current_workspace.nutrition_monitoring.daily_bodyweight_log,
+        )
 
         merged_payload = merge_workspace_into_payload(
             base_payload=(
@@ -76,6 +81,7 @@ def build_nutrition_router(
             ),
             workspace=normalized_update,
             profile=profile,
+            weight_from_log=weight_from_log,
         )
 
         if current_workspace.source == "intake" and current_workspace.intake_id:
@@ -139,6 +145,10 @@ def build_nutrition_router(
         )
         validate_schedule_consistency(normalized_update)
         validate_session_type_consistency(normalized_update)
+        normalized_update, weight_from_log = sync_current_weight_with_log(
+            update=normalized_update,
+            previous_log=current_workspace.nutrition_monitoring.daily_bodyweight_log,
+        )
 
         merged_payload = merge_workspace_into_payload(
             base_payload=(
@@ -150,6 +160,7 @@ def build_nutrition_router(
             ),
             workspace=normalized_update,
             profile=athlete,
+            weight_from_log=weight_from_log,
         )
 
         if current_workspace.source == "intake" and current_workspace.intake_id:

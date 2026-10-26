@@ -156,10 +156,22 @@ export type NutritionSharedCampContext = {
   training_restriction_level?: TrainingRestrictionLevel | null;
 };
 
+export type NutritionBodyweightTrendPoint = {
+  date: string;
+  scale_weight_kg: number;
+  trend_weight_kg: number;
+};
+
+export type WeightCutRiskBand = "none" | "moderate" | "high" | "severe";
+
+// Fields added after first release are optional: the web app can deploy ahead
+// of the API, and the tracker must read an older response without them.
 export type NutritionDerivedState = {
   days_until_fight?: number | null;
   weight_cut_pct: number;
   weight_cut_risk: boolean;
+  weight_cut_risk_band?: WeightCutRiskBand;
+  weight_cut_supervision_required?: boolean;
   aggressive_weight_cut: boolean;
   high_pressure_weight_cut: boolean;
   short_notice: boolean;
@@ -168,6 +180,9 @@ export type NutritionDerivedState = {
   fight_week_override_band: FightWeekOverrideBand;
   current_phase_effective?: string | null;
   rolling_7_day_average_weight?: number | null;
+  rolling_7_day_weigh_in_days?: number;
+  weekly_pace_kg?: number | null;
+  bodyweight_trend?: NutritionBodyweightTrendPoint[];
   foundation_status: FoundationStatus;
   missing_required_fields: string[];
 };
