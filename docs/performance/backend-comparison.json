@@ -1,0 +1,2356 @@
+{
+  "schema_version": 2,
+  "before_commit": "efa2deceb3304381a78c7aa8418cdcb90319b5b6",
+  "after_variant": "PR2 backend-read-reduction",
+  "source": "synthetic-local; no production latency claims",
+  "aggregation": "Counts/bytes are constants when all runs agree, otherwise observed min/max (or distinct values including null). Logical method counts include nested calls and treat absent methods as zero. Per-run timings and traces are local-only; p50/p95 retain all runs.",
+  "data_api": [
+    {
+      "persona": null,
+      "scenario": "history_frozen",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 52.81706799996755,
+        "p95_ms": 79.7792909997952,
+        "read_attempts": 4,
+        "repeated_reads": 0,
+        "full_plan_reads": 2,
+        "compact_plan_reads": 0,
+        "retrieved_bytes": 2109341,
+        "endpoint_bytes": 1637,
+        "endpoint_status": 200,
+        "data_api_attempt_ms": {
+          "p50": 9.436,
+          "p95": 10.346
+        },
+        "backend_ms": {
+          "p50": 49.207499999999996,
+          "p95": 70.439
+        }
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 5.425706499863736,
+        "p95_ms": 6.686592999813001,
+        "read_attempts": 2,
+        "repeated_reads": 0,
+        "full_plan_reads": 0,
+        "compact_plan_reads": 0,
+        "retrieved_bytes": 1867,
+        "endpoint_bytes": 1637,
+        "endpoint_status": 200,
+        "data_api_attempt_ms": {
+          "p50": 0.8220000000000001,
+          "p95": 1.18
+        },
+        "backend_ms": {
+          "p50": 3.207,
+          "p95": 4.139
+        }
+      }
+    },
+    {
+      "persona": null,
+      "scenario": "history_legacy",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 53.62901550006427,
+        "p95_ms": 77.82051000003776,
+        "read_attempts": 4,
+        "repeated_reads": 0,
+        "full_plan_reads": 2,
+        "compact_plan_reads": 0,
+        "retrieved_bytes": 2109217,
+        "endpoint_bytes": 1654,
+        "endpoint_status": 200,
+        "data_api_attempt_ms": {
+          "p50": 9.008,
+          "p95": 11.572
+        },
+        "backend_ms": {
+          "p50": 49.801,
+          "p95": 72.558
+        }
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 48.039139000138675,
+        "p95_ms": 61.78306399988287,
+        "read_attempts": 4,
+        "repeated_reads": 0,
+        "full_plan_reads": 0,
+        "compact_plan_reads": 2,
+        "retrieved_bytes": 1241237,
+        "endpoint_bytes": 1654,
+        "endpoint_status": 200,
+        "data_api_attempt_ms": {
+          "p50": 7.133,
+          "p95": 8.291
+        },
+        "backend_ms": {
+          "p50": 44.737,
+          "p95": 58.279
+        }
+      }
+    },
+    {
+      "persona": null,
+      "scenario": "completion_history_frozen",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 49.2157415001202,
+        "p95_ms": 55.87648199980322,
+        "read_attempts": 3,
+        "repeated_reads": 0,
+        "full_plan_reads": 2,
+        "compact_plan_reads": 0,
+        "retrieved_bytes": 2109339,
+        "endpoint_bytes": 2066,
+        "endpoint_status": 200,
+        "data_api_attempt_ms": {
+          "p50": 8.211500000000001,
+          "p95": 9.873
+        },
+        "backend_ms": {
+          "p50": 46.1895,
+          "p95": 53.078
+        }
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 5.491964999691845,
+        "p95_ms": 8.163243000126386,
+        "read_attempts": 1,
+        "repeated_reads": 0,
+        "full_plan_reads": 0,
+        "compact_plan_reads": 0,
+        "retrieved_bytes": 1865,
+        "endpoint_bytes": 2085,
+        "endpoint_status": 200,
+        "data_api_attempt_ms": {
+          "p50": 0.4295,
+          "p95": 0.524
+        },
+        "backend_ms": {
+          "p50": 3.0325,
+          "p95": 3.727
+        }
+      }
+    },
+    {
+      "persona": null,
+      "scenario": "landing",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 27.221485499921982,
+        "p95_ms": 37.64768900009585,
+        "read_attempts": 1,
+        "repeated_reads": 0,
+        "full_plan_reads": 1,
+        "compact_plan_reads": 0,
+        "retrieved_bytes": 1053737,
+        "endpoint_bytes": 58,
+        "endpoint_status": 200,
+        "data_api_attempt_ms": {
+          "p50": 4.715,
+          "p95": 5.891
+        },
+        "backend_ms": {
+          "p50": 23.0835,
+          "p95": 33.822
+        }
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 5.939306499840313,
+        "p95_ms": 7.418310000048223,
+        "read_attempts": 1,
+        "repeated_reads": 0,
+        "full_plan_reads": 0,
+        "compact_plan_reads": 1,
+        "retrieved_bytes": 102,
+        "endpoint_bytes": 58,
+        "endpoint_status": 200,
+        "data_api_attempt_ms": {
+          "p50": 1.5,
+          "p95": 1.984
+        },
+        "backend_ms": {
+          "p50": 3.452,
+          "p95": 4.73
+        }
+      }
+    },
+    {
+      "persona": null,
+      "scenario": "overlap",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 30.33743750006579,
+        "p95_ms": 39.51610400008576,
+        "read_attempts": 3,
+        "repeated_reads": 1,
+        "full_plan_reads": 2,
+        "compact_plan_reads": 0,
+        "retrieved_bytes": 2107533,
+        "endpoint_bytes": null,
+        "endpoint_status": null,
+        "data_api_attempt_ms": {
+          "p50": 8.2765,
+          "p95": 9.32
+        },
+        "backend_ms": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 20.140563999802907,
+        "p95_ms": 36.15858299963293,
+        "read_attempts": 2,
+        "repeated_reads": 0,
+        "full_plan_reads": 1,
+        "compact_plan_reads": 0,
+        "retrieved_bytes": 1053796,
+        "endpoint_bytes": null,
+        "endpoint_status": null,
+        "data_api_attempt_ms": {
+          "p50": 5.006,
+          "p95": 10.964
+        },
+        "backend_ms": null
+      }
+    },
+    {
+      "persona": null,
+      "scenario": "consent",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 1.3219615000252816,
+        "p95_ms": 3.303946999949403,
+        "read_attempts": 1,
+        "repeated_reads": 0,
+        "full_plan_reads": 0,
+        "compact_plan_reads": 0,
+        "retrieved_bytes": 66347,
+        "endpoint_bytes": null,
+        "endpoint_status": null,
+        "data_api_attempt_ms": {
+          "p50": 0.5105,
+          "p95": 0.816
+        },
+        "backend_ms": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 0.548962500261041,
+        "p95_ms": 0.7373209996330843,
+        "read_attempts": 1,
+        "repeated_reads": 0,
+        "full_plan_reads": 0,
+        "compact_plan_reads": 0,
+        "retrieved_bytes": 268,
+        "endpoint_bytes": null,
+        "endpoint_status": null,
+        "data_api_attempt_ms": {
+          "p50": 0.277,
+          "p95": 0.448
+        },
+        "backend_ms": null
+      }
+    }
+  ],
+  "local": [
+    {
+      "persona": "active_camp",
+      "scenario": "startup_home_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 3.4393814999020833,
+        "p95_ms": 4.303232999973261,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_latest_intake": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1722,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 4.036154000004899,
+        "p95_ms": 6.351557000016328,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_latest_intake": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1722,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "active_camp",
+      "scenario": "today_load_refresh_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 23.74241050006276,
+        "p95_ms": 52.099146999808,
+        "logical_store_calls": {
+          "ensure_profile": 2,
+          "get_active_plan_id": 2,
+          "get_latest_intake": 2,
+          "get_plan_for_athlete": 2,
+          "get_profile": 2,
+          "get_today_checkin": 2,
+          "get_training_plan_for_athlete": 2,
+          "list_injury_flags": 2,
+          "list_pending_delayed_rehab": 2,
+          "list_session_completions": 2,
+          "list_session_completions_from_day": 2,
+          "list_sparring_logs": 2,
+          "list_today_checkins": 2,
+          "list_today_checkins_for_day": 2
+        },
+        "http_requests": 2,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 2808,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 25.188934499738025,
+        "p95_ms": 41.43605000035677,
+        "logical_store_calls": {
+          "ensure_profile": 2,
+          "get_active_plan_id": 2,
+          "get_latest_intake": 2,
+          "get_plan_for_athlete": 2,
+          "get_profile": 2,
+          "get_profile_compliance": 2,
+          "get_today_checkin": 2,
+          "get_training_plan_for_athlete": 2,
+          "list_injury_flags": 2,
+          "list_pending_delayed_rehab": 2,
+          "list_session_completions": 2,
+          "list_session_completions_from_day": 2,
+          "list_sparring_logs": 2,
+          "list_today_checkins": 2,
+          "list_today_checkins_for_day": 2
+        },
+        "http_requests": 2,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 2808,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "active_camp",
+      "scenario": "plans_list_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 3.3646834999672137,
+        "p95_ms": 4.8857490000955295,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 313,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 3.9584994999586343,
+        "p95_ms": 7.807169999978214,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 313,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "active_camp",
+      "scenario": "plan_detail_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 12.95842099989386,
+        "p95_ms": 19.215502999941236,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_active_plan_id": 1,
+          "get_generation_job_by_plan_id": 1,
+          "get_plan_for_athlete": 2,
+          "list_injury_flags": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1198,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 13.690282499965178,
+        "p95_ms": 17.613679000078264,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_active_plan_id": 1,
+          "get_generation_job_by_plan_id": 1,
+          "get_plan_for_athlete": 2,
+          "list_injury_flags": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1198,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "active_camp",
+      "scenario": "history_page_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 3.6697324997021497,
+        "p95_ms": 4.747411000153079,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 38,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 3.9525110000795394,
+        "p95_ms": 6.672892000096908,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 38,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "active_camp",
+      "scenario": "history_pagination_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 3.5292560000925732,
+        "p95_ms": 5.804624000120384,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 38,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 3.433056499943632,
+        "p95_ms": 5.242326999905345,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 38,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "active_camp",
+      "scenario": "xp_refresh_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 25.863246999733747,
+        "p95_ms": 33.71638599992366,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_active_plan_id": 1,
+          "get_athlete_streaks": 1,
+          "get_latest_intake": 2,
+          "get_latest_plan": 1,
+          "get_plan_for_athlete": 2,
+          "get_profile": 1,
+          "get_today_checkin": 1,
+          "get_training_plan_for_athlete": 1,
+          "get_xp_progress_state": 1,
+          "list_injury_flags": 1,
+          "list_pending_delayed_rehab": 1,
+          "list_plan_milestones": 1,
+          "list_session_completions": 1,
+          "list_session_completions_from_day": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1,
+          "list_today_checkins_for_day": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 651,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 25.29049299982944,
+        "p95_ms": 33.351953999954276,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_active_plan_id": 1,
+          "get_athlete_streaks": 1,
+          "get_latest_intake": 2,
+          "get_latest_plan": 1,
+          "get_latest_plan_status": 1,
+          "get_plan_for_athlete": 2,
+          "get_profile": 1,
+          "get_profile_compliance": 1,
+          "get_today_checkin": 1,
+          "get_training_plan_for_athlete": 1,
+          "get_xp_progress_state": 1,
+          "list_injury_flags": 1,
+          "list_pending_delayed_rehab": 1,
+          "list_plan_milestones": 1,
+          "list_session_completions": 1,
+          "list_session_completions_from_day": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1,
+          "list_today_checkins_for_day": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 651,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "active_camp",
+      "scenario": "today_fixed_clock_service",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 8.365716000071188,
+        "p95_ms": 12.986941999770352,
+        "logical_store_calls": {
+          "get_active_plan_id": 1,
+          "get_latest_intake": 1,
+          "get_plan_for_athlete": 1,
+          "get_profile": 1,
+          "get_today_checkin": 1,
+          "get_training_plan_for_athlete": 1,
+          "list_injury_flags": 1,
+          "list_pending_delayed_rehab": 1,
+          "list_session_completions": 1,
+          "list_session_completions_from_day": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1,
+          "list_today_checkins_for_day": 1
+        },
+        "http_requests": 0,
+        "http_statuses": [],
+        "endpoint_bytes": 0,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 8.334694500035766,
+        "p95_ms": 15.196270000160439,
+        "logical_store_calls": {
+          "get_active_plan_id": 1,
+          "get_latest_intake": 1,
+          "get_plan_for_athlete": 1,
+          "get_profile": 1,
+          "get_profile_compliance": 1,
+          "get_today_checkin": 1,
+          "get_training_plan_for_athlete": 1,
+          "list_injury_flags": 1,
+          "list_pending_delayed_rehab": 1,
+          "list_session_completions": 1,
+          "list_session_completions_from_day": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1,
+          "list_today_checkins_for_day": 1
+        },
+        "http_requests": 0,
+        "http_statuses": [],
+        "endpoint_bytes": 0,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "renewable",
+      "scenario": "startup_home_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 4.818833499939501,
+        "p95_ms": 6.082280999635259,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_latest_intake": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1705,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 4.191013000081512,
+        "p95_ms": 6.735787000252458,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_latest_intake": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1705,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "renewable",
+      "scenario": "today_load_refresh_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 18.18863399989823,
+        "p95_ms": 23.296430999835138,
+        "logical_store_calls": {
+          "ensure_profile": 2,
+          "get_active_plan_id": 2,
+          "get_latest_intake": 2,
+          "get_plan_for_athlete": 2,
+          "get_profile": 2,
+          "get_today_checkin": 2,
+          "get_training_plan_for_athlete": 2,
+          "list_injury_flags": 2,
+          "list_pending_delayed_rehab": 2,
+          "list_session_completions": 2,
+          "list_session_completions_from_day": 2,
+          "list_sparring_logs": 2,
+          "list_today_checkins": 2,
+          "list_today_checkins_for_day": 2
+        },
+        "http_requests": 2,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 2738,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 12.564522000047873,
+        "p95_ms": 28.41480799997953,
+        "logical_store_calls": {
+          "ensure_profile": 2,
+          "get_active_plan_id": 2,
+          "get_latest_intake": 2,
+          "get_plan_for_athlete": 2,
+          "get_profile": 2,
+          "get_profile_compliance": 2,
+          "get_today_checkin": 2,
+          "get_training_plan_for_athlete": 2,
+          "list_injury_flags": 2,
+          "list_pending_delayed_rehab": 2,
+          "list_session_completions": 2,
+          "list_session_completions_from_day": 2,
+          "list_sparring_logs": 2,
+          "list_today_checkins": 2,
+          "list_today_checkins_for_day": 2
+        },
+        "http_requests": 2,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 2738,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "renewable",
+      "scenario": "plans_list_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 4.131492999931652,
+        "p95_ms": 5.560030000197003,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 296,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 3.4866344999500143,
+        "p95_ms": 5.077898999843455,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 296,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "renewable",
+      "scenario": "plan_detail_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 8.527660000027026,
+        "p95_ms": 11.131286999898293,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_active_plan_id": 1,
+          "get_generation_job_by_plan_id": 1,
+          "get_latest_intake": 1,
+          "get_plan_for_athlete": 2,
+          "list_injury_flags": 2
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1185,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 6.163453499993921,
+        "p95_ms": 8.76477200017689,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_active_plan_id": 1,
+          "get_generation_job_by_plan_id": 1,
+          "get_latest_intake": 1,
+          "get_plan_for_athlete": 2,
+          "list_injury_flags": 2
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1185,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "renewable",
+      "scenario": "history_page_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 3.943444499782345,
+        "p95_ms": 6.262631000026886,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 38,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 4.073012499929973,
+        "p95_ms": 6.84033300012743,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 38,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "renewable",
+      "scenario": "history_pagination_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 4.543643000033626,
+        "p95_ms": 6.969758000195725,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 38,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 4.982181999821478,
+        "p95_ms": 8.910156000183633,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 38,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "renewable",
+      "scenario": "xp_refresh_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 9.288466000043627,
+        "p95_ms": 16.5321990002667,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_active_plan_id": 1,
+          "get_athlete_streaks": 1,
+          "get_latest_intake": 2,
+          "get_latest_plan": 1,
+          "get_plan_for_athlete": 2,
+          "get_profile": 1,
+          "get_today_checkin": 1,
+          "get_training_plan_for_athlete": 1,
+          "get_xp_progress_state": 1,
+          "list_injury_flags": 1,
+          "list_pending_delayed_rehab": 1,
+          "list_plan_milestones": 1,
+          "list_session_completions": 1,
+          "list_session_completions_from_day": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1,
+          "list_today_checkins_for_day": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 651,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 9.079827499817839,
+        "p95_ms": 14.662355999917054,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_active_plan_id": 1,
+          "get_athlete_streaks": 1,
+          "get_latest_intake": 2,
+          "get_latest_plan": 1,
+          "get_latest_plan_status": 1,
+          "get_plan_for_athlete": 2,
+          "get_profile": 1,
+          "get_profile_compliance": 1,
+          "get_today_checkin": 1,
+          "get_training_plan_for_athlete": 1,
+          "get_xp_progress_state": 1,
+          "list_injury_flags": 1,
+          "list_pending_delayed_rehab": 1,
+          "list_plan_milestones": 1,
+          "list_session_completions": 1,
+          "list_session_completions_from_day": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1,
+          "list_today_checkins_for_day": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 651,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "renewable",
+      "scenario": "today_fixed_clock_service",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 2.232898000102068,
+        "p95_ms": 3.762605999781954,
+        "logical_store_calls": {
+          "get_active_plan_id": 1,
+          "get_latest_intake": 1,
+          "get_plan_for_athlete": 1,
+          "get_profile": 1,
+          "get_today_checkin": 1,
+          "get_training_plan_for_athlete": 1,
+          "list_injury_flags": 1,
+          "list_pending_delayed_rehab": 1,
+          "list_session_completions": 1,
+          "list_session_completions_from_day": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1,
+          "list_today_checkins_for_day": 1
+        },
+        "http_requests": 0,
+        "http_statuses": [],
+        "endpoint_bytes": 0,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 1.657276499827276,
+        "p95_ms": 2.131078999809688,
+        "logical_store_calls": {
+          "get_active_plan_id": 1,
+          "get_latest_intake": 1,
+          "get_plan_for_athlete": 1,
+          "get_profile": 1,
+          "get_profile_compliance": 1,
+          "get_today_checkin": 1,
+          "get_training_plan_for_athlete": 1,
+          "list_injury_flags": 1,
+          "list_pending_delayed_rehab": 1,
+          "list_session_completions": 1,
+          "list_session_completions_from_day": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1,
+          "list_today_checkins_for_day": 1
+        },
+        "http_requests": 0,
+        "http_statuses": [],
+        "endpoint_bytes": 0,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "tracking_without_plan",
+      "scenario": "startup_home_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 4.118112000014662,
+        "p95_ms": 5.896000999655371,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_latest_intake": 1,
+          "list_user_plans": 2
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1415,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 3.497728999946048,
+        "p95_ms": 4.5978359999026,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_latest_intake": 1,
+          "list_user_plans": 2
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1415,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "tracking_without_plan",
+      "scenario": "today_load_refresh_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 8.917730499888421,
+        "p95_ms": 11.398957999972481,
+        "logical_store_calls": {
+          "ensure_profile": 2,
+          "get_active_plan_id": 2,
+          "get_latest_intake": 2,
+          "get_today_checkin": 2,
+          "list_injury_flags": 2,
+          "list_pending_delayed_rehab": 2,
+          "list_rehab_schedule_completions": 2,
+          "list_sparring_logs": 2,
+          "list_today_checkins": 2
+        },
+        "http_requests": 2,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1612,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 7.6790124999206455,
+        "p95_ms": 9.395351999955892,
+        "logical_store_calls": {
+          "ensure_profile": 2,
+          "get_active_plan_id": 2,
+          "get_latest_intake": 2,
+          "get_today_checkin": 2,
+          "list_injury_flags": 2,
+          "list_pending_delayed_rehab": 2,
+          "list_rehab_schedule_completions": 2,
+          "list_sparring_logs": 2,
+          "list_today_checkins": 2
+        },
+        "http_requests": 2,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1612,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "tracking_without_plan",
+      "scenario": "plans_list_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 3.927585500150599,
+        "p95_ms": 4.86144200021954,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 2,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 3.6447605000375916,
+        "p95_ms": 4.5604590000039025,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 2,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "tracking_without_plan",
+      "scenario": "plan_detail_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 4.145077999964997,
+        "p95_ms": 5.731601999741542,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_plan_for_athlete": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          404
+        ],
+        "endpoint_bytes": 51,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 3.5118645000693505,
+        "p95_ms": 5.013071000121272,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_plan_for_athlete": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          404
+        ],
+        "endpoint_bytes": 51,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "tracking_without_plan",
+      "scenario": "history_page_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 4.444598499958374,
+        "p95_ms": 6.779379999898083,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 38,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 3.4654979999686475,
+        "p95_ms": 5.834719000176847,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 38,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "tracking_without_plan",
+      "scenario": "history_pagination_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 3.901677999920139,
+        "p95_ms": 6.5325109999321285,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 38,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 3.7197980000200914,
+        "p95_ms": 4.894787000012002,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 38,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "tracking_without_plan",
+      "scenario": "xp_refresh_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 4.733971500172629,
+        "p95_ms": 7.187157000316802,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_active_plan_id": 1,
+          "get_athlete_streaks": 1,
+          "get_latest_intake": 2,
+          "get_latest_plan": 1,
+          "get_today_checkin": 1,
+          "get_xp_progress_state": 1,
+          "list_injury_flags": 1,
+          "list_pending_delayed_rehab": 1,
+          "list_plan_milestones": 1,
+          "list_rehab_schedule_completions": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 651,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 4.847870000048715,
+        "p95_ms": 7.953189999625465,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_active_plan_id": 1,
+          "get_athlete_streaks": 1,
+          "get_latest_intake": 2,
+          "get_latest_plan": 1,
+          "get_latest_plan_status": 1,
+          "get_today_checkin": 1,
+          "get_xp_progress_state": 1,
+          "list_injury_flags": 1,
+          "list_pending_delayed_rehab": 1,
+          "list_plan_milestones": 1,
+          "list_rehab_schedule_completions": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 651,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "tracking_without_plan",
+      "scenario": "today_fixed_clock_service",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 0.1086435001980135,
+        "p95_ms": 0.3290249997007777,
+        "logical_store_calls": {
+          "get_active_plan_id": 1,
+          "get_latest_intake": 1,
+          "get_today_checkin": 1,
+          "list_injury_flags": 1,
+          "list_pending_delayed_rehab": 1,
+          "list_rehab_schedule_completions": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1
+        },
+        "http_requests": 0,
+        "http_statuses": [],
+        "endpoint_bytes": 0,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 0.09529399994789856,
+        "p95_ms": 0.33908000023075147,
+        "logical_store_calls": {
+          "get_active_plan_id": 1,
+          "get_latest_intake": 1,
+          "get_today_checkin": 1,
+          "list_injury_flags": 1,
+          "list_pending_delayed_rehab": 1,
+          "list_rehab_schedule_completions": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1
+        },
+        "http_requests": 0,
+        "http_statuses": [],
+        "endpoint_bytes": 0,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "injury_history",
+      "scenario": "startup_home_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 5.748824499960392,
+        "p95_ms": 10.008579999976064,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_latest_intake": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1750,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 5.590434999930949,
+        "p95_ms": 8.762152999679529,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_latest_intake": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1750,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "injury_history",
+      "scenario": "today_load_refresh_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 211.0328250000748,
+        "p95_ms": 391.4094869996916,
+        "logical_store_calls": {
+          "ensure_profile": 2,
+          "get_active_plan_id": 2,
+          "get_injury_flag_for_athlete": 2,
+          "get_intake": 2,
+          "get_plan_for_athlete": 2,
+          "get_profile": 2,
+          "get_today_checkin": 2,
+          "get_training_plan_for_athlete": 2,
+          "list_injury_episode_events": 4,
+          "list_injury_flags": 8,
+          "list_pending_delayed_rehab": 2,
+          "list_rehab_exposures": 2,
+          "list_rehab_schedule_completions": 2,
+          "list_session_completions": 4,
+          "list_session_completions_from_day": 2,
+          "list_sparring_logs": 2,
+          "list_today_checkins": 2,
+          "list_today_checkins_for_day": 2
+        },
+        "http_requests": 2,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 11090,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 185.74942250006643,
+        "p95_ms": 486.7026930000975,
+        "logical_store_calls": {
+          "ensure_profile": 2,
+          "get_active_plan_id": 2,
+          "get_injury_flag_for_athlete": 2,
+          "get_intake": 2,
+          "get_plan_for_athlete": 2,
+          "get_profile": 2,
+          "get_profile_compliance": 2,
+          "get_today_checkin": 2,
+          "get_training_plan_for_athlete": 2,
+          "list_injury_episode_events": 4,
+          "list_injury_flags": 8,
+          "list_pending_delayed_rehab": 2,
+          "list_rehab_exposures": 2,
+          "list_rehab_schedule_completions": 2,
+          "list_session_completions": 4,
+          "list_session_completions_from_day": 2,
+          "list_sparring_logs": 2,
+          "list_today_checkins": 2,
+          "list_today_checkins_for_day": 2
+        },
+        "http_requests": 2,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 11090,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "injury_history",
+      "scenario": "plans_list_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 5.683886500037261,
+        "p95_ms": 7.0228529998530576,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 313,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 5.460299000105806,
+        "p95_ms": 7.222809000268171,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 313,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "injury_history",
+      "scenario": "plan_detail_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 146.27184899995882,
+        "p95_ms": 162.33509600033358,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_active_plan_id": 1,
+          "get_generation_job_by_plan_id": 1,
+          "get_plan_for_athlete": 2,
+          "list_injury_flags": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 2452,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 142.93785850009044,
+        "p95_ms": 160.47653399982664,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_active_plan_id": 1,
+          "get_generation_job_by_plan_id": 1,
+          "get_plan_for_athlete": 2,
+          "list_injury_flags": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 2452,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "injury_history",
+      "scenario": "history_page_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 5.615833999854658,
+        "p95_ms": 6.77262699991843,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 38,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 5.512696499863523,
+        "p95_ms": 6.364295999901515,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 38,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "injury_history",
+      "scenario": "history_pagination_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 5.60300450001705,
+        "p95_ms": 7.559011000012106,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 38,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 5.1868869998088485,
+        "p95_ms": 5.88642599996092,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 38,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "injury_history",
+      "scenario": "xp_refresh_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 107.31718100009857,
+        "p95_ms": 137.21144500004812,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_active_plan_id": 1,
+          "get_athlete_streaks": 1,
+          "get_injury_flag_for_athlete": 1,
+          "get_intake": 1,
+          "get_latest_intake": 1,
+          "get_latest_plan": 1,
+          "get_plan_for_athlete": 2,
+          "get_profile": 1,
+          "get_today_checkin": 1,
+          "get_training_plan_for_athlete": 1,
+          "get_xp_progress_state": 1,
+          "list_injury_episode_events": 2,
+          "list_injury_flags": 4,
+          "list_pending_delayed_rehab": 1,
+          "list_plan_milestones": 1,
+          "list_rehab_exposures": 1,
+          "list_rehab_schedule_completions": 1,
+          "list_session_completions": 2,
+          "list_session_completions_from_day": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1,
+          "list_today_checkins_for_day": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 654,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 109.47205399997983,
+        "p95_ms": 415.26562000035483,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_active_plan_id": 1,
+          "get_athlete_streaks": 1,
+          "get_injury_flag_for_athlete": 1,
+          "get_intake": 1,
+          "get_latest_intake": 1,
+          "get_latest_plan": 1,
+          "get_latest_plan_status": 1,
+          "get_plan_for_athlete": 2,
+          "get_profile": 1,
+          "get_profile_compliance": 1,
+          "get_today_checkin": 1,
+          "get_training_plan_for_athlete": 1,
+          "get_xp_progress_state": 1,
+          "list_injury_episode_events": 2,
+          "list_injury_flags": 4,
+          "list_pending_delayed_rehab": 1,
+          "list_plan_milestones": 1,
+          "list_rehab_exposures": 1,
+          "list_rehab_schedule_completions": 1,
+          "list_session_completions": 2,
+          "list_session_completions_from_day": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1,
+          "list_today_checkins_for_day": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 654,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "injury_history",
+      "scenario": "today_fixed_clock_service",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 81.99261700019633,
+        "p95_ms": 92.05178699994576,
+        "logical_store_calls": {
+          "get_active_plan_id": 1,
+          "get_injury_flag_for_athlete": 1,
+          "get_intake": 1,
+          "get_plan_for_athlete": 1,
+          "get_profile": 1,
+          "get_today_checkin": 1,
+          "get_training_plan_for_athlete": 1,
+          "list_injury_episode_events": 2,
+          "list_injury_flags": 4,
+          "list_pending_delayed_rehab": 1,
+          "list_rehab_exposures": 1,
+          "list_rehab_schedule_completions": 1,
+          "list_session_completions": 2,
+          "list_session_completions_from_day": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1,
+          "list_today_checkins_for_day": 1
+        },
+        "http_requests": 0,
+        "http_statuses": [],
+        "endpoint_bytes": 0,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 92.4352000001818,
+        "p95_ms": 109.40738199997213,
+        "logical_store_calls": {
+          "get_active_plan_id": 1,
+          "get_injury_flag_for_athlete": 1,
+          "get_intake": 1,
+          "get_plan_for_athlete": 1,
+          "get_profile": 1,
+          "get_profile_compliance": 1,
+          "get_today_checkin": 1,
+          "get_training_plan_for_athlete": 1,
+          "list_injury_episode_events": 2,
+          "list_injury_flags": 4,
+          "list_pending_delayed_rehab": 1,
+          "list_rehab_exposures": 1,
+          "list_rehab_schedule_completions": 1,
+          "list_session_completions": 2,
+          "list_session_completions_from_day": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1,
+          "list_today_checkins_for_day": 1
+        },
+        "http_requests": 0,
+        "http_statuses": [],
+        "endpoint_bytes": 0,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "historical_plans",
+      "scenario": "startup_home_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 5.243027000005895,
+        "p95_ms": 7.195077999767818,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_latest_intake": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1722,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 4.362876999948639,
+        "p95_ms": 6.196037999870896,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_latest_intake": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1722,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "historical_plans",
+      "scenario": "today_load_refresh_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 31.08491300008609,
+        "p95_ms": 38.24178300010317,
+        "logical_store_calls": {
+          "ensure_profile": 2,
+          "get_active_plan_id": 2,
+          "get_latest_intake": 2,
+          "get_plan_for_athlete": 2,
+          "get_profile": 2,
+          "get_today_checkin": 2,
+          "get_training_plan_for_athlete": 2,
+          "list_injury_flags": 2,
+          "list_pending_delayed_rehab": 2,
+          "list_session_completions": 2,
+          "list_session_completions_from_day": 2,
+          "list_sparring_logs": 2,
+          "list_today_checkins": 2,
+          "list_today_checkins_for_day": 2
+        },
+        "http_requests": 2,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 2808,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 29.49065999996492,
+        "p95_ms": 35.89389499984463,
+        "logical_store_calls": {
+          "ensure_profile": 2,
+          "get_active_plan_id": 2,
+          "get_latest_intake": 2,
+          "get_plan_for_athlete": 2,
+          "get_profile": 2,
+          "get_profile_compliance": 2,
+          "get_today_checkin": 2,
+          "get_training_plan_for_athlete": 2,
+          "list_injury_flags": 2,
+          "list_pending_delayed_rehab": 2,
+          "list_session_completions": 2,
+          "list_session_completions_from_day": 2,
+          "list_sparring_logs": 2,
+          "list_today_checkins": 2,
+          "list_today_checkins_for_day": 2
+        },
+        "http_requests": 2,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 2808,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "historical_plans",
+      "scenario": "plans_list_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 4.588541999964946,
+        "p95_ms": 9.272676999898977,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1873,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 4.6748414997637155,
+        "p95_ms": 5.9770130001197685,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1873,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "historical_plans",
+      "scenario": "plan_detail_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 15.633259999958682,
+        "p95_ms": 20.549710000068444,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_active_plan_id": 1,
+          "get_generation_job_by_plan_id": 1,
+          "get_plan_for_athlete": 2,
+          "list_injury_flags": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1198,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 23.659636999809663,
+        "p95_ms": 30.359758000031434,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_active_plan_id": 1,
+          "get_generation_job_by_plan_id": 1,
+          "get_plan_for_athlete": 2,
+          "list_injury_flags": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 1198,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "historical_plans",
+      "scenario": "history_page_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 5.023940999990373,
+        "p95_ms": 6.326819000150863,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "get_plan_for_athlete": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 445,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 4.108723500166889,
+        "p95_ms": 5.737295000017184,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 445,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "historical_plans",
+      "scenario": "history_pagination_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 6.099816500181987,
+        "p95_ms": 7.404070999655232,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "get_plan_for_athlete": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 445,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 5.057650999788166,
+        "p95_ms": 6.407219999800873,
+        "logical_store_calls": {
+          "count_manual_exercises": 1,
+          "ensure_profile": 1,
+          "list_external_training_sessions": 1,
+          "list_session_completions": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 445,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "historical_plans",
+      "scenario": "xp_refresh_probe",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 25.752926999984993,
+        "p95_ms": 34.882776999893395,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_active_plan_id": 1,
+          "get_athlete_streaks": 1,
+          "get_latest_intake": 2,
+          "get_latest_plan": 1,
+          "get_plan_for_athlete": 2,
+          "get_profile": 1,
+          "get_today_checkin": 1,
+          "get_training_plan_for_athlete": 1,
+          "get_xp_progress_state": 1,
+          "list_injury_flags": 1,
+          "list_pending_delayed_rehab": 1,
+          "list_plan_milestones": 1,
+          "list_session_completions": 1,
+          "list_session_completions_from_day": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1,
+          "list_today_checkins_for_day": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 651,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 28.465743499964447,
+        "p95_ms": 46.704297000360384,
+        "logical_store_calls": {
+          "ensure_profile": 1,
+          "get_active_plan_id": 1,
+          "get_athlete_streaks": 1,
+          "get_latest_intake": 2,
+          "get_latest_plan": 1,
+          "get_latest_plan_status": 1,
+          "get_plan_for_athlete": 2,
+          "get_profile": 1,
+          "get_profile_compliance": 1,
+          "get_today_checkin": 1,
+          "get_training_plan_for_athlete": 1,
+          "get_xp_progress_state": 1,
+          "list_injury_flags": 1,
+          "list_pending_delayed_rehab": 1,
+          "list_plan_milestones": 1,
+          "list_session_completions": 1,
+          "list_session_completions_from_day": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1,
+          "list_today_checkins_for_day": 1,
+          "list_user_plans": 1
+        },
+        "http_requests": 1,
+        "http_statuses": [
+          200
+        ],
+        "endpoint_bytes": 651,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": "historical_plans",
+      "scenario": "today_fixed_clock_service",
+      "before": {
+        "repetitions": 20,
+        "p50_ms": 7.516334999991159,
+        "p95_ms": 8.905281999886938,
+        "logical_store_calls": {
+          "get_active_plan_id": 1,
+          "get_latest_intake": 1,
+          "get_plan_for_athlete": 1,
+          "get_profile": 1,
+          "get_today_checkin": 1,
+          "get_training_plan_for_athlete": 1,
+          "list_injury_flags": 1,
+          "list_pending_delayed_rehab": 1,
+          "list_session_completions": 1,
+          "list_session_completions_from_day": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1,
+          "list_today_checkins_for_day": 1
+        },
+        "http_requests": 0,
+        "http_statuses": [],
+        "endpoint_bytes": 0,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 20,
+        "p50_ms": 9.050561999856654,
+        "p95_ms": 10.924024000360077,
+        "logical_store_calls": {
+          "get_active_plan_id": 1,
+          "get_latest_intake": 1,
+          "get_plan_for_athlete": 1,
+          "get_profile": 1,
+          "get_profile_compliance": 1,
+          "get_today_checkin": 1,
+          "get_training_plan_for_athlete": 1,
+          "list_injury_flags": 1,
+          "list_pending_delayed_rehab": 1,
+          "list_session_completions": 1,
+          "list_session_completions_from_day": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 1,
+          "list_today_checkins_for_day": 1
+        },
+        "http_requests": 0,
+        "http_statuses": [],
+        "endpoint_bytes": 0,
+        "database_operations": null
+      }
+    }
+  ],
+  "mutations": [
+    {
+      "persona": null,
+      "scenario": "tests/test_api_rehab_completion_flow.py::TestPendingPromptRehydration::test_successful_answer_removes_prompt_using_canonical_exposures",
+      "before": {
+        "repetitions": 10,
+        "p50_ms": 236.72670349992586,
+        "p95_ms": 273.2534440001473,
+        "logical_store_calls": {
+          "ensure_profile": 4,
+          "get_active_plan_id": 4,
+          "get_athlete_streaks": 1,
+          "get_injury_flag_for_athlete": 2,
+          "get_latest_intake": 1,
+          "get_plan_for_athlete": 5,
+          "get_plan_identity_for_athlete": 1,
+          "get_profile": 1,
+          "get_session_completion": 2,
+          "get_today_checkin": 1,
+          "get_training_plan_for_athlete": 2,
+          "list_external_training_sessions": 3,
+          "list_injury_episode_events": 3,
+          "list_injury_flags": 7,
+          "list_pending_delayed_rehab": 1,
+          "list_plan_session_completions": 2,
+          "list_rehab_exposures": 1,
+          "list_rehab_exposures_by_ids": 3,
+          "list_rehab_schedule_completions": 1,
+          "list_session_completions": 6,
+          "list_session_completions_from_day": 1,
+          "list_session_logs": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 4,
+          "list_today_checkins_for_day": 2
+        },
+        "http_requests": 4,
+        "http_statuses": [
+          200,
+          201
+        ],
+        "endpoint_bytes": 2908,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 10,
+        "p50_ms": 244.17448399981367,
+        "p95_ms": 295.2706380001473,
+        "logical_store_calls": {
+          "ensure_profile": 4,
+          "get_active_plan_id": 4,
+          "get_athlete_streaks": 1,
+          "get_injury_flag_for_athlete": 2,
+          "get_latest_intake": 1,
+          "get_plan_for_athlete": 5,
+          "get_plan_identity_for_athlete": 1,
+          "get_profile": 1,
+          "get_profile_compliance": 1,
+          "get_session_completion": 2,
+          "get_today_checkin": 1,
+          "get_training_plan_for_athlete": 2,
+          "list_external_training_sessions": 3,
+          "list_injury_episode_events": 3,
+          "list_injury_flags": 7,
+          "list_pending_delayed_rehab": 1,
+          "list_plan_session_completions": 2,
+          "list_rehab_exposures": 1,
+          "list_rehab_exposures_by_ids": 3,
+          "list_rehab_schedule_completions": 1,
+          "list_session_completions": 6,
+          "list_session_completions_from_day": 1,
+          "list_session_logs": 1,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 4,
+          "list_today_checkins_for_day": 2
+        },
+        "http_requests": 4,
+        "http_statuses": [
+          200,
+          201
+        ],
+        "endpoint_bytes": 2908,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": null,
+      "scenario": "tests/test_exercise_customisation.py::test_added_exercise_can_be_edited_and_logged_with_its_updated_dose",
+      "before": {
+        "repetitions": 10,
+        "p50_ms": 1716.4834005000102,
+        "p95_ms": 1890.6660900001953,
+        "logical_store_calls": {
+          "ensure_profile": 10,
+          "get_active_plan_id": 3,
+          "get_generation_job_by_plan_id": 1,
+          "get_intake": 7,
+          "get_plan_for_athlete": 17,
+          "get_profile": 1,
+          "get_session_completion": 1,
+          "get_today_checkin": 2,
+          "get_training_plan_for_athlete": 12,
+          "list_exercise_media": 1,
+          "list_external_training_sessions": 3,
+          "list_injury_flags": 11,
+          "list_pending_delayed_rehab": 1,
+          "list_session_completions": 4,
+          "list_session_completions_from_day": 6,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 3,
+          "list_today_checkins_for_day": 2
+        },
+        "http_requests": 8,
+        "http_statuses": [
+          200,
+          201,
+          409
+        ],
+        "endpoint_bytes": 24353,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 10,
+        "p50_ms": 1918.889355499914,
+        "p95_ms": 2329.962643000272,
+        "logical_store_calls": {
+          "ensure_profile": 10,
+          "get_active_plan_id": 3,
+          "get_generation_job_by_plan_id": 1,
+          "get_intake": 7,
+          "get_plan_for_athlete": 17,
+          "get_profile": 1,
+          "get_profile_compliance": 1,
+          "get_session_completion": 1,
+          "get_today_checkin": 2,
+          "get_training_plan_for_athlete": 12,
+          "list_exercise_media": 1,
+          "list_external_training_sessions": 3,
+          "list_injury_flags": 11,
+          "list_pending_delayed_rehab": 1,
+          "list_session_completions": 4,
+          "list_session_completions_from_day": 6,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 3,
+          "list_today_checkins_for_day": 2
+        },
+        "http_requests": 8,
+        "http_statuses": [
+          200,
+          201,
+          409
+        ],
+        "endpoint_bytes": 24353,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": null,
+      "scenario": "tests/test_external_training.py::test_retry_edit_delete_and_delayed_retry",
+      "before": {
+        "repetitions": 10,
+        "p50_ms": 486.48840949999794,
+        "p95_ms": 527.7201180001612,
+        "logical_store_calls": {
+          "count_manual_exercises": 2,
+          "ensure_profile": 11,
+          "list_external_training_sessions": 2,
+          "list_session_completions": 2
+        },
+        "http_requests": 11,
+        "http_statuses": [
+          200,
+          201,
+          204,
+          404,
+          409,
+          410
+        ],
+        "endpoint_bytes": 2195,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 10,
+        "p50_ms": 538.9023250002083,
+        "p95_ms": 634.2896490000385,
+        "logical_store_calls": {
+          "count_manual_exercises": 2,
+          "ensure_profile": 11,
+          "list_external_training_sessions": 2,
+          "list_session_completions": 2
+        },
+        "http_requests": 11,
+        "http_statuses": [
+          200,
+          201,
+          204,
+          404,
+          409,
+          410
+        ],
+        "endpoint_bytes": 2195,
+        "database_operations": null
+      }
+    },
+    {
+      "persona": null,
+      "scenario": "tests/test_plan_free_readiness.py::test_an_injury_reported_after_a_clean_check_in_refreshes_it",
+      "before": {
+        "repetitions": 10,
+        "p50_ms": 553.0431800000315,
+        "p95_ms": 581.2758990000475,
+        "logical_store_calls": {
+          "ensure_profile": 5,
+          "get_active_plan_id": 3,
+          "get_latest_intake": 1,
+          "get_today_checkin": 2,
+          "list_external_training_sessions": 4,
+          "list_injury_episode_events": 5,
+          "list_injury_flags": 6,
+          "list_pending_delayed_rehab": 1,
+          "list_rehab_exposures": 2,
+          "list_rehab_schedule_completions": 2,
+          "list_session_completions": 6,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 6
+        },
+        "http_requests": 3,
+        "http_statuses": [
+          200,
+          201
+        ],
+        "endpoint_bytes": 6072,
+        "database_operations": null
+      },
+      "after": {
+        "repetitions": 10,
+        "p50_ms": 623.6759025000538,
+        "p95_ms": 738.5633009998855,
+        "logical_store_calls": {
+          "ensure_profile": 5,
+          "get_active_plan_id": 3,
+          "get_latest_intake": 1,
+          "get_today_checkin": 2,
+          "list_external_training_sessions": 4,
+          "list_injury_episode_events": 5,
+          "list_injury_flags": 6,
+          "list_pending_delayed_rehab": 1,
+          "list_rehab_exposures": 2,
+          "list_rehab_schedule_completions": 2,
+          "list_session_completions": 6,
+          "list_sparring_logs": 1,
+          "list_today_checkins": 6
+        },
+        "http_requests": 3,
+        "http_statuses": [
+          200,
+          201
+        ],
+        "endpoint_bytes": 6072,
+        "database_operations": null
+      }
+    }
+  ]
+}

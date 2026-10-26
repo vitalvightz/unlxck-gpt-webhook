@@ -3129,7 +3129,7 @@ def check_in_possible(store: AppStore, athlete_id: str) -> bool:
     """A check-in is health data: without consent it cannot be given, so it is never required."""
     try:
         from api.compliance import evaluate_profile_compliance
-        profile = store.get_profile(athlete_id)
+        profile = store.get_profile_compliance(athlete_id)
         return profile is None or evaluate_profile_compliance(profile).health_consent_granted
     except Exception:
         logger.exception("[today] check_in_consent_read_failed")

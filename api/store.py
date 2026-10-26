@@ -131,6 +131,12 @@ def _guard_persisted_json(
         ) from None
 
 
+# Exact inputs read by evaluate_profile_compliance; no auth/bootstrap change.
+PROFILE_COMPLIANCE_SELECT = (
+    "date_of_birth,terms_version,terms_accepted_at,health_data_consent,"
+    "health_consent_at,health_consent_withdrawn_at,health_consent_version"
+)
+
 PLAN_SUMMARY_SELECT = (
     "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, "
     "stage2_validator_report, pdf_url, created_at"
@@ -1274,6 +1280,12 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
         worker, for instance — read it through here.
         """
         return self._get_profile_by_id(athlete_id)
+
+    def get_profile_compliance(self, athlete_id: str) -> dict[str, Any] | None:
+        """Fresh compliance facts only; intentionally no separate cache."""
+        return self._select_first(
+            self.client.table("profiles").select(PROFILE_COMPLIANCE_SELECT).eq("id", athlete_id)
+        )
 
     @_invalidates_profile_cache()
     def record_compliance_acceptance(

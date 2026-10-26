@@ -2,182 +2,182 @@
   {
     "file": "api/store.py",
     "caller": "_fail_stale_active_generation_jobs_for_athlete",
-    "line": 853,
+    "line": 859,
     "selection": "GENERATION_JOB_SELECT"
   },
   {
     "file": "api/store.py",
     "caller": "validate_runtime_schema",
-    "line": 1092,
+    "line": 1098,
     "selection": "','.join(PLAN_RUNTIME_REQUIRED_COLUMNS)"
   },
   {
     "file": "api/store.py",
     "caller": "_lookup_generation_job_by_client_request_id",
-    "line": 1171,
+    "line": 1177,
     "selection": "GENERATION_JOB_SELECT"
   },
   {
     "file": "api/store.py",
     "caller": "_read_generation_job",
-    "line": 1180,
+    "line": 1186,
     "selection": "GENERATION_JOB_SELECT"
   },
   {
     "file": "api/store.py",
     "caller": "_read_generation_job_status_guard",
-    "line": 1186,
+    "line": 1192,
     "selection": "GENERATION_JOB_STATUS_GUARD_SELECT"
   },
   {
     "file": "api/store.py",
     "caller": "_get_profile_by_id",
-    "line": 1192,
+    "line": 1198,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "_get_profile_contacts_by_ids",
-    "line": 1205,
+    "line": 1211,
     "selection": "id, email, full_name"
   },
   {
     "file": "api/store.py",
+    "caller": "get_profile_compliance",
+    "line": 1287,
+    "selection": "PROFILE_COMPLIANCE_SELECT"
+  },
+  {
+    "file": "api/store.py",
     "caller": "_get_profile_by_email",
-    "line": 1593,
+    "line": 1605,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "_get_profile_by_email",
-    "line": 1601,
+    "line": 1613,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_admin_profiles",
-    "line": 1612,
+    "line": 1624,
     "selection": "id,email,role"
   },
   {
     "file": "api/store.py",
     "caller": "get_latest_intake",
-    "line": 1810,
+    "line": 1822,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "get_intake",
-    "line": 1817,
+    "line": 1829,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_user_plans",
-    "line": 2047,
+    "line": 2059,
     "selection": "PLAN_SUMMARY_SELECT"
   },
   {
     "file": "api/store.py",
     "caller": "get_plan",
-    "line": 2066,
+    "line": 2078,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "get_plan_for_athlete",
-    "line": 2086,
+    "line": 2098,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "_owned_plan_projection",
-    "line": 2106,
+    "line": 2118,
     "selection": "columns"
   },
   {
     "file": "api/store.py",
     "caller": "get_latest_plan",
-    "line": 2130,
+    "line": 2142,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "get_active_plan_id",
-    "line": 2148,
+    "line": 2160,
     "selection": "active_plan_id"
   },
   {
     "file": "api/store.py",
     "caller": "count_generation_jobs_for_athlete_since",
-    "line": 2504,
+    "line": 2516,
     "selection": "id"
   },
   {
     "file": "api/store.py",
     "caller": "get_visible_active_generation_job_for_athlete",
-    "line": 2782,
+    "line": 2794,
     "selection": "GENERATION_JOB_SELECT"
   },
   {
     "file": "api/store.py",
     "caller": "reconcile_active_generation_job_for_athlete",
-    "line": 2829,
+    "line": 2841,
     "selection": "GENERATION_JOB_SELECT"
   },
   {
     "file": "api/store.py",
     "caller": "get_generation_job_by_plan_id",
-    "line": 3026,
+    "line": 3038,
     "selection": "GENERATION_JOB_SELECT"
   },
   {
     "file": "api/store.py",
     "caller": "get_latest_generation_job_for_athlete",
-    "line": 3039,
+    "line": 3051,
     "selection": "GENERATION_JOB_SELECT"
   },
   {
     "file": "api/store.py",
     "caller": "has_active_generation_job_for_plan",
-    "line": 3071,
+    "line": 3083,
     "selection": "id"
   },
   {
     "file": "api/store.py",
     "caller": "list_generation_jobs_for_athlete",
-    "line": 3090,
+    "line": 3102,
     "selection": "GENERATION_JOB_ADMIN_LIST_SELECT"
   },
   {
     "file": "api/store.py",
     "caller": "list_admin_triage_generation_jobs",
-    "line": 3115,
+    "line": 3127,
     "selection": "GENERATION_JOB_ADMIN_TRIAGE_SELECT"
   },
   {
     "file": "api/store.py",
     "caller": "list_admin_active_generation_jobs",
-    "line": 3142,
+    "line": 3154,
     "selection": "GENERATION_JOB_ADMIN_ACTIVE_SELECT"
   },
   {
     "file": "api/store.py",
     "caller": "list_orphaned_terminal_generation_jobs",
-    "line": 3168,
+    "line": 3180,
     "selection": "id, athlete_id, status, source, plan_id, plans!left(id)"
   },
   {
     "file": "api/store.py",
     "caller": "list_failed_triage_resume_jobs_with_approved_marker",
-    "line": 3204,
+    "line": 3216,
     "selection": "id, athlete_id, status, source, plan_id, plans!inner(id,stage2_status)"
-  },
-  {
-    "file": "api/store.py",
-    "caller": "list_claimable_generation_jobs",
-    "line": 3242,
-    "selection": "GENERATION_JOB_SELECT"
   },
   {
     "file": "api/store.py",
@@ -188,493 +188,499 @@
   {
     "file": "api/store.py",
     "caller": "list_claimable_generation_jobs",
-    "line": 3263,
+    "line": 3266,
     "selection": "GENERATION_JOB_SELECT"
   },
   {
     "file": "api/store.py",
     "caller": "list_claimable_generation_jobs",
-    "line": 3273,
+    "line": 3275,
     "selection": "GENERATION_JOB_SELECT"
   },
   {
     "file": "api/store.py",
     "caller": "list_claimable_generation_jobs",
-    "line": 3283,
+    "line": 3285,
+    "selection": "GENERATION_JOB_SELECT"
+  },
+  {
+    "file": "api/store.py",
+    "caller": "list_claimable_generation_jobs",
+    "line": 3295,
     "selection": "GENERATION_JOB_SELECT"
   },
   {
     "file": "api/store.py",
     "caller": "count_active_generation_jobs",
-    "line": 3472,
+    "line": 3484,
     "selection": "id"
   },
   {
     "file": "api/store.py",
     "caller": "list_admin_plans",
-    "line": 4219,
+    "line": 4231,
     "selection": "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, stage2_validator_report, pdf_url, created_at"
   },
   {
     "file": "api/store.py",
     "caller": "list_admin_review_plans",
-    "line": 4244,
+    "line": 4256,
     "selection": "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, stage2_validator_report, pdf_url, created_at"
   },
   {
     "file": "api/store.py",
     "caller": "list_plans_missing_structured_plan",
-    "line": 4268,
+    "line": 4280,
     "selection": "id, status, created_at"
   },
   {
     "file": "api/store.py",
     "caller": "list_plans_with_orphaned_structured_card_attempt",
-    "line": 4295,
+    "line": 4307,
     "selection": "id, status, created_at"
   },
   {
     "file": "api/store.py",
     "caller": "list_admin_athletes",
-    "line": 4313,
+    "line": 4325,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_admin_signup_activation",
-    "line": 4329,
+    "line": 4341,
     "selection": "id,role,created_at,first_usable_plan_at"
   },
   {
     "file": "api/store.py",
     "caller": "list_injury_episode_events",
-    "line": 4380,
+    "line": 4392,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "get_admin_athlete",
-    "line": 4398,
+    "line": 4410,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_admin_athletes_by_ids",
-    "line": 4405,
+    "line": 4417,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "get_today_checkin",
-    "line": 4489,
+    "line": 4501,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_today_checkins_for_day",
-    "line": 4497,
+    "line": 4509,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "get_session_completion_by_id",
-    "line": 4550,
+    "line": 4562,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_session_detail_exercise_logs",
-    "line": 4555,
+    "line": 4567,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "get_external_session_sparring_log",
-    "line": 4561,
+    "line": 4573,
     "selection": "athlete_id,external_session_id,intensity,rounds_completed,round_seconds,head_contact,rocked,notes"
   },
   {
     "file": "api/store.py",
     "caller": "get_session_completion",
-    "line": 4569,
+    "line": 4581,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_custom_plans",
-    "line": 4614,
+    "line": 4626,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "get_custom_plan",
-    "line": 4619,
+    "line": 4631,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "create_external_training_session",
-    "line": 4640,
+    "line": 4652,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_external_training_sessions",
-    "line": 4648,
+    "line": 4660,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "get_external_training_session",
-    "line": 4658,
+    "line": 4670,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "delete_external_training_session",
-    "line": 4674,
+    "line": 4686,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "get_personal_exercise",
-    "line": 4691,
+    "line": 4703,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "ensure_personal_exercise",
-    "line": 4700,
+    "line": 4712,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "get_manual_exercise",
-    "line": 4708,
+    "line": 4720,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_manual_exercises",
-    "line": 4747,
+    "line": 4759,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "count_manual_exercises",
-    "line": 4755,
+    "line": 4767,
     "selection": "external_session_id"
   },
   {
     "file": "api/store.py",
     "caller": "has_exercise_record",
-    "line": 4765,
+    "line": 4777,
     "selection": "id"
   },
   {
     "file": "api/store.py",
     "caller": "list_manual_exercise_index_page",
-    "line": 4774,
+    "line": 4786,
     "selection": "id,athlete_id,external_session_id,exercise_key,personal_exercise_id,display_name,measurement_format,training_day,actual,deleted_at"
   },
   {
     "file": "api/store.py",
     "caller": "list_manual_exercise_performances",
-    "line": 4785,
+    "line": 4797,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_session_completions",
-    "line": 4800,
+    "line": 4812,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_session_completions_from_day",
-    "line": 4815,
+    "line": 4827,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_plan_session_completions",
-    "line": 4831,
+    "line": 4843,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_rehab_schedule_completions",
-    "line": 4845,
+    "line": 4857,
     "selection": "id,athlete_id,plan_id,session_id,training_day,status,prescription_snapshot,created_at,updated_at"
   },
   {
     "file": "api/store.py",
     "caller": "get_rehab_schedule_revision",
-    "line": 4859,
+    "line": 4871,
     "selection": "id"
   },
   {
     "file": "api/store.py",
     "caller": "list_session_logs",
-    "line": 4872,
+    "line": 4884,
     "selection": "id,athlete_id,plan_id,session_date,session_type,completed,created_at,updated_at"
   },
   {
     "file": "api/store.py",
     "caller": "get_athlete_streaks",
-    "line": 4883,
+    "line": 4895,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_daily_activity",
-    "line": 4913,
+    "line": 4925,
     "selection": "athlete_id,activity_date"
   },
   {
     "file": "api/store.py",
     "caller": "get_xp_progress_state",
-    "line": 4973,
+    "line": 4985,
     "selection": "total_xp,last_daily_login_date"
   },
   {
     "file": "api/store.py",
     "caller": "get_xp_progress_state",
-    "line": 4982,
+    "line": 4994,
     "selection": "id,action,amount,awarded_at,calendar_date"
   },
   {
     "file": "api/store.py",
     "caller": "xp_award_exists",
-    "line": 5004,
+    "line": 5016,
     "selection": "id"
   },
   {
     "file": "api/store.py",
     "caller": "list_plan_milestones",
-    "line": 5015,
+    "line": 5027,
     "selection": "id,plan_id,milestone_type,milestone_key,phase_label,metadata,completed_at"
   },
   {
     "file": "api/store.py",
     "caller": "get_notification_preferences",
-    "line": 5078,
+    "line": 5090,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_notification_evaluations",
-    "line": 5132,
+    "line": 5144,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "has_notification_evaluation_decision",
-    "line": 5146,
+    "line": 5158,
     "selection": "id"
   },
   {
     "file": "api/store.py",
     "caller": "get_notification_simulation_state",
-    "line": 5197,
+    "line": 5209,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "get_notification_simulation_state",
-    "line": 5213,
+    "line": 5225,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "get_notification_simulation_state",
-    "line": 5221,
+    "line": 5233,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "get_notification_simulation_state",
-    "line": 5231,
+    "line": 5243,
     "selection": "profile_id,action_key,training_day"
   },
   {
     "file": "api/store.py",
     "caller": "get_notification_simulation_state",
-    "line": 5204,
+    "line": 5216,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_notification_deliveries",
-    "line": 5273,
+    "line": 5285,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_notification_templates",
-    "line": 5283,
+    "line": 5295,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_today_checkins",
-    "line": 5298,
+    "line": 5310,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_injury_flags",
-    "line": 5357,
+    "line": 5369,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "get_injury_flag_for_athlete",
-    "line": 5384,
+    "line": 5396,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_rehab_exposures_by_ids",
-    "line": 5440,
+    "line": 5452,
     "selection": "id,athlete_id,event_json"
   },
   {
     "file": "api/store.py",
     "caller": "list_rehab_exposures",
-    "line": 5459,
+    "line": 5471,
     "selection": "id,athlete_id,event_json,occurred_at,created_at"
   },
   {
     "file": "api/store.py",
     "caller": "list_push_subscriptions",
-    "line": 5518,
+    "line": 5530,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_all_push_subscriptions",
-    "line": 5559,
+    "line": 5571,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_sparring_logs",
-    "line": 5611,
+    "line": 5623,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "latest_sparring_log_day",
-    "line": 5626,
+    "line": 5638,
     "selection": "training_day"
   },
   {
     "file": "api/store.py",
     "caller": "list_exercise_logs_for_day",
-    "line": 5715,
+    "line": 5727,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_exercise_index_page",
-    "line": 5727,
+    "line": 5739,
     "selection": "id,athlete_id,exercise_key,status,training_day,prescribed,actual"
   },
   {
     "file": "api/store.py",
     "caller": "list_exercise_performances",
-    "line": 5737,
+    "line": 5749,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_exercise_history",
-    "line": 5747,
+    "line": 5759,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_recent_exercise_loads",
-    "line": 5760,
+    "line": 5772,
     "selection": "exercise_key,prescribed,actual,training_day"
   },
   {
     "file": "api/store.py",
     "caller": "_exercise_media_page",
-    "line": 5783,
+    "line": 5795,
     "selection": "columns"
   },
   {
     "file": "api/store.py",
     "caller": "list_admin_reviews",
-    "line": 5879,
+    "line": 5891,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "count_pending_admin_reviews_for_athlete",
-    "line": 5887,
+    "line": 5899,
     "selection": "id"
   },
   {
     "file": "api/store.py",
     "caller": "get_context_feedback",
-    "line": 5935,
+    "line": 5947,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "get_feedback_plan_for_owner",
-    "line": 5946,
+    "line": 5958,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "get_feedback_active_plan_id",
-    "line": 5954,
+    "line": 5966,
     "selection": "active_plan_id"
   },
   {
     "file": "api/store.py",
     "caller": "get_feedback_today_checkin",
-    "line": 5965,
-    "selection": "*"
-  },
-  {
-    "file": "api/store.py",
-    "caller": "list_feedback_injury_flags",
     "line": 5977,
     "selection": "*"
   },
   {
     "file": "api/store.py",
+    "caller": "list_feedback_injury_flags",
+    "line": 5989,
+    "selection": "*"
+  },
+  {
+    "file": "api/store.py",
     "caller": "get_feedback_intake",
-    "line": 5992,
+    "line": 6004,
     "selection": "*"
   },
   {
     "file": "api/store.py",
     "caller": "list_admin_feedback",
-    "line": 6034,
+    "line": 6046,
     "selection": "id,submitted_by_profile_id,surface,category,response,reason,comment,structured_response,contact_allowed,priority,plan_id,today_checkin_id,session_id,camp_phase,app_version,readiness_snapshot,injury_snapshot,technical_context,screenshot_path,screenshot_expires_at,created_at,updated_at,profiles!beta_feedback_submitted_by_profile_id_fkey(email,full_name)"
   },
   {
     "file": "api/store.py",
     "caller": "get_feedback_screenshot_path",
-    "line": 6062,
+    "line": 6074,
     "selection": "screenshot_path"
   },
   {
     "file": "api/store.py",
     "caller": "list_expired_feedback_screenshots",
-    "line": 6141,
+    "line": 6153,
     "selection": "id,screenshot_path,screenshot_expires_at"
   },
   {
     "file": "api/store.py",
     "caller": "list_profile_feedback_screenshots",
-    "line": 6154,
+    "line": 6166,
     "selection": "id,screenshot_path,screenshot_expires_at"
   },
   {

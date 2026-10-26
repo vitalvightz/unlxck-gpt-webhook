@@ -105,7 +105,7 @@ def _safe_latest_intake(store: AppStore, athlete_id: str) -> _RecordRead:
 def _safe_latest_plan(store: AppStore, athlete_id: str) -> _RecordRead:
     try:
         return _optional_record_read(
-            store.get_latest_plan(athlete_id),
+            store.get_latest_plan_status(athlete_id),
             source="plan",
             athlete_id=athlete_id,
         )

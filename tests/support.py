@@ -658,6 +658,11 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
     def get_profile(self, athlete_id: str) -> dict | None:
         return self.profiles.get(athlete_id)
 
+    def get_profile_compliance(self, athlete_id: str) -> dict | None:
+        from api.store import PROFILE_COMPLIANCE_SELECT
+        row = self.get_profile(athlete_id)
+        return {key: row[key] for key in PROFILE_COMPLIANCE_SELECT.split(",") if key in row} if row is not None else None
+
     def record_compliance_acceptance(
         self,
         athlete_id: str,
