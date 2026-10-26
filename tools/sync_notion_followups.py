@@ -640,7 +640,9 @@ def sync_scorecard():
                 inspect(block["id"])
             elif block["type"] == "callout":
                 parts = list(block_children(block["id"]))
-                names = [block_text(part) for part in parts if part["type"] == "paragraph"]
+                # Notion editors can leave spaces inside a bold label span.
+                # Match the label without its edge whitespace; preserve its text.
+                names = [block_text(part).strip() for part in parts if part["type"] == "paragraph"]
                 for name in counts:
                     if name not in names:
                         continue

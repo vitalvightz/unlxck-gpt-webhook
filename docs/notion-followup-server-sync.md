@@ -10,6 +10,8 @@ After all six headline/detail blocks have been checked and any changes have succ
 
 The scorecard uses the current stages and already persisted milestones at the start of the invocation. Newly confirmed milestones are included on the next successful refresh. No historical send dates or milestones are fabricated to repair the denominator.
 
+Card labels are matched after trimming surrounding whitespace, including nonbreaking spaces, without rewriting their content or formatting. The live page's `ACTIVATION RATE ` label had a trailing space, which the previous exact match treated as a missing card and aborted before any writes. The page label was trimmed during investigation; the worker now tolerates this editor variation while still rejecting missing or duplicate cards.
+
 If `Confirmed Stage` is missing, stage processing logs a warning that historical milestone confirmation is disabled for the affected examined rows. The expected property is **rich text** (`rich_text`), matching `Observed Stage`; it is not a select or status. Verify the live data-source schema and recover any existing property/history before restoring it. This worker change does not migrate the live schema. Current-stage scorecard totals continue to work without this property, but historical milestones can be missed until it is restored.
 
 After deployment, check the existing service journal:
