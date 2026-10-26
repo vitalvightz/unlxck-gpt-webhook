@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date, timedelta
+
 from fastapi import HTTPException, status
 
 from support import _build_client, _build_request
@@ -274,8 +276,12 @@ def _intake_weight(store) -> float:
     return store.get_latest_intake("athlete-1")["intake"]["athlete"]["weight_kg"]
 
 
-MONDAY = {"date": "2099-03-02", "weight_kg": 71.8, "time": "07:00", "is_fasted": True, "notes": None}
-WEDNESDAY = {"date": "2099-03-04", "weight_kg": 71.2, "time": "07:05", "is_fasted": True, "notes": None}
+def _days_from_today(days: int) -> str:
+    return (date.today() + timedelta(days=days)).isoformat()
+
+
+MONDAY = {"date": _days_from_today(-4), "weight_kg": 71.8, "time": "07:00", "is_fasted": True, "notes": None}
+WEDNESDAY = {"date": _days_from_today(-2), "weight_kg": 71.2, "time": "07:05", "is_fasted": True, "notes": None}
 
 
 def test_a_new_weigh_in_becomes_the_camp_current_weight():
@@ -288,7 +294,7 @@ def test_a_new_weigh_in_becomes_the_camp_current_weight():
 
     assert workspace["shared_camp_context"]["current_weight_kg"] == 71.8
     assert workspace["shared_camp_context"]["current_weight_source"] == "latest_bodyweight_log"
-    assert workspace["shared_camp_context"]["current_weight_recorded_at"] == "2099-03-02T07:00"
+    assert workspace["shared_camp_context"]["current_weight_recorded_at"] == f"{MONDAY['date']}T07:00"
     # Camp Setup, the next plan and the cut maths read the stored intake weight.
     assert _intake_weight(store) == 71.8
     assert workspace["derived"]["weight_cut_pct"] == 2.5
@@ -343,3 +349,47 @@ def test_workspace_reports_the_canonical_weight_cut_band_for_adults():
     assert derived["weight_cut_pct"] == 7.5
     assert derived["weight_cut_risk_band"] == "severe"
     assert derived["weight_cut_supervision_required"] is True
+
+
+
+def test_a_future_dated_weigh_in_is_rejected():
+    client, store, _ = _build_client()
+    client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+    store.create_intake("athlete-1", _build_request({}))
+    workspace = _get_current_workspace(client)
+
+    response = client.put(
+        "/api/nutrition/current",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={**workspace, "nutrition_monitoring": {"daily_bodyweight_log": [
+            {"date": _days_from_today(5), "weight_kg": 69.0, "time": "07:00", "is_fasted": True, "notes": None},
+        ]}},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "A weigh-in can't be dated in the future."
+    assert _intake_weight(store) == 72.5
+
+
+def test_a_stored_future_weigh_in_never_sets_camp_weight_or_blocks_saves():
+    client, store, _ = _build_client()
+    client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+    future = {"date": _days_from_today(5), "weight_kg": 69.0, "time": "07:00", "is_fasted": True, "notes": None}
+    # Saved before the date check existed.
+    store.create_intake("athlete-1", _build_request({}))
+    intake = store.get_latest_intake("athlete-1")
+    store.update_intake(
+        intake["id"],
+        intake={**intake["intake"], "nutrition_monitoring": {"daily_bodyweight_log": [future]}},
+        fight_date=intake["fight_date"],
+        technical_style=["boxing"],
+    )
+    workspace = _get_current_workspace(client)
+    assert workspace["derived"]["bodyweight_trend"] == []
+
+    yesterday = {"date": _days_from_today(-1), "weight_kg": 71.6, "time": "07:00", "is_fasted": True, "notes": None}
+    workspace = _put_bodyweight_log(client, workspace, [future, yesterday])
+
+    assert _intake_weight(store) == 71.6
+    assert workspace["shared_camp_context"]["current_weight_kg"] == 71.6
+    assert [point["scale_weight_kg"] for point in workspace["derived"]["bodyweight_trend"]] == [71.6]

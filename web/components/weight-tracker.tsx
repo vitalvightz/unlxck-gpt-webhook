@@ -20,7 +20,7 @@ import {
   formatWeightDelta,
   getBodyweightEntriesWithIndex,
   getBodyweightTrend,
-  getLatestEffectiveWeight,
+  getCampWeight,
   getTargetGap,
   getTrendChange,
 } from "@/lib/nutrition-bodyweight";
@@ -115,10 +115,16 @@ export function WeightTracker() {
 
   const entries = workspace?.nutrition_monitoring.daily_bodyweight_log ?? [];
   const newestFirst = getBodyweightEntriesWithIndex(entries);
-  const latest = newestFirst[0] ?? null;
-  const latestWeight = workspace ? getLatestEffectiveWeight(workspace) : null;
+  // A future-dated weigh-in (only possible from before dates were checked) is
+  // listed but never headlined, matching the API, which never uses it for camp weight.
+  const today = localDateValue();
+  const latest = newestFirst.find(entry => entry.date <= today) ?? null;
+  // Camp calculations (gap, cut band, the plan) use the camp's current weight.
+  // It follows the newest weigh-in unless a later weight was set in Camp Setup.
+  const campWeight = workspace ? getCampWeight(workspace) : null;
+  const campWeightDiffers = latest != null && campWeight != null && Math.abs(campWeight - latest.weight_kg) >= 0.05;
   const targetKg = isMinorAthlete ? null : (workspace?.shared_camp_context.target_weight_kg ?? null);
-  const gap = getTargetGap(latestWeight, targetKg);
+  const gap = getTargetGap(campWeight, targetKg);
   const derived = workspace?.derived ?? null;
   const average = derived?.rolling_7_day_average_weight ?? null;
   const pace = derived?.weekly_pace_kg ?? null;
@@ -171,7 +177,7 @@ export function WeightTracker() {
           <>
             <section className={`history-summary ${styles.card}`} aria-label="Weight summary">
               <div className={summary.head}>
-                <p className="history-summary-label">Your weight</p>
+                <p className="history-summary-label">Latest weigh-in</p>
                 {latest ? <span className={styles.lastLogged}>Last logged {formatAppDate(latest.date)}</span> : null}
               </div>
               {latest ? (
@@ -183,6 +189,12 @@ export function WeightTracker() {
                   <dl className={`history-summary-stats ${summary.stats}`} style={{ "--stat-count": tiles.length > 3 ? 2 : tiles.length } as CSSProperties}>
                     {tiles.map(tile => <div key={tile.label}><dt>{tile.label}</dt><dd data-tone={"tone" in tile ? tile.tone : undefined}>{tile.value}</dd></div>)}
                   </dl>
+                  {campWeightDiffers ? (
+                    <p className={progress.note}>
+                      Your camp weight is <strong>{formatWeight(campWeight)}</strong>, set in <Link href="/onboarding" className="auth-text-link">Camp Setup</Link>.
+                      {" "}Your plan{gap != null ? ", gap to target" : ""} and cut warnings use it until you log a newer weigh-in.
+                    </p>
+                  ) : null}
                   {!isMinorAthlete && targetKg == null ? (
                     <p className={progress.note}>No target weight yet. <Link href="/onboarding" className="auth-text-link">Set it in Camp Setup</Link> to see your gap.</p>
                   ) : null}
@@ -358,6 +370,10 @@ function WeighInSheet({ entry, lastWeight, onClose, onSave, onDelete }: {
       setError("Choose the date of this weigh-in.");
       return;
     }
+    if (draft.date.trim() > localDateValue()) {
+      setError("A weigh-in can't be dated in the future.");
+      return;
+    }
     run(() => onSave({
       date: draft.date.trim(),
       weight_kg: weight,
@@ -377,7 +393,7 @@ function WeighInSheet({ entry, lastWeight, onClose, onSave, onDelete }: {
         </div>
         <button type="button" className={sheet.close} aria-label="Close" onClick={onClose} disabled={isPending}>×</button>
       </header>
-      <form className={`${sheet.body} ${styles.form}`} onSubmit={event => { event.preventDefault(); save(); }}>
+      <form className={`${sheet.body} ${styles.form}`} noValidate onSubmit={event => { event.preventDefault(); save(); }}>
         <div>
           <label htmlFor={`${fieldId}-weight`} className={styles.fieldLabel}>Weight</label>
           <div className={styles.weightField}>
@@ -407,7 +423,7 @@ function WeighInSheet({ entry, lastWeight, onClose, onSave, onDelete }: {
         <div className={styles.when}>
           <div className="field">
             <label htmlFor={`${fieldId}-date`}>Date</label>
-            <input id={`${fieldId}-date`} type="date" value={draft.date} onChange={event => setDraft(current => ({ ...current, date: event.target.value }))} />
+            <input id={`${fieldId}-date`} type="date" max={localDateValue()} value={draft.date} onChange={event => setDraft(current => ({ ...current, date: event.target.value }))} />
           </div>
           <div className="field">
             <label htmlFor={`${fieldId}-time`}>Time</label>

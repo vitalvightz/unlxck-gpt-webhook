@@ -46,3 +46,12 @@ def test_weekly_pace_needs_two_weeks_of_recent_readings():
     assert weekly_pace(steady[::2], date(2026, 10, 26)) is None
     # Latest reading over a week old.
     assert weekly_pace(steady, date(2026, 11, 5)) is None
+
+
+def test_latest_calendar_day_is_already_tomorrow_east_of_the_date_line():
+    from datetime import datetime, timezone
+
+    from api.nutrition_workspace import latest_calendar_day
+
+    assert latest_calendar_day(datetime(2026, 10, 26, 9, 0, tzinfo=timezone.utc)) == date(2026, 10, 26)
+    assert latest_calendar_day(datetime(2026, 10, 26, 11, 0, tzinfo=timezone.utc)) == date(2026, 10, 27)

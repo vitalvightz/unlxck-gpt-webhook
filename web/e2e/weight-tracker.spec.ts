@@ -52,7 +52,7 @@ function workspace(isMinor: boolean, empty = false, legacy = false) {
   };
 }
 
-async function signInAthlete(page: Page, baseURL: string, { isMinor, empty = false, legacy = false }: { isMinor: boolean; empty?: boolean; legacy?: boolean }) {
+async function signInAthlete(page: Page, baseURL: string, { isMinor, empty = false, legacy = false, campWeight }: { isMinor: boolean; empty?: boolean; legacy?: boolean; campWeight?: number }) {
   await isolateFromNetwork(page, baseURL);
   const key = `sb-${new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://stub.supabase.co").hostname.split(".")[0]}-auth-token`;
   await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [key, JSON.stringify({
@@ -61,6 +61,7 @@ async function signInAthlete(page: Page, baseURL: string, { isMinor, empty = fal
   })]);
   const saves: unknown[] = [];
   let current = workspace(isMinor, empty, legacy);
+  if (campWeight != null) current = { ...current, shared_camp_context: { ...current.shared_camp_context, current_weight_kg: campWeight } };
   await page.route("**/api/**", async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -189,4 +190,35 @@ test("a first weigh-in starts from an empty state", async ({ page, baseURL }) =>
   await page.getByRole("button", { name: "Log weigh-in" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Save weigh-in" }).click();
   await expect(page.getByRole("dialog").getByRole("alert")).toHaveText("Enter your weight in kg.");
+});
+
+test("camp weight set later in Camp Setup drives the gap, and the tracker says so", async ({ page, baseURL }) => {
+  await signInAthlete(page, baseURL!, { isMinor: false, campWeight: 72.9 });
+  await page.goto("/nutrition");
+  const summary = page.getByRole("region", { name: "Weight summary" });
+  // The headline stays the latest logged weigh-in...
+  await expect(summary.getByText("73.4", { exact: true })).toBeVisible();
+  // ...while the gap uses the camp weight the plan and cut band use.
+  await expect(summary.getByText("2.9 kg", { exact: true })).toBeVisible();
+  await expect(summary.getByText(/Your camp weight is 72\.9 kg, set in Camp Setup\./)).toBeVisible();
+});
+
+test("a weigh-in can't be dated in the future", async ({ page, baseURL }) => {
+  const saves = await signInAthlete(page, baseURL!, { isMinor: false });
+  await page.goto("/nutrition");
+  await page.getByRole("region", { name: "Weight summary" }).getByRole("button", { name: "Log weigh-in" }).click();
+  const dialog = page.getByRole("dialog", { name: "Log weigh-in" });
+  const date = dialog.getByLabel("Date");
+  const today = await page.evaluate(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  });
+  await expect(date).toHaveAttribute("max", today);
+  const future = new Date(`${today}T12:00:00`);
+  future.setDate(future.getDate() + 3);
+  await date.fill(future.toISOString().slice(0, 10));
+  await dialog.getByLabel("Weight").fill("72.0");
+  await dialog.getByRole("button", { name: "Save weigh-in" }).click();
+  await expect(dialog.getByRole("alert")).toHaveText("A weigh-in can't be dated in the future.");
+  expect(saves).toHaveLength(0);
 });

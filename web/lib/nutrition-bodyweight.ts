@@ -36,10 +36,6 @@ export function getBodyweightEntriesWithIndex(entries: NutritionBodyweightLogEnt
     .sort((left, right) => getBodyweightTimestamp(right) - getBodyweightTimestamp(left));
 }
 
-export function getLatestBodyweightEntry(entries: NutritionBodyweightLogEntry[]): NutritionBodyweightLogEntry | null {
-  return getBodyweightEntriesWithIndex(entries)[0] ?? null;
-}
-
 /**
  * Weigh-ins that can be plotted for the range, oldest first. Ranges count back
  * from the latest weigh-in, so a gap in logging never leaves an empty chart.
@@ -60,9 +56,13 @@ export function getTrendChange(trend: readonly NutritionBodyweightLogEntry[]): n
   return roundToOne(trend[trend.length - 1].weight_kg - trend[0].weight_kg);
 }
 
-export function getLatestEffectiveWeight(workspace: NutritionWorkspaceState): number | null {
-  const latestEntry = getLatestBodyweightEntry(workspace.nutrition_monitoring.daily_bodyweight_log);
-  return normalizeWeight(latestEntry?.weight_kg ?? workspace.shared_camp_context.current_weight_kg ?? null);
+/**
+ * The camp's current weight: what the API's cut maths, Camp Setup and the plan
+ * use. It follows the newest weigh-in unless a later weight was set in Camp
+ * Setup, so it can differ from the latest logged weigh-in.
+ */
+export function getCampWeight(workspace: NutritionWorkspaceState): number | null {
+  return normalizeWeight(workspace.shared_camp_context.current_weight_kg ?? null);
 }
 
 export function getTargetGap(weightKg: number | null, targetWeightKg: number | null | undefined): number | null {

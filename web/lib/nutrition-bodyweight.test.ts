@@ -5,6 +5,7 @@ import {
   formatWeightDelta,
   getBodyweightEntriesWithIndex,
   getBodyweightTrend,
+  getCampWeight,
   getTargetGap,
   getTrendChange,
 } from "./nutrition-bodyweight.ts";
@@ -50,4 +51,12 @@ test("formats weight changes with a sign", () => {
 test("calculates target gap", () => {
   assert.equal(getTargetGap(73.4, 70), 3.4);
   assert.equal(getTargetGap(null, 70), null);
+});
+
+test("camp weight is the workspace's current weight, not the latest weigh-in", () => {
+  const workspace = {
+    shared_camp_context: { current_weight_kg: 70.94 },
+    nutrition_monitoring: { daily_bodyweight_log: entries },
+  } as unknown as Parameters<typeof getCampWeight>[0];
+  assert.equal(getCampWeight(workspace), 70.9);
 });
