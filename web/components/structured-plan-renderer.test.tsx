@@ -1980,11 +1980,14 @@ test("week overview separates app sessions, coach-led days, and app completion",
 
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 18)} />);
 
-  assert.equal(html.includes("App sessions</span>2"), true);
-  assert.equal(html.includes("Coach/gym days</span>3"), true);
-  assert.equal(html.includes("App completed</span>1/2"), true);
+  assert.equal(html.includes(">2 app sessions</span>"), true);
+  assert.equal(html.includes(">3 coach/gym days</span>"), true);
+  assert.equal(html.includes(">1/2 app done</span>"), true);
   assert.equal(html.includes("1/2 app"), true);
   assert.equal(html.includes("Coach/gym days are tracked separately."), true);
+  // The facts sit on one line, not in a grid of bordered stat tiles.
+  assert.equal(html.includes("cm-week-overview-stats"), false);
+  assert.equal(html.includes("Week overview"), false);
   assert.equal(html.includes("Load</span>"), false);
   assert.equal(html.includes("Training days</span>"), false);
   assert.equal(html.includes("Plan sessions</span>"), false);
@@ -2020,11 +2023,9 @@ test("week overview hides source counters that are not present", () => {
       sessions: [{ session_id: "s1", title: "Strength primer", blocks: [] }],
     },
   ]);
-  assert.equal(appOnlyHtml.includes("App sessions</span>1"), true);
-  assert.equal(appOnlyHtml.includes("App completed</span>0/1"), true);
-  assert.equal(appOnlyHtml.includes("Coach/gym days</span>"), false);
-  // The app-vs-coach note only earns its place when both counts are showing.
-  assert.equal(appOnlyHtml.includes("cm-week-count-note"), false);
+  assert.equal(appOnlyHtml.includes(">1 app session</span>"), true);
+  assert.equal(appOnlyHtml.includes(">0/1 app done</span>"), true);
+  assert.equal(appOnlyHtml.includes("coach/gym day"), false);
 
   const coachOnlyHtml = renderDays([
     {
@@ -2033,9 +2034,9 @@ test("week overview hides source counters that are not present", () => {
       sessions: [],
     },
   ]);
-  assert.equal(coachOnlyHtml.includes("Coach/gym days</span>1"), true);
-  assert.equal(coachOnlyHtml.includes("App sessions</span>"), false);
-  assert.equal(coachOnlyHtml.includes("App completed</span>"), false);
+  assert.equal(coachOnlyHtml.includes(">1 coach/gym day</span>"), true);
+  assert.equal(coachOnlyHtml.includes("app session"), false);
+  assert.equal(coachOnlyHtml.includes("app done"), false);
 
   const emptyHtml = renderDays([
     {
@@ -2044,9 +2045,9 @@ test("week overview hides source counters that are not present", () => {
       sessions: [],
     },
   ]);
-  assert.equal(emptyHtml.includes("App sessions</span>"), false);
-  assert.equal(emptyHtml.includes("Coach/gym days</span>"), false);
-  assert.equal(emptyHtml.includes("App completed</span>"), false);
+  assert.equal(emptyHtml.includes("app session"), false);
+  assert.equal(emptyHtml.includes("coach/gym day"), false);
+  assert.equal(emptyHtml.includes("app done"), false);
 });
 
 test("completed work is tagged with the calm success tone, never the brand red accent", () => {
