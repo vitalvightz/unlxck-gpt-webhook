@@ -2,6 +2,26 @@
 
 This job keeps editable **Copy Follow-Up** equal to the cold **Follow-Up DM** while Contacted, or to the warm **Warm Next DM** when a Replied/Accepted/Activated reminder is due. It never sends Instagram messages. It records **Last Follow-Up Sent** when it observes **Follow-Ups Sent** advance, which powers the existing **Actual Next Due** formula. The approved 3B scripts are selected in Python by stage and shared sequence position; cold and Activated copy retain their formula sources. The recurring job uses the already-running worker container, not a new container each time.
 
+## Scorecard refresh isolation and freshness
+
+The existing worker refreshes the three conversion cards **first**, before stage-history and follow-up processing. A scorecard exception is logged with its traceback and does not stop stage observation/scheduling. Stage observation still precedes scheduling; a stage-pass exception skips scheduling for that invocation. Any failed branch makes the worker exit nonzero so systemd reports the failure, even when the other branch succeeds. The existing timer, token and overlap lock are reused.
+
+After all six headline/detail blocks have been checked and any changes have succeeded, the worker updates a top-level paragraph on the performance page: `Last successful scorecard refresh: <UTC timestamp>`. The first successful refresh appends it; later refreshes reuse it, including when counts are unchanged. Missing/duplicate cards, duplicate freshness paragraphs, query failures and card-write failures do not advance the timestamp. Notion writes are not transactional: a failed refresh can leave some cards updated, with the old success timestamp. A timestamp-write failure also fails the scorecard branch. The `updated ... blocks` log counts headline/detail changes only.
+
+The scorecard uses the current stages and already persisted milestones at the start of the invocation. Newly confirmed milestones are included on the next successful refresh. No historical send dates or milestones are fabricated to repair the denominator.
+
+Card labels are matched after trimming surrounding whitespace, including nonbreaking spaces, without rewriting their content or formatting. The live page's `ACTIVATION RATE ` label had a trailing space, which the previous exact match treated as a missing card and aborted before any writes. The page label was trimmed during investigation; the worker now tolerates this editor variation while still rejecting missing or duplicate cards.
+
+If `Confirmed Stage` is missing, stage processing logs a warning that historical milestone confirmation is disabled for the affected examined rows. The expected property is **rich text** (`rich_text`), matching `Observed Stage`; it is not a select or status. Verify the live data-source schema and recover any existing property/history before restoring it. This worker change does not migrate the live schema. Current-stage scorecard totals continue to work without this property, but historical milestones can be missed until it is restored.
+
+After deployment, check the existing service journal:
+
+```sh
+sudo journalctl -u unlxck-notion-followups.service -n 100 --no-pager
+```
+
+Verify `Notion conversion: contacted ...`, the dashboard timestamp and a complete stage/follow-up pass. Investigate any traceback or missing-property warning. A successful scorecard refresh alone does not establish that scheduling succeeded or that the historical schema is repaired.
+
 ## One-time server setup
 
 1. **Reuse the existing outreach AI qualification integration.** The qualification worker already polls and writes the same UNLXCK Beta Candidate Pipeline every ~2 minutes, so do not make a new Notion integration or issue a second token. Check that its integration can update `Copy Follow-Up`, `Synced Follow-Ups Sent`, and `Last Follow-Up Sent`.

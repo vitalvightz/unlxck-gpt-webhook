@@ -381,23 +381,8 @@ def test_scorecard_rows_include_all_contacted_stages_and_skip_counters(monkeypat
     assert calls[1]["start_cursor"] == "page-2"
 
 
-def test_scorecard_updates_three_rates_without_touching_other_blocks(monkeypatch):
-    def item(stage):
-        # Initial baselines have no milestone dates; Inactive keeps previous milestones.
-        past = {"date": {"start": "2026-10-17"}} if stage == "Inactive" else {"date": None}
-        return {"properties": {
-            "Stage (AI Fills First)": {"select": {"name": stage}},
-            "First Reply Confirmed At": past,
-            "Accepted At": past,
-            "Registered At": {"date": None},
-            "First Meaningful Action At": {"date": None},
-        }}
-    monkeypatch.setenv("UNLXCK_APP_EVENTS_VERIFIED", "0")  # Must not gate CRM activation.
-    monkeypatch.setattr(sync, "scorecard_rows", lambda: iter(
-        [item("Contacted")] * 47 + [item("Rejected")] + [item("Replied")] * 11
-        + [item("Accepted")] * 2 + [item("Activated")] * 2 + [item("Inactive")]
-    ))
-
+@pytest.fixture
+def scorecard_tree(monkeypatch):
     def block(identifier, kind, value="", children=False):
         return {"id": identifier, "type": kind, "has_children": children,
                 kind: {"rich_text": [{"plain_text": value}]}}
@@ -415,10 +400,29 @@ def test_scorecard_updates_three_rates_without_touching_other_blocks(monkeypatch
 
     monkeypatch.setattr(sync, "SCORECARD_PAGE_ID", "page")
     monkeypatch.setattr(sync, "block_children", lambda identifier: iter(tree[identifier]))
+    return tree
+
+
+def test_scorecard_updates_three_rates_without_touching_other_blocks(monkeypatch, scorecard_tree):
+    def item(stage):
+        # Initial baselines have no milestone dates; Inactive keeps previous milestones.
+        past = {"date": {"start": "2026-10-17"}} if stage == "Inactive" else {"date": None}
+        return {"properties": {
+            "Stage (AI Fills First)": {"select": {"name": stage}},
+            "First Reply Confirmed At": past,
+            "Accepted At": past,
+            "Registered At": {"date": None},
+            "First Meaningful Action At": {"date": None},
+        }}
+    monkeypatch.setenv("UNLXCK_APP_EVENTS_VERIFIED", "0")  # Must not gate CRM activation.
+    monkeypatch.setattr(sync, "scorecard_rows", lambda: iter(
+        [item("Contacted")] * 47 + [item("Rejected")] + [item("Replied")] * 11
+        + [item("Accepted")] * 2 + [item("Activated")] * 2 + [item("Inactive")]
+    ))
     writes = []
     monkeypatch.setattr(sync, "request", lambda method, path, body=None: writes.append((method, path, body)))
     assert sync.sync_scorecard() == (64, 6)
-    assert len(writes) == 6
+    assert len(writes) == 7
     assert all(method == "PATCH" and path.startswith("/blocks/") for method, path, _ in writes)
     data = {path: body for _, path, body in writes}
     assert data["/blocks/headline-0"]["heading_2"]["rich_text"][0]["text"]["content"] == "26.6%"
@@ -428,6 +432,82 @@ def test_scorecard_updates_three_rates_without_touching_other_blocks(monkeypatch
     assert data["/blocks/count-1"]["paragraph"]["rich_text"][0]["text"]["content"] == "5 of 64 fighters"
     assert data["/blocks/count-2"]["paragraph"]["rich_text"][0]["text"]["content"] == "2 of 64 fighters"
     assert "/blocks/label-0" not in data
+    method, path, body = writes[-1]
+    assert path == "/blocks/page/children"
+    stamp_text = body["children"][0]["paragraph"]["rich_text"][0]["text"]["content"]
+    assert stamp_text.startswith(sync.SCORECARD_SUCCESS_PREFIX)
+    stamp = datetime.fromisoformat(stamp_text.removeprefix(sync.SCORECARD_SUCCESS_PREFIX))
+    assert stamp.utcoffset() == timedelta(0)
+
+
+def test_scorecard_refreshes_existing_success_stamp_when_counts_unchanged(monkeypatch, scorecard_tree):
+    monkeypatch.setattr(sync, "scorecard_rows", lambda: iter([]))
+    for i in range(3):
+        scorecard_tree[f"card-{i}"][2]["paragraph"]["rich_text"] = [{"plain_text": "0 of 0 fighters"}]
+    scorecard_tree["page"].append({"id": "success", "type": "paragraph", "paragraph": {
+        "rich_text": [{"plain_text": sync.SCORECARD_SUCCESS_PREFIX + "2026-10-01T12:00:00+00:00"}]}})
+    writes = []
+    monkeypatch.setattr(sync, "request", lambda *args: writes.append(args))
+    assert sync.sync_scorecard() == (0, 0)
+    assert len(writes) == 1
+    assert writes[0][:2] == ("PATCH", "/blocks/success")
+
+
+@pytest.mark.parametrize("label", ["ACTIVATION RATE ", "\tACTIVATION RATE\n", "\u00a0ACTIVATION RATE\u00a0"])
+def test_scorecard_accepts_label_whitespace_without_rewriting_label(monkeypatch, scorecard_tree, label):
+    # Live Notion's bold activation label has a trailing space. Rich-text
+    # formatting can split the label into multiple spans without changing it.
+    paragraph = scorecard_tree["card-2"][1]["paragraph"]
+    paragraph["rich_text"] = [{"plain_text": label[:10]}, {"plain_text": label[10:]}]
+    monkeypatch.setattr(sync, "scorecard_rows", lambda: iter([]))
+    writes = []
+    monkeypatch.setattr(sync, "request", lambda *args: writes.append(args))
+    assert sync.sync_scorecard() == (0, 1)
+    assert [path for _, path, _ in writes] == ["/blocks/count-2", "/blocks/page/children"]
+    assert sync.block_text(scorecard_tree["card-2"][1]) == label
+
+
+def test_scorecard_rejects_duplicate_card_with_padded_label(monkeypatch, scorecard_tree):
+    duplicate = copy.deepcopy(scorecard_tree["card-2"])
+    duplicate[1]["paragraph"]["rich_text"] = [{"plain_text": "ACTIVATION RATE "}]
+    scorecard_tree["column-2"].append({"id": "duplicate", "type": "callout"})
+    scorecard_tree["duplicate"] = duplicate
+    monkeypatch.setattr(sync, "scorecard_rows", lambda: iter([]))
+    monkeypatch.setattr(sync, "request", lambda *_: pytest.fail("Duplicate cards must prevent all writes"))
+    with pytest.raises(ValueError, match="Duplicate scorecard card: ACTIVATION RATE"):
+        sync.sync_scorecard()
+
+
+@pytest.mark.parametrize("failure", ["query", "card", "timestamp", "duplicate"])
+def test_failed_scorecard_does_not_publish_success(monkeypatch, scorecard_tree, failure):
+    old_text = sync.SCORECARD_SUCCESS_PREFIX + "2026-10-01T12:00:00+00:00"
+    for i in range(3):
+        scorecard_tree[f"card-{i}"][2]["paragraph"]["rich_text"] = [{"plain_text": "1 of 5 fighters"}]
+    scorecard_tree["page"].append({"id": "success", "type": "paragraph", "paragraph": {
+        "rich_text": [{"plain_text": old_text}]}})
+    if failure == "duplicate":
+        scorecard_tree["page"].append(copy.deepcopy(scorecard_tree["page"][-1]))
+
+    def rows():
+        if failure == "query":
+            raise RuntimeError("query failed")
+        return iter([])
+
+    writes = []
+    def request(method, path, body):
+        writes.append(path)
+        if (failure == "card" and path == "/blocks/count-1") or path == "/blocks/success":
+            raise RuntimeError("write failed")
+
+    monkeypatch.setattr(sync, "scorecard_rows", rows)
+    monkeypatch.setattr(sync, "request", request)
+    with pytest.raises((RuntimeError, ValueError)):
+        sync.sync_scorecard()
+    if failure != "timestamp":
+        assert "/blocks/success" not in writes
+    if failure == "card":
+        assert writes == ["/blocks/count-0", "/blocks/count-1"]
+    assert sync.block_text(scorecard_tree["page"][-1]) == old_text
 
 
 def test_scorecard_fails_closed_when_card_missing(monkeypatch):
@@ -466,6 +546,17 @@ def test_missing_confirmed_stage_skips_history_safely():
                         since=(now - timedelta(minutes=10)).isoformat())
     del page["properties"]["Confirmed Stage"]
     assert sync.stage_changes(page, now) == {}
+
+
+def test_missing_confirmed_stage_warns_without_inventing_milestones(monkeypatch, capsys):
+    now = datetime(2026, 10, 18, 17, tzinfo=timezone.utc)
+    page = observed_row(stage="Accepted", observed="Accepted",
+                        since=(now - timedelta(minutes=10)).isoformat())
+    del page["properties"]["Confirmed Stage"]
+    monkeypatch.setattr(sync, "all_pipeline_rows", lambda: iter([page]))
+    monkeypatch.setattr(sync, "request", lambda *_: pytest.fail("No writes expected"))
+    assert sync.sync_stage_history(now) == (1, 0)
+    assert "1 examined rows lack Confirmed Stage (rich_text)" in capsys.readouterr().err
 
 
 def test_debounces_stage_and_remembers_rejection_as_reply():
@@ -911,7 +1002,34 @@ def test_existing_worker_observes_stage_dates_before_followup_scheduling(monkeyp
             return 0, 0
         monkeypatch.setattr(sync, name, record)
     sync.run()
-    assert calls == ["sync_stage_history", "sync", "sync_scorecard"]
+    assert calls == ["sync_scorecard", "sync_stage_history", "sync"]
+
+
+@pytest.mark.parametrize("failures", [
+    {"sync_scorecard"}, {"sync_stage_history"}, {"sync"}, {"sync_scorecard", "sync"},
+])
+def test_worker_isolates_scorecard_failure_and_reports_failed_run(monkeypatch, capsys, failures):
+    calls = []
+    monkeypatch.setenv("NOTION_TOKEN", "test")
+    for name in ("sync_scorecard", "sync_stage_history", "sync"):
+        def record(name=name):
+            calls.append(name)
+            if name in failures:
+                raise RuntimeError(f"{name} failed")
+            return 0, 0
+        monkeypatch.setattr(sync, name, record)
+    with pytest.raises(SystemExit) as exc:
+        sync.run()
+    assert exc.value.code == 1
+    expected = ["sync_scorecard", "sync_stage_history"]
+    if "sync_stage_history" not in failures:
+        expected.append("sync")
+    assert calls == expected
+    captured = capsys.readouterr()
+    for name in failures:
+        assert f"{name} failed" in captured.err
+    if "sync_scorecard" not in failures:
+        assert "Notion conversion: contacted 0" in captured.out
 
 
 def test_accepted_details_sent_reuses_known_send_time_without_second_action():
