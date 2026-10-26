@@ -19,7 +19,7 @@ function ExerciseCard({ exercise, onSelect }: { exercise: PersonalExercise; onSe
   return <li className={`history-row ${styles.card}`} data-tone={exercise.identity_kind === "legacy" ? "grey" : "green"}>
     <button className={styles.open} type="button" aria-haspopup="dialog" aria-label={`View ${exercise.name} performance history${exercise.identity_kind === "legacy" ? ` for ${formatAppDate(exercise.latest_day)}` : ""}`} onClick={onSelect}>
       <span className={styles.cardHeading}><span className="history-row-title">{exercise.name}</span><span className={styles.chevron} aria-hidden="true">›</span></span>
-      <span className={styles.resultLabel}>{result.label}</span><strong className={styles.result}>{result.value}</strong>
+      <span className={styles.resultLabel}>{result.label}</span><strong className={styles.result} data-weight={exercise.best_loads.length > 0 || undefined}>{result.value}</strong>
       <span className={styles.date}>{exercise.identity_kind === "legacy" ? "Unlinked record" : exercise.identity_kind === "personal" ? "Your exercise · Last performed" : "Last performed"} · {formatAppDate(exercise.latest_day)}</span>
     </button>
   </li>;
@@ -65,6 +65,18 @@ export function ExerciseDetails({ exercise, asOf, token, cache, onDismiss }: {
   const [error, setError] = useState(false);
   const [busy, setBusy] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  // History rows start collapsed; the chart opens the one it points to.
+  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
+  // A fresh object per request, so inspecting the same point twice still scrolls.
+  const [reveal, setReveal] = useState<{ id: string } | null>(null);
+  const [view, setView] = useState<"progress" | "history">("progress");
+  const [limit, setLimit] = useState<number | null>(null);
+  const tabs = useId();
+  useEffect(() => {
+    if (!reveal) return;
+    const target = [...(timeline.current?.children ?? [])].find(element => (element as HTMLElement).dataset.performance === reveal.id) as HTMLElement | undefined;
+    target?.scrollIntoView({ block: "start", behavior: "instant" }); target?.focus({ preventScroll: true });
+  }, [reveal]);
   const cacheKey = `${asOf}:${exercise.id}`;
   useEffect(() => {
     const element = dialog.current;
@@ -106,25 +118,34 @@ export function ExerciseDetails({ exercise, asOf, token, cache, onDismiss }: {
       if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onDismiss();
     } }}>
     <header className={sheet.header}><div className={styles.detailHeading}><div><p className={sheet.eyebrow}>Exercise record</p><h2 id={heading}>{exercise.name}</h2></div>
-      <div><p className={styles.resultLabel}>{result.label}</p><strong className={styles.detailResult}>{result.value}</strong></div></div>
+      <div><p className={styles.resultLabel}>{result.label}</p><strong className={styles.detailResult} data-weight={exercise.best_loads.length > 0 || undefined}>{result.value}</strong></div></div>
       <button type="button" className={sheet.close} aria-label="Close exercise history" onClick={onDismiss}>×</button></header>
     <div className={sheet.body} tabIndex={0} role="region" aria-label="Exercise performance record">
-      <div className={sheet.exerciseLayout}><div className={sheet.analysisColumn}>
-      <p className={sheet.quiet}>{exercise.identity_kind === "legacy" ? "One original legacy record. Movement identity across other dates is unknown."
-        : exercise.identity_kind === "personal" ? "An exercise you named, from training you logged. Only you can see it. These are not individual set records."
-        : "Saved results from your plans and the training you logged. These are not individual set records."}</p>
-      {exercise.best_loads.length ? <p className={sheet.quiet}>Highest eligible recorded load by unit; not an estimated one-rep maximum.</p> : null}
-      {data ? <ExerciseProgress records={data.performances} exercise={exercise} hasMore={data.next_cursor !== null} onInspect={id => {
-        const target = [...(timeline.current?.children ?? [])].find(element => (element as HTMLElement).dataset.performance === id) as HTMLElement | undefined;
-        target?.scrollIntoView({ block: "start", behavior: "instant" }); target?.focus({ preventScroll: true });
-      }} /> : null}
+      {/* Phones and tablets switch between the chart and the list; wide screens show both. */}
+      <div className={styles.views} role="tablist" aria-label="Exercise record views">
+        {(["progress", "history"] as const).map(id => <button key={id} type="button" role="tab" id={`${tabs}-${id}`} aria-controls={`${tabs}-${id}-panel`}
+          aria-selected={view === id} onClick={() => setView(id)}>{id === "progress" ? "Progress" : "History"}</button>)}
       </div>
-      <section className={`${sheet.section} ${sheet.performanceColumn}`}><h3>Performance history</h3>
+      <div className={sheet.exerciseLayout}><div className={sheet.analysisColumn} role="tabpanel" id={`${tabs}-progress-panel`} aria-labelledby={`${tabs}-progress`} data-active={view === "progress"}>
+      {data ? <ExerciseProgress records={data.performances} exercise={exercise} hasMore={data.next_cursor !== null} about={<>
+        <p>{exercise.identity_kind === "legacy" ? "One original legacy record. Movement identity across other dates is unknown."
+          : exercise.identity_kind === "personal" ? "An exercise you named, from training you logged. Only you can see it. These are not individual set records."
+          : "Saved results from your plans and the training you logged. These are not individual set records."}</p>
+        {exercise.best_loads.length ? <p>Highest eligible recorded load by unit; not an estimated one-rep maximum.</p> : null}
+      </>} onInspect={id => { setView("history"); setLimit(null); setOpen(current => new Set(current).add(id)); setReveal({ id }); }} /> : null}
+      </div>
+      <section className={`${sheet.section} ${sheet.performanceColumn}`} role="tabpanel" id={`${tabs}-history-panel`} aria-labelledby={`${tabs}-history`} data-active={view === "history"}>
+        <div className={styles.historyHead}><h3>History</h3>
+          {data && data.performances.length > 3 ? <div className={styles.chips} role="group" aria-label="Show records">
+            {[null, 3, 6, 12].filter(count => count === null || count < data.performances.length).map(count => <button key={count ?? "all"} type="button" aria-pressed={limit === count}
+              onClick={() => setLimit(count)}>{count === null ? "All" : `Last ${count}`}</button>)}
+          </div> : null}</div>
         {!data && !error ? <p role="status">Loading exercise history…</p> : null}
-        {data ? <ol ref={timeline} className={sheet.blocks}>{data.performances.map((item, index) => <TrainingBlock key={item.id} block={item.block} index={index} heading={formatAppDate(item.training_day)} recordId={item.id} />)}</ol> : null}
+        {data ? <ol ref={timeline} className={sheet.blocks}>{data.performances.slice(0, limit ?? undefined).map((item, index) => <TrainingBlock key={item.id} block={item.block} index={index} heading={formatAppDate(item.training_day)} recordId={item.id} numbered={false}
+          open={open.has(item.id)} onToggle={() => setOpen(current => { const next = new Set(current); if (!next.delete(item.id)) next.add(item.id); return next; })} />)}</ol> : null}
         {data?.performances.length === 0 ? <p className={sheet.quiet}>No remaining records for this exercise.</p> : null}
         {error ? <div role="alert"><p>{data ? "Unable to load earlier records. Your loaded records are still available." : "Unable to load exercise records. Try again."}</p><button type="button" className="secondary-button" onClick={() => { setError(false); if (data?.next_cursor) void more(); else setAttempt(value => value + 1); }}>Retry</button></div> : null}
-        {data?.next_cursor && !error ? <button type="button" className="secondary-button" disabled={busy} onClick={() => void more()}>{busy ? "Loading…" : "Load earlier performances"}</button> : null}
+        {data?.next_cursor && !error && limit === null ? <button type="button" className="secondary-button" disabled={busy} onClick={() => void more()}>{busy ? "Loading…" : "Load earlier performances"}</button> : null}
       </section>
       </div>
     </div>

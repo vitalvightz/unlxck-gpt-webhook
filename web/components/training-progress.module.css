@@ -37,26 +37,33 @@
 .sessionOpen > span:first-child { min-width: 0; display: grid; gap: 6px; }
 .sessionOpen strong { font-size: 14px; overflow-wrap: anywhere; }
 .sessionOpen > span:first-child > span { font-size: 11px; color: var(--text-muted); }
-.exerciseChart { border-top: 1px solid var(--border-default); margin-top: 24px; padding-top: 24px; }
+.exerciseChart { min-width: 0; }
+.exerciseChart .sectionHead { flex-wrap: wrap; align-items: center; }
 .exerciseChart h3 { font-size: 16px; margin: 0 0 14px; }
-.linePlot { position: relative; height: 230px; margin: 24px 0 4px; touch-action: pan-y; }
-.yTop, .yBottom { position: absolute; left: 0; font-size: 10px; color: var(--text-muted); pointer-events: none; }
-.yTop { top: 0; }
-.yBottom { bottom: 0; }
-.dateAxis { display: flex; justify-content: space-between; gap: 12px; font-size: 10px; color: var(--text-muted); }
+.linePlot { position: relative; height: 230px; margin: 16px 0 4px; touch-action: pan-y; cursor: pointer; border-radius: 6px; }
+.yTick { position: absolute; left: 0; transform: translateY(-110%); font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; pointer-events: none; }
+.dateAxis { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; color: var(--text-muted); }
 .linePlot svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .lineGrid { stroke: var(--border-subtle); stroke-width: 1; }
+.area { fill: var(--brand-red); opacity: .12; stroke: none; }
+.bestRing { fill: none; stroke: var(--progress-gold); stroke-width: 1.8; vector-effect: non-scaling-stroke; }
 .line { fill: none; stroke: var(--text-secondary); stroke-width: 1.8; vector-effect: non-scaling-stroke; }
 .point { fill: var(--bg-panel); stroke: var(--text-secondary); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 .activePoint { fill: var(--brand-red); stroke: var(--text-primary); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 .axis { fill: var(--text-muted); font: 11px var(--font-sans); }
-.scrub { display: flex; align-items: center; gap: 12px; }
-.scrub input { width: 100%; accent-color: var(--brand-red); min-height: 44px; cursor: pointer; }
-.scrub button { flex-shrink: 0; width: 44px; height: 44px; border: 1px solid var(--border-default); border-radius: 6px; background: none; color: var(--text-primary); font-size: 18px; cursor: pointer; }
-.scrub button:disabled { opacity: .35; }
-.selectedRecord { border-left: 2px solid var(--brand-red); padding-left: 16px; margin: 16px 0 0; }
-.selectedRecord strong { display: block; font-size: 26px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
-.selectedRecord p { margin: 6px 0; }
+.about { margin: 4px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+.about summary { padding: 6px 0; cursor: pointer; color: var(--text-secondary); }
+.about[open] summary { margin-bottom: 4px; }
+.about p { margin: 0 0 8px; }
+.selectedRecord { margin: 16px 0 0; padding: 14px 16px; border: 1px solid var(--border-subtle); border-radius: 14px; background: var(--bg-stat); }
+.selectedRecord strong[data-weight] { color: var(--progress-gold); }
+.bestPill { display: inline-block; margin-left: 10px; padding: 2px 8px; border: 1px solid var(--progress-gold-border); border-radius: 999px; background: var(--progress-gold-soft); color: var(--progress-gold); font-size: 11px; font-weight: 700; vertical-align: 6px; }
+.metrics { flex-wrap: wrap; }
+.metrics button { min-height: 36px; }
+.metrics button[aria-pressed="true"] { background: var(--brand-red); color: #fff; }
+.selectedRecord strong { font-size: 30px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.selectedRecord p { margin: 4px 0; }
+.selectedRecord .textButton { min-height: 36px; padding: 0; }
 .twoRecords { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .twoRecords button { padding: 16px 0; border: 0; border-bottom: 1px solid var(--border-default); background: none; color: var(--text-primary); font: inherit; text-align: left; cursor: pointer; }
 .twoRecords strong { display: block; font-size: 24px; margin: 8px 0; }

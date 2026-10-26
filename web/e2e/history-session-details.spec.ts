@@ -63,8 +63,13 @@ for (const width of [390, 1280]) {
     const dialog = page.getByRole("dialog", { name: "Strength & Power" });
     await expect(dialog.getByRole("heading", { name: "Back squat" })).toBeVisible();
     await expect(dialog.getByRole("region", { name: "Performance: Back squat" })).toContainText("75 kg");
-    await expect(dialog).toContainText("Confirmed completed as prescribed");
+    // Completed-as-prescribed blocks start collapsed and show no duplicate reported section.
+    const plank = dialog.getByRole("button", { name: "Plank", exact: true });
+    await expect(plank).toHaveAttribute("aria-expanded", "false"); await expect(dialog).toContainText("3 sets · 45 sec");
+    await plank.click(); await expect(plank).toHaveAttribute("aria-expanded", "true");
+    await expect(dialog).toContainText("Completed as prescribed"); await expect(dialog.getByRole("region", { name: "Performance: Plank" })).toHaveCount(0);
     await expect(dialog).toContainText("Skipped. No performance values logged.");
+    await plank.click(); await dialog.getByRole("button", { name: "Close session details" }).focus();
     await expect(dialog.getByRole("button", { name: "Close session details" })).toBeFocused();
     await page.keyboard.press("Tab");
     expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true);
@@ -84,6 +89,7 @@ for (const width of [390, 1280]) {
     await page.getByRole("button", { name: /View Today's rehab details/ }).click();
     const rehab = page.getByRole("dialog", { name: "Today's rehab" });
     await expect(rehab).toContainText("Completed amount unknown.");
+    await rehab.getByRole("button", { name: "Calf raise", exact: true }).click();
     await expect(rehab.getByRole("region", { name: "Performance: Calf raise" })).toContainText("10");
     await page.keyboard.press("Escape");
     failNext(); await page.getByRole("button", { name: /View Legacy strength details/ }).click();
