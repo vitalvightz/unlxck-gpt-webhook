@@ -258,6 +258,33 @@ test("sign-out forgets held results and the number held stays bounded", async ()
   assert.equal(reads("/api/plans/plan-0"), 2);
 });
 
+test("an already-cancelled caller never starts a cold read", async () => {
+  const unhandled: unknown[] = [];
+  const onUnhandled = (reason: unknown) => unhandled.push(reason);
+  process.on("unhandledRejection", onUnhandled);
+  try {
+    const done = new AbortController(); done.abort();
+    let loads = 0;
+    // A load that would fail: it must not run, so nothing can go unhandled.
+    const failing = async () => { loads += 1; throw new Error("unobserved failure"); };
+    await assert.rejects(sharedRead("t", "/cold", failing, { signal: done.signal }), { name: "AbortError" });
+    await assert.rejects(sharedRead("t", "/cold", failing, { signal: done.signal, hold: true, reuseForMs: SHARED_READ_MAX_AGE_MS }), { name: "AbortError" });
+    assert.equal(loads, 0);
+    // Through the API client: no network request for a cold plan or completions read.
+    await assert.rejects(getPlan("athlete-a", "cold-plan", { signal: done.signal }), { name: "AbortError" });
+    await assert.rejects(getPlan("athlete-a", "cold-plan", { signal: done.signal, ...REUSE }), { name: "AbortError" });
+    assert.equal(calls.length, 0);
+    // The key is not left behind: the next live caller starts a real read.
+    respond = () => json({ plan_id: "cold-plan" });
+    assert.deepEqual(await getPlan("athlete-a", "cold-plan"), { plan_id: "cold-plan" });
+    assert.equal(calls.length, 1);
+    await flush();
+    assert.deepEqual(unhandled, []);
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
+  }
+});
+
 test("completed in-flight entries are removed promptly", async () => {
   let loads = 0;
   const load = async () => ++loads;

@@ -47,7 +47,6 @@ function hold(key: string, value: unknown) {
 }
 
 function consume<T>(key: string, entry: InFlight, signal?: AbortSignal): Promise<T> {
-  if (signal?.aborted) return Promise.reject(abortReason(signal));
   entry.consumers += 1;
   return new Promise<T>((resolve, reject) => {
     let done = false;
@@ -90,13 +89,15 @@ export function sharedRead<T>(
   load: (signal: AbortSignal) => Promise<T>,
   { signal, hold: holdResult = false, reuseForMs = 0 }: SharedReadOptions = {},
 ): Promise<T> {
+  // An already-cancelled caller gets nothing and starts nothing.
+  if (signal?.aborted) return Promise.reject(abortReason(signal));
   const key = `${token}\u0000${path}`;
   const sharing = writesInFlight === 0;
   if (sharing && reuseForMs > 0) {
     pruneHeld();
     const result = held.get(key);
     if (result && now() - result.at <= Math.min(reuseForMs, SHARED_READ_MAX_AGE_MS)) {
-      return signal?.aborted ? Promise.reject(abortReason(signal)) : Promise.resolve(result.value as T);
+      return Promise.resolve(result.value as T);
     }
   }
   let entry = sharing ? inFlight.get(key) : undefined;
