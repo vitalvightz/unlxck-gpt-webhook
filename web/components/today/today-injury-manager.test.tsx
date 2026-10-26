@@ -1558,6 +1558,7 @@ test(`${area} Today has no worksheet and one ${label} tap records the injury and
   const { container, root, cleanup } = mount();
   const original = globalThis.fetch;
   const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
+  const refreshAfterWriteCounts: number[] = [];
   const injury: InjuryFlagRecord = { ...SHOULDER, id: "injury", episode_id: "episode", body_area: `Left ${area}`,
     description: `Left ${area} tendonitis`, rehab_decision: { policy_id: policyId, outcome: "prescribed_rehab",
       summary: "Current rehab", reason_codes: [], stage: "restore" } };
@@ -1566,12 +1567,13 @@ test(`${area} Today has no worksheet and one ${label} tap records the injury and
     return new Response(JSON.stringify({ open_injuries: [injury] }), { status: 200 });
   }) as typeof fetch;
   try {
-    await act(async () => root.render(<TodayInjuryManager openInjuries={[injury]} token="token" onRefresh={async () => {}}
+    await act(async () => root.render(<TodayInjuryManager openInjuries={[injury]} token="token" onRefresh={async () => { refreshAfterWriteCounts.push(calls.length); }}
       delayedPrompts={[{ injury_id: "injury", injury_episode_id: "episode", exposure_id: "exposure", region: area.toLowerCase(), question: "After rehab?", options: ["better", "same", "worse", "not_sure"] }]} />));
     assert.doesNotMatch(container.textContent ?? "", /Heel-rise|assessor|Achilles assessment|Range of motion|Loading task/);
     assert.equal(container.querySelector('input[type="datetime-local"]'), null);
     await click(statusButton(container, label));
     assert.equal(calls.length, 2); // Two owned records, one athlete tap.
+    assert.deepEqual(refreshAfterWriteCounts, [2], "refresh once after both writes");
     assert.deepEqual(calls[0].body.injuries, [{ flag_id: "injury", status }]);
     assert.equal(calls[1].body.event_type, "delayed_rehab_response");
     assert.equal(calls[1].body.response, response);
@@ -1585,17 +1587,19 @@ test("a failed delayed response cannot block the current worsening report", asyn
   const { container, root, cleanup } = mount();
   const original = globalThis.fetch;
   const calls: Array<Record<string, unknown>> = [];
+  const refreshAfterWriteCounts: number[] = [];
   const injury = { ...SHOULDER, episode_id: "episode" };
   globalThis.fetch = (async (_input, init) => {
     calls.push(JSON.parse(String(init?.body)));
     return new Response(JSON.stringify(calls.length === 1 ? { open_injuries: [injury] } : { detail: "Unavailable" }), { status: calls.length === 1 ? 200 : 500 });
   }) as typeof fetch;
   try {
-    await act(async () => root.render(<TodayInjuryManager openInjuries={[injury]} token="token" onRefresh={async () => {}}
+    await act(async () => root.render(<TodayInjuryManager openInjuries={[injury]} token="token" onRefresh={async () => { refreshAfterWriteCounts.push(calls.length); }}
       delayedPrompts={[{ injury_id: injury.id, injury_episode_id: "episode", exposure_id: "exposure", region: "shoulder", question: "After rehab?", options: ["better", "same", "worse", "not_sure"] }]} />));
     await click(statusButton(container, "Worse"));
     assert.deepEqual(calls[0].injuries, [{ flag_id: injury.id, status: "worse" }]);
     assert.equal(calls[1].response, "worse");
+    assert.deepEqual(refreshAfterWriteCounts, [2], "refresh saved injury even when its delayed response fails");
     assert.equal(statusButton(container, "Worse").getAttribute("aria-pressed"), "true");
   } finally { globalThis.fetch = original; cleanup(); }
 });

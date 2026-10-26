@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { ExerciseMediaProvider } from "@/components/exercise-demo";
 import { PrivateExerciseMediaProvider } from "@/components/private-exercise-video";
@@ -512,9 +512,9 @@ export function TodaySessionPanel({
   // Resolve today's day/session from the structured plan through the shared
   // 03:00 rollover, exactly as Plan Detail does. These blocks — not the backend
   // session summary — are the "what exact blocks apply today" answer. The
-  // training day comes from the client-mounted hook (SSR-safe, null until mount)
-  // and is resolved on every render so a long-lived tab follows the rollover
-  // instead of sticking on a memoized day.
+  // training day comes from the client-mounted hook (SSR-safe, null until mount).
+  // The hook checks rollover every minute and on focus/visibility, invalidating
+  // the calendar projection when a long-lived tab crosses into a new day.
   const trainingDay = useTrainingDay();
   const activePlanId = state.active_plan.id ?? "";
   // Exercises are logged against a session started (or already completed)
@@ -553,22 +553,24 @@ export function TodaySessionPanel({
   // by that target day — not the bare calendar day — stops the card from sticking
   // on the finished session while the header has already advanced to "Next
   // session", which is exactly how Overview already behaves.
-  const focusDate = resolveSessionFocusDate(trainingDay, session);
+  const focusDate = useMemo(() => resolveSessionFocusDate(trainingDay, session), [trainingDay, session]);
   // Open (renewable) plans carry weekday-only days with no calendar dates, so
   // the resolver needs to know which week of the block "today" falls in. Dated
   // camps ignore the hint — they still resolve purely by calendar date.
-  const openWeekNumber = resolveOpenPlanWeekNumber(structuredPlan, focusDate, {
+  const openWeekNumber = useMemo(() => resolveOpenPlanWeekNumber(structuredPlan, focusDate, {
     currentWeekNumber: planSchedule?.scheduleContext?.current_week_number,
     anchorDate: planSchedule?.scheduleContext?.anchor_date,
     createdAt: planSchedule?.createdAt,
-  });
+  }), [structuredPlan, focusDate, planSchedule]);
   const openOngoing = Boolean(
     state.active_plan && isOpenOngoingPlan(state.active_plan.fight_date),
   );
-  const storedCurrent = resolveCurrentDay(structuredPlan, focusDate, {
+  // Calendar projection can scan the whole plan. Local review/timer controls
+  // do not change it; a new plan, focus date or week still resolves afresh.
+  const storedCurrent = useMemo(() => resolveCurrentDay(structuredPlan, focusDate, {
     openWeekNumber,
     allowDatedWeekdayMatch: openOngoing,
-  });
+  }), [structuredPlan, focusDate, openWeekNumber, openOngoing]);
   const livePrescription = state.live_prescription;
   // Calm-stage recovery support is guidance to follow, not rehab to log.
   const sessionHasRehab = Boolean(livePrescription?.session.blocks?.some(block =>
@@ -580,12 +582,12 @@ export function TodaySessionPanel({
   const guidanceOnlyRehab = sessionHasGuidanceRehab && !sessionHasRehab;
   // A rehab-only day of guidance has nothing to start: it is checked off.
   const guidanceOnlyRehabDay = rehabOnlyPrescription && guidanceOnlyRehab;
-  const liveSessions = livePrescription?.session.prescription_source === "athlete" && storedCurrent.sessions.length
+  const liveSessions = useMemo(() => livePrescription?.session.prescription_source === "athlete" && storedCurrent.sessions.length
     ? storedCurrent.sessions.map(s => ({
         ...s, blocks: (livePrescription.session.blocks ?? []).filter(b => b.source_session_id === s.session_id),
       }))
-    : livePrescription ? [livePrescription.session] : [];
-  const current: CurrentDayResolution = livePrescription ? {
+    : livePrescription ? [livePrescription.session] : [], [livePrescription, storedCurrent.sessions]);
+  const current: CurrentDayResolution = useMemo(() => livePrescription ? {
     ...storedCurrent, inRange: true,
     day: {
       ...(storedCurrent.day ?? {}), date: state.today.training_day, sessions: liveSessions,
@@ -599,7 +601,7 @@ export function TodaySessionPanel({
       } : {}),
     },
     sessions: liveSessions,
-  } : storedCurrent;
+  } : storedCurrent, [livePrescription, storedCurrent, liveSessions, rehabOnlyPrescription, state.today.training_day]);
   // Where the resolved day sits in the renewable development block (baseline /
   // progress / peak / deload). The resolved week position wins over the bare
   // anchor-derived number so the note always matches the blocks shown below.
@@ -609,12 +611,12 @@ export function TodaySessionPanel({
     : null;
   const showStructuredBlocks = current.inRange && Boolean(current.day);
   // The day's blocks by id, to put each timer log back against its block.
-  const dayBlocksById = new Map(
+  const dayBlocksById = useMemo(() => new Map(
     current.sessions.flatMap((item) => item.blocks ?? []).flatMap((block) => {
       const id = cleanText(block.block_id);
       return id ? [[id, block] as const] : [];
     }),
-  );
+  ), [current.sessions]);
   const hasResolvedDaySessions = current.inRange && current.sessions.length > 0;
   const isSessionPreview = resolvedDecision.displayTier === "preview" || (hasSession && !resolvedDecision.sessionIsToday);
   // Home's "Preview session" lands here with ?preview=1: open the preview once
@@ -671,21 +673,22 @@ export function TodaySessionPanel({
   // notice is authoritative for every contact action, whatever the tier or
   // clearance says. Non-contact work is untouched.
   const headImpactToday = state.today.primary_safety_notice?.code === "head_impact_no_contact";
-  const plannedTimerItems: TimerItem[] = hasResolvedDaySessions
+  const plannedTimerItems: TimerItem[] = useMemo(() => hasResolvedDaySessions
     ? dayTimerItems(current.sessions, session.session_id, {
         sourceText: timerSourceText,
         countdown: timerCountdown,
       })
-    : [];
-  const nonContactItems = headImpactToday ? withoutSparringItems(plannedTimerItems) : plannedTimerItems;
+    : [], [hasResolvedDaySessions, current.sessions, session.session_id, timerSourceText, timerCountdown]);
+  const nonContactItems = useMemo(() => headImpactToday ? withoutSparringItems(plannedTimerItems) : plannedTimerItems,
+    [headImpactToday, plannedTimerItems]);
   const contactRemovedFromTimer = nonContactItems.length !== plannedTimerItems.length;
   const timerItems = nonContactItems;
   // The day's Fight Visualisation, offered as a voice-guided run. Only when the
   // session being logged is one of this day's, the same rule as the timer.
-  const guidedVisualisation =
+  const guidedVisualisation = useMemo(() =>
     hasResolvedDaySessions && timerSessionFor(current.sessions, session.session_id)
       ? current.sessions.map(fightVisualisationFromSession).find((item) => item !== null) ?? null
-      : null;
+      : null, [hasResolvedDaySessions, current.sessions, session.session_id]);
   const timerKeys: Record<TimerSource, string> = {
     // A run saved with its sparring rounds is not resumed once they are removed.
     session: `${SESSION_RUN_KEY_PREFIX}${activePlanId}:${session.session_id ?? ""}:${state.today.training_day}${contactRemovedFromTimer ? ":no-contact" : ""}`,
@@ -694,18 +697,18 @@ export function TodaySessionPanel({
   const timerStorageKey = timerKeys.session;
   // Coach-led contact is timed from TODAY's plan day, even when the card above
   // has moved on to the next app session (a sparring-only day has none).
-  const todayOpenWeekNumber = resolveOpenPlanWeekNumber(structuredPlan, trainingDay, {
+  const todayOpenWeekNumber = useMemo(() => resolveOpenPlanWeekNumber(structuredPlan, trainingDay, {
     currentWeekNumber: planSchedule?.scheduleContext?.current_week_number,
     anchorDate: planSchedule?.scheduleContext?.anchor_date,
     createdAt: planSchedule?.createdAt,
-  });
-  const todayResolved =
+  }), [structuredPlan, trainingDay, planSchedule]);
+  const todayResolved = useMemo(() =>
     focusDate === trainingDay
       ? current
       : resolveCurrentDay(structuredPlan, trainingDay, {
           openWeekNumber: todayOpenWeekNumber,
           allowDatedWeekdayMatch: openOngoing,
-        });
+        }), [focusDate, trainingDay, current, structuredPlan, todayOpenWeekNumber, openOngoing]);
   // completion_status always describes today: once today is logged (done,
   // modified or skipped) its contact is over, even while the card has moved on
   // to the next session, so its rounds are no longer offered or re-loggable.

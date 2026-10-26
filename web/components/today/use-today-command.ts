@@ -146,7 +146,9 @@ export function useTodayCommand(token: string | null): TodayCommand {
             }
             const detail = await pending.promise;
             if (pendingPlan.current === pending) pendingPlan.current = null;
-            if (!detail) return;
+            // Several refreshes may share this read. Only the latest one
+            // should parse/adapt the plan and publish its presentation.
+            if (!detail || sequence !== refreshSequence.current) return;
             nextStructuredPlan = resolveTodayStructuredPlan(detail);
             nextPlanSchedule = {
               scheduleContext: detail?.schedule_context ?? null,

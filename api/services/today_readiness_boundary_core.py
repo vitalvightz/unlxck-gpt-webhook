@@ -43,6 +43,7 @@ from api.contracts.readiness_message import (
 )
 from api.services.active_plan import ActivePlanResolution
 from api.services import today_service as _today_service
+from api.services.today_reads import _BuildReadCache
 from api.services.plan_schedule import (
     parse_iso_date,
     resolve_current_week,
@@ -339,6 +340,9 @@ def upsert_session_completion(
 ) -> dict[str, Any]:
     """Block current-session execution when active injury state cannot be verified."""
 
+    # Share the preflight and validation reads only inside this mutation.
+    # Any write (including intake synchronization) clears mutable inputs.
+    store = _BuildReadCache(store)
     completion_status = str(payload.get("status") or "not_started")
     current_day = _today_service.resolve_training_day(athlete_timezone, now=now)
     requested_day = str(payload.get("training_day") or "").strip()
@@ -354,13 +358,14 @@ def upsert_session_completion(
         if not stopped and not _injury_flags_readable(store, athlete_id):
             _raise_execution_unavailable()
 
-    return _today_service.upsert_session_completion(
-        store,
-        athlete_id=athlete_id,
-        athlete_timezone=athlete_timezone,
-        payload=payload,
-        now=now,
-    )
+    with _today_service.structured_projection_memo():
+        return _today_service.upsert_session_completion(
+            store,
+            athlete_id=athlete_id,
+            athlete_timezone=athlete_timezone,
+            payload=payload,
+            now=now,
+        )
 
 
 def submit_today_injury_checkin(
@@ -378,16 +383,18 @@ def submit_today_injury_checkin(
     real ones), so this returns a retryable 503 instead. The refreshed readiness
     recommendation is failed-safe by ``today_service`` itself.
     """
+    store = _BuildReadCache(store)
     if not _injury_flags_readable(store, athlete_id):
         _raise_execution_unavailable()
 
-    return _today_service.submit_today_injury_checkin(
-        store,
-        athlete_id=athlete_id,
-        payload=payload,
-        athlete_timezone=athlete_timezone,
-        now=now,
-    )
+    with _today_service.structured_projection_memo():
+        return _today_service.submit_today_injury_checkin(
+            store,
+            athlete_id=athlete_id,
+            payload=payload,
+            athlete_timezone=athlete_timezone,
+            now=now,
+        )
 
 
 def _apply_fail_safe_to_command_view(

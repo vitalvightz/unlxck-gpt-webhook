@@ -228,6 +228,11 @@ export function TodayScreen() {
     [state?.today.training_day],
   );
 
+  const mergedExerciseMedia = useMemo(
+    () => ({ ...exerciseMedia, ...state?.exercise_media }),
+    [exerciseMedia, state?.exercise_media],
+  );
+
   if (isLoading) {
     return <TodayLoadingState />;
   }
@@ -319,7 +324,7 @@ export function TodayScreen() {
       state={state}
       structuredPlan={structuredPlan}
       rehabLabelPolicy={rehabLabelPolicy}
-      exerciseMedia={{ ...exerciseMedia, ...state.exercise_media }}
+      exerciseMedia={mergedExerciseMedia}
       planSchedule={planSchedule}
       painReasonAllowed={hasHealthDataConsent(me)}
       token={token ?? ""}

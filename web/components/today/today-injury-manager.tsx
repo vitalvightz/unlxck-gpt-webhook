@@ -373,9 +373,9 @@ export function TodayInjuryManager({
       ]
     : [];
 
-  async function submit(injuries: TodayInjuryDeclaration[]) {
+  async function submit(injuries: TodayInjuryDeclaration[], refreshAfterSave = true) {
     const response = await submitTodayInjuryCheckin(token, { injuries });
-    await onRefresh();
+    if (refreshAfterSave) await onRefresh();
     return response;
   }
 
@@ -392,9 +392,11 @@ export function TodayInjuryManager({
       return false;
     }
     setPendingFlagId(flagId);
+    let injurySaved = false;
     try {
       // Save the current safety report even if a delayed response fails.
-      const response = await submit([declaration ?? { flag_id: flagId, status }]);
+      const response = await submit([declaration ?? { flag_id: flagId, status }], false);
+      injurySaved = true;
       setSelectedStatusByFlagId((current) => ({ ...current, [flagId]: status }));
       // The same three-button response answers yesterday's rehab question.
       // Match the exact episode; never attach an answer after an injury changes.
@@ -407,7 +409,6 @@ export function TodayInjuryManager({
             event_type: "delayed_rehab_response", exposure_id: prompt.exposure_id,
             response: status === "improving" ? "better" : status === "worse" ? "worse" : "same" });
         }
-        if (matchingPrompts.length) await onRefresh();
       } catch {
         showToast("Injury updated. Your rehab response could not be saved; try the same response again.", { tone: "error" });
         return true;
@@ -445,7 +446,13 @@ export function TodayInjuryManager({
       showToast(error instanceof Error ? error.message : "Injury update failed.", { tone: "error" });
       return false;
     } finally {
-      setPendingFlagId(null);
+      // One fresh command after both writes, including a failed delayed answer.
+      // Do not spend a full Today build between two parts of the same tap.
+      try {
+        if (injurySaved) await onRefresh();
+      } finally {
+        setPendingFlagId(null);
+      }
     }
   }
 
