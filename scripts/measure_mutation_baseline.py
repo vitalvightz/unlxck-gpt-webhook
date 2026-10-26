@@ -20,6 +20,7 @@ SCENARIOS = [
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runs", type=int, default=10)
+    parser.add_argument("--output", type=Path, default=ROOT / "docs/performance/local-mutation-baseline.json")
     args = parser.parse_args()
     if args.runs < 2:
         parser.error("--runs must be at least 2")
@@ -38,7 +39,7 @@ def main():
         times = sorted(r["workflow_ms"] for r in runs)
         scenarios.append({"scenario": name, "runs": runs, "p50_ms": statistics.median(times),
                           "p95_ms": times[math.ceil(.95*len(times))-1]})
-    (ROOT / "docs/performance/local-mutation-baseline.json").write_text(json.dumps({
+    args.output.write_text(json.dumps({
         "source": "synthetic-existing-test-workflows", "repetitions": args.runs,
         "clock": "Fixture-relative training day; uses wall clock, not production observations",
         "boundaries": "Test call, excluding pytest fixture setup/teardown; includes assertions and local fixture construction inside test bodies",

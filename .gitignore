@@ -31,3 +31,6 @@ docs/rehab-bank-rationalisation.json
 docs/rehab-bank-duplicate-clusters.json
 
 supabase/.temp/
+
+# Raw local performance runs; commit comparison summaries instead.
+/.performance-runs/

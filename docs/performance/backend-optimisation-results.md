@@ -64,14 +64,11 @@ A small shared brief projection is **not established** by these contracts. Remov
 
 ## Reproduction and measurement boundaries
 
-Artifacts:
+Committed evidence is the [comparison summary](backend-comparison.json) and the tables below: all 40 five-persona probes (20 repetitions), four mutation workflows (10 repetitions), and six Data API scenarios (20 repetitions). The summary retains p50/p95, read/projection counts, retrieved and endpoint bytes, HTTP statuses and logical method counts. SQL counts are never inferred from FakeStore calls.
 
-- [Before](backend-before/local-baseline.json) and [after](backend-after/local-baseline.json): #3044's same 40 probes, all five personas, 20 repetitions.
-- [Before mutation workflows](backend-before/local-mutation-baseline.json) and [after](backend-after/local-mutation-baseline.json): #3044's four workflows, 10 repetitions, including completion/delayed rehab and exercise editing/logging.
-- [Before Data API measurements](backend-before/data-api.json) and [after](backend-after/data-api.json): 20 repetitions through real Supabase query builders with `httpx.MockTransport`, using #3044's request diagnostics.
-- [Comparison data](backend-comparison.json): complete counts, data sizes, logical method entries, and p50/p95. No SQL counts are inferred from FakeStore calls.
+Repetitive per-run timings, request traces and full copies of method-count dictionaries are **local-only**, under ignored `.performance-runs/backend-before/` and `.performance-runs/backend-after/`. No measurements were rerun or selectively removed when compacting the committed results. Counts and byte totals become a scalar when every repetition agrees, or an observed min/max range when they vary; null/mixed observations remain explicit. Logical methods absent in a run count as zero. Negative timing results remain in the summary and tables.
 
-The before source is an untouched worktree at `efa2dece`, with only the new measurement script/transport fixture copied in. The after source is this backend change. Both use the same host, Python environment, fixture sizes and cache setup. The final before/after runs were sequential, after verification jobs finished, rather than competing with those test jobs. Fresh stores are seeded for each repetition; application setup is outside probe timing. The original scripts' embedded `base_commit` describes their historical audit baseline; this comparison's before source is explicitly `efa2dece`.
+The before source is an untouched worktree at `efa2dece`, with only the measurement script/transport fixture and the output-path-enabled mutation runner copied in. The after source is this backend change. Both use the same host, Python environment, fixture sizes and cache setup. The final before/after runs were sequential, after verification jobs finished, rather than competing with those test jobs. Fresh stores are seeded for each repetition; application setup is outside probe timing. The original scripts' embedded `base_commit` describes their historical audit baseline; this comparison's before source is explicitly `efa2dece`.
 
 The Data API fixture gives two plans synthetic padding of 578 KiB in the brief and 424 KiB in the Stage 2 payload and a profile a 64 KiB draft. These are **controlled test inputs, not production measurements or estimates of every plan**. The transport applies the production query's projection, owner filters and limit and records actual JSON bytes returned to the client. It refuses writes. No real database, network latency, query planner, RLS, compression or server-side RPC work is modelled.
 
@@ -79,15 +76,26 @@ Only the selected Data API methods are real in this harness: plan reads, profile
 
 Backend time is captured from #3044's request middleware for endpoint scenarios; outer request duration includes TestClient response handling. Direct overlap/consent probes have service duration and Data API attempt duration but no HTTP/backend duration. These durations are separate from SQL execution time, which is unmeasured. p50 is the median and p95 uses nearest rank. No warm-up is discarded. Ten-run p95 is the maximum, with limited tail confidence.
 
-Example commands from each checkout (run before and after sequentially under the same conditions):
+Reproduce raw measurements locally without modifying tracked baseline files (run from the PR checkout, with the existing Python test dependencies installed):
 
 ```sh
-python scripts/measure_read_baseline.py --runs 20 --output /absolute/output/local-baseline.json
-python scripts/measure_mutation_baseline.py --runs 10
-# Copy its generated local-mutation-baseline.json to the appropriate before/after directory.
-python scripts/measure_backend_reads.py --runs 20 --output /absolute/output/data-api.json
+git worktree add --detach /tmp/unlxck-backend-before efa2deceb3304381a78c7aa8418cdcb90319b5b6
+cp scripts/measure_backend_reads.py /tmp/unlxck-backend-before/scripts/
+cp scripts/measure_mutation_baseline.py /tmp/unlxck-backend-before/scripts/
+cp tests/backend_read_fixtures.py /tmp/unlxck-backend-before/tests/
+mkdir -p .performance-runs/backend-before .performance-runs/backend-after
+
+python /tmp/unlxck-backend-before/scripts/measure_read_baseline.py --runs 20 --output "$PWD/.performance-runs/backend-before/local-baseline.json"
+python /tmp/unlxck-backend-before/scripts/measure_mutation_baseline.py --runs 10 --output "$PWD/.performance-runs/backend-before/local-mutation-baseline.json"
+python /tmp/unlxck-backend-before/scripts/measure_backend_reads.py --runs 20 --output "$PWD/.performance-runs/backend-before/data-api.json"
+
+python scripts/measure_read_baseline.py --runs 20 --output .performance-runs/backend-after/local-baseline.json
+python scripts/measure_mutation_baseline.py --runs 10 --output .performance-runs/backend-after/local-mutation-baseline.json
+python scripts/measure_backend_reads.py --runs 20 --output .performance-runs/backend-after/data-api.json
 python scripts/compare_backend_baselines.py
 ```
+
+The comparison script also accepts `--before`, `--after` and `--output` paths. It rejects mismatched scenario sets. Existing benchmark tools keep their original default outputs for compatibility; the explicit paths above keep raw reruns out of version control.
 
 ## Before/after results
 
@@ -170,6 +178,8 @@ The original FakeStore probes do not model Supabase transfer costs. Their compac
 The final sequential FakeStore run shows slower p50 values for all four mutation test workflows. Injury Today service and some unchanged plan-detail probes are also slower. These measurements do not establish that completion, exercise editing or the whole app became faster. The fixtures have no database transfer cost, and small dictionary/proxy overhead and runtime variability remain in their timings. No causal attribution is made from one synthetic timing batch; the supported improvements are the removed Data API attempts and reduced transferred projection bytes. Every negative/neutral result is retained above.
 
 ## Verification
+
+Artifact compaction was checked against the original runs: all 50 scenarios retain identical quantiles/repetitions and accurate count/byte ranges. Summary regeneration is byte-for-byte reproducible from those runs, mismatched scenario sets are rejected, and the mutation runner passed a four-workflow/two-repetition custom-output smoke check without changing its tracked default baseline.
 
 - Broad relevant backend run: **727 passed, 2 skipped, 5 failed** across History, active plans, projections, Today/readiness/safety, renewable/custom plans, exercise customisation, session details, rehab, XP, timezone and compliance coverage.
 - Every failure also reproduces on untouched `efa2dece` in the separate before worktree:
