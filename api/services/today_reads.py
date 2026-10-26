@@ -64,4 +64,3 @@ class _BuildReadCache:
         if key not in self._flags:
             self._flags[key] = [dict(row) for row in (self._store.list_injury_flags(athlete_id, statuses=statuses, limit=limit) or [])]
         return deepcopy(self._flags[key])
-
