@@ -13,6 +13,18 @@
 .legacy h2 { margin-bottom: 8px; font-size: 16px; }
 .detailResult { display: block; margin-top: 6px; font-size: 26px; line-height: 1.3; overflow-wrap: anywhere; }
 .detailHeading { min-width: 0; }
+/* Gold is reserved for weight. */
+.result[data-weight], .detailResult[data-weight] { color: var(--progress-gold); }
+.views { display: flex; gap: 4px; margin: 0 0 16px; padding: 4px; border: 1px solid var(--border-default); border-radius: 12px; }
+.views button { flex: 1; min-height: 40px; border: 0; border-radius: 8px; background: transparent; color: var(--text-secondary); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.views button[aria-selected="true"] { background: var(--brand-red); color: #fff; }
+.views button:focus-visible, .chips button:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 2px; }
+.historyHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 12px; }
+.historyHead h3 { margin: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { min-height: 32px; padding: 0 12px; border: 1px solid var(--border-default); border-radius: 999px; background: transparent; color: var(--text-secondary); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.chips button[aria-pressed="true"] { border-color: var(--brand-red); background: var(--brand-red-soft); color: var(--text-primary); }
+@media (min-width: 1100px) { .views { display: none; } }
 @media (min-width: 900px) {
   .detailHeading { display: flex; align-items: center; justify-content: space-between; gap: 32px; flex: 1; }
   .detailHeading > div { min-width: 0; }

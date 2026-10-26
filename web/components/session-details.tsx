@@ -8,7 +8,8 @@ import { sessionStatusLabel } from "@/lib/history";
 import { EXERCISE_LOG_REASON_LABELS } from "@/lib/exercise-log";
 import type { ExerciseLogReason } from "@/lib/types";
 import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
-import { detailMeasurements, matchesPrescription, measurementSummary } from "@/lib/session-details";
+import { comparisonRows, detailMeasurements, matchesPrescription, splitLoad, type ComparisonRow } from "@/lib/session-details";
+import { recordStatus, StatusIcon, TileIcon, type RecordStatus } from "./record-icons";
 import { NO_MEASUREMENTS, summarise } from "@/lib/manual-exercises";
 import { sessionTypes, sportLabel } from "@/lib/training-disciplines";
 import type { TrainingHistorySession } from "@/lib/training-history";
@@ -17,86 +18,111 @@ import { countOnlySetSummary } from "@/lib/set-entries";
 import { SetResults } from "./set-rows";
 import type { ExerciseSetResult } from "@/lib/types";
 
+/** The session's own status as an icon tone. */
+function sessionTone(status: string): RecordStatus {
+  return status === "done" ? "done" : status === "modified" ? "partial" : status === "skipped" ? "missed" : "unknown";
+}
+
 export type SessionDetailsCache = Map<string, Promise<Details>>;
 const OUTCOMES = { as_prescribed: "Completed as prescribed", modified: "Modified", skipped: "Skipped",
   done_as_shown: "Done as shown", changed: "Changed", stopped: "Stopped" };
 
-function Measurements({ values, reported = false }: { values: Record<string, unknown>; reported?: boolean }) {
-  const sets = Array.isArray(values.set_entries) ? values.set_entries as ExerciseSetResult[] : null;
-  const unreported = reported ? countOnlySetSummary(values) : null;
-  if (unreported) return <p className={styles.quiet}>{unreported}</p>;
-  const items = detailMeasurements(values).filter(item => !sets || item.label !== "Sets");
-  return <>{sets?.length ? <SetResults entries={sets} completed={typeof values.sets === "number" ? values.sets : undefined} /> : null}{items.length ? <dl className={styles.measurements}>{items.map(item => <div key={item.label}>
-    <dt>{item.label}</dt><dd>{item.value}</dd>
-  </div>)}</dl> : !sets?.length ? <p className={styles.quiet}>No values recorded.</p> : null}</>;
-}
-
-/** Short status for a collapsed row; the full outcome stays in the expanded record. */
+/** Short status for a row; the full outcome stays in the expanded record. */
 const SHORT_OUTCOMES = { as_prescribed: "Done", modified: "Modified", skipped: "Skipped",
   done_as_shown: "Done", changed: "Changed", stopped: "Stopped" };
 const QUIET_STATUSES = new Set(["as_prescribed", "done_as_shown"]);
+const hasWeight = (label: string, value?: string) => label === "Load" && !!value && /\d/.test(value);
 
 /** Blocks with something to see start open: a lone block, or any change, skip or unknown outcome. */
 export function opensByDefault(block: SessionDetailBlock, count: number): boolean {
   return count === 1 || (block.source !== "manual" && !QUIET_STATUSES.has(block.status ?? ""));
 }
 
-/** The one-line summary of what was done, falling back to what was prescribed. */
-export function blockSummary(block: SessionDetailBlock): string {
-  return measurementSummary(block.actual) || measurementSummary(block.prescribed);
+/** What a row shows: the weight on its own and the rest of the dose, from what was done or else what was planned. */
+export function blockSummary(block: SessionDetailBlock): { load: string | null; dose: string } {
+  return detailMeasurements(block.actual).length ? splitLoad(block.actual) : splitLoad(block.prescribed);
+}
+
+/** Done beside planned, one measurement per row; the weight is gold, changed values stand out. */
+function Comparison({ rows, label, title, bar = false }: { rows: ComparisonRow[]; label: string; title: string; bar?: boolean }) {
+  const paired = rows.filter(row => row.did && row.plan);
+  const matched = paired.filter(row => row.same).length;
+  return <section className={styles.compare} aria-label={label}>
+    <div className={styles.compareHead}><h5>{title}</h5>
+      {bar && paired.length ? <span className={styles.bar} data-full={matched === paired.length} aria-hidden="true"><span style={{ width: `${Math.max(8, matched / paired.length * 100)}%` }} /></span> : null}</div>
+    <dl className={styles.compareRows}>{rows.map(row => <div key={row.label} data-changed={!!(row.did && row.plan && !row.same) || undefined}>
+      <dt>{row.label}</dt>
+      <dd>{row.did ? <span className={styles.did} data-weight={hasWeight(row.label, row.did) || undefined}>{row.did}</span> : null}
+        {row.did && row.plan ? <span className={styles.plan}> / {row.plan}</span> : row.plan ? <span data-weight={hasWeight(row.label, row.plan) || undefined}>{row.plan}</span> : null}</dd>
+    </div>)}</dl>
+  </section>;
 }
 
 function TrainingBlockBody({ block, context }: { block: SessionDetailBlock; context: string }) {
+  const entries = Array.isArray(block.actual.set_entries) && block.actual.set_entries.length ? block.actual.set_entries as ExerciseSetResult[] : null;
+  const sets = entries ? <SetResults entries={entries} completed={typeof block.actual.sets === "number" ? block.actual.sets : undefined} /> : null;
+  const countOnly = countOnlySetSummary(block.actual);
+  const notes = <>{block.reason ? <p className={styles.note}>{EXERCISE_LOG_REASON_LABELS[block.reason as ExerciseLogReason] || block.reason}</p> : null}
+    {block.notes ? <blockquote className={styles.quote}>{block.notes}</blockquote> : null}</>;
   if (block.source === "manual") return <>
     <p className={styles.outcome}>Logged training · added by you</p>
-    <section aria-label={`Recorded: ${context}`}><h5 className={styles.recordedHeading}>Recorded</h5>
-      {detailMeasurements(block.actual).length ? <Measurements values={block.actual} reported /> : <p className={styles.quiet}>No measurements recorded.</p>}</section>
-    {block.notes ? <p className={styles.note}>{block.notes}</p> : null}
+    {countOnly ? <p className={styles.quiet}>{countOnly}</p> : detailMeasurements(block.actual).length
+      ? <Comparison rows={comparisonRows({}, block.actual)} label={`Recorded: ${context}`} title="Recorded" /> : <p className={styles.quiet}>No measurements recorded.</p>}
+    {countOnly ? null : sets}{notes}
   </>;
-  const rehab = block.kind !== "exercise";
+  const plan = comparisonRows(block.prescribed, {});
+  if (block.kind === "guidance") return <><p className={styles.outcome}>Guidance · {block.status ? OUTCOMES[block.status] : "Completion not recorded"}</p>
+    <Comparison rows={plan} label={`Prescribed: ${context}`} title="Saved guidance" />{notes}</>;
+  if (block.kind !== "exercise") {
+    const quantified = block.completed_dose?.completion_state === "quantified";
+    return <>{quantified ? <Comparison rows={comparisonRows(block.prescribed, block.completed_dose!)} label={`Performance: ${context}`} title="Completed dose vs prescribed" bar />
+      : <><Comparison rows={plan} label={`Prescribed: ${context}`} title="Prescribed" />
+        <p className={styles.quiet}>{block.status === "skipped" ? "Skipped. No completed dose recorded." : "Completed amount unknown."}</p></>}
+      {notes}
+      {block.responses.map((response, i) => <div key={i} className={styles.response} aria-label="Recorded rehab response">
+        <span>Recorded response for the rehab work</span>
+        {response.during_response !== "not_reported" ? <p>During: {response.during_response.replaceAll("_", " ")}</p> : null}
+        {response.stopped_due_to_symptoms != null ? <p>{response.stopped_due_to_symptoms ? "Reduced or stopped because of symptoms." : "No reduction or stop reported."}</p> : null}
+        {response.pain_during != null ? <p>Pain during: {typeof response.pain_during === "number" ? `${response.pain_during}/10` : "Not sure"}</p> : null}
+        {response.pain_immediate_after != null ? <p>Pain after: {typeof response.pain_immediate_after === "number" ? `${response.pain_immediate_after}/10` : "Not sure"}</p> : null}
+        {response.next_day_response !== "not_yet_known" ? <p>Next day: {response.next_day_response.replaceAll("_", " ")}</p> : null}
+        {response.worsening_reported != null ? <p>Worsening reported: {response.worsening_reported ? "Yes" : "No"}</p> : null}
+      </div>)}
+    </>;
+  }
   const actuals = detailMeasurements(block.actual).length > 0;
-  const quantified = block.completed_dose?.completion_state === "quantified";
   // Confirmed or repeated values add nothing beside the prescription.
-  const same = !rehab && block.kind !== "guidance" && block.status === "as_prescribed" && (!actuals || matchesPrescription(block.prescribed, block.actual));
+  const same = block.status === "as_prescribed" && (!actuals || matchesPrescription(block.prescribed, block.actual));
+  if (same || !actuals) return <>
+    {same ? <p className={styles.confirmed}><StatusIcon status="done" /> Completed as prescribed{actuals ? " · reported values match" : ""}</p> : null}
+    <Comparison rows={plan} label={`Prescribed: ${context}`} title="Prescription" />
+    {same ? null : <p className={styles.quiet}>{block.status === "skipped" ? "Skipped. No performance values logged." : "Performed values unknown."}</p>}
+    {notes}
+  </>;
+  const rows = comparisonRows(block.prescribed, block.actual);
   return <>
-    {/* The row already shows "Modified", "Skipped"…; only say what it doesn't. */}
-    {block.kind === "guidance" || !block.status || OUTCOMES[block.status] !== SHORT_OUTCOMES[block.status]
-      ? <p className={styles.outcome}>{block.kind === "guidance" ? "Guidance · " : ""}{block.status ? OUTCOMES[block.status] : "Completion not recorded"}{same && actuals ? " · reported values match" : ""}</p> : null}
-    <div className={same ? undefined : styles.comparison}>
-      <section aria-label={`Prescribed: ${context}`}><h5>{block.kind === "guidance" ? "Saved guidance" : "Prescribed"}</h5><Measurements values={block.prescribed} /></section>
-      {block.kind !== "guidance" && !same ? <section aria-label={`Performance: ${context}`}><h5>{rehab ? "Confirmed completed dose" : "Reported"}</h5>
-        {rehab ? quantified ? <Measurements values={block.completed_dose!} /> : <p className={styles.quiet}>{block.status === "skipped" ? "Skipped. No completed dose recorded." : "Completed amount unknown."}</p>
-          : actuals ? <><Measurements values={block.actual} reported /><p className={styles.quiet}>{block.status === "as_prescribed" ? "Other prescribed values confirmed as completed." : "Other performed values are unknown."}</p></>
-          : <p className={styles.quiet}>{block.status === "skipped" ? "Skipped. No performance values logged." : "Performed values unknown."}</p>}
-      </section> : null}
-    </div>
-    {block.reason ? <p className={styles.note}>{EXERCISE_LOG_REASON_LABELS[block.reason as ExerciseLogReason] || block.reason}</p> : null}
-    {block.notes ? <p className={styles.note}>{block.notes}</p> : null}
-    {block.responses.map((response, i) => <div key={i} className={styles.response} aria-label="Recorded rehab response">
-      <span>Recorded response for the rehab work</span>
-      {response.during_response !== "not_reported" ? <p>During: {response.during_response.replaceAll("_", " ")}</p> : null}
-      {response.stopped_due_to_symptoms != null ? <p>{response.stopped_due_to_symptoms ? "Reduced or stopped because of symptoms." : "No reduction or stop reported."}</p> : null}
-      {response.pain_during != null ? <p>Pain during: {typeof response.pain_during === "number" ? `${response.pain_during}/10` : "Not sure"}</p> : null}
-      {response.pain_immediate_after != null ? <p>Pain after: {typeof response.pain_immediate_after === "number" ? `${response.pain_immediate_after}/10` : "Not sure"}</p> : null}
-      {response.next_day_response !== "not_yet_known" ? <p>Next day: {response.next_day_response.replaceAll("_", " ")}</p> : null}
-      {response.worsening_reported != null ? <p>Worsening reported: {response.worsening_reported ? "Yes" : "No"}</p> : null}
-    </div>)}
+    {countOnly ? <><Comparison rows={plan} label={`Prescribed: ${context}`} title="Prescription" /><p className={styles.quiet}>{countOnly}</p></>
+      : <Comparison rows={rows} label={`Performance: ${context}`} title="Reported vs prescribed" bar />}
+    {countOnly ? null : sets}
+    {!countOnly && rows.some(row => row.plan && !row.did) ? <p className={styles.quiet}>{block.status === "as_prescribed" ? "Other prescribed values confirmed as completed." : "Other performed values are unknown."}</p> : null}
+    {notes}
   </>;
 }
 
-/** A collapsible record row: name, one-line summary and status; the full record expands on request. */
-export function TrainingBlock({ block, index, heading, recordId, open, onToggle }: {
-  block: SessionDetailBlock; index: number; heading?: string; recordId?: string; open: boolean; onToggle: () => void;
+/** A collapsible record card: name, dose and the weight in gold; the full record expands on request. */
+export function TrainingBlock({ block, index, heading, recordId, open, onToggle, numbered = true }: {
+  block: SessionDetailBlock; index: number; heading?: string; recordId?: string; open: boolean; onToggle: () => void; numbered?: boolean;
 }) {
   const body = useId();
   const context = heading ? `${block.name} · ${heading} · Record ${index + 1}` : block.name;
-  const status = block.source === "manual" ? "Logged" : block.status ? SHORT_OUTCOMES[block.status] : "Not recorded";
-  const summary = blockSummary(block);
+  const label = block.source === "manual" ? "Logged" : block.status ? SHORT_OUTCOMES[block.status] : "Not recorded";
+  const { load, dose } = blockSummary(block);
   return <li className={styles.block} data-performance={recordId} data-open={open} tabIndex={recordId ? -1 : undefined}>
-    <div className={styles.blockHeading}><span className={styles.number}>{String(index + 1).padStart(2, "0")}</span>
+    <div className={styles.blockHeading}>{numbered ? <span className={styles.number}>{String(index + 1).padStart(2, "0")}</span> : null}
       <div className={styles.blockTitle}><h4><button type="button" className={styles.blockToggle} aria-expanded={open} aria-controls={body} onClick={onToggle}>{heading || block.name}</button></h4>
-        {summary ? <p className={styles.blockSummary}>{summary}</p> : null}</div>
-      <span className={styles.status} data-tone={block.status === "skipped" || block.status === "stopped" ? "warn" : block.status && !QUIET_STATUSES.has(block.status) ? "changed" : undefined}>{status}</span>
+        {dose ? <p className={styles.blockSummary}>{dose}</p> : null}</div>
+      <div className={styles.blockSide}>{load ? <strong className={styles.weight}>{load}</strong> : null}
+        <span className={styles.status} data-status={recordStatus(block.status, block.source === "manual")}><StatusIcon status={recordStatus(block.status, block.source === "manual")} />{label}</span></div>
       <span className={styles.chevron} aria-hidden="true">›</span></div>
     {open ? <div id={body} className={styles.blockBody}><TrainingBlockBody block={block} context={context} /></div> : null}
   </li>;
@@ -148,7 +174,9 @@ export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = tr
       if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onDismiss();
     } }}>
     <header className={styles.header}><div><p className={styles.eyebrow}>Session details</p>
-      <h2 id={heading}>{record?.title || row.title}</h2><p className={styles.quiet}>{formatAppDate(record?.training_day || row.training_day)}</p></div>
+      <h2 id={heading}>{record?.title || row.title}</h2>
+      <p className={styles.quiet}>{formatAppDate(record?.training_day || row.training_day)}
+        {record ? <span className={styles.sessionStatus} data-status={sessionTone(record.status)}><StatusIcon status={sessionTone(record.status)} />{sessionStatusLabel(record.status)}</span> : null}</p></div>
       <button type="button" className={styles.close} aria-label="Close session details" onClick={onDismiss}>×</button></header>
     <div className={styles.body} tabIndex={0} role="region" aria-label="Session record">
       {!details && !error ? <p role="status">Loading session details…</p> : null}
@@ -156,11 +184,11 @@ export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = tr
       {details && record ? <div className={styles.sessionLayout}>
         <section className={styles.sessionSummary} aria-label="Session overview">
           <dl className={styles.sessionFacts}>
-            <div><dt>Status</dt><dd>{sessionStatusLabel(record.status)}</dd></div>
-            <div><dt>Source</dt><dd>{record.source === "external" ? "Added by you" : "Unlxck"}</dd></div>
-            {record.duration_minutes != null ? <div><dt>Recorded time</dt><dd>{record.duration_minutes} min recorded</dd></div> : null}
-            {record.session_rpe != null ? <div><dt>Session effort</dt><dd>RPE {record.session_rpe}/10</dd></div> : null}
-            {record.effort ? <div><dt>Effort</dt><dd>{record.effort}</dd></div> : null}
+            <div><TileIcon name="source" /><dt>Source</dt><dd>{record.source === "external" ? "Added by you" : "Unlxck"}</dd></div>
+            {record.session_rpe != null ? <div><TileIcon name="effort" /><dt>Session effort</dt><dd>RPE {record.session_rpe}/10</dd></div> : null}
+            {record.effort ? <div><TileIcon name="effort" /><dt>Effort</dt><dd>{record.effort}</dd></div> : null}
+            {record.duration_minutes != null ? <div><TileIcon name="time" /><dt>Recorded time</dt><dd>{record.duration_minutes} min recorded</dd></div> : null}
+            {record.pain_after != null ? <div><TileIcon name="pain" /><dt>Pain after</dt><dd>{record.pain_after}/10</dd></div> : null}
           </dl>
         </section>
         <div className={styles.recordContent}>
@@ -187,8 +215,7 @@ export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = tr
             open={expanded.has(index)} onToggle={() => setOpen(new Set(expanded.has(index) ? [...expanded].filter(item => item !== index) : [...expanded, index]))} />)}</ol> : null}
         </section>}
         {details.message ? <p className={styles.quiet}>{details.message}</p> : null}
-        {record.pain_after != null || record.notes || record.modification_reason || record.takeaway ? <section className={styles.section}><h3>Session feedback</h3>
-          {record.pain_after != null ? <dl className={styles.measurements}><div><dt>Pain after</dt><dd>{record.pain_after}/10</dd></div></dl> : null}
+        {record.notes || record.modification_reason || record.takeaway ? <section className={styles.section}><h3>Session feedback</h3>
           {record.modification_reason ? <p className={styles.note}>Modification: {record.modification_reason}</p> : null}
           {record.notes ? <p className={styles.note}>{record.notes}</p> : null}
           {record.takeaway ? <p className={styles.note}>Takeaway: {record.takeaway}</p> : null}</section> : null}

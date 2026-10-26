@@ -72,14 +72,18 @@ for (const width of [390, 1280]) {
     if (process.env.EXERCISE_QA_DIR) await page.screenshot({ path: `${process.env.EXERCISE_QA_DIR}/exercise-library-${width}.png` });
     await trigger.focus(); await page.keyboard.press("Enter");
     const dialog = page.getByRole("dialog", { name: "Back Squat", exact: true });
-    await expect(dialog).toContainText("Performance history"); await expect(dialog).toContainText("80 kg");
+    await expect(dialog).toContainText("History"); await expect(dialog).toContainText("80 kg");
     await expect(dialog.getByRole("button", { name: "Close exercise history" })).toBeFocused();
     await page.keyboard.press("Tab"); expect(await dialog.evaluate(node => node.contains(document.activeElement))).toBe(true);
     // History rows are one-line summaries; the full record opens on request.
+    // Below the two-column layout, the list sits behind the History tab.
+    if (width < 1100) await dialog.getByRole("tab", { name: "History" }).click();
     const latest = dialog.locator("ol > li").first().getByRole("button", { expanded: false });
-    await expect(dialog).not.toContainText("Other performed values are unknown"); await latest.click();
+    await expect(dialog.getByRole("region", { name: /^Performance:/ })).toHaveCount(0); await latest.click();
     await expect(dialog.locator("ol > li").first().getByRole("button", { expanded: true })).toBeVisible();
-    await expect(dialog).toContainText("180 seconds"); await expect(dialog).toContainText("Other performed values are unknown");
+    // Done beside planned on one row: every prescribed value was reported.
+    const compare = dialog.getByRole("region", { name: /^Performance: Back Squat/ }).first();
+    await expect(compare).toContainText("80 kg / 90 kg"); await expect(compare).toContainText("3 min / 2 min");
     expect((await new AxeBuilder({ page }).include("dialog").analyze()).violations).toEqual([]);
     const box = await dialog.boundingBox(); expect(box!.width).toBeLessThanOrEqual(width); expect(box!.x).toBeGreaterThanOrEqual(0);
     await dialog.getByRole("button", { name: "Load earlier performances" }).click();

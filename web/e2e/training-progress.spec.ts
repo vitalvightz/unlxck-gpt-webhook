@@ -64,9 +64,9 @@ for (const width of [390, 1280]) {
     const dialog = page.getByRole("dialog", { name: "Back Squat", exact: true });
     const progress = dialog.getByRole("region", { name: "Exercise progress", exact: true });
     await expect(progress.getByRole("slider", { name: "Inspect performance" })).toBeVisible();
-    await progress.getByRole("combobox", { name: "Progress measurement" }).selectOption("reps:reps");
+    await progress.getByRole("group", { name: "Progress measurement" }).getByRole("button", { name: "Reps", exact: true }).click();
     await expect(progress.locator('[aria-label="Selected performance"]')).toContainText("5 reps");
-    await progress.getByRole("combobox", { name: "Progress measurement" }).selectOption("load:kg");
+    await progress.getByRole("group", { name: "Progress measurement" }).getByRole("button", { name: "Load · kg" }).click();
     await progress.getByRole("slider", { name: "Inspect performance" }).focus(); await page.keyboard.press("ArrowLeft");
     const selected = progress.locator('[aria-label="Selected performance"]');
     await expect(selected).toContainText("95 kg"); await expect(selected).toContainText("Sat 03 Oct 2026");
@@ -75,9 +75,10 @@ for (const width of [390, 1280]) {
     await expect(dialog.locator('[data-performance="p5"]')).toBeFocused();
     await expect(dialog.locator('[data-performance="p5"]').getByRole("button", { expanded: true })).toBeVisible();
     await dialog.getByRole("button", { name: "Load earlier performances" }).click();
+    if (width < 1100) await dialog.getByRole("tab", { name: "Progress" }).click();
     await expect(progress).toContainText("6 recorded loads");
     // Records without a load are excluded from the series rather than splitting the line.
-    expect(await progress.locator("svg path").getAttribute("d")).toMatch(/^M[^M]*$/);
+    expect(await progress.locator("svg path").last().getAttribute("d")).toMatch(/^M[^M]*$/);
     await progress.getByRole("slider").focus(); await page.keyboard.press("Home");
     await expect(selected).toContainText("80 kg");
     expect((await new AxeBuilder({ page }).include("dialog[open]").analyze()).violations).toEqual([]);
@@ -143,7 +144,7 @@ test("exercise units never combine and point selection survives an earlier-page 
   await expect(dialog.getByRole("alert")).toBeVisible();
   await expect(progress.locator('[aria-label="Selected performance"]')).toContainText("95 kg");
   await dialog.getByRole("button", { name: "Retry", exact: true }).click();
-  await progress.getByRole("combobox", { name: "Progress measurement" }).selectOption("load:lb");
+  await progress.getByRole("group", { name: "Progress measurement" }).getByRole("button", { name: "Load · lb" }).click();
   await expect(progress.locator('[aria-label="Selected performance"]')).toContainText("175 lb");
   await expect(progress.getByRole("slider")).toHaveCount(0);
 });

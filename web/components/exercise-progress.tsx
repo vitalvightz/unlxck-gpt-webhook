@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { ExercisePerformance, PersonalExercise } from "@/lib/api-schema.generated";
 import { formatAppDate } from "@/lib/date-format";
-import { measurementSummary } from "@/lib/session-details";
+import { measurementSummary, splitLoad } from "@/lib/session-details";
 import { measurementBasis, measurementCount, progressPoints, progressSeries } from "@/lib/exercise-progress";
 import styles from "./training-progress.module.css";
 
@@ -51,15 +51,15 @@ export function ExerciseProgress({ records, exercise, hasMore, about, onInspect 
   const loads = selected && series.metric === "load" ? (selected.record.performed_values?.set_entries ?? []).flatMap(entry => entry.load?.unit === series.unit ? [entry.load.value] : []) : [];
   const ranged = loads.length > 1 && Math.min(...loads) < Math.max(...loads);
   // The dose beside the value; a plotted load isn't repeated, its range is stated above.
-  const performed = (selected?.record.performed_values ?? {}) as Record<string, unknown>;
-  const sets = selected?.record.performed_values?.set_entries ?? [];
-  const sameReps = sets.length > 0 && sets.every(entry => entry.reps != null && entry.reps === sets[0].reps);
-  const dose = selected ? measurementSummary({ ...performed, rest: undefined, effort: undefined,
-    ...(series.metric === "load" ? { load: undefined } : {}),
-    ...(sets.length && series.metric === "load" ? { set_entries: undefined, sets: performed.sets ?? sets.length, reps: sameReps ? sets[0].reps : undefined } : {}) }) : "";
+  const performed = { ...selected?.record.performed_values as Record<string, unknown>, rest: undefined, effort: undefined };
+  const dose = !selected ? "" : series.metric === "load" ? splitLoad(performed).dose : measurementSummary(performed);
+  const weight = series?.metric === "load";
   return <section className={styles.exerciseChart} aria-label="Exercise progress">
     <div className={styles.sectionHead}><h3>{series?.metric === "load" ? "Heaviest load per session" : "Recorded performance"}</h3>
-      {options.length > 1 ? <label className={styles.selectLabel}>Measurement<select aria-label="Progress measurement" value={series.id} onChange={event => { setSeriesId(event.target.value); setSelectedId(null); }}>
+      {options.length > 1 && options.length <= 4 ? <div className={`${styles.segment} ${styles.metrics}`} role="group" aria-label="Progress measurement">
+        {options.map(option => <button key={option.id} type="button" aria-pressed={option.id === series.id} onClick={() => { setSeriesId(option.id); setSelectedId(null); }}>
+          {option.label}{option.unit !== option.metric ? ` · ${option.unit}` : ""}</button>)}
+      </div> : options.length > 1 ? <label className={styles.selectLabel}>Measurement<select aria-label="Progress measurement" value={series.id} onChange={event => { setSeriesId(event.target.value); setSelectedId(null); }}>
         {options.map(option => <option key={option.id} value={option.id}>{option.label}{option.unit !== option.metric ? ` · ${option.unit}` : ""}</option>)}
       </select></label> : series ? <span className={styles.note}>{series.label} · {series.unit}</span> : null}
     </div>
@@ -70,7 +70,9 @@ export function ExerciseProgress({ records, exercise, hasMore, about, onInspect 
     </details>
     {!selected ? <p className={styles.note}>No comparable measurements in the loaded records.{hasMore ? " Load earlier performances to check older records." : ""}</p> : <>
       <div className={styles.selectedRecord} aria-live="polite" aria-label="Selected performance">
-        <p><strong>{format(selected.value)}</strong>{ranged ? <span className={styles.note}> heaviest of {Math.min(...loads)}–{Math.max(...loads)} {series.unit}</span> : null}</p>
+        <p><strong data-weight={weight || undefined}>{format(selected.value)}</strong>
+          {best != null && selected.value === best ? <span className={styles.bestPill}>Best</span> : null}
+          {ranged ? <span className={styles.note}> heaviest of {Math.min(...loads)}–{Math.max(...loads)} {series.unit}</span> : null}</p>
         <p className={styles.note}>{[formatAppDate(selected.record.training_day), dose, measurementBasis(selected.record, series.metric)].filter(Boolean).join(" · ")}</p>
         <button type="button" className={styles.textButton} onClick={() => onInspect(selected.record.id)}>Show in history <span aria-hidden="true">↓</span></button>
       </div>
@@ -101,13 +103,14 @@ export function ExerciseProgress({ records, exercise, hasMore, about, onInspect 
           }}>
           <svg viewBox={`0 0 ${plotWidth} 200`} preserveAspectRatio="none" aria-hidden="true">
             {[20, 100, 180].map(value => <line key={value} x1="0" x2={plotWidth} y1={value} y2={value} className={styles.lineGrid} />)}
+            <path d={`${path} L${x(lastDay!).toFixed(2)},180 L${x(firstDay!).toFixed(2)},180 Z`} className={styles.area} />
             <path d={path} className={styles.line} />
             {valid.map(point => <g key={point.record.id}>
-              {point === highestPoint ? <circle cx={x(point.record.training_day)} cy={y(point.value)} r="8" className={styles.point} /> : null}
+              {point === highestPoint ? <circle cx={x(point.record.training_day)} cy={y(point.value)} r="8" className={weight ? styles.bestRing : styles.point} /> : null}
               <circle cx={x(point.record.training_day)} cy={y(point.value)} r={selected.record.id === point.record.id ? 6 : 4} className={selected.record.id === point.record.id ? styles.activePoint : styles.point} />
             </g>)}
           </svg>
-          <span className={styles.yTop} aria-hidden="true">{format(ceiling)}</span><span className={styles.yBottom} aria-hidden="true">{format(floor)}</span>
+          {[ceiling, (ceiling + floor) / 2, floor].map((value, index) => <span key={index} className={styles.yTick} style={{ top: `${10 + index * 40}%` }} aria-hidden="true">{format(value)}</span>)}
         </div>
         <div className={styles.dateAxis}><span>{formatAppDate(firstDay)}</span><span>{formatAppDate(lastDay)}</span></div>
       </> : valid.length === 2 ? <div className={styles.twoRecords}>{valid.map(point => <button key={point.record.id} type="button" aria-pressed={selected.record.id === point.record.id} onClick={() => setSelectedId(point.record.id)}>
