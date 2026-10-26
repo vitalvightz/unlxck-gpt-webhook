@@ -71,6 +71,7 @@ from .state_machine import (
     require_plan_transition,
 )
 from .store_performance import CompactGenerationReads
+from .read_diagnostics import DiagnosticHttpClient
 from .store_protocols import AppStore, RehabExposureWindow
 from .structured_block_identity import ensure_structured_block_ids
 from .services.effective_structured_plan import ensure_structured_session_ids
@@ -770,7 +771,7 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
         # latency spikes. Overridable via env for ops tuning.
         read_timeout = env_float("SUPABASE_HTTP_TIMEOUT_SECONDS", 20.0, positive=True)
         connect_timeout = env_float("SUPABASE_HTTP_CONNECT_TIMEOUT_SECONDS", 10.0, positive=True)
-        http_client = httpx.Client(
+        http_client = DiagnosticHttpClient(
             http2=False,
             timeout=httpx.Timeout(
                 read_timeout,

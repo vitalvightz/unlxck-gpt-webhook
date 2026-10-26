@@ -1,3 +1,4 @@
+import { completeApiMeasurement, measuredApiFetch } from "./api-measurements";
 import {
   OFFLINE_NETWORK_MESSAGE,
   RETRYABLE_NETWORK_MESSAGE,
@@ -369,7 +370,7 @@ async function executeRequest(path: string, init?: ApiRequestInit): Promise<Exec
     if (timeoutMs > 0) {
       timeoutId = globalThis.setTimeout(() => abortController.abort(), timeoutMs);
     }
-    response = await fetch(url, {
+    response = await measuredApiFetch(path, url, {
       ...init,
       cache: "no-store",
       headers,
@@ -415,6 +416,7 @@ async function executeRequest(path: string, init?: ApiRequestInit): Promise<Exec
 
   if (!response.ok) {
     const rawText = await response.text();
+    completeApiMeasurement(response);
     const trimmedText = rawText.trim();
     let parsedBody: unknown = null;
 
@@ -519,6 +521,7 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
 
   try {
     const data = (await response.json()) as T;
+    completeApiMeasurement(response);
     if (shouldLogApiDetails()) {
       console.info("[api] request:success", {
         path,
@@ -537,6 +540,7 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
     }
     return data;
   } catch (parseError) {
+    completeApiMeasurement(response);
     if (shouldLogApiDetails()) {
       console.error("[api] request:success_body_parse_failed", {
         path,

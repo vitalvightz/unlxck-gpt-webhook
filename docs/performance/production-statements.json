@@ -1,0 +1,158 @@
+{
+  "source": "Supabase pg_stat_statements cumulative snapshot; not per-user latency",
+  "captured_date": "2026-10-26",
+  "reset_time": "2026-09-15T18:09:12.011906Z",
+  "rows": [
+    {
+      "category": "profiles",
+      "statement_id": "8913771770534056826",
+      "calls": 19681,
+      "total_exec_ms": "3123086.01",
+      "mean_exec_ms": "158.69",
+      "rows": 19681,
+      "wildcard_projection": true,
+      "owner_scoped": false
+    },
+    {
+      "category": "plans",
+      "statement_id": "-3259626848228504006",
+      "calls": 28620,
+      "total_exec_ms": "1145454.56",
+      "mean_exec_ms": "40.02",
+      "rows": 28620,
+      "wildcard_projection": true,
+      "owner_scoped": true
+    },
+    {
+      "category": "profiles",
+      "statement_id": "4198156773070080836",
+      "calls": 4793,
+      "total_exec_ms": "446311.05",
+      "mean_exec_ms": "93.12",
+      "rows": 4793,
+      "wildcard_projection": true,
+      "owner_scoped": false
+    },
+    {
+      "category": "plans",
+      "statement_id": "-8693842595633383058",
+      "calls": 8094,
+      "total_exec_ms": "435892.90",
+      "mean_exec_ms": "53.85",
+      "rows": 8094,
+      "wildcard_projection": true,
+      "owner_scoped": true
+    },
+    {
+      "category": "profiles",
+      "statement_id": "-6856317647541300064",
+      "calls": 557,
+      "total_exec_ms": "330761.21",
+      "mean_exec_ms": "593.83",
+      "rows": 557,
+      "wildcard_projection": true,
+      "owner_scoped": false
+    },
+    {
+      "category": "plans",
+      "statement_id": "4874336862738510789",
+      "calls": 5456,
+      "total_exec_ms": "214711.52",
+      "mean_exec_ms": "39.35",
+      "rows": 5456,
+      "wildcard_projection": false,
+      "owner_scoped": true
+    },
+    {
+      "category": "plans",
+      "statement_id": "-2486386961341779402",
+      "calls": 1386,
+      "total_exec_ms": "208808.01",
+      "mean_exec_ms": "150.66",
+      "rows": 1386,
+      "wildcard_projection": true,
+      "owner_scoped": false
+    },
+    {
+      "category": "plans",
+      "statement_id": "8326732450419558769",
+      "calls": 3872,
+      "total_exec_ms": "172657.34",
+      "mean_exec_ms": "44.59",
+      "rows": 3872,
+      "wildcard_projection": true,
+      "owner_scoped": true
+    },
+    {
+      "category": "plans",
+      "statement_id": "-6638240657794280747",
+      "calls": 2278,
+      "total_exec_ms": "130373.37",
+      "mean_exec_ms": "57.23",
+      "rows": 2278,
+      "wildcard_projection": false,
+      "owner_scoped": true
+    },
+    {
+      "category": "profiles",
+      "statement_id": "426399677433353442",
+      "calls": 173,
+      "total_exec_ms": "116061.42",
+      "mean_exec_ms": "670.88",
+      "rows": 173,
+      "wildcard_projection": true,
+      "owner_scoped": false
+    },
+    {
+      "category": "plans",
+      "statement_id": "446573462446646175",
+      "calls": 2601,
+      "total_exec_ms": "115267.99",
+      "mean_exec_ms": "44.32",
+      "rows": 2601,
+      "wildcard_projection": true,
+      "owner_scoped": true
+    },
+    {
+      "category": "plans",
+      "statement_id": "-7618650463847941810",
+      "calls": 904,
+      "total_exec_ms": "76500.63",
+      "mean_exec_ms": "84.62",
+      "rows": 904,
+      "wildcard_projection": true,
+      "owner_scoped": false
+    },
+    {
+      "category": "plans",
+      "statement_id": "-2400537966439373926",
+      "calls": 2399,
+      "total_exec_ms": "59124.62",
+      "mean_exec_ms": "24.65",
+      "rows": 2399,
+      "wildcard_projection": false,
+      "owner_scoped": true
+    },
+    {
+      "category": "plans",
+      "statement_id": "733364623231037321",
+      "calls": 2108,
+      "total_exec_ms": "53452.14",
+      "mean_exec_ms": "25.36",
+      "rows": 2108,
+      "wildcard_projection": false,
+      "owner_scoped": true
+    },
+    {
+      "category": "profiles",
+      "statement_id": "1014566079991799967",
+      "calls": 289,
+      "total_exec_ms": "39676.60",
+      "mean_exec_ms": "137.29",
+      "rows": 289,
+      "wildcard_projection": true,
+      "owner_scoped": false
+    }
+  ],
+  "dealloc": 0
+}

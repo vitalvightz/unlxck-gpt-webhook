@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import time
@@ -15,6 +16,7 @@ from postgrest.exceptions import APIError as PostgrestAPIError
 
 from fightcamp.logging_utils import bind_log_context, clear_log_context, configure_logging
 
+from . import read_diagnostics
 from .auth import AuthService, SupabaseAuthService
 from .environment import (
     apply_production_environment_defaults,
@@ -590,7 +592,22 @@ def create_app(
         async def invalidate_caches(req: Request):
             return await invalidate_athlete_read_caches(req, limit_admin)
 
-        return await log_requests(request, invalidate_caches)
+        # Off by default in every environment. Enable only for controlled captures.
+        if os.getenv("UNLXCK_READ_DIAGNOSTICS") != "1":
+            return await log_requests(request, invalidate_caches)
+        diagnostics, token = read_diagnostics.begin()
+        started = time.perf_counter()
+        try:
+            return await log_requests(request, invalidate_caches)
+        finally:
+            read_diagnostics.end(token)
+            route = request.scope.get("route")
+            logger.info("[read-audit] %s", json.dumps({
+                "route": getattr(route, "path", "unmatched"),
+                "method": request.method,
+                "backend_ms": round((time.perf_counter() - started) * 1000, 3),
+                **diagnostics.snapshot(),
+            }, separators=(",", ":")))
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:

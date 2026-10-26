@@ -1,0 +1,13 @@
+{
+  "source": "Read-only aggregate over first 50 plans ordered by id; not endpoint wire size",
+  "captured_date": "2026-10-26",
+  "rows": [
+    {
+      "sample_rows": 50,
+      "mean_full_bytes": "1344546",
+      "max_full_bytes": 2126535,
+      "mean_planning_brief_bytes": "577539",
+      "mean_stage2_payload_bytes": "424314"
+    }
+  ]
+}
