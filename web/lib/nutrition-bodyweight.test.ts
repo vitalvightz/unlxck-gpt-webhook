@@ -2,47 +2,54 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  filterBodyweightEntriesByRange,
-  getBodyMassIndex,
-  getRecentChange,
+  formatWeightDelta,
+  getBodyweightEntriesWithIndex,
+  getBodyweightTrend,
   getSevenDayAverage,
   getTargetGap,
+  getTrendChange,
 } from "./nutrition-bodyweight.ts";
 
 const entries = [
   { date: "2026-04-01", time: "07:10", weight_kg: 74.6, is_fasted: true, notes: "" },
+  { date: "2026-04-08", time: "07:05", weight_kg: 73.4, is_fasted: true, notes: "" },
   { date: "2026-04-03", time: "07:15", weight_kg: 74.1, is_fasted: true, notes: "" },
   { date: "2026-04-06", time: "07:20", weight_kg: 73.8, is_fasted: false, notes: "" },
-  { date: "2026-04-08", time: "07:05", weight_kg: 73.4, is_fasted: true, notes: "" },
 ].map((entry) => ({ ...entry }));
 
-test("filters 7D and 30D ranges relative to the latest logged entry", () => {
+test("lists weigh-ins newest first and keeps each saved-log index", () => {
   assert.deepStrictEqual(
-    filterBodyweightEntriesByRange(entries, "7D").map((entry) => entry.date),
-    ["2026-04-08", "2026-04-06", "2026-04-03"],
-  );
-
-  assert.deepStrictEqual(
-    filterBodyweightEntriesByRange(entries, "30D").map((entry) => entry.date),
-    ["2026-04-08", "2026-04-06", "2026-04-03", "2026-04-01"],
+    getBodyweightEntriesWithIndex(entries).map((entry) => [entry.date, entry.sourceIndex]),
+    [["2026-04-08", 1], ["2026-04-06", 3], ["2026-04-03", 2], ["2026-04-01", 0]],
   );
 });
 
-test("derives recent change from the latest two entries inside the active range", () => {
-  assert.equal(getRecentChange(entries, "All"), -0.4);
-  assert.equal(
-    getRecentChange([{ date: "2026-04-08", time: "07:05", weight_kg: 73.4, is_fasted: true, notes: "" }], "All"),
-    null,
-  );
+test("trend is oldest first and ranges count back from the latest weigh-in", () => {
+  assert.deepStrictEqual(getBodyweightTrend(entries, "7D").map((entry) => entry.date), ["2026-04-03", "2026-04-06", "2026-04-08"]);
+  assert.deepStrictEqual(getBodyweightTrend(entries, "30D").map((entry) => entry.date), ["2026-04-01", "2026-04-03", "2026-04-06", "2026-04-08"]);
+  assert.deepStrictEqual(getBodyweightTrend([], "All"), []);
 });
 
-test("calculates 7-entry average using the most recent entries", () => {
+test("trend skips entries that cannot be plotted", () => {
+  const broken = [...entries, { date: "", time: null, weight_kg: 80, is_fasted: null, notes: null }];
+  assert.equal(getBodyweightTrend(broken, "All").length, 4);
+});
+
+test("trend change runs from the first to the last weigh-in in range", () => {
+  assert.equal(getTrendChange(getBodyweightTrend(entries, "All")), -1.2);
+  assert.equal(getTrendChange(getBodyweightTrend(entries, "7D")), -0.7);
+  assert.equal(getTrendChange(entries.slice(0, 1)), null);
+});
+
+test("formats weight changes with a sign", () => {
+  assert.equal(formatWeightDelta(-0.4), "−0.4 kg");
+  assert.equal(formatWeightDelta(0.3), "+0.3 kg");
+  assert.equal(formatWeightDelta(0), "Even");
+  assert.equal(formatWeightDelta(null), "--");
+});
+
+test("calculates 7-entry average and target gap", () => {
   assert.equal(getSevenDayAverage(entries), 74);
-});
-
-test("calculates BMI and target gap only when enough data is present", () => {
-  assert.equal(getBodyMassIndex(178, 73.4), 23.2);
-  assert.equal(getBodyMassIndex(null, 73.4), null);
   assert.equal(getTargetGap(73.4, 70), 3.4);
   assert.equal(getTargetGap(null, 70), null);
 });

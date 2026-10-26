@@ -1,5 +1,5 @@
-import { BodyweightLogScreen } from "@/components/bodyweight-log-screen";
+import { WeightTracker } from "@/components/weight-tracker";
 
 export default function NutritionPage() {
-  return <BodyweightLogScreen />;
+  return <WeightTracker />;
 }
