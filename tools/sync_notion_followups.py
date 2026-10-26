@@ -11,6 +11,7 @@ import os
 import random
 import sys
 import time
+import traceback
 from datetime import date, datetime, time as datetime_time, timedelta, timezone
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -451,6 +452,7 @@ def sync(today=None):
 
 # Reuse the existing cron and integration for dashboard totals, too.
 SCORECARD_PAGE_ID = "3fcd6e718d27815f8509e69f573bcf27"
+SCORECARD_SUCCESS_PREFIX = "Last successful scorecard refresh: "
 
 
 def scorecard_rows():
@@ -586,8 +588,11 @@ def stage_sync_changes(page, now):
 def sync_stage_history(now=None, max_updates=20):
     now = now or datetime.now(timezone.utc)
     checked = updated = 0
+    missing_confirmation = 0
     for page in all_pipeline_rows():
         checked += 1
+        if "Confirmed Stage" not in page["properties"]:
+            missing_confirmation += 1
         changes = stage_sync_changes(page, now)
         if not changes:
             continue
@@ -603,6 +608,10 @@ def sync_stage_history(now=None, max_updates=20):
         updated += 1
         if updated >= max_updates:
             break
+    if missing_confirmation:
+        print(f"Notion stages: WARNING: {missing_confirmation} examined rows lack "
+              "Confirmed Stage (rich_text); historical milestone confirmation is disabled "
+              "for those rows", file=sys.stderr)
     return checked, updated
 
 
@@ -621,9 +630,13 @@ def sync_scorecard():
             counts["ACTIVATION RATE"] += 1
 
     cards = {}
+    success_blocks = []
     def inspect(parent_id):
         for block in block_children(parent_id):
-            if block["type"] in ("column_list", "column"):
+            if (parent_id == SCORECARD_PAGE_ID and block["type"] == "paragraph"
+                    and block_text(block).startswith(SCORECARD_SUCCESS_PREFIX)):
+                success_blocks.append(block)
+            elif block["type"] in ("column_list", "column"):
                 inspect(block["id"])
             elif block["type"] == "callout":
                 parts = list(block_children(block["id"]))
@@ -644,6 +657,8 @@ def sync_scorecard():
     inspect(SCORECARD_PAGE_ID)
     if set(cards) != set(counts):
         raise ValueError(f"Missing scorecard cards: {set(counts) - set(cards)}")
+    if len(success_blocks) > 1:
+        raise ValueError("Duplicate scorecard last-success timestamps")
 
     updated = 0
     for name, (headline, detail) in cards.items():
@@ -654,6 +669,17 @@ def sync_scorecard():
                 request("PATCH", f"/blocks/{block['id']}",
                         {block["type"]: {"rich_text": [{"type": "text", "text": {"content": value}}]}})
                 updated += 1
+    # Publish success only after every card write returns successfully. Keep the
+    # previous timestamp on query/layout/write errors, including partial writes.
+    stamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    paragraph = {"rich_text": [{"type": "text", "text": {
+        "content": SCORECARD_SUCCESS_PREFIX + stamp}}]}
+    if success_blocks:
+        request("PATCH", f"/blocks/{success_blocks[0]['id']}", {"paragraph": paragraph})
+    else:
+        request("PATCH", f"/blocks/{SCORECARD_PAGE_ID}/children", {"children": [
+            {"object": "block", "type": "paragraph", "paragraph": paragraph},
+        ]})
     return total, updated
 
 def run():
@@ -667,13 +693,28 @@ def run():
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             return
-        # Observe stage dates before using them for this poll's scheduling.
-        checked, updated = sync_stage_history()
-        print(f"Notion stages: examined {checked}, updated {updated}")
-        total, changed = sync()
-        print(f"Notion follow-ups: checked {total}, updated {changed}")
-        contacted, updated = sync_scorecard()
-        print(f"Notion conversion: contacted {contacted}, updated {updated} blocks")
+        failed = False
+        # Refresh before potentially slow per-row processing. Each branch gets
+        # an attempt even if the other fails, while the timer still sees failure.
+        try:
+            contacted, updated = sync_scorecard()
+            print(f"Notion conversion: contacted {contacted}, updated {updated} blocks", flush=True)
+        except Exception:
+            failed = True
+            print("Notion conversion: refresh failed", file=sys.stderr, flush=True)
+            traceback.print_exc()
+        try:
+            # Scheduling depends on the stage observations from this poll.
+            checked, updated = sync_stage_history()
+            print(f"Notion stages: examined {checked}, updated {updated}", flush=True)
+            total, changed = sync()
+            print(f"Notion follow-ups: checked {total}, updated {changed}", flush=True)
+        except Exception:
+            failed = True
+            print("Notion stages/follow-ups: sync failed", file=sys.stderr, flush=True)
+            traceback.print_exc()
+        if failed:
+            sys.exit(1)
 
 
 if __name__ == "__main__":
