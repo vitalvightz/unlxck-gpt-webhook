@@ -6,12 +6,24 @@ from api.compliance_guards import require_health_feature_access
 from api.models import NutritionWorkspaceState, NutritionWorkspaceUpdateRequest, ProfileRecord, ProfileUpdateRequest
 from api.nutrition_workspace import (
     build_nutrition_workspace,
+    future_weigh_ins,
+    latest_calendar_day,
     merge_workspace_into_payload,
     normalize_nutrition_update_request,
     sync_current_weight_with_log,
 )
 from api.plan_mappers import _map_admin_athlete
 from api.store import AppStore
+
+
+def _sync_weight_from_log(*, update, previous_log, today):
+    """Reject new future-dated weigh-ins, then let the newest weigh-in set camp weight."""
+    if future_weigh_ins(update=update, previous_log=previous_log, today=today):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="A weigh-in can't be dated in the future.",
+        )
+    return sync_current_weight_with_log(update=update, previous_log=previous_log, today=today)
 
 
 def build_nutrition_router(
@@ -66,9 +78,10 @@ def build_nutrition_router(
         )
         validate_schedule_consistency(normalized_update)
         validate_session_type_consistency(normalized_update)
-        normalized_update, weight_from_log = sync_current_weight_with_log(
+        normalized_update, weight_from_log = _sync_weight_from_log(
             update=normalized_update,
             previous_log=current_workspace.nutrition_monitoring.daily_bodyweight_log,
+            today=latest_calendar_day(),
         )
 
         merged_payload = merge_workspace_into_payload(
@@ -145,9 +158,10 @@ def build_nutrition_router(
         )
         validate_schedule_consistency(normalized_update)
         validate_session_type_consistency(normalized_update)
-        normalized_update, weight_from_log = sync_current_weight_with_log(
+        normalized_update, weight_from_log = _sync_weight_from_log(
             update=normalized_update,
             previous_log=current_workspace.nutrition_monitoring.daily_bodyweight_log,
+            today=latest_calendar_day(),
         )
 
         merged_payload = merge_workspace_into_payload(

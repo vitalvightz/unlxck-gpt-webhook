@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from api.bodyweight_trend import daily_readings, seven_day_average, smoothed_trend, weekly_pace
+from api.datetimes import parse_calendar_date
 from fightcamp.camp_phases import calculate_phase_weeks
 from fightcamp.input_parsing import _athlete_calendar_now, _compute_days_until_fight, is_short_notice_days
 from fightcamp.mindset_module import classify_mental_block
@@ -145,7 +146,13 @@ def _infer_weight_source(
     return "imported"
 
 
-def _latest_bodyweight_log_entry(entries: list[NutritionBodyweightLogEntry]) -> NutritionBodyweightLogEntry | None:
+def _latest_bodyweight_log_entry(
+    entries: list[NutritionBodyweightLogEntry],
+    *,
+    on_or_before: date | None = None,
+) -> NutritionBodyweightLogEntry | None:
+    if on_or_before is not None:
+        entries = [entry for entry in entries if not _is_future_weigh_in(entry, on_or_before)]
     if not entries:
         return None
 
@@ -153,6 +160,52 @@ def _latest_bodyweight_log_entry(entries: list[NutritionBodyweightLogEntry]) -> 
         return (entry.date, entry.time or "")
 
     return sorted(entries, key=_sort_key)[-1]
+
+
+def athlete_today(profile: ProfileRecord | AdminAthleteRecord) -> date:
+    """The athlete's calendar day, the same reading days-to-fight uses."""
+    return _athlete_calendar_now(profile.athlete_timezone or None).date()
+
+
+# The furthest-ahead timezone. A weigh-in dated after the day already reached
+# there cannot have happened anywhere, whatever timezone the athlete is in.
+_EARLIEST_ZONE = timezone(timedelta(hours=14))
+
+
+def latest_calendar_day(now_utc: datetime | None = None) -> date:
+    """The newest calendar day that has begun anywhere on Earth.
+
+    Future-dated weigh-ins are judged against this rather than the profile
+    timezone, so a fighter who has travelled east of home is not rejected.
+    """
+    return (now_utc or datetime.now(timezone.utc)).astimezone(_EARLIEST_ZONE).date()
+
+
+def _is_future_weigh_in(entry: NutritionBodyweightLogEntry, today: date) -> bool:
+    day = parse_calendar_date(entry.date)
+    return day is not None and day > today
+
+
+def future_weigh_ins(
+    *,
+    update: NutritionWorkspaceUpdateRequest,
+    previous_log: list[NutritionBodyweightLogEntry],
+    today: date,
+) -> list[NutritionBodyweightLogEntry]:
+    """Weigh-ins this update adds or changes that are dated after today.
+
+    Entries already stored are left alone, so one saved before this check
+    existed cannot block every later save; it is ignored for camp weight instead.
+    """
+    unchanged = [entry.model_dump(mode="json") for entry in previous_log]
+    added: list[NutritionBodyweightLogEntry] = []
+    for entry in update.nutrition_monitoring.daily_bodyweight_log:
+        dumped = entry.model_dump(mode="json")
+        if dumped in unchanged:
+            unchanged.remove(dumped)
+        elif _is_future_weigh_in(entry, today):
+            added.append(entry)
+    return added
 
 
 def _same_weigh_in(left: NutritionBodyweightLogEntry | None, right: NutritionBodyweightLogEntry | None) -> bool:
@@ -165,6 +218,7 @@ def sync_current_weight_with_log(
     *,
     update: NutritionWorkspaceUpdateRequest,
     previous_log: list[NutritionBodyweightLogEntry],
+    today: date,
 ) -> tuple[NutritionWorkspaceUpdateRequest, bool]:
     """Make the newest weigh-in the camp's current weight when it changes.
 
@@ -172,10 +226,11 @@ def sync_current_weight_with_log(
     current weight to the newest weigh-in left in the log. Edits to older
     entries leave it alone, so a weight entered later in Camp Setup is not
     overwritten by tidying history. An emptied log keeps the last current weight.
+    A weigh-in dated after ``today`` never counts as the newest.
     Returns the update and whether the current weight now comes from the log.
     """
-    before = _latest_bodyweight_log_entry(previous_log)
-    after = _latest_bodyweight_log_entry(update.nutrition_monitoring.daily_bodyweight_log)
+    before = _latest_bodyweight_log_entry(previous_log, on_or_before=today)
+    after = _latest_bodyweight_log_entry(update.nutrition_monitoring.daily_bodyweight_log, on_or_before=today)
     if after is None or _same_weigh_in(before, after):
         return update, False
     shared = update.shared_camp_context.model_copy(
@@ -611,8 +666,9 @@ def build_nutrition_workspace(
     weight_cut_pct = compute_weight_cut_pct(shared_camp_context.current_weight_kg or 0.0, shared_camp_context.target_weight_kg or 0.0)
     weight_cut_risk = weight_cut_pct >= 3.0
     is_minor = bool(getattr(profile, "is_minor", False))
-    readings = daily_readings(monitoring.daily_bodyweight_log)
-    reference_day = _athlete_calendar_now(profile.athlete_timezone or None).date()
+    reference_day = athlete_today(profile)
+    # Same future-date rule as camp weight: a day that has begun nowhere is ignored.
+    readings = [reading for reading in daily_readings(monitoring.daily_bodyweight_log) if reading[0] <= latest_calendar_day()]
     average_weight, average_days = seven_day_average(readings, reference_day)
     injuries_for_flags = []
     if shared_camp_context.injuries.strip():
