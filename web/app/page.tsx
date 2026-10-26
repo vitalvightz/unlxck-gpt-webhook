@@ -735,6 +735,7 @@ export default function HomePage() {
               />
             </>
           )}
+          <Link href="/nutrition" className="overview-risk-more">Weight tracker: log a weigh-in</Link>
           <OverviewRiskWatch risks={risks} />
         </section>
       </>

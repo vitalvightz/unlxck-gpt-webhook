@@ -77,27 +77,3 @@ export function PlanHistoryRowSkeleton() {
     </article>
   );
 }
-
-export function NutritionWorkspaceSkeleton() {
-  return (
-    <section className="nutrition-page-grid" aria-busy="true">
-      <div className="nutrition-main-column">
-        {[0, 1, 2].map((index) => (
-          <div className="nutrition-group" key={index}>
-            <Skeleton variant="text" width={160} height={11} />
-            <article className="step-card nutrition-section" style={{ display: "grid", gap: 16 }}>
-              <Skeleton variant="text" width="42%" height={20} />
-              <Skeleton variant="text" width="80%" height={14} />
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-                <Skeleton variant="block" height={64} style={{ borderRadius: 14 }} />
-                <Skeleton variant="block" height={64} style={{ borderRadius: 14 }} />
-                <Skeleton variant="block" height={64} style={{ borderRadius: 14 }} />
-                <Skeleton variant="block" height={64} style={{ borderRadius: 14 }} />
-              </div>
-            </article>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}

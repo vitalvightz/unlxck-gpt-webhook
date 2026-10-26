@@ -12,7 +12,7 @@ const RANGE_DAY_WINDOW: Record<Exclude<BodyweightRange, "All">, number> = {
   "30D": 30,
 };
 
-function toTimestamp(entry: NutritionBodyweightLogEntry): number {
+export function getBodyweightTimestamp(entry: NutritionBodyweightLogEntry): number {
   const normalizedDate = String(entry.date || "").trim();
   if (!normalizedDate) return Number.NEGATIVE_INFINITY;
   const normalizedTime = String(entry.time || "").trim() || "00:00";
@@ -29,43 +29,35 @@ function roundToOne(value: number): number {
   return Math.round(value * 10) / 10;
 }
 
+/** Newest first, each entry keeping its index in the saved log. */
 export function getBodyweightEntriesWithIndex(entries: NutritionBodyweightLogEntry[]): IndexedBodyweightEntry[] {
   return entries
     .map((entry, sourceIndex) => ({ ...entry, sourceIndex }))
-    .sort((left, right) => toTimestamp(right) - toTimestamp(left));
+    .sort((left, right) => getBodyweightTimestamp(right) - getBodyweightTimestamp(left));
 }
 
 export function getLatestBodyweightEntry(entries: NutritionBodyweightLogEntry[]): NutritionBodyweightLogEntry | null {
   return getBodyweightEntriesWithIndex(entries)[0] ?? null;
 }
 
-export function getPreviousBodyweightEntry(entries: NutritionBodyweightLogEntry[]): NutritionBodyweightLogEntry | null {
-  return getBodyweightEntriesWithIndex(entries)[1] ?? null;
+/**
+ * Weigh-ins that can be plotted for the range, oldest first. Ranges count back
+ * from the latest weigh-in, so a gap in logging never leaves an empty chart.
+ */
+export function getBodyweightTrend(entries: NutritionBodyweightLogEntry[], range: BodyweightRange): IndexedBodyweightEntry[] {
+  const plottable = getBodyweightEntriesWithIndex(entries)
+    .filter((entry) => Number.isFinite(getBodyweightTimestamp(entry)) && Number.isFinite(entry.weight_kg))
+    .reverse();
+  const latest = plottable.at(-1);
+  if (range === "All" || !latest) return plottable;
+  const cutoff = getBodyweightTimestamp(latest) - (RANGE_DAY_WINDOW[range] - 1) * 24 * 60 * 60 * 1000;
+  return plottable.filter((entry) => getBodyweightTimestamp(entry) >= cutoff);
 }
 
-export function filterBodyweightEntriesByRange(
-  entries: NutritionBodyweightLogEntry[],
-  range: BodyweightRange,
-): NutritionBodyweightLogEntry[] {
-  const sorted = getBodyweightEntriesWithIndex(entries);
-  if (range === "All") {
-    return sorted.map(({ sourceIndex: _sourceIndex, ...entry }) => entry);
-  }
-
-  const latest = sorted[0];
-  if (!latest) return [];
-
-  const latestTimestamp = toTimestamp(latest);
-  if (!Number.isFinite(latestTimestamp)) {
-    return sorted.map(({ sourceIndex: _sourceIndex, ...entry }) => entry);
-  }
-
-  const days = RANGE_DAY_WINDOW[range];
-  const cutoff = latestTimestamp - (days - 1) * 24 * 60 * 60 * 1000;
-
-  return sorted
-    .filter((entry) => toTimestamp(entry) >= cutoff)
-    .map(({ sourceIndex: _sourceIndex, ...entry }) => entry);
+/** Change from the first to the last weigh-in in a trend, or null with fewer than two. */
+export function getTrendChange(trend: readonly NutritionBodyweightLogEntry[]): number | null {
+  if (trend.length < 2) return null;
+  return roundToOne(trend[trend.length - 1].weight_kg - trend[0].weight_kg);
 }
 
 export function getLatestEffectiveWeight(workspace: NutritionWorkspaceState): number | null {
@@ -73,24 +65,9 @@ export function getLatestEffectiveWeight(workspace: NutritionWorkspaceState): nu
   return normalizeWeight(latestEntry?.weight_kg ?? workspace.shared_camp_context.current_weight_kg ?? null);
 }
 
-export function getRecentChange(
-  entries: NutritionBodyweightLogEntry[],
-  range: BodyweightRange,
-): number | null {
-  const filtered = filterBodyweightEntriesByRange(entries, range);
-  if (filtered.length < 2) return null;
-  return roundToOne(filtered[0].weight_kg - filtered[1].weight_kg);
-}
-
 export function getTargetGap(weightKg: number | null, targetWeightKg: number | null | undefined): number | null {
   if (weightKg == null || targetWeightKg == null || !Number.isFinite(targetWeightKg)) return null;
   return roundToOne(weightKg - targetWeightKg);
-}
-
-export function getBodyMassIndex(heightCm: number | null | undefined, weightKg: number | null): number | null {
-  if (heightCm == null || weightKg == null || heightCm <= 0) return null;
-  const heightMeters = heightCm / 100;
-  return roundToOne(weightKg / (heightMeters * heightMeters));
 }
 
 export function getSevenDayAverage(entries: NutritionBodyweightLogEntry[]): number | null {
@@ -108,24 +85,13 @@ export function formatWeight(value: number | null | undefined): string {
 export function formatWeightDelta(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "--";
   if (value === 0) return "Even";
-  return `${value > 0 ? "+" : ""}${value.toFixed(1)} kg`;
-}
-
-export function formatTargetGapLabel(value: number | null | undefined): string {
-  if (value == null || !Number.isFinite(value)) return "--";
-  if (value === 0) return "On target";
-  return value > 0 ? `${value.toFixed(1)} kg above` : `${Math.abs(value).toFixed(1)} kg below`;
+  return `${value > 0 ? "+" : "−"}${Math.abs(value).toFixed(1)} kg`;
 }
 
 export function formatBodyweightDate(value: string | null | undefined): string {
   const normalized = String(value || "").trim();
   if (!normalized) return "No entry yet";
   return formatAppDate(normalized);
-}
-
-export function formatBodyweightTime(value: string | null | undefined): string {
-  const normalized = String(value || "").trim();
-  return normalized || "No time";
 }
 
 export function formatFastedState(value: boolean | null | undefined): string {

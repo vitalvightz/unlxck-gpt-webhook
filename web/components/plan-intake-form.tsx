@@ -3365,11 +3365,11 @@ export function PlanIntakeForm() {
 
             <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
               <div className="support-panel">
-                <p className="kicker">Nutrition foundation</p>
-                <p className="muted">Weight, weigh-ins and readiness are set in Nutrition.</p>
+                <p className="kicker">Weight tracker</p>
+                <p className="muted">Log weigh-ins and track your trend toward fight weight.</p>
                 <div className="plan-summary-actions">
                   <Link href="/nutrition" className="ghost-button">
-                    Open nutrition workspace
+                    Open weight tracker
                   </Link>
                 </div>
               </div>
