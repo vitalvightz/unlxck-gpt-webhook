@@ -1408,3 +1408,43 @@ test("without a head-impact notice the same contact day is unchanged", () => {
   state.today.primary_safety_notice = { ...HEAD_IMPACT_NOTICE, code: "skin_care", chip: "SKIN CARE", tone: "amber" };
   assert.match(renderPanel(state), />Start hard sparring</);
 });
+
+test("local log controls reuse the calendar projection; a new plan refreshes the blocks", async () => {
+  const container = document.createElement("div"); document.body.appendChild(container);
+  const root = createRoot(container);
+  const state = contactDayState("green");
+  const day = toISODate(resolveTrainingDay(new Date()));
+  state.today.training_day = day;
+  state.today.next_session = { ...state.today.next_session, calendar_date: day, coach_led_contact: undefined };
+  const weeks: StructuredPlan["weeks"] = [{ week_index: 1, days: [{ date: day, sessions: [{
+    session_id: state.today.next_session.session_id!, title: "Strength", blocks: [
+      { block_id: "squat", block_type: "strength", display_name: "Squat", sets: 3, reps: "5" },
+    ],
+  }] }] }];
+  let calendarReads = 0;
+  const plan: StructuredPlan = { get weeks() { calendarReads++; return weeks; } };
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => new Response('{"response_sets":[],"history_truncated":false}')) as typeof fetch;
+  const render = (structuredPlan: StructuredPlan) => root.render(
+    <AuthProvider><ToastProvider><TodaySessionPanel state={state} structuredPlan={structuredPlan}
+      token="token" onRefresh={async () => {}} /></ToastProvider></AuthProvider>,
+  );
+  try {
+    await act(async () => { render(plan); });
+    assert.match(container.textContent ?? "", /Squat/);
+    const initialReads = calendarReads;
+    assert.ok(initialReads > 0);
+    const skip = Array.from(container.querySelectorAll("button")).find(b => b.textContent?.trim() === "Skip session");
+    assert.ok(skip);
+    await act(async () => { skip.click(); });
+    assert.ok(container.querySelector("form"), "the skip form opens");
+    assert.equal(calendarReads, initialReads, "opening a local form must not rescan the calendar");
+    const changedPlan = structuredClone({ weeks });
+    changedPlan.weeks![0].days![0].sessions![0].blocks![0].display_name = "Updated squat";
+    await act(async () => { render(changedPlan); });
+    assert.match(container.textContent ?? "", /Updated squat/);
+  } finally {
+    await act(async () => { root.unmount(); });
+    container.remove(); globalThis.fetch = originalFetch;
+  }
+});

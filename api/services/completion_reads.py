@@ -13,7 +13,8 @@ class CompletionReads:
     reads are retried by the next consumer, and returned rows cannot mutate the
     shared copy. Only streak/XP writes are known to leave these inputs intact;
     other mutations invalidate them before delegating, including failed writes.
-    Active-plan pointers and reward state are always read from the store.
+    Training-engagement reconciliation writes only XP and leaves plan/history
+    inputs intact. Active-plan pointers and reward state stay uncached.
     """
 
     def __init__(self, store: AppStore):
@@ -37,7 +38,8 @@ class CompletionReads:
                 return deepcopy(self._reads[key])
             return read
         if (not callable(attr) or name.startswith(("get_", "list_"))
-                or name in {"upsert_athlete_streaks", "award_xp", "validate_xp_abuse_hardening"}):
+                or name in {"upsert_athlete_streaks", "award_xp", "validate_xp_abuse_hardening",
+                            "reconcile_training_engagement_xp"}):
             return attr
 
         def write(*args: Any, **kwargs: Any) -> Any:

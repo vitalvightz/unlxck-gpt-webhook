@@ -550,3 +550,67 @@ def test_shared_history_retries_failures_and_invalidates_after_a_write():
     store.list_today_checkins = real_read
     cache.upsert_today_checkin(ATHLETE, {"plan_id": PLAN, "training_day": "2026-06-03"})
     assert cache.list_today_checkins(ATHLETE, limit=14)[0]["plan_id"] == PLAN
+
+
+def test_finish_session_shares_preflight_reads_and_plan_projection(monkeypatch):
+    from api.services.today_readiness_boundary import upsert_session_completion
+    from api.models import TodayCheckinRequest
+
+    store = _store_with_camp()
+    now = NOW + timedelta(days=1)  # A scheduled training day.
+    today_service.submit_today_checkin(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=now,
+        payload=TodayCheckinRequest(plan_id=PLAN, sleep="good", body="normal", pain="none", phase="GPP").model_dump())
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=now)
+    payload = {"plan_id": PLAN, "session_id": view.today.next_session["session_id"], "status": "done"}
+    if view.live_prescription:
+        payload["prescription_revision"] = view.live_prescription["revision"]
+    resolutions = []
+    original = today_service.resolve_effective_structured_plan
+
+    def resolve(row, **kwargs):
+        resolutions.append(row.get("id"))
+        return original(row, **kwargs)
+
+    monkeypatch.setattr(today_service, "resolve_effective_structured_plan", resolve)
+    store.reads.clear()
+    result = upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="UTC", payload=payload, now=now)
+    assert result["status"] == "done"
+    assert store.reads["get_training_plan_for_athlete"] == 1
+    # The owned row and Today command's private copy each resolve at most once.
+    assert len(resolutions) <= 2
+    assert store.reads["list_injury_flags"] == 3
+
+
+def test_injury_mutation_reads_the_checkin_once_and_observes_the_written_flags():
+    from api.services.today_readiness_boundary import submit_today_injury_checkin
+
+    store = _store_with_intake_injury()
+    flag_id = store.list_injury_flags(ATHLETE)[0]["id"]
+    store.reads.clear()
+    result = submit_today_injury_checkin(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW,
+        payload={"injuries": [{"flag_id": flag_id, "status": "resolved"}]})
+    assert result["open_injuries"] == []
+    assert result["updated_injury_ids"] == [flag_id]
+    assert store.reads["get_today_checkin"] == 1
+    assert store.reads["get_training_plan_for_athlete"] == 1
+    # A later request must read again, including its newly written flags.
+    store.reads.clear()
+    reopened = submit_today_injury_checkin(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW,
+        payload={"injuries": [{"flag_id": flag_id, "status": "ongoing"}]})
+    assert [row["id"] for row in reopened["open_injuries"]] == [flag_id]
+    assert store.reads["get_today_checkin"] == 1
+
+
+def test_mutation_cache_keeps_exact_ownership_scopes_and_invalidates_even_failed_writes():
+    store = _store_with_camp()
+    cache = _BuildReadCache(store)
+    first = cache.get_training_plan_for_athlete(PLAN, ATHLETE)
+    first["structured_plan"]["weeks"].clear()
+    assert cache.get_plan_for_athlete(PLAN, ATHLETE)["structured_plan"]["weeks"]
+    assert store.reads["get_training_plan_for_athlete"] == 1
+    assert cache.get_training_plan_for_athlete(PLAN, "another-athlete") is None
+    store.update_injury_flag = MagicMock(side_effect=RuntimeError("write unavailable"))
+    with pytest.raises(RuntimeError):
+        cache.update_injury_flag("flag", {"status": "resolved"})
+    assert cache.get_training_plan_for_athlete(PLAN, ATHLETE)
+    assert store.reads["get_training_plan_for_athlete"] == 3

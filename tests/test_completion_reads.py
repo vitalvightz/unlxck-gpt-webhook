@@ -85,3 +85,19 @@ def test_store_capability_cache_survives_request_wrapper():
     cache = CompletionReads(store)
     cache._unlxck_xp_abuse_hardening_validated = True
     assert CompletionReads(store)._unlxck_xp_abuse_hardening_validated is True
+
+
+def test_tracking_xp_keeps_plan_history_inputs_but_rewards_are_not_cached():
+    store = FakeStore()
+    store.get_plan_for_athlete = Mock(return_value={"id": PLAN})
+    store.list_plan_session_completions = Mock(return_value=[{"id": "saved-completion"}])
+    store.reconcile_training_engagement_xp = Mock(side_effect=[[{"awarded": True}], [{"awarded": False}]])
+    cache = CompletionReads(store)
+    assert cache.get_plan_for_athlete(PLAN, ATHLETE) == {"id": PLAN}
+    assert cache.list_plan_session_completions(ATHLETE, PLAN, limit=500) == [{"id": "saved-completion"}]
+    assert cache.reconcile_training_engagement_xp(ATHLETE) == [{"awarded": True}]
+    assert cache.reconcile_training_engagement_xp(ATHLETE) == [{"awarded": False}]
+    assert cache.get_plan_for_athlete(PLAN, ATHLETE) == {"id": PLAN}
+    assert cache.list_plan_session_completions(ATHLETE, PLAN, limit=500) == [{"id": "saved-completion"}]
+    assert store.get_plan_for_athlete.call_count == 1
+    assert store.list_plan_session_completions.call_count == 1
