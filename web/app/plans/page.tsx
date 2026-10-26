@@ -28,6 +28,7 @@ import { PlanHistoryRowSkeleton } from "@/components/skeleton";
 import { useToast } from "@/components/toast-provider";
 import { ApiError, getActivePlan, getToday, listCustomPlans, listPlans, setActivePlan } from "@/lib/api";
 import { describeLoadFailure } from "@/lib/connectivity";
+import { SHARED_READ_MAX_AGE_MS } from "@/lib/shared-reads";
 import { getOptionLabels, TACTICAL_STYLE_OPTIONS } from "@/lib/intake-options";
 import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { requestXpRefresh } from "@/lib/xp-events";
@@ -222,7 +223,8 @@ export default function PlansPage() {
     const token = session?.access_token;
     if (!token) return;
     let cancelled = false;
-    getToday(token)
+    // A label only, so a Today view read moments ago by Home is enough.
+    getToday(token, { reuseForMs: SHARED_READ_MAX_AGE_MS })
       .then((command) => {
         const planId = command.active_plan?.id;
         const rawPhase = command.active_plan?.phase;

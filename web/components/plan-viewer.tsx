@@ -22,6 +22,7 @@ import {
   submitManualStage2,
 } from "@/lib/api";
 import { requestXpRefresh } from "@/lib/xp-events";
+import { SHARED_READ_MAX_AGE_MS } from "@/lib/shared-reads";
 import {
   type ActivePlanOverlapAction,
   canSetActivePlan,
@@ -1982,9 +1983,11 @@ export function PlanViewer({
       ? getPlanCompletions(accessToken, plan.plan_id)
       : Promise.resolve(null);
 
+    // The active label and "Open Today" link may reuse reads from the screen the
+    // athlete came from; Today itself re-reads before any training action.
     Promise.allSettled([
-      getActivePlan(accessToken),
-      getToday(accessToken),
+      getActivePlan(accessToken, { reuseForMs: SHARED_READ_MAX_AGE_MS }),
+      getToday(accessToken, { reuseForMs: SHARED_READ_MAX_AGE_MS }),
       completionsRequest,
     ]).then(([activeResult, todayResult, completionsResult]) => {
         if (cancelled) {

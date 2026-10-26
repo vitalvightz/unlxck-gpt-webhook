@@ -3,12 +3,17 @@ import assert from "node:assert/strict";
 import "../test-dom";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
+import { applyExerciseChange, getPlan, submitTodayInjuryCheckin } from "@/lib/api";
+import type { TodayInjuryCheckinRequest } from "@/lib/types";
+import { XP_REFRESH_EVENT } from "@/lib/xp-events";
 import { useTodayCommand, type TodayCommand } from "./use-today-command";
 
 test("an older Today response cannot overwrite a refresh after an injury update", async () => {
   const originalFetch = globalThis.fetch;
   const pending: Array<(response: Response) => void> = [];
-  globalThis.fetch = (() => new Promise<Response>(resolve => pending.push(resolve))) as typeof fetch;
+  globalThis.fetch = ((_url: string, init?: RequestInit) => init?.method === "POST"
+    ? Promise.resolve(new Response(JSON.stringify({}), { status: 200 }))
+    : new Promise<Response>(resolve => pending.push(resolve))) as typeof fetch;
   const container = document.createElement("div");
   const root = createRoot(container);
   let current: TodayCommand;
@@ -22,6 +27,8 @@ test("an older Today response cannot overwrite a refresh after an injury update"
   try {
     await act(async () => { root.render(<Probe />); });
     assert.equal(pending.length, 1);
+    // The update is a write, so the refresh cannot join the earlier read.
+    await submitTodayInjuryCheckin("test-token", {} as TodayInjuryCheckinRequest);
     let refreshed: Promise<void>;
     await act(async () => { refreshed = current!.refresh(); });
     assert.equal(pending.length, 2);
@@ -162,6 +169,47 @@ test("a failed post-save refresh keeps entries with an error and a later refresh
     assert.equal(current!.error, null);
     assert.equal(current!.state?.today.recommendation_reason, "After training");
   } finally {
+    await act(async () => { root.unmount(); });
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("opening Today reuses the plan Home just read and leaves XP alone; refreshes and changes read fresh", async () => {
+  const originalFetch = globalThis.fetch;
+  const reads: string[] = [];
+  globalThis.fetch = (async (url: string, init?: RequestInit) => {
+    const path = new URL(String(url), "http://127.0.0.1").pathname;
+    if (init?.method && init.method !== "GET") return new Response(JSON.stringify({}));
+    reads.push(path);
+    return new Response(JSON.stringify(path === "/api/today"
+      ? { active_plan: { id: "plan-1" }, today: { training_day: "2026-10-07" }, open_injuries: [], risk_watch: [] }
+      : { outputs: {}, created_at: `read-${reads.length}` }));
+  }) as typeof fetch;
+  let xpRefreshes = 0;
+  const onXp = () => { xpRefreshes += 1; };
+  window.addEventListener(XP_REFRESH_EVENT, onXp);
+  const root = createRoot(document.createElement("div"));
+  let current: TodayCommand;
+  function Probe() { current = useTodayCommand("navigation-token"); return null; }
+  const settle = () => act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+  try {
+    await getPlan("navigation-token", "plan-1"); // Home's countdown read.
+    await act(async () => { root.render(<Probe />); });
+    await settle();
+    assert.deepEqual(reads, ["/api/plans/plan-1", "/api/today"]);
+    assert.equal(current!.planSchedule.createdAt, "read-1");
+    assert.equal(xpRefreshes, 0);
+    // A refresh the screen asks for (after a save) still refreshes XP.
+    await act(async () => { await current!.refresh(); });
+    assert.equal(xpRefreshes, 1);
+    // An exercise change is a write; the plan is read again past every cache.
+    await applyExerciseChange("navigation-token", "plan-1", {} as never);
+    await act(async () => { current!.patchSession("2026-10-07", null); });
+    await settle();
+    assert.equal(reads.filter(path => path === "/api/plans/plan-1").length, 2);
+    assert.equal(current!.planSchedule.createdAt, `read-${reads.lastIndexOf("/api/plans/plan-1") + 1}`);
+  } finally {
+    window.removeEventListener(XP_REFRESH_EVENT, onXp);
     await act(async () => { root.unmount(); });
     globalThis.fetch = originalFetch;
   }

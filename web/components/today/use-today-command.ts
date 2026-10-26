@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getPlan, getToday } from "@/lib/api";
+import { SHARED_READ_MAX_AGE_MS } from "@/lib/shared-reads";
 import { buildStructuredPlanFromText } from "@/lib/plan-text-adapter";
 import { patchPlanSession } from "@/lib/exercise-customisation";
 import { shouldRenderStructuredPlan } from "@/lib/structured-plan";
@@ -99,8 +100,12 @@ export function useTodayCommand(token: string | null): TodayCommand {
   const loadedPlanId = useRef<string | null>(null);
   const presentation = useRef<{ token: string; key: string; loadedAt: number } | null>(null);
   const pendingPlan = useRef<{ token: string; key: string; promise: Promise<PlanDetail | null> } | null>(null);
+  // Set by an exercise change: the next plan read must reach the server.
+  const planChanged = useRef(false);
 
-  const refresh = useCallback(async () => {
+  // `explicit` marks a refresh the screen asked for, normally after a write.
+  // Opening Today awards nothing, so only those refresh XP.
+  const load = useCallback(async (explicit: boolean) => {
     if (!token) {
       return;
     }
@@ -115,7 +120,7 @@ export function useTodayCommand(token: string | null): TodayCommand {
       // prescription in nextState remains authoritative for training actions.
       setState(nextState);
       setError(null);
-      requestXpRefresh();
+      if (explicit) requestXpRefresh();
       if (loadedPlanId.current !== activePlanId) {
         setStructuredPlan(null);
         setPlanSchedule(EMPTY_PLAN_SCHEDULE);
@@ -141,7 +146,12 @@ export function useTodayCommand(token: string | null): TodayCommand {
           try {
             let pending = pendingPlan.current;
             if (pending?.token !== token || pending.key !== key) {
-              pending = { token, key, promise: getPlan(token, activePlanId).catch(() => null) };
+              // Opening Today may reuse the plan Home read seconds ago. Once this
+              // screen has shown blocks, any change of plan, day or injuries,
+              // an expired presentation or an exercise change reads it fresh.
+              const reuseForMs = presentation.current || planChanged.current ? 0 : SHARED_READ_MAX_AGE_MS;
+              planChanged.current = false;
+              pending = { token, key, promise: getPlan(token, activePlanId, { reuseForMs }).catch(() => null) };
               pendingPlan.current = pending;
             }
             const detail = await pending.promise;
@@ -180,6 +190,8 @@ export function useTodayCommand(token: string | null): TodayCommand {
     }
   }, [token]);
 
+  const refresh = useCallback(() => load(true), [load]);
+
   // An athlete's swap / add / remove: show the server's effective session at
   // once, then reload the plan past the presentation cache so every other
   // date a recurring change touches catches up.
@@ -187,15 +199,16 @@ export function useTodayCommand(token: string | null): TodayCommand {
     if (session) setStructuredPlan((current) => patchPlanSession(current, date, session));
     presentation.current = null;
     pendingPlan.current = null;
+    planChanged.current = true;
     void refresh();
   }, [refresh]);
 
   useEffect(() => {
     const sequenceCounter = refreshSequence;
     let cancelled = false;
-    void Promise.resolve().then(() => { if (!cancelled) void refresh(); });
+    void Promise.resolve().then(() => { if (!cancelled) void load(false); });
     return () => { cancelled = true; sequenceCounter.current++; };
-  }, [refresh]);
+  }, [load]);
 
   return {
     state,

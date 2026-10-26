@@ -12,6 +12,7 @@ import { PlanViewer } from "@/components/plan-viewer";
 import { LogTraining } from "@/components/log-training";
 import { ApiError, getPlan, trackProductEvent } from "@/lib/api";
 import { isNetworkFailure } from "@/lib/connectivity";
+import { SHARED_READ_MAX_AGE_MS } from "@/lib/shared-reads";
 import type { PlanDetail } from "@/lib/types";
 
 // Right after generation completes the app redirects straight to
@@ -117,7 +118,8 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
     const loadPlan = async () => {
       for (let attempt = 1; attempt <= PLAN_LOAD_MAX_ATTEMPTS; attempt += 1) {
         try {
-          const loaded = await getPlan(token, planId);
+          // Failed reads are never held, so a retry always reaches the server.
+          const loaded = await getPlan(token, planId, { reuseForMs: SHARED_READ_MAX_AGE_MS });
           if (!cancelled) {
             setPlan(loaded);
             void trackProductEvent(token, "plan_opened", "plans", undefined, loaded.plan_id);
