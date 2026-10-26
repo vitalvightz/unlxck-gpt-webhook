@@ -161,6 +161,9 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       clearRetryTimer();
       setHasTransientMeError(false);
       setMe(nextMe);
+      // Set now, not after the render commits: the auth-change and getSession
+      // paths both load at startup, and the later one must see this result.
+      latestMeRef.current = nextMe;
       hydratedAccessTokenRef.current = nextSession.access_token;
       setSession(nextSession);
     } catch (err) {

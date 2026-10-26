@@ -139,7 +139,7 @@ export const screens = {
   today: (page: Page) => page.getByRole("button", { name: TODAY_BLOCK, exact: false }).first(),
   plans: (page: Page) => page.getByRole("heading", { name: /camp/i, level: 2 }).first(),
   plansReady: (page: Page) => page.locator(`a[href^="/plans/"]`).filter({ hasText: /view|open/i }).first(),
-  viewer: (page: Page) => page.getByRole("heading", { level: 1 }).first(),
+  viewer: (page: Page) => page.getByRole("heading", { level: 1, name: /camp/i }).first(),
   viewerReady: (page: Page) => page.getByRole("link", { name: /Open Today|Open next session/ }).first(),
   history: (page: Page) => page.getByRole("button", { name: /View Boxing details/ }).first(),
   details: (page: Page) => page.getByRole("dialog"),
@@ -160,23 +160,27 @@ export type StepResult = {
 };
 
 type Mock = Awaited<ReturnType<typeof mockAthlete>>;
-type Step = { journey: string; act: (page: Page) => Promise<unknown>; useful: (page: Page) => ReturnType<Page["locator"]>; ready: (page: Page) => ReturnType<Page["locator"]>; settleMs?: number };
+type Step = { journey: string; url: RegExp; act: (page: Page) => Promise<unknown>; useful: (page: Page) => ReturnType<Page["locator"]>; ready: (page: Page) => ReturnType<Page["locator"]>; settleMs?: number };
+
+// Every step waits for its own route first, so no locator can match the
+// screen being left.
+const URLS = { home: /\/$/, today: /\/today$/, plans: /\/plans$/, viewer: /\/plans\/[0-9a-f-]{36}$/, history: /\/history$/ };
 
 const planLink = (page: Page) => page.locator(`main a[href="/plans/${PRIMARY.planId}"]`).first();
 
 /** The central athlete workflow, in the order an athlete moves through it. */
 export const CORE_JOURNEY: Step[] = [
   // Startup checks deliberately deferred by ~1s still belong to startup.
-  { journey: "Login → Home", act: page => page.goto("/"), useful: screens.home, ready: screens.homeReady, settleMs: 1_500 },
-  { journey: "Home → Today", act: page => navigate(page, "Today"), useful: screens.today, ready: screens.today },
-  { journey: "Today → Viewer", act: page => planLink(page).click(), useful: screens.viewer, ready: screens.viewerReady },
-  { journey: "Viewer → Today", act: page => screens.viewerReady(page).click(), useful: screens.today, ready: screens.today },
-  { journey: "Today → Home", act: page => navigate(page, "Home"), useful: screens.home, ready: screens.homeReady },
-  { journey: "Home → Plans", act: page => navigate(page, "Plans"), useful: page => planLink(page), ready: page => planLink(page) },
-  { journey: "Plans → Viewer", act: page => planLink(page).click(), useful: screens.viewer, ready: screens.viewerReady },
-  { journey: "Viewer → History", act: page => navigate(page, "History"), useful: screens.history, ready: screens.history },
-  { journey: "History → Details", act: page => screens.history(page).click(), useful: screens.details, ready: screens.details },
-  { journey: "History → Home (return)", act: async page => { await page.keyboard.press("Escape"); await navigate(page, "Home"); }, useful: screens.home, ready: screens.homeReady },
+  { journey: "Login → Home", url: URLS.home, act: page => page.goto("/"), useful: screens.home, ready: screens.homeReady, settleMs: 1_500 },
+  { journey: "Home → Today", url: URLS.today, act: page => navigate(page, "Today"), useful: screens.today, ready: screens.today },
+  { journey: "Today → Viewer", url: URLS.viewer, act: page => planLink(page).click(), useful: screens.viewer, ready: screens.viewerReady },
+  { journey: "Viewer → Today", url: URLS.today, act: page => screens.viewerReady(page).click(), useful: screens.today, ready: screens.today },
+  { journey: "Today → Home", url: URLS.home, act: page => navigate(page, "Home"), useful: screens.home, ready: screens.homeReady },
+  { journey: "Home → Plans", url: URLS.plans, act: page => navigate(page, "Plans"), useful: page => planLink(page), ready: page => planLink(page) },
+  { journey: "Plans → Viewer", url: URLS.viewer, act: page => planLink(page).click(), useful: screens.viewer, ready: screens.viewerReady },
+  { journey: "Viewer → History", url: URLS.history, act: page => navigate(page, "History"), useful: screens.history, ready: screens.history },
+  { journey: "History → Details", url: URLS.history, act: page => screens.history(page).click(), useful: screens.details, ready: screens.details },
+  { journey: "History → Home (return)", url: URLS.home, act: async page => { await page.keyboard.press("Escape"); await navigate(page, "Home"); }, useful: screens.home, ready: screens.homeReady },
 ];
 
 /** Runs each step, timing visible/usable content and the API calls it caused. */
@@ -186,6 +190,7 @@ export async function runJourney(page: Page, api: Mock, steps = CORE_JOURNEY): P
     const first = api.calls.length;
     const started = Date.now();
     await step.act(page);
+    await page.waitForURL(step.url);
     await step.useful(page).waitFor({ state: "visible" });
     const usefulMs = Date.now() - started;
     await step.ready(page).waitFor({ state: "visible" });

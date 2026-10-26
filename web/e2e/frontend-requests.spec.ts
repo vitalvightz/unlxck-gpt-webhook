@@ -6,6 +6,9 @@ const plan = `/api/plans/${PRIMARY.planId}`;
 const paths = (step: StepResult) => step.requests.map(({ method, path }) => `${method} ${path}`);
 const byJourney = (steps: StepResult[]) => Object.fromEntries(steps.map(step => [step.journey, paths(step)]));
 
+// Entrance motion is irrelevant to request counts and makes clicks wait.
+test.use({ contextOptions: { reducedMotion: "reduce" } });
+
 test.describe("frontend request budget", () => {
   test("central athlete journey reuses fresh reads and repeats none", async ({ page, baseURL }) => {
     test.setTimeout(90_000);
@@ -85,7 +88,7 @@ test.describe("frontend request benchmark", () => {
     test.setTimeout(runs * 120_000);
     const results: StepResult[][] = [];
     for (let run = 0; run < runs; run += 1) {
-      const context = await browser.newContext();
+      const context = await browser.newContext({ reducedMotion: "reduce" });
       const page = await context.newPage();
       const api = await mockAthlete(page, baseURL!, { latencyMs });
       results.push(await runJourney(page, api, CORE_JOURNEY));
