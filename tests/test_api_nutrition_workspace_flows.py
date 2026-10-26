@@ -251,3 +251,95 @@ def test_admin_nutrition_workspace_update_allows_coach_control_fields():
     assert controls["protein_floor_g_per_kg"] == 2.0
     assert controls["fight_week_manual_mode"] is True
     assert controls["water_cut_locked_to_manual"] is True
+
+
+def _put_bodyweight_log(client, workspace: dict, entries: list[dict]) -> dict:
+    response = client.put(
+        "/api/nutrition/current",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={
+            "nutrition_profile": workspace["nutrition_profile"],
+            "shared_camp_context": workspace["shared_camp_context"],
+            "s_and_c_preferences": workspace["s_and_c_preferences"],
+            "nutrition_readiness": workspace["nutrition_readiness"],
+            "nutrition_monitoring": {"daily_bodyweight_log": entries},
+            "nutrition_coach_controls": workspace["nutrition_coach_controls"],
+        },
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def _intake_weight(store) -> float:
+    return store.get_latest_intake("athlete-1")["intake"]["athlete"]["weight_kg"]
+
+
+MONDAY = {"date": "2099-03-02", "weight_kg": 71.8, "time": "07:00", "is_fasted": True, "notes": None}
+WEDNESDAY = {"date": "2099-03-04", "weight_kg": 71.2, "time": "07:05", "is_fasted": True, "notes": None}
+
+
+def test_a_new_weigh_in_becomes_the_camp_current_weight():
+    client, store, _ = _build_client()
+    client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+    store.create_intake("athlete-1", _build_request({}))
+    assert _intake_weight(store) == 72.5
+
+    workspace = _put_bodyweight_log(client, _get_current_workspace(client), [MONDAY])
+
+    assert workspace["shared_camp_context"]["current_weight_kg"] == 71.8
+    assert workspace["shared_camp_context"]["current_weight_source"] == "latest_bodyweight_log"
+    assert workspace["shared_camp_context"]["current_weight_recorded_at"] == "2099-03-02T07:00"
+    # Camp Setup, the next plan and the cut maths read the stored intake weight.
+    assert _intake_weight(store) == 71.8
+    assert workspace["derived"]["weight_cut_pct"] == 2.5
+
+
+def test_editing_or_deleting_the_newest_weigh_in_moves_the_current_weight():
+    client, store, _ = _build_client()
+    client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+    store.create_intake("athlete-1", _build_request({}))
+    workspace = _put_bodyweight_log(client, _get_current_workspace(client), [MONDAY, WEDNESDAY])
+    assert _intake_weight(store) == 71.2
+
+    workspace = _put_bodyweight_log(client, workspace, [MONDAY, {**WEDNESDAY, "weight_kg": 71.4}])
+    assert _intake_weight(store) == 71.4
+
+    workspace = _put_bodyweight_log(client, workspace, [MONDAY])
+    assert _intake_weight(store) == 71.8
+    assert workspace["shared_camp_context"]["current_weight_kg"] == 71.8
+
+    # An emptied log keeps the last known weight rather than clearing it.
+    workspace = _put_bodyweight_log(client, workspace, [])
+    assert _intake_weight(store) == 71.8
+
+
+def test_tidying_older_weigh_ins_keeps_a_weight_set_later_in_camp_setup():
+    client, store, _ = _build_client()
+    client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+    store.create_intake("athlete-1", _build_request({}))
+    _put_bodyweight_log(client, _get_current_workspace(client), [MONDAY, WEDNESDAY])
+
+    intake = store.get_latest_intake("athlete-1")
+    camp_setup = {**intake["intake"], "athlete": {**intake["intake"]["athlete"], "weight_kg": 70.9}}
+    store.update_intake(intake["id"], intake=camp_setup, fight_date=intake["fight_date"], technical_style=["boxing"])
+
+    workspace = _get_current_workspace(client)
+    assert workspace["shared_camp_context"]["current_weight_kg"] == 70.9
+    _put_bodyweight_log(client, workspace, [{**MONDAY, "notes": "after travel"}, WEDNESDAY])
+
+    assert _intake_weight(store) == 70.9
+
+
+def test_workspace_reports_the_canonical_weight_cut_band_for_adults():
+    client, store, _ = _build_client()
+    client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+    store.create_intake(
+        "athlete-1",
+        _build_request({"athlete": {**_build_request({}).athlete.model_dump(mode="json"), "weight_kg": 80.0, "target_weight_kg": 74.0}}),
+    )
+
+    derived = _get_current_workspace(client)["derived"]
+
+    assert derived["weight_cut_pct"] == 7.5
+    assert derived["weight_cut_risk_band"] == "severe"
+    assert derived["weight_cut_supervision_required"] is True

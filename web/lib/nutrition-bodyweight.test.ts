@@ -5,7 +5,6 @@ import {
   formatWeightDelta,
   getBodyweightEntriesWithIndex,
   getBodyweightTrend,
-  getSevenDayAverage,
   getTargetGap,
   getTrendChange,
 } from "./nutrition-bodyweight.ts";
@@ -48,8 +47,7 @@ test("formats weight changes with a sign", () => {
   assert.equal(formatWeightDelta(null), "--");
 });
 
-test("calculates 7-entry average and target gap", () => {
-  assert.equal(getSevenDayAverage(entries), 74);
+test("calculates target gap", () => {
   assert.equal(getTargetGap(73.4, 70), 3.4);
   assert.equal(getTargetGap(null, 70), null);
 });

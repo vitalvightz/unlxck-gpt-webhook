@@ -795,10 +795,25 @@ class NutritionSharedCampContext(BaseModel):
         return cleaned
 
 
+class NutritionBodyweightTrendPoint(BaseModel):
+    """One day's scale reading and the smoothed trend through it (an estimate)."""
+
+    date: str
+    scale_weight_kg: float
+    trend_weight_kg: float
+
+
+WeightCutRiskBand = Literal["none", "moderate", "high", "severe"]
+
+
 class NutritionDerivedState(BaseModel):
     days_until_fight: int | None = None
     weight_cut_pct: float = 0.0
     weight_cut_risk: bool = False
+    # Canonical athlete-facing band and supervision flag from fightcamp.weight_cut,
+    # the same reading the plan's nutrition block uses. Always none/False for a minor.
+    weight_cut_risk_band: WeightCutRiskBand = "none"
+    weight_cut_supervision_required: bool = False
     aggressive_weight_cut: bool = False
     high_pressure_weight_cut: bool = False
     short_notice: bool = False
@@ -806,7 +821,12 @@ class NutritionDerivedState(BaseModel):
     readiness_flags: list[str] = Field(default_factory=list)
     fight_week_override_band: FightWeekOverrideBand = "none"
     current_phase_effective: str | None = None
+    # Mean of one reading per day over today and the six days before it.
     rolling_7_day_average_weight: float | None = None
+    rolling_7_day_weigh_in_days: int = 0
+    # kg per week over the last four weeks; None until two weeks of readings exist.
+    weekly_pace_kg: float | None = None
+    bodyweight_trend: list[NutritionBodyweightTrendPoint] = Field(default_factory=list)
     foundation_status: FoundationStatus = "incomplete"
     missing_required_fields: list[str] = Field(default_factory=list)
 

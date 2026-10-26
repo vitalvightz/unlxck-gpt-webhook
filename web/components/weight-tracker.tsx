@@ -21,14 +21,13 @@ import {
   getBodyweightEntriesWithIndex,
   getBodyweightTrend,
   getLatestEffectiveWeight,
-  getSevenDayAverage,
   getTargetGap,
   getTrendChange,
 } from "@/lib/nutrition-bodyweight";
 import { localDateValue, localTimeValue, toNumber, toUpdateRequest } from "@/lib/nutrition-workspace";
 import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 import { WEIGHT_CUT_SAFETY } from "@/lib/safety-copy";
-import type { NutritionBodyweightLogEntry, NutritionWorkspaceState } from "@/lib/types";
+import type { NutritionBodyweightLogEntry, NutritionDerivedState, NutritionWorkspaceState } from "@/lib/types";
 import sheet from "./session-details.module.css";
 import progress from "./training-progress.module.css";
 import summary from "./training-summary.module.css";
@@ -52,6 +51,21 @@ function describeGap(gap: number): { value: string; label: string; tone?: "green
 
 function describeDaysOut(days: number): string {
   return days === 0 ? "Today" : `${days}`;
+}
+
+/**
+ * The plan's own weight-cut band, read from the API, never recalculated here.
+ * Only an escalated cut (high or severe) earns a warning; the copy names who
+ * should oversee it and never says how to cut.
+ */
+function cutWarning(derived: NutritionDerivedState): string | null {
+  const band = derived.weight_cut_risk_band ?? "none";
+  if (band !== "high" && band !== "severe" && !derived.weight_cut_supervision_required) return null;
+  const days = derived.days_until_fight;
+  const context = `${derived.weight_cut_pct.toFixed(1)}% of your bodyweight to target${days != null && days >= 0 ? ` with ${plural(days, "day")} to go` : ""}`;
+  return band === "severe"
+    ? `Severe weight cut: ${context}. Don't attempt this without your coach or a medical professional overseeing it.`
+    : `High-strain weight cut: ${context}. A cut like this needs supervision from your coach or a qualified practitioner.`;
 }
 
 export function WeightTracker() {
@@ -105,8 +119,11 @@ export function WeightTracker() {
   const latestWeight = workspace ? getLatestEffectiveWeight(workspace) : null;
   const targetKg = isMinorAthlete ? null : (workspace?.shared_camp_context.target_weight_kg ?? null);
   const gap = getTargetGap(latestWeight, targetKg);
-  const average = getSevenDayAverage(entries);
-  const daysOut = workspace?.derived.days_until_fight ?? null;
+  const derived = workspace?.derived ?? null;
+  const average = derived?.rolling_7_day_average_weight ?? null;
+  const pace = derived?.weekly_pace_kg ?? null;
+  const daysOut = derived?.days_until_fight ?? null;
+  const warning = derived && !isMinorAthlete ? cutWarning(derived) : null;
   const trend = getBodyweightTrend(entries, range);
   const trendChange = getTrendChange(trend);
   const keyOf = (entry: (typeof newestFirst)[number]) => createBodyweightEntryKey(entry, entry.sourceIndex);
@@ -115,10 +132,16 @@ export function WeightTracker() {
   // Change from the weigh-in before each one, across the whole log.
   const previousOf = (entry: (typeof newestFirst)[number]) => newestFirst[newestFirst.findIndex(item => item.sourceIndex === entry.sourceIndex) + 1] ?? null;
   const selectedPrevious = selected ? previousOf(selected) : null;
+  // The smoothed trend for the days in range; absent from an older API.
+  const trendLine = trend.length
+    ? (derived?.bodyweight_trend ?? []).filter(point => point.date >= trend[0].date && point.date <= trend[trend.length - 1].date)
+    : [];
+  const selectedTrend = selected ? trendLine.find(point => point.date === selected.date) ?? null : null;
   const listed = showAll ? newestFirst : newestFirst.slice(0, LIST_PAGE);
   const tiles = [
     ...(gap != null ? [describeGap(gap)] : []),
-    { value: average != null ? average.toFixed(1) : "--", label: "7-entry average" },
+    { value: average != null ? average.toFixed(1) : "--", label: "7-day average" },
+    ...(pace != null ? [{ value: formatWeightDelta(pace), label: "Per week" }] : []),
     ...(daysOut != null && daysOut >= 0 ? [{ value: describeDaysOut(daysOut), label: daysOut === 0 ? "Fight day" : daysOut === 1 ? "Day to fight" : "Days to fight" }] : []),
   ];
   const editingEntry = editing?.mode === "edit" ? entries[editing.sourceIndex] ?? null : null;
@@ -157,7 +180,7 @@ export function WeightTracker() {
                     <strong>{latest.weight_kg.toFixed(1)}</strong>
                     <span>kg<br />{latest.is_fasted == null ? "Latest weigh-in" : `${formatFastedState(latest.is_fasted)} weigh-in`}</span>
                   </div>
-                  <dl className={`history-summary-stats ${summary.stats}`} style={{ "--stat-count": tiles.length } as CSSProperties}>
+                  <dl className={`history-summary-stats ${summary.stats}`} style={{ "--stat-count": tiles.length > 3 ? 2 : tiles.length } as CSSProperties}>
                     {tiles.map(tile => <div key={tile.label}><dt>{tile.label}</dt><dd data-tone={"tone" in tile ? tile.tone : undefined}>{tile.value}</dd></div>)}
                   </dl>
                   {!isMinorAthlete && targetKg == null ? (
@@ -175,6 +198,8 @@ export function WeightTracker() {
               </button>
             </section>
 
+            {warning ? <SafetyNote tone="warning">{warning}</SafetyNote> : null}
+
             {trend.length ? (
               <section className={`history-summary ${styles.card}`} aria-label="Weight trend">
                 <div className={summary.head}>
@@ -191,7 +216,7 @@ export function WeightTracker() {
                   <div className={progress.selectedRecord} aria-live="polite" aria-label="Selected weigh-in">
                     <p><strong data-weight="">{formatWeight(selected.weight_kg)}</strong>
                       {selectedPrevious ? <span className={styles.change}>{formatWeightDelta(Math.round((selected.weight_kg - selectedPrevious.weight_kg) * 10) / 10)} vs previous</span> : null}</p>
-                    <p className={progress.note}>{[formatAppDate(selected.date), selected.time, selected.is_fasted == null ? null : formatFastedState(selected.is_fasted)].filter(Boolean).join(" · ")}</p>
+                    <p className={progress.note}>{[formatAppDate(selected.date), selected.time, selected.is_fasted == null ? null : formatFastedState(selected.is_fasted), selectedTrend ? `Trend ${formatWeight(selectedTrend.trend_weight_kg)}` : null].filter(Boolean).join(" · ")}</p>
                     <button type="button" className={progress.textButton} onClick={() => setEditing({ mode: "edit", sourceIndex: selected.sourceIndex })}>Edit weigh-in <span aria-hidden="true">→</span></button>
                   </div>
                 ) : null}
@@ -200,11 +225,17 @@ export function WeightTracker() {
                   {trendChange != null ? ` · ${trendChange === 0 ? "No change" : `${trendChange < 0 ? "Down" : "Up"} ${Math.abs(trendChange).toFixed(1)} kg`} since ${formatAppDate(trend[0].date)}` : ""}
                 </p>
                 {trend.length >= 2 ? (
-                  <WeightTrendChart trend={trend} targetKg={targetKg} selectedIndex={selectedKey ? selectedIndex : trend.length - 1}
+                  <WeightTrendChart trend={trend} trendLine={trendLine} targetKg={targetKg} selectedIndex={selectedKey ? selectedIndex : trend.length - 1}
                     onSelect={index => setSelectedKey(keyOf(trend[index]))} />
                 ) : (
                   <p className={progress.note}>Log one more weigh-in to see your trend line.</p>
                 )}
+                <details className={progress.about}>
+                  <summary>About these numbers</summary>
+                  <p>Your weight is the scale reading you logged. Weight swings from day to day with water, food and training, so the trend line smooths those swings into an estimate of where your weight is heading. It is not an official weigh-in.</p>
+                  <p>The trend, 7-day average and weekly pace use one reading per day: your earliest fasted weigh-in, or your earliest weigh-in if none was fasted.</p>
+                  <p>Weekly pace appears once you have at least six weigh-in days spanning two weeks, with one in the last week.</p>
+                </details>
               </section>
             ) : null}
 
