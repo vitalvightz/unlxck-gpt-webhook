@@ -1,0 +1,2936 @@
+{
+  "source": "synthetic-existing-test-workflows",
+  "repetitions": 10,
+  "clock": "Fixture-relative training day; uses wall clock, not production observations",
+  "boundaries": "Test call, excluding pytest fixture setup/teardown; includes assertions and local fixture construction inside test bodies",
+  "scenarios": [
+    {
+      "scenario": "tests/test_api_rehab_completion_flow.py::TestPendingPromptRehydration::test_successful_answer_removes_prompt_using_canonical_exposures",
+      "runs": [
+        {
+          "scenario": "tests/test_api_rehab_completion_flow.py::TestPendingPromptRehydration::test_successful_answer_removes_prompt_using_canonical_exposures",
+          "store_method_calls": {
+            "ensure_profile": 4,
+            "list_injury_flags": 7,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 3,
+            "get_training_plan_for_athlete": 2,
+            "get_plan_for_athlete": 5,
+            "list_today_checkins_for_day": 2,
+            "list_injury_episode_events": 3,
+            "list_today_checkins": 4,
+            "get_session_completion": 2,
+            "get_active_plan_id": 4,
+            "get_latest_intake": 1,
+            "get_today_checkin": 1,
+            "list_session_completions_from_day": 1,
+            "list_rehab_schedule_completions": 1,
+            "list_rehab_exposures": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1,
+            "list_session_logs": 1,
+            "get_athlete_streaks": 1,
+            "list_plan_session_completions": 2,
+            "get_injury_flag_for_athlete": 2,
+            "list_rehab_exposures_by_ids": 3,
+            "get_plan_identity_for_athlete": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 171.2453809999488,
+              "decoded_body_bytes": 1642
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 100.4607270000406,
+              "decoded_body_bytes": 1091
+            },
+            {
+              "operation": "rehab-responses",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 6.420192000007319,
+              "decoded_body_bytes": 129
+            },
+            {
+              "operation": "pending",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 4.183151999995971,
+              "decoded_body_bytes": 46
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 282.5423929999715
+        },
+        {
+          "scenario": "tests/test_api_rehab_completion_flow.py::TestPendingPromptRehydration::test_successful_answer_removes_prompt_using_canonical_exposures",
+          "store_method_calls": {
+            "ensure_profile": 4,
+            "list_injury_flags": 7,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 3,
+            "get_training_plan_for_athlete": 2,
+            "get_plan_for_athlete": 5,
+            "list_today_checkins_for_day": 2,
+            "list_injury_episode_events": 3,
+            "list_today_checkins": 4,
+            "get_session_completion": 2,
+            "get_active_plan_id": 4,
+            "get_latest_intake": 1,
+            "get_today_checkin": 1,
+            "list_session_completions_from_day": 1,
+            "list_rehab_schedule_completions": 1,
+            "list_rehab_exposures": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1,
+            "list_session_logs": 1,
+            "get_athlete_streaks": 1,
+            "list_plan_session_completions": 2,
+            "get_injury_flag_for_athlete": 2,
+            "list_rehab_exposures_by_ids": 3,
+            "get_plan_identity_for_athlete": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 279.0660750000029,
+              "decoded_body_bytes": 1642
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 139.83962599996858,
+              "decoded_body_bytes": 1091
+            },
+            {
+              "operation": "rehab-responses",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 6.045164000056502,
+              "decoded_body_bytes": 129
+            },
+            {
+              "operation": "pending",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 44.69685899999831,
+              "decoded_body_bytes": 46
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 469.8174900000254
+        },
+        {
+          "scenario": "tests/test_api_rehab_completion_flow.py::TestPendingPromptRehydration::test_successful_answer_removes_prompt_using_canonical_exposures",
+          "store_method_calls": {
+            "ensure_profile": 4,
+            "list_injury_flags": 7,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 3,
+            "get_training_plan_for_athlete": 2,
+            "get_plan_for_athlete": 5,
+            "list_today_checkins_for_day": 2,
+            "list_injury_episode_events": 3,
+            "list_today_checkins": 4,
+            "get_session_completion": 2,
+            "get_active_plan_id": 4,
+            "get_latest_intake": 1,
+            "get_today_checkin": 1,
+            "list_session_completions_from_day": 1,
+            "list_rehab_schedule_completions": 1,
+            "list_rehab_exposures": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1,
+            "list_session_logs": 1,
+            "get_athlete_streaks": 1,
+            "list_plan_session_completions": 2,
+            "get_injury_flag_for_athlete": 2,
+            "list_rehab_exposures_by_ids": 3,
+            "get_plan_identity_for_athlete": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 380.2662440000404,
+              "decoded_body_bytes": 1642
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 168.10401400005048,
+              "decoded_body_bytes": 1091
+            },
+            {
+              "operation": "rehab-responses",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 7.490706999988106,
+              "decoded_body_bytes": 129
+            },
+            {
+              "operation": "pending",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 4.565940000020419,
+              "decoded_body_bytes": 46
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 560.5997659999957
+        },
+        {
+          "scenario": "tests/test_api_rehab_completion_flow.py::TestPendingPromptRehydration::test_successful_answer_removes_prompt_using_canonical_exposures",
+          "store_method_calls": {
+            "ensure_profile": 4,
+            "list_injury_flags": 7,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 3,
+            "get_training_plan_for_athlete": 2,
+            "get_plan_for_athlete": 5,
+            "list_today_checkins_for_day": 2,
+            "list_injury_episode_events": 3,
+            "list_today_checkins": 4,
+            "get_session_completion": 2,
+            "get_active_plan_id": 4,
+            "get_latest_intake": 1,
+            "get_today_checkin": 1,
+            "list_session_completions_from_day": 1,
+            "list_rehab_schedule_completions": 1,
+            "list_rehab_exposures": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1,
+            "list_session_logs": 1,
+            "get_athlete_streaks": 1,
+            "list_plan_session_completions": 2,
+            "get_injury_flag_for_athlete": 2,
+            "list_rehab_exposures_by_ids": 3,
+            "get_plan_identity_for_athlete": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 254.05990699994163,
+              "decoded_body_bytes": 1642
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 153.07200200004445,
+              "decoded_body_bytes": 1091
+            },
+            {
+              "operation": "rehab-responses",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 8.759589999954187,
+              "decoded_body_bytes": 129
+            },
+            {
+              "operation": "pending",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 5.175575000066601,
+              "decoded_body_bytes": 46
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 421.2471749999622
+        },
+        {
+          "scenario": "tests/test_api_rehab_completion_flow.py::TestPendingPromptRehydration::test_successful_answer_removes_prompt_using_canonical_exposures",
+          "store_method_calls": {
+            "ensure_profile": 4,
+            "list_injury_flags": 7,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 3,
+            "get_training_plan_for_athlete": 2,
+            "get_plan_for_athlete": 5,
+            "list_today_checkins_for_day": 2,
+            "list_injury_episode_events": 3,
+            "list_today_checkins": 4,
+            "get_session_completion": 2,
+            "get_active_plan_id": 4,
+            "get_latest_intake": 1,
+            "get_today_checkin": 1,
+            "list_session_completions_from_day": 1,
+            "list_rehab_schedule_completions": 1,
+            "list_rehab_exposures": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1,
+            "list_session_logs": 1,
+            "get_athlete_streaks": 1,
+            "list_plan_session_completions": 2,
+            "get_injury_flag_for_athlete": 2,
+            "list_rehab_exposures_by_ids": 3,
+            "get_plan_identity_for_athlete": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 147.83745800002634,
+              "decoded_body_bytes": 1642
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 61.16832600002908,
+              "decoded_body_bytes": 1091
+            },
+            {
+              "operation": "rehab-responses",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 5.980378000003839,
+              "decoded_body_bytes": 129
+            },
+            {
+              "operation": "pending",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 5.275867000023027,
+              "decoded_body_bytes": 46
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 220.4215499999691
+        },
+        {
+          "scenario": "tests/test_api_rehab_completion_flow.py::TestPendingPromptRehydration::test_successful_answer_removes_prompt_using_canonical_exposures",
+          "store_method_calls": {
+            "ensure_profile": 4,
+            "list_injury_flags": 7,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 3,
+            "get_training_plan_for_athlete": 2,
+            "get_plan_for_athlete": 5,
+            "list_today_checkins_for_day": 2,
+            "list_injury_episode_events": 3,
+            "list_today_checkins": 4,
+            "get_session_completion": 2,
+            "get_active_plan_id": 4,
+            "get_latest_intake": 1,
+            "get_today_checkin": 1,
+            "list_session_completions_from_day": 1,
+            "list_rehab_schedule_completions": 1,
+            "list_rehab_exposures": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1,
+            "list_session_logs": 1,
+            "get_athlete_streaks": 1,
+            "list_plan_session_completions": 2,
+            "get_injury_flag_for_athlete": 2,
+            "list_rehab_exposures_by_ids": 3,
+            "get_plan_identity_for_athlete": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 243.92829199996413,
+              "decoded_body_bytes": 1642
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 104.4873659999439,
+              "decoded_body_bytes": 1091
+            },
+            {
+              "operation": "rehab-responses",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 18.834281999943414,
+              "decoded_body_bytes": 129
+            },
+            {
+              "operation": "pending",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 8.147592999989683,
+              "decoded_body_bytes": 46
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 375.59041200006504
+        },
+        {
+          "scenario": "tests/test_api_rehab_completion_flow.py::TestPendingPromptRehydration::test_successful_answer_removes_prompt_using_canonical_exposures",
+          "store_method_calls": {
+            "ensure_profile": 4,
+            "list_injury_flags": 7,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 3,
+            "get_training_plan_for_athlete": 2,
+            "get_plan_for_athlete": 5,
+            "list_today_checkins_for_day": 2,
+            "list_injury_episode_events": 3,
+            "list_today_checkins": 4,
+            "get_session_completion": 2,
+            "get_active_plan_id": 4,
+            "get_latest_intake": 1,
+            "get_today_checkin": 1,
+            "list_session_completions_from_day": 1,
+            "list_rehab_schedule_completions": 1,
+            "list_rehab_exposures": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1,
+            "list_session_logs": 1,
+            "get_athlete_streaks": 1,
+            "list_plan_session_completions": 2,
+            "get_injury_flag_for_athlete": 2,
+            "list_rehab_exposures_by_ids": 3,
+            "get_plan_identity_for_athlete": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 140.16629299999295,
+              "decoded_body_bytes": 1642
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 96.66552500004855,
+              "decoded_body_bytes": 1091
+            },
+            {
+              "operation": "rehab-responses",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 6.4249079999854075,
+              "decoded_body_bytes": 129
+            },
+            {
+              "operation": "pending",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 5.590351000023475,
+              "decoded_body_bytes": 46
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 249.02351100001852
+        },
+        {
+          "scenario": "tests/test_api_rehab_completion_flow.py::TestPendingPromptRehydration::test_successful_answer_removes_prompt_using_canonical_exposures",
+          "store_method_calls": {
+            "ensure_profile": 4,
+            "list_injury_flags": 7,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 3,
+            "get_training_plan_for_athlete": 2,
+            "get_plan_for_athlete": 5,
+            "list_today_checkins_for_day": 2,
+            "list_injury_episode_events": 3,
+            "list_today_checkins": 4,
+            "get_session_completion": 2,
+            "get_active_plan_id": 4,
+            "get_latest_intake": 1,
+            "get_today_checkin": 1,
+            "list_session_completions_from_day": 1,
+            "list_rehab_schedule_completions": 1,
+            "list_rehab_exposures": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1,
+            "list_session_logs": 1,
+            "get_athlete_streaks": 1,
+            "list_plan_session_completions": 2,
+            "get_injury_flag_for_athlete": 2,
+            "list_rehab_exposures_by_ids": 3,
+            "get_plan_identity_for_athlete": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 679.6057569999903,
+              "decoded_body_bytes": 1642
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 314.0814700000192,
+              "decoded_body_bytes": 1091
+            },
+            {
+              "operation": "rehab-responses",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 64.16147400000227,
+              "decoded_body_bytes": 129
+            },
+            {
+              "operation": "pending",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 20.33164299996315,
+              "decoded_body_bytes": 46
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 1078.4485570000015
+        },
+        {
+          "scenario": "tests/test_api_rehab_completion_flow.py::TestPendingPromptRehydration::test_successful_answer_removes_prompt_using_canonical_exposures",
+          "store_method_calls": {
+            "ensure_profile": 4,
+            "list_injury_flags": 7,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 3,
+            "get_training_plan_for_athlete": 2,
+            "get_plan_for_athlete": 5,
+            "list_today_checkins_for_day": 2,
+            "list_injury_episode_events": 3,
+            "list_today_checkins": 4,
+            "get_session_completion": 2,
+            "get_active_plan_id": 4,
+            "get_latest_intake": 1,
+            "get_today_checkin": 1,
+            "list_session_completions_from_day": 1,
+            "list_rehab_schedule_completions": 1,
+            "list_rehab_exposures": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1,
+            "list_session_logs": 1,
+            "get_athlete_streaks": 1,
+            "list_plan_session_completions": 2,
+            "get_injury_flag_for_athlete": 2,
+            "list_rehab_exposures_by_ids": 3,
+            "get_plan_identity_for_athlete": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 254.4958000000861,
+              "decoded_body_bytes": 1642
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 168.6880030000566,
+              "decoded_body_bytes": 1091
+            },
+            {
+              "operation": "rehab-responses",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 6.901945999970849,
+              "decoded_body_bytes": 129
+            },
+            {
+              "operation": "pending",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 4.566397999951732,
+              "decoded_body_bytes": 46
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 434.8402000000533
+        },
+        {
+          "scenario": "tests/test_api_rehab_completion_flow.py::TestPendingPromptRehydration::test_successful_answer_removes_prompt_using_canonical_exposures",
+          "store_method_calls": {
+            "ensure_profile": 4,
+            "list_injury_flags": 7,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 3,
+            "get_training_plan_for_athlete": 2,
+            "get_plan_for_athlete": 5,
+            "list_today_checkins_for_day": 2,
+            "list_injury_episode_events": 3,
+            "list_today_checkins": 4,
+            "get_session_completion": 2,
+            "get_active_plan_id": 4,
+            "get_latest_intake": 1,
+            "get_today_checkin": 1,
+            "list_session_completions_from_day": 1,
+            "list_rehab_schedule_completions": 1,
+            "list_rehab_exposures": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1,
+            "list_session_logs": 1,
+            "get_athlete_streaks": 1,
+            "list_plan_session_completions": 2,
+            "get_injury_flag_for_athlete": 2,
+            "list_rehab_exposures_by_ids": 3,
+            "get_plan_identity_for_athlete": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 705.7260719999476,
+              "decoded_body_bytes": 1642
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 317.703779999988,
+              "decoded_body_bytes": 1091
+            },
+            {
+              "operation": "rehab-responses",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 68.80799799989745,
+              "decoded_body_bytes": 129
+            },
+            {
+              "operation": "pending",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 27.142486000002464,
+              "decoded_body_bytes": 46
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 1119.5805970000947
+        }
+      ],
+      "p50_ms": 428.04368750000776,
+      "p95_ms": 1119.5805970000947
+    },
+    {
+      "scenario": "tests/test_exercise_customisation.py::test_added_exercise_can_be_edited_and_logged_with_its_updated_dose",
+      "runs": [
+        {
+          "scenario": "tests/test_exercise_customisation.py::test_added_exercise_can_be_edited_and_logged_with_its_updated_dose",
+          "store_method_calls": {
+            "ensure_profile": 10,
+            "get_training_plan_for_athlete": 12,
+            "get_plan_for_athlete": 17,
+            "list_session_completions_from_day": 6,
+            "get_intake": 7,
+            "list_exercise_media": 1,
+            "get_today_checkin": 2,
+            "list_injury_flags": 11,
+            "get_generation_job_by_plan_id": 1,
+            "get_active_plan_id": 3,
+            "list_session_completions": 4,
+            "list_external_training_sessions": 3,
+            "list_today_checkins_for_day": 2,
+            "list_today_checkins": 3,
+            "get_session_completion": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 2124.3798779999565,
+              "decoded_body_bytes": 6956
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 91.69658399997616,
+              "decoded_body_bytes": 3546
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 11.771984999995766,
+              "decoded_body_bytes": 3909
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 10.835533999966174,
+              "decoded_body_bytes": 6758
+            },
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 48.60552600001711,
+              "decoded_body_bytes": 1493
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 10.540909999974701,
+              "decoded_body_bytes": 589
+            },
+            {
+              "operation": "exercise-log",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 5.566205000036462,
+              "decoded_body_bytes": 1006
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 4.477425000004587,
+              "decoded_body_bytes": 96
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 2993.2917439999756
+        },
+        {
+          "scenario": "tests/test_exercise_customisation.py::test_added_exercise_can_be_edited_and_logged_with_its_updated_dose",
+          "store_method_calls": {
+            "ensure_profile": 10,
+            "get_training_plan_for_athlete": 12,
+            "get_plan_for_athlete": 17,
+            "list_session_completions_from_day": 6,
+            "get_intake": 7,
+            "list_exercise_media": 1,
+            "get_today_checkin": 2,
+            "list_injury_flags": 11,
+            "get_generation_job_by_plan_id": 1,
+            "get_active_plan_id": 3,
+            "list_session_completions": 4,
+            "list_external_training_sessions": 3,
+            "list_today_checkins_for_day": 2,
+            "list_today_checkins": 3,
+            "get_session_completion": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 2426.2467519999973,
+              "decoded_body_bytes": 6956
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 157.3441369999955,
+              "decoded_body_bytes": 3546
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 9.175753000022269,
+              "decoded_body_bytes": 3909
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 12.083702999973411,
+              "decoded_body_bytes": 6758
+            },
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 9.080087999961961,
+              "decoded_body_bytes": 1493
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 64.09633599997733,
+              "decoded_body_bytes": 589
+            },
+            {
+              "operation": "exercise-log",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 8.490010000002712,
+              "decoded_body_bytes": 1006
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 5.48905900001273,
+              "decoded_body_bytes": 96
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 3510.7669510000505
+        },
+        {
+          "scenario": "tests/test_exercise_customisation.py::test_added_exercise_can_be_edited_and_logged_with_its_updated_dose",
+          "store_method_calls": {
+            "ensure_profile": 10,
+            "get_training_plan_for_athlete": 12,
+            "get_plan_for_athlete": 17,
+            "list_session_completions_from_day": 6,
+            "get_intake": 7,
+            "list_exercise_media": 1,
+            "get_today_checkin": 2,
+            "list_injury_flags": 11,
+            "get_generation_job_by_plan_id": 1,
+            "get_active_plan_id": 3,
+            "list_session_completions": 4,
+            "list_external_training_sessions": 3,
+            "list_today_checkins_for_day": 2,
+            "list_today_checkins": 3,
+            "get_session_completion": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 1785.4740529999162,
+              "decoded_body_bytes": 6956
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 90.54115699996146,
+              "decoded_body_bytes": 3546
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 7.880482000018674,
+              "decoded_body_bytes": 3909
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 12.349763999964125,
+              "decoded_body_bytes": 6758
+            },
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 5.842351000069357,
+              "decoded_body_bytes": 1493
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 14.24652100001822,
+              "decoded_body_bytes": 589
+            },
+            {
+              "operation": "exercise-log",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 45.64615200001754,
+              "decoded_body_bytes": 1006
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 5.669239999974707,
+              "decoded_body_bytes": 96
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 2684.1686420000315
+        },
+        {
+          "scenario": "tests/test_exercise_customisation.py::test_added_exercise_can_be_edited_and_logged_with_its_updated_dose",
+          "store_method_calls": {
+            "ensure_profile": 10,
+            "get_training_plan_for_athlete": 12,
+            "get_plan_for_athlete": 17,
+            "list_session_completions_from_day": 6,
+            "get_intake": 7,
+            "list_exercise_media": 1,
+            "get_today_checkin": 2,
+            "list_injury_flags": 11,
+            "get_generation_job_by_plan_id": 1,
+            "get_active_plan_id": 3,
+            "list_session_completions": 4,
+            "list_external_training_sessions": 3,
+            "list_today_checkins_for_day": 2,
+            "list_today_checkins": 3,
+            "get_session_completion": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 1281.3466779999771,
+              "decoded_body_bytes": 6956
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 64.76100099996529,
+              "decoded_body_bytes": 3546
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 7.334210000067287,
+              "decoded_body_bytes": 3909
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 8.643493000022318,
+              "decoded_body_bytes": 6758
+            },
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 5.869724000035603,
+              "decoded_body_bytes": 1493
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 10.060358000032465,
+              "decoded_body_bytes": 589
+            },
+            {
+              "operation": "exercise-log",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 4.979581999918992,
+              "decoded_body_bytes": 1006
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 4.706551000026593,
+              "decoded_body_bytes": 96
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 2006.5655309999784
+        },
+        {
+          "scenario": "tests/test_exercise_customisation.py::test_added_exercise_can_be_edited_and_logged_with_its_updated_dose",
+          "store_method_calls": {
+            "ensure_profile": 10,
+            "get_training_plan_for_athlete": 12,
+            "get_plan_for_athlete": 17,
+            "list_session_completions_from_day": 6,
+            "get_intake": 7,
+            "list_exercise_media": 1,
+            "get_today_checkin": 2,
+            "list_injury_flags": 11,
+            "get_generation_job_by_plan_id": 1,
+            "get_active_plan_id": 3,
+            "list_session_completions": 4,
+            "list_external_training_sessions": 3,
+            "list_today_checkins_for_day": 2,
+            "list_today_checkins": 3,
+            "get_session_completion": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 1225.0971019999497,
+              "decoded_body_bytes": 6956
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 55.00104499992631,
+              "decoded_body_bytes": 3546
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 8.147753999992347,
+              "decoded_body_bytes": 3909
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 9.060939000050894,
+              "decoded_body_bytes": 6758
+            },
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 6.55181900003754,
+              "decoded_body_bytes": 1493
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 10.45923699996365,
+              "decoded_body_bytes": 589
+            },
+            {
+              "operation": "exercise-log",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 6.309955999995509,
+              "decoded_body_bytes": 1006
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 11.296096000023681,
+              "decoded_body_bytes": 96
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 1657.77183900002
+        },
+        {
+          "scenario": "tests/test_exercise_customisation.py::test_added_exercise_can_be_edited_and_logged_with_its_updated_dose",
+          "store_method_calls": {
+            "ensure_profile": 10,
+            "get_training_plan_for_athlete": 12,
+            "get_plan_for_athlete": 17,
+            "list_session_completions_from_day": 6,
+            "get_intake": 7,
+            "list_exercise_media": 1,
+            "get_today_checkin": 2,
+            "list_injury_flags": 11,
+            "get_generation_job_by_plan_id": 1,
+            "get_active_plan_id": 3,
+            "list_session_completions": 4,
+            "list_external_training_sessions": 3,
+            "list_today_checkins_for_day": 2,
+            "list_today_checkins": 3,
+            "get_session_completion": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 1736.0725150000462,
+              "decoded_body_bytes": 6956
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 59.02154000000337,
+              "decoded_body_bytes": 3546
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 9.264968999900702,
+              "decoded_body_bytes": 3909
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 11.612493999905382,
+              "decoded_body_bytes": 6758
+            },
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 7.0910459999140585,
+              "decoded_body_bytes": 1493
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 12.565780000045379,
+              "decoded_body_bytes": 589
+            },
+            {
+              "operation": "exercise-log",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 5.325402000039503,
+              "decoded_body_bytes": 1006
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 4.967568999973082,
+              "decoded_body_bytes": 96
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 2431.446516000051
+        },
+        {
+          "scenario": "tests/test_exercise_customisation.py::test_added_exercise_can_be_edited_and_logged_with_its_updated_dose",
+          "store_method_calls": {
+            "ensure_profile": 10,
+            "get_training_plan_for_athlete": 12,
+            "get_plan_for_athlete": 17,
+            "list_session_completions_from_day": 6,
+            "get_intake": 7,
+            "list_exercise_media": 1,
+            "get_today_checkin": 2,
+            "list_injury_flags": 11,
+            "get_generation_job_by_plan_id": 1,
+            "get_active_plan_id": 3,
+            "list_session_completions": 4,
+            "list_external_training_sessions": 3,
+            "list_today_checkins_for_day": 2,
+            "list_today_checkins": 3,
+            "get_session_completion": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 1414.5241329999863,
+              "decoded_body_bytes": 6956
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 118.57983200002309,
+              "decoded_body_bytes": 3546
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 10.215012999992723,
+              "decoded_body_bytes": 3909
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 18.252239000048576,
+              "decoded_body_bytes": 6758
+            },
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 9.559352000110266,
+              "decoded_body_bytes": 1493
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 14.192095999987941,
+              "decoded_body_bytes": 589
+            },
+            {
+              "operation": "exercise-log",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 9.568134999994982,
+              "decoded_body_bytes": 1006
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 9.672100999978284,
+              "decoded_body_bytes": 96
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 1960.2532480000718
+        },
+        {
+          "scenario": "tests/test_exercise_customisation.py::test_added_exercise_can_be_edited_and_logged_with_its_updated_dose",
+          "store_method_calls": {
+            "ensure_profile": 10,
+            "get_training_plan_for_athlete": 12,
+            "get_plan_for_athlete": 17,
+            "list_session_completions_from_day": 6,
+            "get_intake": 7,
+            "list_exercise_media": 1,
+            "get_today_checkin": 2,
+            "list_injury_flags": 11,
+            "get_generation_job_by_plan_id": 1,
+            "get_active_plan_id": 3,
+            "list_session_completions": 4,
+            "list_external_training_sessions": 3,
+            "list_today_checkins_for_day": 2,
+            "list_today_checkins": 3,
+            "get_session_completion": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 4613.482253000029,
+              "decoded_body_bytes": 6956
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 273.78216199997496,
+              "decoded_body_bytes": 3546
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 8.705874000042968,
+              "decoded_body_bytes": 3909
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 19.18780199991943,
+              "decoded_body_bytes": 6758
+            },
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 8.667876999993496,
+              "decoded_body_bytes": 1493
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 84.64793499990719,
+              "decoded_body_bytes": 589
+            },
+            {
+              "operation": "exercise-log",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 11.960425999973268,
+              "decoded_body_bytes": 1006
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 35.65748000005442,
+              "decoded_body_bytes": 96
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 6667.988885999989
+        },
+        {
+          "scenario": "tests/test_exercise_customisation.py::test_added_exercise_can_be_edited_and_logged_with_its_updated_dose",
+          "store_method_calls": {
+            "ensure_profile": 10,
+            "get_training_plan_for_athlete": 12,
+            "get_plan_for_athlete": 17,
+            "list_session_completions_from_day": 6,
+            "get_intake": 7,
+            "list_exercise_media": 1,
+            "get_today_checkin": 2,
+            "list_injury_flags": 11,
+            "get_generation_job_by_plan_id": 1,
+            "get_active_plan_id": 3,
+            "list_session_completions": 4,
+            "list_external_training_sessions": 3,
+            "list_today_checkins_for_day": 2,
+            "list_today_checkins": 3,
+            "get_session_completion": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 2308.711768999956,
+              "decoded_body_bytes": 6956
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 151.3524019999295,
+              "decoded_body_bytes": 3546
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 7.818828000040412,
+              "decoded_body_bytes": 3909
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 8.456679000005352,
+              "decoded_body_bytes": 6758
+            },
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 4.546009000023332,
+              "decoded_body_bytes": 1493
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 10.146394000003056,
+              "decoded_body_bytes": 589
+            },
+            {
+              "operation": "exercise-log",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 4.252647000043908,
+              "decoded_body_bytes": 1006
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 3.2904170000165323,
+              "decoded_body_bytes": 96
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 3306.895047000012
+        },
+        {
+          "scenario": "tests/test_exercise_customisation.py::test_added_exercise_can_be_edited_and_logged_with_its_updated_dose",
+          "store_method_calls": {
+            "ensure_profile": 10,
+            "get_training_plan_for_athlete": 12,
+            "get_plan_for_athlete": 17,
+            "list_session_completions_from_day": 6,
+            "get_intake": 7,
+            "list_exercise_media": 1,
+            "get_today_checkin": 2,
+            "list_injury_flags": 11,
+            "get_generation_job_by_plan_id": 1,
+            "get_active_plan_id": 3,
+            "list_session_completions": 4,
+            "list_external_training_sessions": 3,
+            "list_today_checkins_for_day": 2,
+            "list_today_checkins": 3,
+            "get_session_completion": 1,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1,
+            "get_profile": 1
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 4660.74662699998,
+              "decoded_body_bytes": 6956
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 211.7770060000339,
+              "decoded_body_bytes": 3546
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 200,
+              "roundtrip_ms": 37.36308499992447,
+              "decoded_body_bytes": 3909
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 61.65520900003685,
+              "decoded_body_bytes": 6758
+            },
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 19.16444500000125,
+              "decoded_body_bytes": 1493
+            },
+            {
+              "operation": "session-completion",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 92.28604700001597,
+              "decoded_body_bytes": 589
+            },
+            {
+              "operation": "exercise-log",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 26.971901000024445,
+              "decoded_body_bytes": 1006
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 51.812111000003824,
+              "decoded_body_bytes": 96
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 6683.418925000069
+        }
+      ],
+      "p50_ms": 2838.7301930000035,
+      "p95_ms": 6683.418925000069
+    },
+    {
+      "scenario": "tests/test_external_training.py::test_retry_edit_delete_and_delayed_retry",
+      "runs": [
+        {
+          "scenario": "tests/test_external_training.py::test_retry_edit_delete_and_delayed_retry",
+          "store_method_calls": {
+            "ensure_profile": 11,
+            "list_session_completions": 2,
+            "list_external_training_sessions": 2,
+            "count_manual_exercises": 2
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 9.302434000005633,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 16.724004999957742,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 8.825855999987198,
+              "decoded_body_bytes": 90
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 200,
+              "roundtrip_ms": 9.477208000021164,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 37.78793300000416,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 7.783151000012367,
+              "decoded_body_bytes": 409
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 14.733896999985063,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 8.184991000007358,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 682.9130770000233,
+              "decoded_body_bytes": 38
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 410,
+              "roundtrip_ms": 5.405763999988267,
+              "decoded_body_bytes": 98
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 404,
+              "roundtrip_ms": 3.1058490000077654,
+              "decoded_body_bytes": 64
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 804.5635580000408
+        },
+        {
+          "scenario": "tests/test_external_training.py::test_retry_edit_delete_and_delayed_retry",
+          "store_method_calls": {
+            "ensure_profile": 11,
+            "list_session_completions": 2,
+            "list_external_training_sessions": 2,
+            "count_manual_exercises": 2
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 46.89661599996953,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 4.144662999976845,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 6.569226999999955,
+              "decoded_body_bytes": 90
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 200,
+              "roundtrip_ms": 8.287985000038134,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 3.3961759999669994,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 4.063820999988366,
+              "decoded_body_bytes": 409
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 4.074236999997538,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 3.6605740000368314,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 691.471364999984,
+              "decoded_body_bytes": 38
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 410,
+              "roundtrip_ms": 6.567904999997154,
+              "decoded_body_bytes": 98
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 404,
+              "roundtrip_ms": 7.057903000031729,
+              "decoded_body_bytes": 64
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 786.7878819999987
+        },
+        {
+          "scenario": "tests/test_external_training.py::test_retry_edit_delete_and_delayed_retry",
+          "store_method_calls": {
+            "ensure_profile": 11,
+            "list_session_completions": 2,
+            "list_external_training_sessions": 2,
+            "count_manual_exercises": 2
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 12.304286000016873,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 4.394029999957638,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 7.383213000025535,
+              "decoded_body_bytes": 90
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 200,
+              "roundtrip_ms": 42.21860999996352,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 8.624863000022742,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 4.054758000052061,
+              "decoded_body_bytes": 409
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 3.7711109999918335,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 4.051903999993556,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 624.2211510000288,
+              "decoded_body_bytes": 38
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 410,
+              "roundtrip_ms": 5.963343999951576,
+              "decoded_body_bytes": 98
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 404,
+              "roundtrip_ms": 40.39611300004253,
+              "decoded_body_bytes": 64
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 757.692028000065
+        },
+        {
+          "scenario": "tests/test_external_training.py::test_retry_edit_delete_and_delayed_retry",
+          "store_method_calls": {
+            "ensure_profile": 11,
+            "list_session_completions": 2,
+            "list_external_training_sessions": 2,
+            "count_manual_exercises": 2
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 6.204968000020017,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 4.033295999988695,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 4.20151999992413,
+              "decoded_body_bytes": 90
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 200,
+              "roundtrip_ms": 4.6280819999537925,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 4.262731999915559,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 5.150039000000106,
+              "decoded_body_bytes": 409
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 4.353579999929025,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 3.7758089999897493,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 3.428115000019716,
+              "decoded_body_bytes": 38
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 410,
+              "roundtrip_ms": 3.6812270000154967,
+              "decoded_body_bytes": 98
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 404,
+              "roundtrip_ms": 4.92902599989975,
+              "decoded_body_bytes": 64
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 48.90095600001132
+        },
+        {
+          "scenario": "tests/test_external_training.py::test_retry_edit_delete_and_delayed_retry",
+          "store_method_calls": {
+            "ensure_profile": 11,
+            "list_session_completions": 2,
+            "list_external_training_sessions": 2,
+            "count_manual_exercises": 2
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 5.95372899999802,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 4.751666999936788,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 4.117392000011932,
+              "decoded_body_bytes": 90
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 200,
+              "roundtrip_ms": 4.055299000015111,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 4.0443330000243805,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 4.227449000040906,
+              "decoded_body_bytes": 409
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 4.440078999891739,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 5.688779000024624,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 387.21111800009567,
+              "decoded_body_bytes": 38
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 410,
+              "roundtrip_ms": 5.129087000000254,
+              "decoded_body_bytes": 98
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 404,
+              "roundtrip_ms": 3.5932230000526033,
+              "decoded_body_bytes": 64
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 433.46754900005635
+        },
+        {
+          "scenario": "tests/test_external_training.py::test_retry_edit_delete_and_delayed_retry",
+          "store_method_calls": {
+            "ensure_profile": 11,
+            "list_session_completions": 2,
+            "list_external_training_sessions": 2,
+            "count_manual_exercises": 2
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 6.373245999952815,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 4.382338999903368,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 3.4563940000680304,
+              "decoded_body_bytes": 90
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 200,
+              "roundtrip_ms": 4.443199999968783,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 4.280103999917628,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 4.099491999909333,
+              "decoded_body_bytes": 409
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 3.0933179999692584,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 2.88145899992287,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 3.7022249999836276,
+              "decoded_body_bytes": 38
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 410,
+              "roundtrip_ms": 392.7592640000057,
+              "decoded_body_bytes": 98
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 404,
+              "roundtrip_ms": 4.440471000066282,
+              "decoded_body_bytes": 64
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 434.1534249999768
+        },
+        {
+          "scenario": "tests/test_external_training.py::test_retry_edit_delete_and_delayed_retry",
+          "store_method_calls": {
+            "ensure_profile": 11,
+            "list_session_completions": 2,
+            "list_external_training_sessions": 2,
+            "count_manual_exercises": 2
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 5.585620000033487,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 4.032349999988583,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 4.1779099999530445,
+              "decoded_body_bytes": 90
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 200,
+              "roundtrip_ms": 4.978456000003462,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 3.826521000064531,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 5.201890999956049,
+              "decoded_body_bytes": 409
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 3.7941120000368755,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 3.0747490000067046,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 4.759115000069869,
+              "decoded_body_bytes": 38
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 410,
+              "roundtrip_ms": 497.62930599990796,
+              "decoded_body_bytes": 98
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 404,
+              "roundtrip_ms": 4.773335999971096,
+              "decoded_body_bytes": 64
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 542.1399959999462
+        },
+        {
+          "scenario": "tests/test_external_training.py::test_retry_edit_delete_and_delayed_retry",
+          "store_method_calls": {
+            "ensure_profile": 11,
+            "list_session_completions": 2,
+            "list_external_training_sessions": 2,
+            "count_manual_exercises": 2
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 51.2713900000108,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 6.845089999956144,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 3.4245489999875645,
+              "decoded_body_bytes": 90
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 200,
+              "roundtrip_ms": 10.959648999914862,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 9.471841999925346,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 12.507921000064925,
+              "decoded_body_bytes": 409
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 3.9879370000335257,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 6.792281000002731,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 879.3778769999108,
+              "decoded_body_bytes": 38
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 410,
+              "roundtrip_ms": 8.709840000051372,
+              "decoded_body_bytes": 98
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 404,
+              "roundtrip_ms": 6.836989000021276,
+              "decoded_body_bytes": 64
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 1000.543222000033
+        },
+        {
+          "scenario": "tests/test_external_training.py::test_retry_edit_delete_and_delayed_retry",
+          "store_method_calls": {
+            "ensure_profile": 11,
+            "list_session_completions": 2,
+            "list_external_training_sessions": 2,
+            "count_manual_exercises": 2
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 14.562187000024096,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 13.17877300004966,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 7.572236999976667,
+              "decoded_body_bytes": 90
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 200,
+              "roundtrip_ms": 4.5199789999514906,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 3.8560590000997763,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 35.04190299997845,
+              "decoded_body_bytes": 409
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 11.136695999994117,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 10.999179999998887,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 8.526964999987285,
+              "decoded_body_bytes": 38
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 410,
+              "roundtrip_ms": 11.858193999955802,
+              "decoded_body_bytes": 98
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 404,
+              "roundtrip_ms": 1365.5740780000087,
+              "decoded_body_bytes": 64
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 1487.1352690000776
+        },
+        {
+          "scenario": "tests/test_external_training.py::test_retry_edit_delete_and_delayed_retry",
+          "store_method_calls": {
+            "ensure_profile": 11,
+            "list_session_completions": 2,
+            "list_external_training_sessions": 2,
+            "count_manual_exercises": 2
+          },
+          "requests": [
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 15.492346999963047,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 54.59848800001055,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 409,
+              "roundtrip_ms": 15.446497000084491,
+              "decoded_body_bytes": 90
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 200,
+              "roundtrip_ms": 11.02086099990629,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 9.587842000087221,
+              "decoded_body_bytes": 374
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 11.78411099999721,
+              "decoded_body_bytes": 409
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 105.22764899997128,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "DELETE",
+              "status": 204,
+              "roundtrip_ms": 48.17918399999144,
+              "decoded_body_bytes": 0
+            },
+            {
+              "operation": "history",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 39.04887200008034,
+              "decoded_body_bytes": 38
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "POST",
+              "status": 410,
+              "roundtrip_ms": 1704.446786999938,
+              "decoded_body_bytes": 98
+            },
+            {
+              "operation": "dynamic_endpoint",
+              "method": "PATCH",
+              "status": 404,
+              "roundtrip_ms": 54.24921100006941,
+              "decoded_body_bytes": 64
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 2069.531235999989
+        }
+      ],
+      "p50_ms": 772.2399550000318,
+      "p95_ms": 2069.531235999989
+    },
+    {
+      "scenario": "tests/test_plan_free_readiness.py::test_an_injury_reported_after_a_clean_check_in_refreshes_it",
+      "runs": [
+        {
+          "scenario": "tests/test_plan_free_readiness.py::test_an_injury_reported_after_a_clean_check_in_refreshes_it",
+          "store_method_calls": {
+            "ensure_profile": 5,
+            "list_injury_flags": 6,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 4,
+            "get_active_plan_id": 3,
+            "list_today_checkins": 6,
+            "list_injury_episode_events": 5,
+            "list_rehab_exposures": 2,
+            "get_today_checkin": 2,
+            "get_latest_intake": 1,
+            "list_rehab_schedule_completions": 2,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 9.407706999979837,
+              "decoded_body_bytes": 1657
+            },
+            {
+              "operation": "injury-checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 261.9480629999771,
+              "decoded_body_bytes": 1368
+            },
+            {
+              "operation": "today",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 212.38296899997522,
+              "decoded_body_bytes": 3047
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 1107.6016170000003
+        },
+        {
+          "scenario": "tests/test_plan_free_readiness.py::test_an_injury_reported_after_a_clean_check_in_refreshes_it",
+          "store_method_calls": {
+            "ensure_profile": 5,
+            "list_injury_flags": 6,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 4,
+            "get_active_plan_id": 3,
+            "list_today_checkins": 6,
+            "list_injury_episode_events": 5,
+            "list_rehab_exposures": 2,
+            "get_today_checkin": 2,
+            "get_latest_intake": 1,
+            "list_rehab_schedule_completions": 2,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 9.856328000012127,
+              "decoded_body_bytes": 1657
+            },
+            {
+              "operation": "injury-checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 205.96927399998322,
+              "decoded_body_bytes": 1368
+            },
+            {
+              "operation": "today",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 215.99280200001658,
+              "decoded_body_bytes": 3047
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 1098.2434480000052
+        },
+        {
+          "scenario": "tests/test_plan_free_readiness.py::test_an_injury_reported_after_a_clean_check_in_refreshes_it",
+          "store_method_calls": {
+            "ensure_profile": 5,
+            "list_injury_flags": 6,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 4,
+            "get_active_plan_id": 3,
+            "list_today_checkins": 6,
+            "list_injury_episode_events": 5,
+            "list_rehab_exposures": 2,
+            "get_today_checkin": 2,
+            "get_latest_intake": 1,
+            "list_rehab_schedule_completions": 2,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 12.640551999993477,
+              "decoded_body_bytes": 1657
+            },
+            {
+              "operation": "injury-checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 157.44033299995408,
+              "decoded_body_bytes": 1368
+            },
+            {
+              "operation": "today",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 147.26063099999465,
+              "decoded_body_bytes": 3047
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 846.2786229999892
+        },
+        {
+          "scenario": "tests/test_plan_free_readiness.py::test_an_injury_reported_after_a_clean_check_in_refreshes_it",
+          "store_method_calls": {
+            "ensure_profile": 5,
+            "list_injury_flags": 6,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 4,
+            "get_active_plan_id": 3,
+            "list_today_checkins": 6,
+            "list_injury_episode_events": 5,
+            "list_rehab_exposures": 2,
+            "get_today_checkin": 2,
+            "get_latest_intake": 1,
+            "list_rehab_schedule_completions": 2,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 6.560227000022678,
+              "decoded_body_bytes": 1657
+            },
+            {
+              "operation": "injury-checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 107.2331169999643,
+              "decoded_body_bytes": 1368
+            },
+            {
+              "operation": "today",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 137.51510200006578,
+              "decoded_body_bytes": 3047
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 966.4350030000151
+        },
+        {
+          "scenario": "tests/test_plan_free_readiness.py::test_an_injury_reported_after_a_clean_check_in_refreshes_it",
+          "store_method_calls": {
+            "ensure_profile": 5,
+            "list_injury_flags": 6,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 4,
+            "get_active_plan_id": 3,
+            "list_today_checkins": 6,
+            "list_injury_episode_events": 5,
+            "list_rehab_exposures": 2,
+            "get_today_checkin": 2,
+            "get_latest_intake": 1,
+            "list_rehab_schedule_completions": 2,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 5.297965999943699,
+              "decoded_body_bytes": 1657
+            },
+            {
+              "operation": "injury-checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 89.35577899990221,
+              "decoded_body_bytes": 1368
+            },
+            {
+              "operation": "today",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 108.83641999998872,
+              "decoded_body_bytes": 3047
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 473.0210559999932
+        },
+        {
+          "scenario": "tests/test_plan_free_readiness.py::test_an_injury_reported_after_a_clean_check_in_refreshes_it",
+          "store_method_calls": {
+            "ensure_profile": 5,
+            "list_injury_flags": 6,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 4,
+            "get_active_plan_id": 3,
+            "list_today_checkins": 6,
+            "list_injury_episode_events": 5,
+            "list_rehab_exposures": 2,
+            "get_today_checkin": 2,
+            "get_latest_intake": 1,
+            "list_rehab_schedule_completions": 2,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 5.884219999984452,
+              "decoded_body_bytes": 1657
+            },
+            {
+              "operation": "injury-checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 94.29366099993786,
+              "decoded_body_bytes": 1368
+            },
+            {
+              "operation": "today",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 114.37235200003215,
+              "decoded_body_bytes": 3047
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 531.8864619999886
+        },
+        {
+          "scenario": "tests/test_plan_free_readiness.py::test_an_injury_reported_after_a_clean_check_in_refreshes_it",
+          "store_method_calls": {
+            "ensure_profile": 5,
+            "list_injury_flags": 6,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 4,
+            "get_active_plan_id": 3,
+            "list_today_checkins": 6,
+            "list_injury_episode_events": 5,
+            "list_rehab_exposures": 2,
+            "get_today_checkin": 2,
+            "get_latest_intake": 1,
+            "list_rehab_schedule_completions": 2,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 8.389570999952412,
+              "decoded_body_bytes": 1657
+            },
+            {
+              "operation": "injury-checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 93.42183499995826,
+              "decoded_body_bytes": 1368
+            },
+            {
+              "operation": "today",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 102.57029399997464,
+              "decoded_body_bytes": 3047
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 526.7545030000065
+        },
+        {
+          "scenario": "tests/test_plan_free_readiness.py::test_an_injury_reported_after_a_clean_check_in_refreshes_it",
+          "store_method_calls": {
+            "ensure_profile": 5,
+            "list_injury_flags": 6,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 4,
+            "get_active_plan_id": 3,
+            "list_today_checkins": 6,
+            "list_injury_episode_events": 5,
+            "list_rehab_exposures": 2,
+            "get_today_checkin": 2,
+            "get_latest_intake": 1,
+            "list_rehab_schedule_completions": 2,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 7.1977910000669,
+              "decoded_body_bytes": 1657
+            },
+            {
+              "operation": "injury-checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 221.05415300006825,
+              "decoded_body_bytes": 1368
+            },
+            {
+              "operation": "today",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 215.15534800005298,
+              "decoded_body_bytes": 3047
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 1390.5682779999324
+        },
+        {
+          "scenario": "tests/test_plan_free_readiness.py::test_an_injury_reported_after_a_clean_check_in_refreshes_it",
+          "store_method_calls": {
+            "ensure_profile": 5,
+            "list_injury_flags": 6,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 4,
+            "get_active_plan_id": 3,
+            "list_today_checkins": 6,
+            "list_injury_episode_events": 5,
+            "list_rehab_exposures": 2,
+            "get_today_checkin": 2,
+            "get_latest_intake": 1,
+            "list_rehab_schedule_completions": 2,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 64.8269179999943,
+              "decoded_body_bytes": 1657
+            },
+            {
+              "operation": "injury-checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 626.5133619999688,
+              "decoded_body_bytes": 1368
+            },
+            {
+              "operation": "today",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 695.4905129999815,
+              "decoded_body_bytes": 3047
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 2516.5471820000676
+        },
+        {
+          "scenario": "tests/test_plan_free_readiness.py::test_an_injury_reported_after_a_clean_check_in_refreshes_it",
+          "store_method_calls": {
+            "ensure_profile": 5,
+            "list_injury_flags": 6,
+            "list_session_completions": 6,
+            "list_external_training_sessions": 4,
+            "get_active_plan_id": 3,
+            "list_today_checkins": 6,
+            "list_injury_episode_events": 5,
+            "list_rehab_exposures": 2,
+            "get_today_checkin": 2,
+            "get_latest_intake": 1,
+            "list_rehab_schedule_completions": 2,
+            "list_sparring_logs": 1,
+            "list_pending_delayed_rehab": 1
+          },
+          "requests": [
+            {
+              "operation": "checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 27.35266000001957,
+              "decoded_body_bytes": 1657
+            },
+            {
+              "operation": "injury-checkin",
+              "method": "POST",
+              "status": 201,
+              "roundtrip_ms": 497.9988960000128,
+              "decoded_body_bytes": 1368
+            },
+            {
+              "operation": "today",
+              "method": "GET",
+              "status": 200,
+              "roundtrip_ms": 568.5841880000453,
+              "decoded_body_bytes": 3047
+            }
+          ],
+          "database_operations": null,
+          "database_execution_ms": null,
+          "frontend_latency_ms": null,
+          "passed": true,
+          "workflow_ms": 2603.0903260000287
+        }
+      ],
+      "p50_ms": 1032.3392255000101,
+      "p95_ms": 2603.0903260000287
+    }
+  ]
+}
