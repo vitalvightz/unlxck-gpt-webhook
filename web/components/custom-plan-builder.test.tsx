@@ -78,8 +78,43 @@ test("rest days offer a pencil control that opens a new session", async () => {
     const addSession = host.querySelector<HTMLButtonElement>('[aria-label="Add session on Monday"]')!;
     await act(async () => addSession.click());
     assert.equal(document.querySelector<HTMLInputElement>('input[value="Training"]')?.value, "Training");
-    assert.match(document.body.textContent!, /Edit session/);
+    assert.match(document.body.textContent!, /New session/);
   } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
+
+test("a new session only joins the plan once confirmed, and the bin removes it", async () => {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  const router = { push() {}, replace() {}, refresh() {}, back() {}, forward() {}, prefetch() {}, bfcacheId: "fixture" };
+  const confirm = window.confirm;
+  window.confirm = () => true;
+  const sheetButton = (label: string) => [...document.querySelectorAll<HTMLButtonElement>(".injury-sheet button")].find(b => b.textContent?.trim() === label);
+  try {
+    await act(async () => root.render(
+      <AppRouterContext.Provider value={router}>
+        <ToastProvider><CustomPlanBuilder accessToken="test-token" /></ToastProvider>
+      </AppRouterContext.Provider>,
+    ));
+    assert.doesNotMatch(host.textContent!, /Unassigned|No day set/);
+    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Add session on Monday"]')!.click());
+    await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="Close"], .injury-sheet-close')?.click());
+    assert.match(host.textContent!, /Rest day/, "closing a new session's sheet adds nothing");
+
+    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Add session on Monday"]')!.click());
+    await act(async () => sheetButton("Add session")!.closest("form")!.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })));
+    assert.equal(host.querySelectorAll('[aria-label^="Session "]').length, 1);
+    assert.doesNotMatch(host.textContent!, /Unassigned|No day set/);
+    assert.ok(host.querySelector('[aria-label="Add another session on Monday"]'));
+
+    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Remove Training"]')!.click());
+    assert.equal(host.querySelectorAll('[aria-label^="Session "]').length, 0);
+    assert.match(host.textContent!, /Rest day/);
+  } finally {
+    window.confirm = confirm;
     await act(async () => root.unmount());
     host.remove();
   }

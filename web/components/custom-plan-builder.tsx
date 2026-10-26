@@ -80,6 +80,13 @@ function PlusIcon() {
     </svg>
   );
 }
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+    </svg>
+  );
+}
 function PencilIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -114,6 +121,8 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
       originalPosition: number;
     }>();
   const [sessionEdit, setSessionEdit] = useState<Session>(),
+    // A new session joins the draft only when the sheet is confirmed, so closing it leaves nothing behind.
+    [sessionFresh, setSessionFresh] = useState(false),
     [preview, setPreview] = useState<LibraryEntry>();
   const [videoOpen, setVideoOpen] = useState(false), [communityOpen, setCommunityOpen] = useState(false), [communityPreview, setCommunityPreview] = useState<string>();
   const [linkedCommunity, setLinkedCommunity] = useState<{ id: string; entry?: CommunityEntry; error?: boolean }>();
@@ -262,15 +271,23 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
   }
 
   function addSessionOnDay(weekday: Session["weekday"]) {
-    const session: Session = {
+    setSessionFresh(true);
+    setSessionEdit({
       id: crypto.randomUUID(),
       name: "Training",
       weekday,
       session_type: "mixed",
       exercises: [],
-    };
-    change({ ...draft, sessions: [...draft.sessions, session] });
+    });
+  }
+  function openSession(session: Session) {
+    setSessionFresh(false);
     setSessionEdit(session);
+  }
+  function removeSession(session: Session) {
+    if (!window.confirm(`Remove ${session.name}${session.exercises.length ? " and its exercises" : ""}?`)) return false;
+    change({ ...draft, sessions: draft.sessions.filter((s) => s.id !== session.id) });
+    return true;
   }
 
   async function suggest() {
@@ -299,7 +316,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
     const session = draft.sessions.find(s => s.id === sessionId)!;
     if (session.weekday) setChosenDay(session.weekday);
     const exercise = session.exercises.find(e => doseIncomplete(e.dose));
-    if (exercise) edit(session.id, exercise); else setSessionEdit(session);
+    if (exercise) edit(session.id, exercise); else openSession(session);
   }
   function createManual(sessionId: string) {
     edit(sessionId, {
@@ -314,20 +331,18 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
       <section key={s.id} className={`sp-session ${styles.session}`} aria-label={`Session ${i + 1}`}>
         <div className="sp-session-head">
           <div>
-            <small className={styles.weekday}>{s.weekday ?? "Unassigned"}</small>
+            <small className={styles.weekday} data-attention={s.weekday ? undefined : "true"}>{s.weekday ?? "No day set"}</small>
             <h2 className="sp-session-title">{s.name}</h2>
           </div>
           <div className={styles.sessionActions}>
             <button type="button" className={styles.editButton} aria-label={`Edit session ${i + 1}`} title="Edit session"
-              onClick={() => setSessionEdit(s)}>
+              onClick={() => openSession(s)}>
               <PencilIcon />
             </button>
-            {s.weekday && ["rest", "recovery"].includes(s.session_type ?? "mixed") ? (
-              <button type="button" className={styles.editButton} aria-label={`Add session on ${s.weekday}`} title="Add session"
-                disabled={draft.sessions.length >= 28} onClick={() => addSessionOnDay(s.weekday)}>
-                <PlusIcon />
-              </button>
-            ) : null}
+            <button type="button" className={`${styles.editButton} ${styles.deleteButton}`} aria-label={`Remove ${s.name}`} title="Remove session"
+              onClick={() => removeSession(s)}>
+              <TrashIcon />
+            </button>
           </div>
         </div>
         <div className="sp-session-meta"><span className="sp-tag">{sessionNames[s.session_type ?? "mixed"]}</span></div>
@@ -563,51 +578,37 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                 <small className={styles.weekday}>{selectedDay}</small>
                 <h2>Rest day</h2>
                 <p className="muted">{REST_DAY_REMINDER}</p>
-                <button type="button" className={styles.emptyDayEditButton} aria-label={`Add session on ${selectedDay}`} title="Add session"
+                <button type="button" className={`secondary-button ${styles.addSession}`} aria-label={`Add session on ${selectedDay}`}
                   disabled={draft.sessions.length >= 28}
                   onClick={() => addSessionOnDay(selectedDay)}>
-                  <PlusIcon />
+                  <PlusIcon /> Add session
                 </button>
               </div>
             )}
           </div>
-          {unassigned.length ? <div className={styles.dayView} role="group" aria-label="Unassigned sessions">
+          {daySessions.length ? (
+            <button type="button" className={`secondary-button ${styles.addSession}`} aria-label={`Add another session on ${selectedDay}`}
+              disabled={draft.sessions.length >= 28} onClick={() => addSessionOnDay(selectedDay)}>
+              <PlusIcon /> Add another session on {selectedDay}
+            </button>
+          ) : null}
+          {/* Only older drafts can hold a session without a day; new sessions always start on the selected day. */}
+          {unassigned.length ? <div className={styles.dayView} role="group" aria-label="Sessions without a day">
             {unassigned.map(renderSession)}
           </div> : null}
-          <button
-            type="button"
-            className="secondary-button"
-            disabled={draft.sessions.length >= 28}
-            onClick={() =>
-              change({
-                ...draft,
-                sessions: [
-                  ...draft.sessions,
-                  {
-                    id: crypto.randomUUID(),
-                    name: "Training",
-                    weekday: null,
-                    exercises: [],
-                  },
-                ],
-              })
-            }
-          >
-            + Add Session
-          </button>
           <div className={styles.saveBar} ref={saveBar}>
             <p className={styles.saveStatus} role="status" data-attention={issues.length ? "true" : undefined}>
               {issues.length ? issues[0].message : "Ready to activate"}
               {dirty ? " · Unsaved changes" : ""}
             </p>
             {issues[0]?.sessionId ? <button type="button" className={`ghost-button ${styles.fixButton}`} onClick={() => fixIssue(issues[0].sessionId!)}>
-              Edit {draft.sessions.find(s => s.id === issues[0].sessionId)?.weekday ?? "session"}
+              Fix
             </button> : null}
             {issues.length > 1 ? <details className={styles.issues}>
               <summary>{issues.length - 1} more to fix</summary>
               <ul>{issues.slice(1).map((issue, index) => <li key={index}>
                 {issue.message} {issue.sessionId ? <button type="button" className="ghost-button" onClick={() => fixIssue(issue.sessionId!)}>
-                  Edit {draft.sessions.find(s => s.id === issue.sessionId)?.weekday ?? "session"}
+                  Fix
                 </button> : null}
               </li>)}</ul>
             </details> : null}
@@ -625,7 +626,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
       </form>
       {draft.id ? (
         <button
-          className="ghost-button"
+          className={`ghost-button ${styles.dangerButton}`}
           disabled={pending}
           onClick={async () => {
             if (!window.confirm("Delete this custom plan?")) return;
@@ -645,11 +646,11 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
       ) : null}
       {sessionEdit ? (
         <InjuryDetailSheet
-          title="Edit session"
+          title={sessionFresh ? "New session" : "Edit session"}
           panelClassName={styles.editorPanel}
           onClose={() => {
             const original = draft.sessions.find((s) => s.id === sessionEdit.id);
-            if (JSON.stringify(original) === JSON.stringify(sessionEdit) || window.confirm("Discard session edits?")) {
+            if (sessionFresh || JSON.stringify(original) === JSON.stringify(sessionEdit) || window.confirm("Discard session edits?")) {
               if (sheetDirty && !dirty) void releaseGuard.current().then(() => setSessionEdit(undefined));
               else setSessionEdit(undefined);
             }
@@ -659,7 +660,8 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
             className={`${styles.sheet} ${styles.sessionSheet}`}
             onSubmit={(e) => {
               e.preventDefault();
-              sessionChange(sessionEdit.id, () => sessionEdit);
+              if (sessionFresh) change({ ...draft, sessions: [...draft.sessions, sessionEdit] });
+              else sessionChange(sessionEdit.id, () => sessionEdit);
               // Follow the session to its day so it never disappears from view.
               if (sessionEdit.weekday) setChosenDay(sessionEdit.weekday);
               setSessionEdit(undefined);
@@ -686,7 +688,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                   })
                 }
               >
-                <option value="">Unassigned</option>
+                {sessionEdit.weekday ? null : <option value="" disabled>Choose a day</option>}
                 {weekdays.map((day) => (
                   <option key={day}>{day}</option>
                 ))}
@@ -705,22 +707,17 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                 <option value="rest">Off / Rest</option>
               </select>
             </label>
-            <button className="cta">Done</button>
-            <button
+            <button className="cta" disabled={!sessionEdit.weekday}>{sessionFresh ? "Add session" : "Done"}</button>
+            {sessionFresh ? null : <button
               type="button"
-              className="ghost-button"
+              className={`ghost-button ${styles.dangerButton}`}
               onClick={() => {
-                if (window.confirm("Remove this session and its exercises?")) {
-                  change({
-                    ...draft,
-                    sessions: draft.sessions.filter((s) => s.id !== sessionEdit.id),
-                  });
-                  setSessionEdit(undefined);
-                }
+                const original = draft.sessions.find((s) => s.id === sessionEdit.id);
+                if (original && removeSession(original)) setSessionEdit(undefined);
               }}
             >
               Remove session
-            </button>
+            </button>}
           </form>
         </InjuryDetailSheet>
       ) : null}
