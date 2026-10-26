@@ -11,7 +11,6 @@ import { ConnectionStatusBanner } from "@/components/connection-status-banner";
 import { GenerationStatusShell } from "@/components/generation-status-shell";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { PasswordRecoveryRedirect } from "@/components/password-recovery-redirect";
-import { PrivateBetaNutritionGate } from "@/components/private-beta-nutrition-link";
 import { PwaRegister } from "@/components/pwa-register";
 import { PushNotificationPrompt } from "@/components/push-notification-prompt";
 import { RoundTimerProvider } from "@/components/session-timer/round-timer-provider";
@@ -116,7 +115,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <AuthProvider>
             <XpProvider>
               <PasswordRecoveryRedirect />
-              <PrivateBetaNutritionGate />
               <ToastProvider>
                 <XpAwardFeedback />
                 <LanguageSwitcher />

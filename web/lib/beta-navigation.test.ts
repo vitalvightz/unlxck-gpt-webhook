@@ -4,10 +4,8 @@ import test from "node:test";
 import {
   BOTTOM_NAV_ITEMS,
   isStandaloneNutritionPath,
-  NUTRITION_DISABLED_REDIRECT,
   showsMobileTabBar,
   SIDE_NAV_ITEMS,
-  STANDALONE_NUTRITION_ENABLED,
 } from "./beta-navigation.ts";
 
 test("bottom nav shows Overview, Today, Plan, History and Timer", () => {
@@ -34,7 +32,7 @@ test("bottom nav never links to the standalone Nutrition route", () => {
 test("side menu keeps Camp Setup without exposing Progress", () => {
   assert.deepEqual(
     SIDE_NAV_ITEMS.map((item) => item.label),
-    ["Overview", "Today", "Plan", "History", "Round timer", "Camp Setup", "Settings"],
+    ["Overview", "Today", "Plan", "History", "Round timer", "Weight tracker", "Camp Setup", "Settings"],
   );
 });
 
@@ -59,18 +57,11 @@ test("the phone bar shows across the signed-in workspace but not on gates or adm
   assert.equal(showsMobileTabBar("/today", false), false);
 });
 
-test("side menu no longer exposes standalone Nutrition", () => {
-  assert.equal(
-    SIDE_NAV_ITEMS.some(
-      (item) => item.label === "Nutrition" || isStandaloneNutritionPath(item.href),
-    ),
-    false,
+test("side menu links Nutrition as the weight tracker", () => {
+  assert.deepEqual(
+    SIDE_NAV_ITEMS.filter((item) => isStandaloneNutritionPath(item.href)),
+    [{ href: "/nutrition", label: "Weight tracker", meta: "Weigh-ins and trend to target" }],
   );
-});
-
-test("standalone Nutrition is disabled for beta and redirects to Overview", () => {
-  assert.equal(STANDALONE_NUTRITION_ENABLED, false);
-  assert.equal(NUTRITION_DISABLED_REDIRECT, "/");
 });
 
 test("isStandaloneNutritionPath matches the workspace and its sub-pages only", () => {

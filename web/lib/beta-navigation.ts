@@ -1,10 +1,10 @@
 // Beta navigation contract.
 //
-// For the live beta the standalone Nutrition workspace is switched off and Plan
-// access is promoted to a first-class destination. On phones the bottom bar is
+// Plan access is a first-class destination. On phones the bottom bar is
 // the primary navigation (Overview, Today, Plan, History, Timer), with + Create
 // (the /create choice screen) and the account menu at the top instead of a
-// sidebar. Camp Setup is an occasional task reached from Create, not a tab. The Progress page is deliberately reached from the XP card on
+// sidebar. Camp Setup is an occasional task reached from Create, not a tab. Nutrition is
+// a weight tracker reached from the side menu and Overview, not a tab. The Progress page is deliberately reached from the XP card on
 // Overview for now, rather than being promoted into primary navigation.
 
 export type NavItem = {
@@ -12,12 +12,6 @@ export type NavItem = {
   label: string;
   meta?: string;
 };
-
-// Standalone Nutrition is disabled for beta. Plan-level nutrition inside a
-// generated structured plan is unaffected by this flag.
-export const STANDALONE_NUTRITION_ENABLED: boolean = false;
-
-export const NUTRITION_DISABLED_REDIRECT = "/";
 
 export const BOTTOM_NAV_ITEMS: readonly NavItem[] = [
   { href: "/", label: "Overview" },
@@ -33,6 +27,7 @@ export const SIDE_NAV_ITEMS: readonly NavItem[] = [
   { href: "/plans", label: "Plan", meta: "Active and saved plans" },
   { href: "/history", label: "History", meta: "Sessions, check-ins, injuries" },
   { href: "/timer", label: "Round timer", meta: "Rounds and rest, any time" },
+  { href: "/nutrition", label: "Weight tracker", meta: "Weigh-ins and trend to target" },
   { href: "/onboarding", label: "Camp Setup", meta: "Start or edit your camp" },
   { href: "/settings", label: "Settings", meta: "Account & preferences" },
 ] as const;

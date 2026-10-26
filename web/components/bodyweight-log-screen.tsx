@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 
 import { NutritionBodyweightChart } from "@/components/nutrition-bodyweight-chart";
@@ -8,8 +9,6 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { useOnReconnect } from "@/components/connection-status-banner";
 import { EmptyState } from "@/components/empty-state";
-import { NutritionSubnav } from "@/components/nutrition-subnav";
-import { NutritionWorkspaceHeader } from "@/components/nutrition-workspace-header";
 import { SafetyNote } from "@/components/safety-note";
 import { getNutritionCurrent, updateNutritionCurrent } from "@/lib/api";
 import { WEIGHT_CUT_SAFETY } from "@/lib/safety-copy";
@@ -22,7 +21,6 @@ import {
   formatTargetGapLabel,
   formatWeight,
   formatWeightDelta,
-  getBodyMassIndex,
   getBodyweightEntriesWithIndex,
   getLatestBodyweightEntry,
   getLatestEffectiveWeight,
@@ -32,7 +30,7 @@ import {
   getTargetGap,
 } from "@/lib/nutrition-bodyweight";
 import { localDateValue, localTimeValue, toNumber, toUpdateRequest } from "@/lib/nutrition-workspace";
-import type { NutritionBodyweightLogEntry, NutritionWorkspaceState, WeightSource } from "@/lib/types";
+import type { NutritionBodyweightLogEntry, NutritionWorkspaceState } from "@/lib/types";
 
 type FastedSelection = "unset" | "fasted" | "fed";
 
@@ -104,16 +102,10 @@ function createEntryFromDraft(draft: BodyweightDraft): NutritionBodyweightLogEnt
   };
 }
 
-function formatWeightSource(value: WeightSource | null | undefined): string {
-  if (value === "latest_bodyweight_log") return "Latest log";
-  if (value === "manual") return "Manual";
-  if (value === "imported") return "Imported";
-  return "Unspecified";
-}
-
-function formatBmiValue(value: number | null): string {
-  if (value == null) return "--";
-  return value.toFixed(1);
+function formatDaysUntilFight(days: number): string {
+  if (days === 0) return "Today";
+  if (days === 1) return "1 day";
+  return `${days} days`;
 }
 
 export function BodyweightLogScreen() {
@@ -151,15 +143,18 @@ export function BodyweightLogScreen() {
     };
   }, [reloadKey, session?.access_token]);
 
-  const athleteName = me?.profile.full_name || me?.profile.email || "Nutrition workspace";
+  // Server-derived age band. Under-18s get no weight-cut feature, so the target
+  // weight and the gap to it are not shown; the backend strips the stored value too.
+  const isMinorAthlete = Boolean(me?.profile.is_minor);
   const entries = workspace?.nutrition_monitoring.daily_bodyweight_log ?? [];
   const indexedEntries = getBodyweightEntriesWithIndex(entries);
   const latestEntry = workspace ? getLatestBodyweightEntry(entries) : null;
   const previousEntry = workspace ? getPreviousBodyweightEntry(entries) : null;
   const latestEffectiveWeight = workspace ? getLatestEffectiveWeight(workspace) : null;
   const sevenDayAverage = workspace ? getSevenDayAverage(entries) : null;
-  const bmi = workspace ? getBodyMassIndex(workspace.nutrition_profile.height_cm ?? null, latestEffectiveWeight) : null;
-  const targetGap = workspace ? getTargetGap(latestEffectiveWeight, workspace.shared_camp_context.target_weight_kg) : null;
+  const targetWeightKg = isMinorAthlete ? null : (workspace?.shared_camp_context.target_weight_kg ?? null);
+  const targetGap = workspace && !isMinorAthlete ? getTargetGap(latestEffectiveWeight, targetWeightKg) : null;
+  const daysUntilFight = workspace?.derived.days_until_fight ?? null;
   const recentChange = workspace ? getRecentChange(entries, selectedRange) : null;
 
   function persistEntries(nextEntries: NutritionBodyweightLogEntry[], successMessage: string, onSuccess?: () => void) {
@@ -244,16 +239,17 @@ export function BodyweightLogScreen() {
   return (
     <RequireAuth>
       <section className={`panel ${styles.bodyweightPage}`}>
-        <NutritionWorkspaceHeader
-          athleteName={athleteName}
-          title="Bodyweight log"
-          description="Log daily weigh-ins, track your trend and edit past entries."
-        />
-        <NutritionSubnav />
+        <div className="section-heading">
+          <div className="athlete-motion-slot athlete-motion-header">
+            <p className="kicker">Nutrition</p>
+            <h1>Weight tracker</h1>
+            <p className="muted">Log your weigh-ins and watch your trend toward fight weight.</p>
+          </div>
+        </div>
         <SafetyNote tone="warning">{WEIGHT_CUT_SAFETY}</SafetyNote>
 
         {!workspace ? (
-          <section className="support-panel loading-card"><p className="muted">{error ? "Bodyweight log unavailable." : "Unlxcking your bodyweight log…"}</p></section>
+          <section className="support-panel loading-card"><p className="muted">{error ? "Weight tracker unavailable." : "Unlxcking your weight tracker…"}</p></section>
         ) : (
           <>
             <section className={styles.heroPanel}>
@@ -277,38 +273,41 @@ export function BodyweightLogScreen() {
                     <p className={styles.heroMetaLabel}>Last entry</p>
                     <p className={styles.heroMetaValue}>{formatBodyweightDate(latestEntry?.date ?? null)}</p>
                   </div>
-                  <div className={styles.heroMetaCard}>
-                    <p className={styles.heroMetaLabel}>Target</p>
-                    <p className={styles.heroMetaValue}>{formatWeight(workspace.shared_camp_context.target_weight_kg ?? null)}</p>
-                  </div>
-                  <div className={styles.heroMetaCard}>
-                    <p className={styles.heroMetaLabel}>Weight source</p>
-                    <p className={styles.heroMetaValue}>{formatWeightSource(workspace.shared_camp_context.current_weight_source)}</p>
-                  </div>
+                  {isMinorAthlete ? null : (
+                    <div className={styles.heroMetaCard}>
+                      <p className={styles.heroMetaLabel}>Target</p>
+                      <p className={styles.heroMetaValue}>{formatWeight(targetWeightKg)}</p>
+                    </div>
+                  )}
+                  {daysUntilFight != null && daysUntilFight >= 0 ? (
+                    <div className={styles.heroMetaCard}>
+                      <p className={styles.heroMetaLabel}>Fight in</p>
+                      <p className={styles.heroMetaValue}>{formatDaysUntilFight(daysUntilFight)}</p>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </section>
 
             <section className={styles.kpiRail}>
               <article className={styles.kpiCard}>
-                <p className={styles.kpiLabel}>BMI</p>
-                <p className={styles.kpiValue}>{formatBmiValue(bmi)}</p>
-                <p className={styles.kpiHelper}>
-                  {bmi == null ? "Needs height and effective weight." : "Derived from saved height and effective current weight."}
-                </p>
-              </article>
-              <article className={styles.kpiCard}>
                 <p className={styles.kpiLabel}>7-day average</p>
                 <p className={styles.kpiValue}>{formatWeight(sevenDayAverage)}</p>
                 <p className={styles.kpiHelper}>Calculated from the seven most recent logged entries.</p>
               </article>
-              <article className={styles.kpiCard}>
-                <p className={styles.kpiLabel}>Target gap</p>
-                <p className={styles.kpiValue}>{formatTargetGapLabel(targetGap)}</p>
-                <p className={styles.kpiHelper}>
-                  {targetGap == null ? "Add a target weight in the workspace." : "Gap between effective weight and saved target."}
-                </p>
-              </article>
+              {isMinorAthlete ? null : (
+                <article className={styles.kpiCard}>
+                  <p className={styles.kpiLabel}>Target gap</p>
+                  <p className={styles.kpiValue}>{formatTargetGapLabel(targetGap)}</p>
+                  <p className={styles.kpiHelper}>
+                    {targetWeightKg == null ? (
+                      <>No target weight yet. <Link href="/onboarding">Set it in Camp Setup</Link>.</>
+                    ) : (
+                      "Distance from your latest weight to your target."
+                    )}
+                  </p>
+                </article>
+              )}
               <article className={styles.kpiCard}>
                 <p className={styles.kpiLabel}>Recent change</p>
                 <p className={styles.kpiValue}>{formatWeightDelta(recentChange)}</p>
@@ -323,7 +322,7 @@ export function BodyweightLogScreen() {
             <NutritionBodyweightChart
               entries={entries}
               range={selectedRange}
-              targetWeightKg={workspace.shared_camp_context.target_weight_kg ?? null}
+              targetWeightKg={targetWeightKg}
               onRangeChange={setSelectedRange}
             />
 
@@ -338,8 +337,9 @@ export function BodyweightLogScreen() {
 
               <div className={styles.quickAddGrid}>
                 <div className={`field ${styles.quickWeightField}`}>
-                  <label>Weight (kg)</label>
+                  <label htmlFor="bodyweight-quick-weight">Weight (kg)</label>
                   <input
+                    id="bodyweight-quick-weight"
                     type="number"
                     inputMode="decimal"
                     step="0.1"
@@ -351,16 +351,18 @@ export function BodyweightLogScreen() {
 
                 <div className={styles.quickMetaGrid}>
                   <div className="field">
-                    <label>Date</label>
+                    <label htmlFor="bodyweight-quick-date">Date</label>
                     <input
+                      id="bodyweight-quick-date"
                       type="date"
                       value={quickAdd.date}
                       onChange={(event) => setQuickAdd((current) => ({ ...current, date: event.target.value }))}
                     />
                   </div>
                   <div className="field">
-                    <label>Time</label>
+                    <label htmlFor="bodyweight-quick-time">Time</label>
                     <input
+                      id="bodyweight-quick-time"
                       type="time"
                       value={quickAdd.time}
                       onChange={(event) => setQuickAdd((current) => ({ ...current, time: event.target.value }))}
@@ -383,8 +385,9 @@ export function BodyweightLogScreen() {
                     </div>
                   </div>
                   <div className={`field ${styles.quickNotes}`}>
-                    <label>Notes</label>
+                    <label htmlFor="bodyweight-quick-notes">Notes</label>
                     <textarea
+                      id="bodyweight-quick-notes"
                       rows={3}
                       value={quickAdd.notes}
                       onChange={(event) => setQuickAdd((current) => ({ ...current, notes: event.target.value }))}
@@ -405,7 +408,7 @@ export function BodyweightLogScreen() {
                 <div className={styles.moduleHeaderCopy}>
                   <p className="kicker">History</p>
                   <h2 className="form-section-title">Editable entries</h2>
-                  <p className="muted">Reverse chronological with explicit save affordances so changes are always deliberate.</p>
+                  <p className="muted">Newest first. Tap Edit to fix an entry.</p>
                 </div>
               </div>
 
