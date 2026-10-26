@@ -73,9 +73,13 @@ for (const width of [390, 1280]) {
     await trigger.focus(); await page.keyboard.press("Enter");
     const dialog = page.getByRole("dialog", { name: "Back Squat", exact: true });
     await expect(dialog).toContainText("Performance history"); await expect(dialog).toContainText("80 kg");
-    await expect(dialog).toContainText("180 seconds"); await expect(dialog).toContainText("Other performed values are unknown");
     await expect(dialog.getByRole("button", { name: "Close exercise history" })).toBeFocused();
     await page.keyboard.press("Tab"); expect(await dialog.evaluate(node => node.contains(document.activeElement))).toBe(true);
+    // History rows are one-line summaries; the full record opens on request.
+    const latest = dialog.locator("ol > li").first().getByRole("button", { expanded: false });
+    await expect(dialog).not.toContainText("Other performed values are unknown"); await latest.click();
+    await expect(dialog.locator("ol > li").first().getByRole("button", { expanded: true })).toBeVisible();
+    await expect(dialog).toContainText("180 seconds"); await expect(dialog).toContainText("Other performed values are unknown");
     expect((await new AxeBuilder({ page }).include("dialog").analyze()).violations).toEqual([]);
     const box = await dialog.boundingBox(); expect(box!.width).toBeLessThanOrEqual(width); expect(box!.x).toBeGreaterThanOrEqual(0);
     await dialog.getByRole("button", { name: "Load earlier performances" }).click();

@@ -55,3 +55,23 @@ test("failed details have a working retry and never cache the failure", async ()
     assert.match(container.textContent!, /Squat/);
   } finally { act(() => root.unmount()); container.remove(); globalThis.fetch = fetch; }
 });
+
+test("completed-as-prescribed blocks start collapsed and never repeat matching reported values", async () => {
+  const fetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ ...payload, blocks: [
+    { name: "Bound", kind: "exercise", prescribed: { sets: 4, reps: 2 }, actual: { sets: 4, set_entries: [{ reps: 2 }, { reps: 2 }, { reps: 2 }, { reps: 2 }] }, status: "as_prescribed", responses: [] },
+    { name: "Press", kind: "exercise", prescribed: { sets: 3, reps: 5 }, actual: { sets: 2 }, status: "modified", responses: [] },
+  ] }));
+  const container = document.createElement("div"); document.body.append(container);
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<SessionDetails row={row} token="token" cache={new Map()} onDismiss={() => {}} />));
+    const toggles = [...container.querySelectorAll<HTMLButtonElement>("ol button[aria-expanded]")];
+    assert.deepEqual(toggles.map(button => button.getAttribute("aria-expanded")), ["false", "true"]);
+    assert.match(container.textContent!, /4 × 2/);
+    assert.equal(container.querySelector('[aria-label="Performance: Press"]') !== null, true);
+    await act(async () => toggles[0].click());
+    assert.equal(container.querySelector('[aria-label="Performance: Bound"]'), null);
+    assert.match(container.textContent!, /Completed as prescribed · reported values match/);
+  } finally { act(() => root.unmount()); container.remove(); globalThis.fetch = fetch; }
+});

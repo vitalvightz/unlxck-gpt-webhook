@@ -1,4 +1,4 @@
-import { formatBlockLoad, formatMeasured } from "./structured-plan";
+import { compactTimeUnits, formatBlockLoad, formatMeasured } from "./structured-plan";
 import type { LoadPrescription, MeasuredValue } from "./types";
 import type { ExerciseSetResult } from "./types";
 import { setSummary } from "./set-entries";
@@ -32,4 +32,38 @@ export function detailMeasurements(values: Record<string, unknown>): { label: st
     }
     return value ? [{ label, value }] : [];
   })];
+}
+
+/** One line for a collapsed record: "3 × 180s · rest 60s", "2 × 3 · 25–30 kg". Effort stays in the full record. */
+export function measurementSummary(values: Record<string, unknown>): string {
+  if (typeof values.prescription_text === "string" && values.prescription_text.trim()) return values.prescription_text.trim();
+  const items = detailMeasurements(values);
+  const value = (label: string) => items.find(item => item.label === label)?.value;
+  const parts: string[] = [];
+  const used = new Set(["Dose", "Effort"]);
+  if (!Array.isArray(values.set_entries) && value("Sets") && value("Reps")) { parts.push(`${value("Sets")} × ${value("Reps")}`); used.add("Sets").add("Reps"); }
+  if (value("Rounds") && value("Work")) { parts.push(`${value("Rounds")} × ${compactTimeUnits(value("Work")!)}`); used.add("Rounds").add("Work"); }
+  for (const item of items) {
+    if (used.has(item.label)) continue;
+    if (item.label === "Rest") parts.push(`rest ${compactTimeUnits(item.value)}`);
+    else if (["Rounds", "Reps"].includes(item.label) || (item.label === "Sets" && !Array.isArray(values.set_entries))) parts.push(`${item.value} ${item.label.toLowerCase()}`);
+    else parts.push(compactTimeUnits(item.value));
+  }
+  return parts.join(" · ");
+}
+
+/** True when every reported value repeats the prescription, so showing both adds nothing. */
+export function matchesPrescription(prescribed: Record<string, unknown>, actual: Record<string, unknown>): boolean {
+  const entries = Array.isArray(actual.set_entries) ? actual.set_entries as ExerciseSetResult[] : null;
+  if (entries?.length) {
+    if (entries.some(entry => entry.load != null || entry.rpe != null)) return false;
+    const reps = entries[0].reps;
+    if (reps == null || entries.some(entry => entry.reps !== reps)) return false;
+    if (String(prescribed.reps) !== String(reps) || prescribed.sets !== (actual.sets ?? entries.length)) return false;
+    actual = Object.fromEntries(Object.entries(actual).filter(([key]) => !["set_entries", "sets", "reps"].includes(key)));
+  }
+  const given = detailMeasurements(actual);
+  if (!given.length) return !!entries?.length;
+  const expected = new Map(detailMeasurements(prescribed).map(item => [item.label, item.value]));
+  return given.every(item => expected.get(item.label) === item.value);
 }

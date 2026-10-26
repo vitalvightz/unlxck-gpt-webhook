@@ -42,6 +42,12 @@ test("complete library search, record detail pagination, failure retry and visit
     const trigger = container.querySelector<HTMLButtonElement>('[aria-label="View Back Squat performance history"]')!;
     trigger.focus(); await act(async () => trigger.click());
     assert.match(container.querySelector("dialog")!.textContent!, /80 kg/);
+    // History rows start collapsed with a one-line summary; the full record expands on request.
+    assert.match(container.querySelector("dialog")!.textContent!, /3 sets · 80 kg/);
+    assert.equal(container.querySelector("dialog")!.textContent!.includes("Other performed values are unknown"), false);
+    const row = container.querySelector<HTMLButtonElement>('dialog ol button[aria-expanded="false"]')!;
+    await act(async () => row.click());
+    assert.equal(row.getAttribute("aria-expanded"), "true");
     assert.match(container.querySelector("dialog")!.textContent!, /Other performed values are unknown/);
     await act(async () => button("Load earlier performances").click());
     assert.ok(container.querySelector('[role="alert"]'));

@@ -1,4 +1,4 @@
-.dialog { width: min(720px, calc(100vw - 40px)); max-height: calc(100dvh - 48px); padding: 0; overflow: hidden; border: 1px solid var(--border-default); border-radius: 18px; background: var(--bg-panel); color: var(--text-primary); box-shadow: 0 24px 80px rgb(0 0 0 / 45%); }
+.dialog { width: min(720px, calc(100vw - 40px)); max-height: calc(100dvh - 48px - var(--safe-area-top)); padding: 0; overflow: hidden; border: 1px solid var(--border-default); border-radius: 18px; background: var(--bg-panel); color: var(--text-primary); box-shadow: 0 24px 80px rgb(0 0 0 / 45%); }
 .dialog[open] { display: flex; flex-direction: column; }
 .dialog::backdrop { background: rgb(0 0 0 / 75%); }
 .header { display: flex; flex-shrink: 0; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 24px; border-bottom: 1px solid var(--border-subtle); }
@@ -13,12 +13,27 @@
 .section { margin-top: 20px; }
 .section h3 { margin: 0 0 16px; font-size: 16px; }
 .blocks { list-style: none; margin: 0; padding: 0; }
-.block { padding: 24px 0; border-top: 1px solid var(--border-subtle); }
-.blockHeading { display: flex; gap: 12px; align-items: baseline; }
-.blockHeading h4 { margin: 0; font-size: 18px; overflow-wrap: anywhere; }
+.block { border-top: 1px solid var(--border-subtle); }
+/* Collapsed row: the whole heading area toggles through the title button's hit area. */
+.blockHeading { position: relative; display: flex; gap: 12px; align-items: baseline; padding: 16px 0; }
+.blockTitle { flex: 1; min-width: 0; }
+.blockHeading h4 { margin: 0; font-size: 17px; overflow-wrap: anywhere; }
+.blockToggle { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.blockToggle::after { content: ""; position: absolute; inset: 0; }
+.blockToggle:focus-visible { outline: none; }
+.blockHeading:has(.blockToggle:focus-visible) { outline: 2px solid var(--brand-red); outline-offset: 2px; border-radius: 8px; }
+.blockHeading:hover .blockToggle { color: var(--text-primary); }
+.blockSummary { margin: 4px 0 0; color: var(--text-secondary); font-size: 13px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.status { flex-shrink: 0; align-self: center; color: var(--text-muted); font-size: 12px; font-weight: 600; }
+.status[data-tone="changed"] { color: var(--progress-gold); }
+.status[data-tone="warn"] { color: var(--danger-ink); }
+.chevron { align-self: center; color: var(--text-muted); font-size: 20px; line-height: 1; transition: transform .15s ease; }
+.block[data-open="true"] .chevron { transform: rotate(90deg); }
+.blockBody { padding: 0 0 20px; }
 .number { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-.outcome { margin: 8px 0 16px; font-size: 12px; color: var(--text-muted); }
+.outcome { margin: 0 0 12px; font-size: 12px; color: var(--text-muted); }
 .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.blockBody section h5 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin: 0 0 10px; color: var(--text-muted); }
 .comparison section { min-width: 0; }
 .comparison h5 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin: 0 0 10px; color: var(--text-muted); }
 .measurements { display: grid; gap: 8px; margin: 0; font-size: 13px; }
@@ -44,16 +59,15 @@
 .response { margin-top: 16px; padding-left: 12px; border-left: 2px solid var(--border-default); font-size: 13px; }
 .response > span { color: var(--text-muted); }
 .response p { margin: 8px 0; }
-.sessionSummary h3 { margin: 0 0 16px; font-size: 16px; }
-.sessionFacts { display: flex; flex-wrap: wrap; gap: 16px 24px; margin: 0; }
-.sessionFacts > div { display: grid; gap: 6px; }
+.sessionFacts { display: flex; flex-wrap: wrap; gap: 12px 24px; margin: 0; }
+.sessionFacts > div { display: grid; gap: 4px; }
 .sessionFacts dt { color: var(--text-muted); font-size: 12px; }
 .sessionFacts dd { margin: 0; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .recordContent, .analysisColumn, .performanceColumn { min-width: 0; }
 .analysisColumn > p + p { margin-top: 8px; }
 .block:focus { outline: 2px solid var(--brand-red); outline-offset: -2px; border-radius: 8px; }
 @media (min-width: 900px) {
-  .workspace { width: min(1320px, calc(100vw - 48px)); max-width: none; height: calc(100dvh - 48px); }
+  .workspace { width: min(1320px, calc(100vw - 48px)); max-width: none; height: calc(100dvh - 48px - var(--safe-area-top)); }
   .workspace .header { padding: 24px 32px; }
   .workspace .body { flex: 1; padding: 24px 32px 32px; }
   .sessionLayout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; align-items: start; }
@@ -71,8 +85,11 @@
   .performanceColumn .comparison { gap: 20px; }
 }
 @media (max-width: 600px) {
-  .dialog { position: fixed; inset: auto 0 0; margin: 0; width: 100%; max-width: none; max-height: calc(100dvh - 12px); border-radius: 18px 18px 0 0; border-bottom: 0; }
-  .header { padding: 20px; }
+  .dialog { position: fixed; inset: auto 0 0; margin: 0; width: 100%; max-width: none; max-height: calc(100dvh - var(--safe-area-top) - 12px); border-radius: 18px 18px 0 0; border-bottom: 0; }
+  .header { padding: 16px 16px 14px 20px; }
+  .header h2 { margin: 4px 0 4px; font-size: 22px; }
+  .section { margin-top: 16px; }
+  .sessionFacts dd { font-size: 14px; }
   .body { padding-left: 20px; padding-right: 20px; }
   .comparison { grid-template-columns: 1fr; gap: 18px; }
   .manualList > li { grid-template-columns: 1fr; }

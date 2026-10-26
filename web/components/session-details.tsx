@@ -8,7 +8,7 @@ import { sessionStatusLabel } from "@/lib/history";
 import { EXERCISE_LOG_REASON_LABELS } from "@/lib/exercise-log";
 import type { ExerciseLogReason } from "@/lib/types";
 import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
-import { detailMeasurements } from "@/lib/session-details";
+import { detailMeasurements, matchesPrescription, measurementSummary } from "@/lib/session-details";
 import { NO_MEASUREMENTS, summarise } from "@/lib/manual-exercises";
 import { sessionTypes, sportLabel } from "@/lib/training-disciplines";
 import type { TrainingHistorySession } from "@/lib/training-history";
@@ -31,30 +31,43 @@ function Measurements({ values, reported = false }: { values: Record<string, unk
   </div>)}</dl> : !sets?.length ? <p className={styles.quiet}>No values recorded.</p> : null}</>;
 }
 
-export function TrainingBlock({ block, index, heading, recordId }: { block: SessionDetailBlock; index: number; heading?: string; recordId?: string }) {
-  // Recorded on the athlete's own training: no prescription exists to compare.
-  if (block.source === "manual") return <li className={styles.block} data-performance={recordId} tabIndex={recordId ? -1 : undefined}>
-    <div className={styles.blockHeading}><span className={styles.number}>{String(index + 1).padStart(2, "0")}</span>
-      <h4>{heading || block.name}</h4></div>
+/** Short status for a collapsed row; the full outcome stays in the expanded record. */
+const SHORT_OUTCOMES = { as_prescribed: "Done", modified: "Modified", skipped: "Skipped",
+  done_as_shown: "Done", changed: "Changed", stopped: "Stopped" };
+const QUIET_STATUSES = new Set(["as_prescribed", "done_as_shown"]);
+
+/** Blocks with something to see start open: a lone block, or any change, skip or unknown outcome. */
+export function opensByDefault(block: SessionDetailBlock, count: number): boolean {
+  return count === 1 || (block.source !== "manual" && !QUIET_STATUSES.has(block.status ?? ""));
+}
+
+/** The one-line summary of what was done, falling back to what was prescribed. */
+export function blockSummary(block: SessionDetailBlock): string {
+  return measurementSummary(block.actual) || measurementSummary(block.prescribed);
+}
+
+function TrainingBlockBody({ block, context }: { block: SessionDetailBlock; context: string }) {
+  if (block.source === "manual") return <>
     <p className={styles.outcome}>Logged training · added by you</p>
-    <section aria-label={`Recorded: ${heading ? `${block.name} · ${heading} · Record ${index + 1}` : block.name}`}><h5 className={styles.recordedHeading}>Recorded</h5>
+    <section aria-label={`Recorded: ${context}`}><h5 className={styles.recordedHeading}>Recorded</h5>
       {detailMeasurements(block.actual).length ? <Measurements values={block.actual} reported /> : <p className={styles.quiet}>No measurements recorded.</p>}</section>
     {block.notes ? <p className={styles.note}>{block.notes}</p> : null}
-  </li>;
+  </>;
   const rehab = block.kind !== "exercise";
   const actuals = detailMeasurements(block.actual).length > 0;
   const quantified = block.completed_dose?.completion_state === "quantified";
-  const context = heading ? `${block.name} · ${heading} · Record ${index + 1}` : block.name;
-  return <li className={styles.block} data-performance={recordId} tabIndex={recordId ? -1 : undefined}>
-    <div className={styles.blockHeading}><span className={styles.number}>{String(index + 1).padStart(2, "0")}</span>
-      <h4>{heading || block.name}</h4></div>
-    <p className={styles.outcome}>{block.kind === "guidance" ? "Guidance · " : ""}{block.status ? OUTCOMES[block.status] : "Completion not recorded"}</p>
-    <div className={styles.comparison}>
+  // Confirmed or repeated values add nothing beside the prescription.
+  const same = !rehab && block.kind !== "guidance" && block.status === "as_prescribed" && (!actuals || matchesPrescription(block.prescribed, block.actual));
+  return <>
+    {/* The row already shows "Modified", "Skipped"…; only say what it doesn't. */}
+    {block.kind === "guidance" || !block.status || OUTCOMES[block.status] !== SHORT_OUTCOMES[block.status]
+      ? <p className={styles.outcome}>{block.kind === "guidance" ? "Guidance · " : ""}{block.status ? OUTCOMES[block.status] : "Completion not recorded"}{same && actuals ? " · reported values match" : ""}</p> : null}
+    <div className={same ? undefined : styles.comparison}>
       <section aria-label={`Prescribed: ${context}`}><h5>{block.kind === "guidance" ? "Saved guidance" : "Prescribed"}</h5><Measurements values={block.prescribed} /></section>
-      {block.kind !== "guidance" ? <section aria-label={`Performance: ${context}`}><h5>{rehab ? "Confirmed completed dose" : "Reported"}</h5>
+      {block.kind !== "guidance" && !same ? <section aria-label={`Performance: ${context}`}><h5>{rehab ? "Confirmed completed dose" : "Reported"}</h5>
         {rehab ? quantified ? <Measurements values={block.completed_dose!} /> : <p className={styles.quiet}>{block.status === "skipped" ? "Skipped. No completed dose recorded." : "Completed amount unknown."}</p>
           : actuals ? <><Measurements values={block.actual} reported /><p className={styles.quiet}>{block.status === "as_prescribed" ? "Other prescribed values confirmed as completed." : "Other performed values are unknown."}</p></>
-          : <p className={styles.quiet}>{block.status === "as_prescribed" ? "Confirmed completed as prescribed. No separate values logged." : block.status === "skipped" ? "Skipped. No performance values logged." : "Performed values unknown."}</p>}
+          : <p className={styles.quiet}>{block.status === "skipped" ? "Skipped. No performance values logged." : "Performed values unknown."}</p>}
       </section> : null}
     </div>
     {block.reason ? <p className={styles.note}>{EXERCISE_LOG_REASON_LABELS[block.reason as ExerciseLogReason] || block.reason}</p> : null}
@@ -68,6 +81,24 @@ export function TrainingBlock({ block, index, heading, recordId }: { block: Sess
       {response.next_day_response !== "not_yet_known" ? <p>Next day: {response.next_day_response.replaceAll("_", " ")}</p> : null}
       {response.worsening_reported != null ? <p>Worsening reported: {response.worsening_reported ? "Yes" : "No"}</p> : null}
     </div>)}
+  </>;
+}
+
+/** A collapsible record row: name, one-line summary and status; the full record expands on request. */
+export function TrainingBlock({ block, index, heading, recordId, open, onToggle }: {
+  block: SessionDetailBlock; index: number; heading?: string; recordId?: string; open: boolean; onToggle: () => void;
+}) {
+  const body = useId();
+  const context = heading ? `${block.name} · ${heading} · Record ${index + 1}` : block.name;
+  const status = block.source === "manual" ? "Logged" : block.status ? SHORT_OUTCOMES[block.status] : "Not recorded";
+  const summary = blockSummary(block);
+  return <li className={styles.block} data-performance={recordId} data-open={open} tabIndex={recordId ? -1 : undefined}>
+    <div className={styles.blockHeading}><span className={styles.number}>{String(index + 1).padStart(2, "0")}</span>
+      <div className={styles.blockTitle}><h4><button type="button" className={styles.blockToggle} aria-expanded={open} aria-controls={body} onClick={onToggle}>{heading || block.name}</button></h4>
+        {summary ? <p className={styles.blockSummary}>{summary}</p> : null}</div>
+      <span className={styles.status} data-tone={block.status === "skipped" || block.status === "stopped" ? "warn" : block.status && !QUIET_STATUSES.has(block.status) ? "changed" : undefined}>{status}</span>
+      <span className={styles.chevron} aria-hidden="true">›</span></div>
+    {open ? <div id={body} className={styles.blockBody}><TrainingBlockBody block={block} context={context} /></div> : null}
   </li>;
 }
 
@@ -108,6 +139,8 @@ export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = tr
     return () => { cancelled = true; };
   }, [row.id, row.source, token, cache, attempt]);
   const record = details?.session;
+  const [open, setOpen] = useState<ReadonlySet<number> | null>(null);
+  const expanded = open ?? new Set(details?.blocks.flatMap((block, index) => opensByDefault(block, details.blocks.length) ? [index] : []) ?? []);
   return <dialog ref={dialog} className={`${styles.dialog} ${styles.workspace}`} aria-labelledby={heading}
     onCancel={event => { event.preventDefault(); onDismiss(); }}
     onClick={event => { if (event.target === event.currentTarget) {
@@ -122,7 +155,6 @@ export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = tr
       {error ? <div role="alert"><p>Unable to load session details. Try again.</p><button type="button" className="secondary-button" onClick={() => { setError(false); setAttempt(value => value + 1); }}>Retry</button></div> : null}
       {details && record ? <div className={styles.sessionLayout}>
         <section className={styles.sessionSummary} aria-label="Session overview">
-          <h3>Session overview</h3>
           <dl className={styles.sessionFacts}>
             <div><dt>Status</dt><dd>{sessionStatusLabel(record.status)}</dd></div>
             <div><dt>Source</dt><dd>{record.source === "external" ? "Added by you" : "Unlxck"}</dd></div>
@@ -151,11 +183,12 @@ export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = tr
             {details.sparring.notes ? <p className={styles.note}>{details.sparring.notes}</p> : null}</> : null}
         </section> : <section className={styles.section}><h3>Exercises & training blocks</h3>
           {details.prescription_source === "exercise_logs" ? <p className={styles.quiet}>Saved exercise logs only. The full prescription and original block order are unavailable.</p> : null}
-          {details.blocks.length ? <ol className={styles.blocks}>{details.blocks.map((block, index) => <TrainingBlock key={index} block={block} index={index} />)}</ol> : null}
+          {details.blocks.length ? <ol className={styles.blocks}>{details.blocks.map((block, index) => <TrainingBlock key={index} block={block} index={index}
+            open={expanded.has(index)} onToggle={() => setOpen(new Set(expanded.has(index) ? [...expanded].filter(item => item !== index) : [...expanded, index]))} />)}</ol> : null}
         </section>}
         {details.message ? <p className={styles.quiet}>{details.message}</p> : null}
         {record.pain_after != null || record.notes || record.modification_reason || record.takeaway ? <section className={styles.section}><h3>Session feedback</h3>
-          {record.pain_after != null ? <p>Pain after: {record.pain_after}/10</p> : null}
+          {record.pain_after != null ? <dl className={styles.measurements}><div><dt>Pain after</dt><dd>{record.pain_after}/10</dd></div></dl> : null}
           {record.modification_reason ? <p className={styles.note}>Modification: {record.modification_reason}</p> : null}
           {record.notes ? <p className={styles.note}>{record.notes}</p> : null}
           {record.takeaway ? <p className={styles.note}>Takeaway: {record.takeaway}</p> : null}</section> : null}

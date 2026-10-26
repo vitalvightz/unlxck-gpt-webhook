@@ -67,12 +67,13 @@ for (const width of [390, 1280]) {
     await progress.getByRole("combobox", { name: "Progress measurement" }).selectOption("reps:reps");
     await expect(progress.locator('[aria-label="Selected performance"]')).toContainText("5 reps");
     await progress.getByRole("combobox", { name: "Progress measurement" }).selectOption("load:kg");
-    await progress.getByRole("button", { name: "Previous performance" }).click();
+    await progress.getByRole("slider", { name: "Inspect performance" }).focus(); await page.keyboard.press("ArrowLeft");
     const selected = progress.locator('[aria-label="Selected performance"]');
     await expect(selected).toContainText("95 kg"); await expect(selected).toContainText("Sat 03 Oct 2026");
-    await expect(selected).toContainText("Sets: 3");
-    await selected.getByRole("button", { name: "View original performance" }).click();
+    await expect(selected).toContainText("3 ×");
+    await selected.getByRole("button", { name: "Show in history" }).click();
     await expect(dialog.locator('[data-performance="p5"]')).toBeFocused();
+    await expect(dialog.locator('[data-performance="p5"]').getByRole("button", { expanded: true })).toBeVisible();
     await dialog.getByRole("button", { name: "Load earlier performances" }).click();
     await expect(progress).toContainText("6 recorded loads");
     // Records without a load are excluded from the series rather than splitting the line.
@@ -137,7 +138,7 @@ test("exercise units never combine and point selection survives an earlier-page 
   await page.getByRole("button", { name: "View Back Squat performance history", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Back Squat", exact: true });
   const progress = dialog.getByRole("region", { name: "Exercise progress", exact: true });
-  await progress.getByRole("button", { name: "Previous performance" }).click();
+  await progress.getByRole("slider", { name: "Inspect performance" }).focus(); await page.keyboard.press("ArrowLeft");
   await dialog.getByRole("button", { name: "Load earlier performances" }).click();
   await expect(dialog.getByRole("alert")).toBeVisible();
   await expect(progress.locator('[aria-label="Selected performance"]')).toContainText("95 kg");

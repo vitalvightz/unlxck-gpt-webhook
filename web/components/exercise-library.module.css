@@ -19,3 +19,11 @@
   .detailHeading > div:last-child { text-align: right; }
 }
 @media (max-width: 700px) { .library { grid-template-columns: minmax(0, 1fr); } }
+/* Keep the sticky record header short on phones: name and best load share one row. */
+@media (max-width: 600px) {
+  .detailHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex: 1; }
+  .detailHeading h2 { font-size: 20px; }
+  .detailHeading > div:last-child { flex-shrink: 0; max-width: 55%; text-align: right; }
+  .detailHeading .resultLabel { margin: 0; font-size: 11px; }
+  .detailResult { margin-top: 2px; font-size: 18px; text-wrap: balance; }
+}
