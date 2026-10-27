@@ -526,3 +526,50 @@ def test_a_newly_built_camp_injury_reaches_today_before_the_camp_is_active() -> 
     store.set_active_plan_id(ATHLETE, built["id"])
     build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC")
     assert len(_live(store)) == 1
+
+
+def test_free_text_intake_injury_is_parsed_into_area_and_condition() -> None:
+    """Quick build / onboarding free text must not become one opaque area string."""
+    store = FakeStore()
+    plan = _seed_generated_plan(
+        store,
+        intake_id="intake-free-text",
+        intake={"injuries": "hip tightness [training_impact:not_limiting]"},
+    )
+
+    flags = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=plan)
+
+    assert [(flag["body_area"], flag["description"]) for flag in flags] == [
+        ("Hip", "tightness [training_impact:not_limiting]")
+    ]
+
+
+def test_free_text_intake_with_two_injuries_tracks_each() -> None:
+    store = FakeStore()
+    plan = _seed_generated_plan(
+        store,
+        intake_id="intake-free-text-two",
+        intake={"injuries": "left shoulder strain, sore knee [training_impact:limiting]"},
+    )
+
+    flags = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=plan)
+
+    assert sorted((flag["body_area"], flag["description"]) for flag in flags) == [
+        ("Knee", "soreness [training_impact:limiting]"),
+        ("Left shoulder", "strain [training_impact:limiting]"),
+    ]
+
+
+def test_unplaceable_free_text_keeps_one_flag_without_the_impact_marker_in_its_area() -> None:
+    store = FakeStore()
+    plan = _seed_generated_plan(
+        store,
+        intake_id="intake-free-text-vague",
+        intake={"injuries": "something weird [training_impact:cant_train]"},
+    )
+
+    flags = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=plan)
+
+    assert [(flag["body_area"], flag["description"]) for flag in flags] == [
+        ("something weird", "something weird [training_impact:cant_train]")
+    ]
