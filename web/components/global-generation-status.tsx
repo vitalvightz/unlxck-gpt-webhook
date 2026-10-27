@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { cancelGenerationJob, retryGenerationJob } from "@/lib/api";
 import { formatGenerationElapsedLabel, formatJobElapsedLabel } from "@/lib/generation-elapsed";
 import { humanizeGenerationError } from "@/lib/generation-failure";
+import { offerInstallPrompt } from "@/lib/push-prompt";
 import { useAppSession } from "./auth-provider";
 import { useGenerationStatus } from "./generation-status-provider";
 
@@ -465,6 +466,15 @@ export function GlobalGenerationStatus() {
     const interval = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(interval);
   }, [isElapsedRunning]);
+
+  const isAthlete = me?.profile.role === "athlete";
+  const offeredPlanRef = useRef<string | null>(null);
+  useEffect(() => {
+    // A plan that finishes in the background is the same value moment as /generate.
+    if (!isAthlete || phase !== "completed" || !planId || offeredPlanRef.current === planId) return;
+    offeredPlanRef.current = planId;
+    offerInstallPrompt();
+  }, [isAthlete, phase, planId]);
 
   useEffect(() => {
     if (previousPhaseRef.current !== "completed" && phase === "completed") {
