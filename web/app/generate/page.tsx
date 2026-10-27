@@ -22,6 +22,7 @@ import {
 import { hydratePlanRequest } from "@/lib/onboarding";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import { stableStringify } from "@/lib/stable-stringify";
+import { offerInstallPrompt } from "@/lib/push-prompt";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 import { PublicGenerationScreen } from "@/components/public-generation-screen";
 
@@ -114,6 +115,8 @@ export default function GeneratePage() {
       if (!planId) {
         return;
       }
+      // The new plan is the first value moment; the prompt opens on the plan page.
+      if (!isProtectedTriageOutcome) offerInstallPrompt();
       const search = new URLSearchParams();
       if (status === "review_required") {
         search.set("review_required", "1");
