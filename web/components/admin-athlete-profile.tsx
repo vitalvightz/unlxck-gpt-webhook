@@ -201,7 +201,7 @@ function buildOverviewSections(athlete: AdminAthleteRecord): OverviewSection[] {
           value:
             athlete.plan_count > 0
               ? `This athlete has ${athlete.plan_count} saved ${athlete.plan_count === 1 ? "plan" : "plans"}, but the latest intake payload was not returned for this record.`
-              : "No completed intake has been saved yet for this athlete.",
+              : "No completed intake saved yet.",
           multiline: true,
         },
         {
@@ -328,7 +328,7 @@ export function AthleteProfileOverviewCard({ athlete }: { athlete: AdminAthleteR
           <h2 className="plan-summary-title">Captured athlete profile</h2>
         </div>
         <p className="muted">
-          The athlete account, latest saved intake, and planner context are grouped into one faster reading surface.
+          Account, latest intake and planner context in one view.
         </p>
       </div>
 

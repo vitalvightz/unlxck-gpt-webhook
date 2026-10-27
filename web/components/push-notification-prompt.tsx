@@ -99,7 +99,7 @@ export function DevicePushPrompt({ token, athleteId }: { token: string; athleteI
       await subscribeToPushNotifications(token, setup);
       setSetup(null);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to enable notifications. Try again in Settings.");
+      setError(caught instanceof Error ? caught.message : "Couldn't enable notifications. Try again in Settings.");
     } finally { working.current = false; setBusy(false); }
   }
 
@@ -112,7 +112,7 @@ export function DevicePushPrompt({ token, athleteId }: { token: string; athleteI
         <p className={styles.eyebrow}>STAY READY</p>
       </div>
       <h2 id="push-prompt-title"><span className={styles.brand}>UNLXCK</span>{" "}<span className={styles.headline}>your next move.</span></h2>
-      <p id="push-prompt-description" className={styles.description}>Get timely training reminders, check-in nudges and key camp updates.</p>
+      <p id="push-prompt-description" className={styles.description}>Training reminders, check-in nudges and camp updates.</p>
       {error ? <p role="alert" className={styles.error}>{error}</p> : null}
       <button type="button" className={styles.enable} onClick={() => void enable()} disabled={busy}>
         {busy ? "Enabling…" : "Enable notifications"}<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 12 12 4M4 4h8v8" stroke="currentColor" strokeWidth="1.5" /></svg>

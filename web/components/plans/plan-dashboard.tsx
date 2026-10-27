@@ -360,7 +360,7 @@ export function PlanManageSheet({
           </form>
         ) : manage.isArchiveConfirmOpen ? (
           <div className={styles.inlineForm} role="group" aria-label="Archive plan">
-            <p>Archive this plan? It moves to your archived list, where you can still view it.</p>
+            <p>Archive this plan? You can still view it in your archived list.</p>
             <div className={styles.sheetActions}>
               <button
                 type="button"
@@ -598,7 +598,7 @@ export function AthleteProfileRow({ me }: { me: MeResponse | null }) {
       {open ? (
         <InjuryDetailSheet title={t("athleteProfile")} onClose={() => setOpen(false)}>
           <div className="injury-sheet-body">
-            <p className="muted">Profile and intake details used for your next build.</p>
+            <p className="muted">Profile and intake used for your next build.</p>
             {facts.length ? (
               <dl className={styles.facts}>
                 {facts.map((line) => (

@@ -27,11 +27,7 @@ export function AnalyticsPreference() {
     <div className="support-panel">
       <h3>Optional product analytics</h3>
       <p className="muted">
-        Help improve Unlxck by sharing feature interactions such as timer starts
-        and plan views. No notes, nutrition contents or health details are
-        included. Stored for up to 180 days. You can switch this off at any
-        time. Your saved training records remain available for service
-        diagnostics.
+        Share feature interactions like timer starts and plan views to help improve Unlxck. No notes, nutrition or health details. Kept up to 180 days. Switch off any time. Saved training records stay available for service diagnostics.
       </p>
       <label>
         <input

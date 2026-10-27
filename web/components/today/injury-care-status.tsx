@@ -78,7 +78,7 @@ export function InjuryClearance({ injury, token, onRefresh }: {
       <form onSubmit={event => { event.preventDefault(); void report(); }}>
         <div className="injury-sheet-body">
           <p className="injury-sheet-caption">Clinical Clearance · Self-reported</p>
-          <p className="muted">Record what your clinician advised. Your rehab follows the level you report, with injury restrictions and response holds. Stages without published rehab remain unavailable.</p>
+          <p className="muted">Record your clinician’s advice. Rehab follows the level you report, with injury restrictions and response holds. Stages without published rehab stay unavailable.</p>
           <fieldset className="injury-permission-options" disabled={busy || !injury.episode_id || surface}>
             <legend>Rehabilitation level</legend>
             {(["not_cleared", "gentle_recovery", "loading", "sport_specific"] as const).map(value => <label key={value} data-selected={rehabLevel === value}>
@@ -95,7 +95,7 @@ export function InjuryClearance({ injury, token, onRefresh }: {
               {trainingLevel === value ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg> : null}
             </label>)}
           </fieldset>
-          <p className="injury-sheet-note">Update only when your clinician’s advice changes. Injury restrictions and safety holds still apply.</p>
+          <p className="injury-sheet-note">Update only when your clinician’s advice changes. Restrictions and safety holds still apply.</p>
           <p className="injury-sheet-note">Unlxck does not issue or verify medical clearance.</p>
           {injury.rehab_decision?.prescription?.sources?.length ? <details className="injury-guidance-sources"><summary>Guidance sources</summary>
             {injury.rehab_decision.prescription.sources.map((source, index) => <a key={source} href={source} target="_blank" rel="noopener noreferrer">Routine guidance{index ? ` ${index + 1}` : ""}</a>)}

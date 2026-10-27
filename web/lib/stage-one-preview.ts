@@ -141,10 +141,10 @@ function dedupeStrings(values: readonly (string | null | undefined)[]): string[]
 }
 
 const TRIAGE_ADVISORY_COPY: Record<string, string> = {
-  medical_hold: "Injury triage flagged this for a medical hold. Final plan will reflect that.",
+  medical_hold: "Injury triage flagged a medical hold. The final plan will reflect it.",
   restricted_rehab_only: "Injury triage routed this to a restricted rehab build.",
   needs_review: "Injury triage flagged this for coach review before release.",
-  triage_blocked: "Injury triage blocked Stage 2 finalization until review clears.",
+  triage_blocked: "Injury triage blocked Stage 2 until review clears.",
 };
 
 function buildSafetyNotes(triage: StageOneTriage | null): StageOneSafetyNote[] {

@@ -482,7 +482,7 @@ function AdminFeedbackLoader({ token, reloadKey }: { token: string; reloadKey: n
         <div>
           <p className="kicker">Athlete voice</p>
           <h2>Feedback review</h2>
-          <p className="muted admin-panel-subtext">Safety reports stay pinned. Context opens only when you need it.</p>
+          <p className="muted admin-panel-subtext">Safety reports stay pinned. Open context as needed.</p>
         </div>
         <span className="badge status-badge-neutral">{loading ? "Checking" : `${feedback.length} recent`}</span>
       </div>
@@ -499,7 +499,7 @@ function AdminFeedbackLoader({ token, reloadKey }: { token: string; reloadKey: n
       {!loading && !error && feedback.length === 0 ? (
         <div className="support-panel support-panel-success">
           <h3 className="form-section-title">No feedback yet.</h3>
-          <p className="muted">Plan, recommendation, and global reports will appear here.</p>
+          <p className="muted">Plan, recommendation and global reports appear here.</p>
         </div>
       ) : null}
       {!loading && !error && feedback.length > 0 ? (

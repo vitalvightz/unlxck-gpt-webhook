@@ -312,7 +312,7 @@ function GenerationDiagnosticCard({
 
       {job.requires_admin_resume && !job.plan_id ? (
         <div className="admin-diagnostic-alert">
-          Protected triage: no plan row was created. Approve and resume to create a plan if Stage 2 succeeds.
+          Protected triage: no plan row created. Approve and resume to create one if Stage 2 succeeds.
         </div>
       ) : null}
       {showProfileRefreshWarning ? (
@@ -682,7 +682,7 @@ export default function AdminAthletePage() {
             <article className="step-card">
               <div className="form-section-header">
                 <h2 className="form-section-title">Resolve intake issues</h2>
-                <p className="muted">This saved intake needs a small update before a new plan can be generated.</p>
+                <p className="muted">Update this intake before generating a new plan.</p>
               </div>
               <p className="error-text">
                 Focus cap exceeded. This camp allows {latestIntakeFocusValidation?.cap?.maxSelections} total focus picks. Current intake has {draftFocusValidation?.totalSelections ?? 0}.
@@ -706,7 +706,7 @@ export default function AdminAthletePage() {
             </article>
           ) : null}
           {!athlete.latest_intake ? (
-            <p className="muted">Generate is available after this athlete has at least one saved intake.</p>
+            <p className="muted">Generate needs at least one saved intake.</p>
           ) : null}
 
           <AthleteProfileOverviewCard athlete={athlete} />

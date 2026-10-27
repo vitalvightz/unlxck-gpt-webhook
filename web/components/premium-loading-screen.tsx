@@ -33,12 +33,12 @@ const WORKFLOW_STEPS = [
   {
     key: "running",
     title: "Build camp",
-    detail: "Turn the saved intake into a structured fight-camp plan.",
+    detail: "Turn your intake into a structured fight camp.",
   },
   {
     key: "reconnecting",
     title: "Reconnect",
-    detail: "Restore the same saved build if the browser or network drops.",
+    detail: "Restores the same build if the browser or network drops.",
   },
   {
     key: "finalizing",
@@ -73,19 +73,19 @@ export const PHASE_CONTENT: Record<
   submitting: {
     eyebrow: "Plan build",
     title: "Saving your intake.",
-    copy: "Saving your answers so the plan uses exactly what you entered.",
+    copy: "Saving your answers.",
     chip: "Submitting",
     statusFallback: "Saving your intake now.",
-    reassurance: "Safe to leave and come back. We'll pick up the same build.",
+    reassurance: "Safe to leave. We'll pick up the same build.",
     buildState: "Saving",
   },
   queued: {
     eyebrow: "Plan build",
     title: "Intake saved. Planner is next.",
-    copy: "Your setup is saved. Building your camp plan next.",
+    copy: "Setup saved. Building your camp next.",
     chip: "Queued",
     statusFallback: "Your saved intake is queued for planning.",
-    reassurance: "Safe to leave and come back. We'll pick up the same build.",
+    reassurance: "Safe to leave. We'll pick up the same build.",
     buildState: "Queued",
   },
   running: {
@@ -94,22 +94,22 @@ export const PHASE_CONTENT: Record<
     copy: "Structuring your camp and running safety checks.",
     chip: "Running",
     statusFallback: "Your saved plan build is in progress.",
-    reassurance: "Safe to leave and come back. We'll pick up the same build.",
+    reassurance: "Safe to leave. We'll pick up the same build.",
     buildState: "Building",
   },
   reconnecting: {
     eyebrow: "Connection watch",
     title: "Reconnecting to the same plan build.",
-    copy: "Your build is safe. Just reconnecting this page to it.",
+    copy: "Your build is safe. Reconnecting.",
     chip: "Reconnecting",
     statusFallback: "Reconnecting to the saved plan build now.",
-    reassurance: "Safe to leave and come back. We'll pick up the same build.",
+    reassurance: "Safe to leave. We'll pick up the same build.",
     buildState: "Reconnecting",
   },
   finalizing: {
     eyebrow: "Final checks",
     title: "Plan ready. Opening workspace.",
-    copy: "Your plan is done. Finishing final checks before it opens.",
+    copy: "Plan done. Running final checks.",
     chip: "Finalizing",
     statusFallback: "Final checks passed. Opening your saved plan.",
     reassurance: "Your plan is ready and opening now.",
@@ -118,7 +118,7 @@ export const PHASE_CONTENT: Record<
   already_generated: {
     eyebrow: "Plan already exists",
     title: "This intake already has a generated plan.",
-    copy: "Open the existing plan or refine the intake to create a new version.",
+    copy: "Open the existing plan or refine the intake for a new version.",
     chip: "Already generated",
     statusFallback: "This intake already has a generated plan.",
     reassurance: "No new duplicate was created.",
@@ -127,10 +127,10 @@ export const PHASE_CONTENT: Record<
   review_paused: {
     eyebrow: "Planning paused",
     title: "Admin review required",
-    copy: "Your intake was flagged for a safety review before we build the plan. Nothing was lost.",
+    copy: "Your intake needs a safety review before we build. Nothing was lost.",
     chip: "Admin review",
-    statusFallback: "Planning paused. Admin review is required before generation can continue.",
-    reassurance: "Your intake is saved and visible to admins. You'll be notified when the plan is ready.",
+    statusFallback: "Planning paused for admin review.",
+    reassurance: "Intake saved and sent to admins. We'll notify you when the plan is ready.",
     buildState: "Paused",
   },
   failed: {
@@ -138,15 +138,15 @@ export const PHASE_CONTENT: Record<
     // Overridden per failure kind by describeGenerationFailure; these stay as
     // the fallback for a failure the classifier could not name.
     title: "Your plan build stopped before it finished.",
-    copy: "The saved intake did not reach an openable plan state.",
+    copy: "The intake didn't produce an openable plan.",
     chip: "Stopped",
     statusFallback: "The plan build stopped.",
-    reassurance: "Your intake is still saved. No half-finished plan was kept.",
+    reassurance: "Intake still saved. No half-finished plan kept.",
     buildState: "Stopped",
   },
 };
 
-const ESTIMATE_COPY = "Plan build has started. You can leave and return later; the saved build keeps running.";
+const ESTIMATE_COPY = "Build started. You can leave; it keeps running.";
 
 interface PremiumLoadingScreenProps {
   phase: GenerationUiPhase;
@@ -383,13 +383,13 @@ export function PremiumLoadingScreen({
                 <p className="loading-eyebrow">Build stopped</p>
                 <h2 className="form-section-title">What happened</h2>
                 <p className="muted">
-                  Your intake is saved. No partial plan was created, so you can just try again.
+                  Intake saved. No partial plan was created, so just try again.
                 </p>
               </div>
               <div className="loading-support-note">
                 <p className="kicker">Still stuck?</p>
                 <p className="muted">
-                  If it fails again, edit your intake or open your last saved plan.
+                  If it fails again, edit your intake or open your last plan.
                 </p>
               </div>
             </div>
@@ -398,7 +398,7 @@ export function PremiumLoadingScreen({
             <div className="form-section-header">
               <p className="loading-eyebrow">Build steps</p>
               <h2 className="form-section-title">Plan progress</h2>
-              <p className="muted">The highlighted stage follows the real saved plan state, not a fake timer.</p>
+              <p className="muted">The highlighted stage tracks real progress, not a timer.</p>
             </div>
             <ol className="loading-steps" aria-label="Generation workflow">
               {WORKFLOW_STEPS.map((step, index) => {

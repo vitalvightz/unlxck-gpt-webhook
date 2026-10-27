@@ -65,7 +65,7 @@ function formatRestrictions(restrictions: StageOnePreview["restrictions"]): stri
 
 function formatSafety(notes: StageOnePreview["safetyNotes"]): string {
   if (notes.length === 0) {
-    return "No exceptional safety flags. Standard camp routing.";
+    return "No safety flags. Standard routing.";
   }
   return notes.map((note) => note.message).join(" ");
 }

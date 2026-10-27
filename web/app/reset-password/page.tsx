@@ -197,7 +197,7 @@ export default function ResetPasswordPage() {
       try {
         client = getSupabaseBrowserClient();
       } catch {
-        setError("We're having trouble connecting. Please try again in a minute.");
+        setError("Connection trouble. Try again in a minute.");
         return;
       }
 
@@ -212,7 +212,7 @@ export default function ResetPasswordPage() {
       // form for the rest of the tab's life.
       clearPasswordRecovery();
       await client.auth.signOut();
-      setMessage("Password updated successfully. Redirecting to log in...");
+      setMessage("Password updated. Redirecting to log in...");
       setTimeout(() => router.replace("/login"), 1500);
     });
   }
@@ -223,13 +223,13 @@ export default function ResetPasswordPage() {
         <div className="hero-panel-copy">
           <p className="eyebrow">Account recovery</p>
           <h1>Choose a new password.</h1>
-          <p>Pick a strong password to keep your athlete workspace secure.</p>
+          <p>Pick a strong password.</p>
         </div>
         <div className="support-panel">
           <p className="kicker">Tips</p>
           <ul className="auth-flow">
             <li>Use at least 8 characters.</li>
-            <li>Longer uncommon phrases are stronger than predictable patterns.</li>
+            <li>Long, uncommon phrases beat predictable patterns.</li>
             <li>Avoid reusing a previous password.</li>
           </ul>
         </div>

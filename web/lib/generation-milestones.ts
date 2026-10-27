@@ -50,7 +50,7 @@ export type MilestoneView = {
 const REAL_BACKEND_MILESTONE_OVERRIDES: Record<string, GenerationMilestone> = {
   job_loaded: {
     title: "Worker started",
-    detail: "Worker loaded the generation job and is preparing request parsing.",
+    detail: "Worker loaded the job and is parsing the request.",
   },
 };
 

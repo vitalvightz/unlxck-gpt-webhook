@@ -73,15 +73,15 @@ export function AchillesAssessmentForm({ injury, token, onRefresh, disabled = fa
       if (reps !== null && !Number.isInteger(reps)) throw new Error("Repetitions must be a whole number.");
       if (heel !== true && (reps !== null || boolean(data, "heel_rise_assessor_usable") !== null
           || String(data.get("heel_rise_mode")) !== "unknown" || String(data.get("heel_rise_quality")) !== "unknown")) {
-        throw new Error("Heel-rise results need a completed assessment (even one where you couldn't do the movement).");
+        throw new Error("Heel-rise results need a completed assessment (even if you couldn't do the movement).");
       }
       if (range !== true && (numeric(data, "resistance_kg") !== null || boolean(data, "range_load_assessor_usable") !== null
           || ["permitted_range", "resistance", "range_load_tolerance"].some(name => String(data.get(name)) !== "unknown"))) {
-        throw new Error("Range and load results need an actual assessment. Leave unassessed results unknown.");
+        throw new Error("Range and load results need a real assessment. Otherwise leave unknown.");
       }
       const assessor = choice(data, "assessor", ["unknown", "self_reported", "coach_observed", "clinician_physio"]);
       const pathology = choice(data, "incompatible_pathology", ["not_assessed", "unknown", "suspected", "excluded"]);
-      if (pathology === "excluded" && assessor !== "clinician_physio") throw new Error("Only record pathology exclusion reported by a clinician or physio; otherwise leave it not assessed.");
+      if (pathology === "excluded" && assessor !== "clinician_physio") throw new Error("Only record a clinician- or physio-reported pathology exclusion; otherwise leave not assessed.");
       const resistance = range === true ? choice(data, "resistance", ["unknown", "bodyweight", "external"]) : "unknown";
       const payload: AchillesProgressionInput = {
         site: choice(data, "site", ["unknown", "midportion", "insertional"]), incompatible_pathology: pathology,
@@ -109,7 +109,7 @@ export function AchillesAssessmentForm({ injury, token, onRefresh, disabled = fa
       setMessage("Assessment saved. Loading rehab stays locked.");
       await onRefresh();
     } catch (e) {
-      setError(saved ? "Your report was saved, but Today could not refresh. Refresh the page to see the updated guidance."
+      setError(saved ? "Report saved, but Today couldn't refresh. Refresh for updated guidance."
         : e instanceof Error ? e.message : "Could not save the assessment report.");
     } finally { setBusy(false); }
   }
@@ -162,7 +162,7 @@ export function AchillesAssessmentForm({ injury, token, onRefresh, disabled = fa
         <label>Assessed resistance<select name="resistance" defaultValue="unknown"><option value="unknown">Not known</option><option value="bodyweight">Bodyweight</option><option value="external">External resistance</option></select></label>
         <label>Measured external resistance (kg, optional)<input name="resistance_kg" type="number" min="0" step="any" /></label>
         <label>Reported tolerance<select name="range_load_tolerance" defaultValue="unknown"><option value="unknown">Not known</option><option value="tolerated">Tolerated</option><option value="not_tolerated">Not tolerated</option></select></label>
-        <YesNo name="range_load_assessor_usable" label="Did the assessor say this range/load observation was usable?" />
+        <YesNo name="range_load_assessor_usable" label="Did the assessor call this range/load result usable?" />
       </fieldset>
       <button className="today-segment" type="submit" disabled={busy || disabled}>{busy ? "Saving…" : "Save assessment report"}</button>
       {message ? <p role="status">{message}</p> : null}

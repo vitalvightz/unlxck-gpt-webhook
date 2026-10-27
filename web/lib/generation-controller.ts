@@ -125,7 +125,7 @@ const PENDING_GENERATION_PREFIX = "unlxck:pending-generation:";
 const TRAINING_AVAILABILITY_MISMATCH_ERROR =
   "invalid Weekly Training Frequency: cannot exceed selected Training Availability days";
 const TRAINING_AVAILABILITY_MISMATCH_UI_MESSAGE =
-  "You selected fewer available training days than your weekly training frequency. Either reduce Weekly Training Frequency or select more Training Availability days.";
+  "Fewer available days than weekly sessions. Lower Weekly Training Frequency or add Training Availability days.";
 
 function mapGenerationErrorMessage(error: unknown): string {
   if (!(error instanceof Error)) {
@@ -279,7 +279,7 @@ async function createJobWithReconnect(
           if (activeJob) {
             setPhase("reconnecting");
             setStatusMessage(
-              "Reconnecting to a plan build already in progress on another tab or device.",
+              "Reconnecting to a build running on another tab or device.",
             );
             return activeJob;
           }
@@ -295,7 +295,7 @@ async function createJobWithReconnect(
         break;
       }
       setPhase("reconnecting");
-      setStatusMessage("Connection dropped while starting the job. Reconnecting to the same request.");
+      setStatusMessage("Connection dropped at start. Reconnecting.");
       await sleep(1_500 * attempt);
     }
   }
@@ -416,7 +416,7 @@ export function useGenerationController({
           setPhase("reconnecting");
           setStatusMessage(
             isBrowserOffline()
-              ? "You're offline. Your camp is still being built — we'll pick it back up when you reconnect."
+              ? "You're offline. Your camp is still building; we'll reconnect when you're back."
               : "Connection dropped. Reconnecting to your camp build.",
           );
           await waitForOnline(Math.min(2_000 * networkMisses, 15_000));
@@ -459,7 +459,7 @@ export function useGenerationController({
             finishWithTerminalJob(currentJob);
             setPhase("review_paused");
             setStatusMessage(
-              "Planning paused. Admin review is required before generation can continue.",
+              "Planning paused for admin review.",
             );
             setIsGenerating(false);
             onComplete({
@@ -542,7 +542,7 @@ export function useGenerationController({
         setPhase(recovered ? "reconnecting" : "submitting");
         setStatusMessage(
           recovered
-            ? "Reconnecting to your existing plan generation request."
+            ? "Reconnecting to your plan build."
             : "Submitting your plan generation request.",
         );
         setMilestones([]);

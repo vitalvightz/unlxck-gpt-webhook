@@ -77,7 +77,7 @@ export default function GeneratePage() {
     storageKey: STORAGE_KEY,
     createJob: async (clientRequestId) => {
       if (!session?.access_token || !payload) {
-        throw new Error("We couldn't start generation. Please reload the page and try again.");
+        throw new Error("Couldn't start generation. Reload and try again.");
       }
       const planSource = pendingGeneration?.planSource ?? resolvePlanSource(me);
       if (process.env.NODE_ENV !== "production") {

@@ -72,7 +72,7 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
           </h1>
           <p style={styles.p}>
             {connectionProblem
-              ? "Your plan and logs are safe on our side. Reconnect and we’ll bring you straight back."
+              ? "Your plan and logs are safe. Reconnect to carry on."
               : "Your data is safe. Reload to get back to your training."}
           </p>
           {retryFailed ? <p style={styles.p} role="status">Still can’t reach UNLXCK. Try again shortly.</p> : null}

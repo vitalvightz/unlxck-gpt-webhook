@@ -26,9 +26,9 @@ const detailFields = ["movement", "training_method", "skill_focus", "physical_fo
 const otherFields = ["sport", "equipment", "body_focus", "type"] as const;
 const examples = { movement: "Squat, hip hinge, rotation", training_method: "Static holds, plyometric drills, lowering-focused", skill_focus: "Footwork, striking, grappling", physical_focus: "Balance, coordination, agility, visual focus" };
 const boundaries: Record<Category, string> = {
-  training: "Discovery only. Injury, phase, equipment and programming checks still apply.",
+  training: "For discovery. Injury, phase, equipment and programming checks still apply.",
   rehab: "Rehab pathway only. Your current stage and clinical clearance still apply.",
-  learn: "For learning and care. These entries are not workout exercises.",
+  learn: "For learning and care, not workouts.",
 };
 const readable = (value: string) => value.replaceAll("_", " ").replaceAll("-", " ");
 
@@ -294,7 +294,7 @@ export function TrainingLibrary({ accessToken, onSelect, onBack, onSelectCommuni
         {category === "training" ? <>
           <h3>What do you want to improve?</h3>
           {selector("goal")}
-          <p className={styles.meta}>Choose a training goal, or explore exercises below.</p>
+          <p className={styles.meta}>Pick a goal, or explore below.</p>
           <h3>Explore exercises</h3>
           <div className={styles.explore}>{detailFields.map(selector)}</div>
           <details className={styles.otherFilters} open={otherOpen} onToggle={event => setOtherOpen(event.currentTarget.open)}><summary>Other filters</summary>

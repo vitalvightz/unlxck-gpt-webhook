@@ -36,7 +36,7 @@ test("detects profile refresh failure warning milestones", () => {
 
 test("uses the admin-facing profile refresh warning copy", () => {
   assert.equal(PROFILE_REFRESH_FAILED_BANNER_TITLE, "Profile refresh failed during generation.");
-  assert.match(PROFILE_REFRESH_FAILED_BANNER_BODY, /Review the latest intake before approving or editing this plan/);
+  assert.match(PROFILE_REFRESH_FAILED_BANNER_BODY, /Review the latest intake before approving or editing/);
 });
 
 test("detects the athlete-facing plan flag from a plan detail", () => {

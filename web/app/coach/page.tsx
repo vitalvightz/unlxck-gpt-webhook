@@ -5,7 +5,7 @@ export default function CoachPage() {
     <RoleComingSoon
       kicker="Coach"
       title="Coach accounts are coming soon"
-      message="Coach accounts will be available in public beta. For now, Unlxck private beta is open to athletes."
+      message="Coach accounts arrive in public beta. Private beta is athletes only."
     />
   );
 }

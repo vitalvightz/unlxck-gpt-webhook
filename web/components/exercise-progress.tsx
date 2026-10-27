@@ -65,7 +65,7 @@ export function ExerciseProgress({ records, exercise, hasMore, about, onInspect 
     </div>
     <details className={styles.about}><summary>About these numbers</summary>
       {about}
-      {series?.metric === "load" && records.some(record => record.performed_values?.set_entries?.length) ? <p>Load shows the heaviest recorded set in each session.</p> : null}
+      {series?.metric === "load" && records.some(record => record.performed_values?.set_entries?.length) ? <p>Load is each session’s heaviest set.</p> : null}
       {series?.metric === "load" ? <p>A heavier load isn’t automatically a better performance: different sets and reps are not equivalent strength performances.</p> : null}
     </details>
     {!selected ? <p className={styles.note}>No comparable measurements in the loaded records.{hasMore ? " Load earlier performances to check older records." : ""}</p> : <>

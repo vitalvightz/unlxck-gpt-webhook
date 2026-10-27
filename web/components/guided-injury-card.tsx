@@ -731,7 +731,7 @@ function FollowUpQuestions({
           <SingleChipRow label="Impact" options={YES_NO_UNSURE} value={injury.impact_related} onChange={(v) => onUpdate("impact_related", v)} />
         </div>
         <p className="gi-warning gi-warning-red" role="alert">
-          Chest or breathing symptoms may pause normal planning until review.
+          Chest or breathing symptoms may pause planning until review.
         </p>
       </div>
     );
@@ -1309,7 +1309,7 @@ export function GuidedInjuryCard({
                 <path d="M8 1.5L1 14h14L8 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
                 <path d="M8 6v3.5M8 11.5v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
               </svg>
-              <span>Flags here help the coach and admin review risk before release.</span>
+              <span>Flags help coach and admin review risk before release.</span>
             </div>
           ) : null}
 
@@ -1325,7 +1325,7 @@ export function GuidedInjuryCard({
                   setStaleNote(false);
                 }}
                 maxLength={GUIDED_INJURY_NOTES_MAX}
-                placeholder="What happened, what irritates it, anything else the planner should know"
+                placeholder="What happened, what irritates it, anything else relevant"
                 rows={2}
               />
             </div>

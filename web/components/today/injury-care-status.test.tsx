@@ -96,7 +96,7 @@ for (const [label, scopes] of [
       assert.equal(container.querySelector('a[href*="nhs"]'), null);
       await click(container, "Report clearance");
       assert.ok(document.querySelector('[role="dialog"] details a[href*="nhs"]'));
-      assert.match(document.querySelector('[role="dialog"]')?.textContent ?? "", /Injury restrictions and safety holds still apply./);
+      assert.match(document.querySelector('[role="dialog"]')?.textContent ?? "", /Restrictions and safety holds still apply./);
       assert.equal(document.querySelector('[role="dialog"]')?.querySelectorAll("select").length, 0);
       assert.equal(document.querySelector('[role="dialog"]')?.querySelectorAll('input[type="radio"]').length, 7);
       await click(container, label);

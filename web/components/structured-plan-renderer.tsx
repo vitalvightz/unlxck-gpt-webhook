@@ -146,10 +146,10 @@ function PriorityMicrodoseCard({ day }: { day: StructuredDay }) {
 
 // A sessionless contact day carries no app S&C. The note must match the day kind.
 const HARD_SPARRING_SESSIONLESS_NOTE =
-  "No extra S&C today. This is your declared hard-sparring/contact work. Keep freshness the priority.";
+  "No extra S&C. This is your declared hard-sparring/contact day. Stay fresh.";
 const TECHNICAL_COMBAT_TITLE = "Technical Combat";
 const TECHNICAL_COMBAT_HELP =
-  "Near fight day, hard sparring is reduced. This lowers fatigue and injury risk while keeping your timing and skills sharp.";
+  "Hard sparring is reduced near fight day to cut fatigue and injury risk while keeping you sharp.";
 const TECHNICAL_COMBAT_TAG = "Low load";
 const TECHNICAL_COMBAT_RATIONALE =
   "Technical only, no hard sparring. Stay sharp and leave fresh.";
@@ -167,7 +167,7 @@ const TECHNICAL_COMBAT_STAGE_RATIONALES: Record<string, string> = {
 // Coach-owned contact that coexists with app work on the same day, keyed the same
 // way so a technical-only contact block never reads as hard sparring.
 const HARD_SPARRING_CONTACT_NOTE =
-  "Your declared hard-sparring/contact work today, alongside the app work below. Keep freshness the priority.";
+  "Your declared hard-sparring/contact work, plus the app work below. Stay fresh.";
 
 function blockCountLabel(count: number): string {
   return `${count} block${count === 1 ? "" : "s"}`;
@@ -2820,8 +2820,7 @@ export function StructuredPlanRenderer({
             <section className="sp-card cm-schedule-unavailable" role="status">
               <p className="sp-eyebrow">Schedule unavailable</p>
               <p className="sp-block-purpose">
-                This legacy plan could not be matched safely to weekdays. Use the original plan
-                below until the schedule is rebuilt.
+                This older plan couldn’t be matched to weekdays. Use the original below until it’s rebuilt.
               </p>
             </section>
           ) : null}

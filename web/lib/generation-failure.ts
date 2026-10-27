@@ -142,13 +142,13 @@ export function humanizeGenerationError(rawError: string | null | undefined): st
     return "This build was cancelled before it finished.";
   }
   if (message.includes("Stage 2 first_pass prompt too large")) {
-    return "Your camp was too large to finalize in one pass. A retry usually clears it.";
+    return "Camp too large to finalize in one pass. A retry usually works.";
   }
   if (message.includes("Stage 1 planner timed out") || message.includes("timed out")) {
-    return "The planner took too long and stopped. Nothing was saved, so a retry starts clean.";
+    return "The planner timed out. Nothing was saved; a retry starts clean.";
   }
   if (message.toLowerCase().includes("quota")) {
-    return "Plan generation is temporarily unavailable on our side. Try again shortly.";
+    return "Plan generation is temporarily down. Try again shortly.";
   }
   if (includesAny(message, INTAKE_ERROR_SNIPPETS) || includesAny(message, LIMIT_ERROR_SNIPPETS)) {
     // Already written for athletes by the API — pass it through unchanged.
@@ -168,7 +168,7 @@ export function describeGenerationFailure(
       return {
         headline: "The build stopped responding.",
         detail:
-          "No progress came back for several minutes, so we stopped watching it. Nothing was saved, so a retry starts clean.",
+          "No progress for several minutes, so we stopped. Nothing was saved; a retry starts clean.",
         primary: "retry",
         secondary: ["workspace"],
       };
@@ -176,21 +176,21 @@ export function describeGenerationFailure(
       return {
         headline: "We could not start the build.",
         detail:
-          "The request never reached the planner, so no plan was started and nothing was charged against your daily builds.",
+          "The request never reached the planner. No plan started and no daily build used.",
         primary: "retry",
         secondary: ["workspace"],
       };
     case "invalid_intake":
       return {
         headline: "Your intake needs a change before this can build.",
-        detail: rawError ? String(rawError) : "Some of your answers conflict, so the planner rejected the request.",
+        detail: rawError ? String(rawError) : "Some answers conflict, so the planner rejected the request.",
         primary: "refine_intake",
         secondary: ["workspace"],
       };
     case "limit_reached":
       return {
         headline: "This build cannot start right now.",
-        detail: rawError ? String(rawError) : "Another build is in flight or you have hit today's build limit.",
+        detail: rawError ? String(rawError) : "Another build is running or you've hit today's limit.",
         primary: "workspace",
         secondary: ["plan_history"],
       };

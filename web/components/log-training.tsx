@@ -305,7 +305,7 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
           <button className={styles.close} type="button" aria-label="Close training log" disabled={busy} onClick={() => setOpen(false)}>×</button>
         </header>
         {requiresConsent ? <div className={styles.consent}>
-          <p>Training logs include health-related information, such as effort and sparring.</p>
+          <p>Training logs include health information, like effort and sparring.</p>
           <p id={`${fieldId}-consent`}>{consentCopy.signupHealthConsentLabel}</p>
           <p className="muted">Optional. You can withdraw in Settings. <Link href={PRIVACY_HREF}>Privacy Notice</Link></p>
           {error ? <p role="alert">{error}</p> : null}

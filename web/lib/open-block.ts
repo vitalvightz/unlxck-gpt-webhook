@@ -30,7 +30,7 @@ const OPEN_BLOCK_WEEK_INTENTS: readonly OpenBlockWeekIntent[] = [
     key: "baseline",
     weekNumber: 1,
     label: "Baseline",
-    summary: "Run every dose as written and groove technical consistency.",
+    summary: "Run every dose as written and build consistency.",
   },
   {
     key: "progress",
@@ -44,14 +44,14 @@ const OPEN_BLOCK_WEEK_INTENTS: readonly OpenBlockWeekIntent[] = [
     weekNumber: 3,
     label: "Highest controlled",
     summary:
-      "The block's top week. Progress again only while movement quality holds.",
+      "The block's top week. Progress only while movement quality holds.",
   },
   {
     key: "deload",
     weekNumber: 4,
     label: "Deload + reassess",
     summary:
-      "Cut working volume roughly in half, stop every session fresh, and reassess for the next block.",
+      "Cut working volume in half, finish every session fresh, and reassess for the next block.",
   },
 ];
 

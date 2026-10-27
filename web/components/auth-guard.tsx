@@ -10,7 +10,7 @@ function LoadingCard({ label }: { label: string }) {
     <section className="panel loading-card">
       <p className="kicker">Unlxcking…</p>
       <h1>{label}</h1>
-      <p className="muted">We are checking your session and restoring the correct athlete workspace.</p>
+      <p className="muted">Checking your session and restoring your workspace.</p>
     </section>
   );
 }

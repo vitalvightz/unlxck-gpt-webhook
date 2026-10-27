@@ -1214,7 +1214,7 @@ export function TodaySessionPanel({
             exerciseCustomisation={exerciseCustomisation}
           />
         ) : (
-          <p className="muted">No active plan card matched today. Use View plan to find the next training target.</p>
+          <p className="muted">No plan session today. Use View plan to find the next one.</p>
         )}
         {contactOnlyTray}
         {sparringPrompt}
@@ -1466,7 +1466,7 @@ export function TodaySessionPanel({
             <div className="today-caution-row">
               <span className="today-caution-label">Caution</span>
               <span className="today-caution-text">
-                Combat session planned next. Re-check fatigue, pain, and injury status before clearing.
+                Combat session next. Re-check fatigue, pain and injury before clearing.
               </span>
             </div>
           ) : null}
@@ -1618,8 +1618,8 @@ export function TodaySessionPanel({
           logging={exerciseLogging}
           hint={
             reviewFromTimer
-              ? "Ticked from your timer. Tap any exercise to add the weight or change what you did."
-              : "Tick what you did. Tap an exercise to add the weight or change it."
+              ? "Ticked from your timer. Tap an exercise to add weight or edit it."
+              : "Tick what you did. Tap an exercise to add weight or edit it."
           }
           blocks={
             showStructuredBlocks ? (

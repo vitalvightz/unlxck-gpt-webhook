@@ -64,7 +64,7 @@ for (const [name, message] of [
   ["missing_permission", "Do today’s rehab, then tap how it feels"],
   ["pending_response", "Do today’s rehab, then tap how it feels"],
   ["worsening", "Your injury got worse"],
-  ["missing_equipment", "This exercise needs equipment you haven’t listed"],
+  ["missing_equipment", "This needs equipment you haven’t listed"],
 ] as const) {
   test(`actual Today decision explains ${name} at 375px`, async ({ page, baseURL }) => {
     await page.setViewportSize({ width: 375, height: 844 });

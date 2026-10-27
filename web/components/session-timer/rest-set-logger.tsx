@@ -75,7 +75,7 @@ export function TimerSetReview({ timer }: { timer: SessionTimerController }) {
           })} />
       </details>;
     })}</div>
-    {error ? <p className="st-log-error" role="alert">Check the highlighted set values before continuing.</p> : null}
+    {error ? <p className="st-log-error" role="alert">Check the highlighted sets.</p> : null}
     <button type="button" className="st-primary" onClick={() => {
       const next = confirmAllSetLogs(timer.state);
       setError(pendingSetLogs(next).length > 0);

@@ -499,7 +499,7 @@ export default function HomePage() {
             <p className="eyebrow">Welcome to UNLXCK</p>
             <h1 className="hero-title">Build your fight camp in minutes.</h1>
             <p className="overview-command-summary">
-              Set your goals, get your plan, start training. It takes about two minutes.
+              Set goals, get your plan, start training. About two minutes.
             </p>
             <div className="hero-actions welcome-actions">
               <Link href="/quick-build" className="cta">

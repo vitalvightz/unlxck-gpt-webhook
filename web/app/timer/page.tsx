@@ -28,7 +28,7 @@ export default function TimerPage() {
         <h1>Round timer</h1>
         {todayRunSaved ? (
           <p className="muted">
-            Your session timer is still running. Finish or close it on Today before starting the round timer.
+            Session timer still running. Finish or close it on Today first.
           </p>
         ) : null}
       </div>

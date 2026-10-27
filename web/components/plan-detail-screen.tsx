@@ -164,7 +164,7 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
           <article className="status-card loading-context-panel loading-context-panel-compact">
             <p className="loading-eyebrow">Plan synced</p>
             <div className="loading-status-strip">
-              Plan was restored after a timeout and synced back into your workspace.
+              Plan restored after a timeout and synced.
             </div>
           </article>
         </section>
@@ -199,11 +199,11 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
           title={isConnectionError ? "Connection dropped." : "We couldn't load this plan."}
           copy={
             isConnectionError
-              ? "This plan reloads automatically as soon as you're back online."
-              : "Check the error below, then try again from your plans."
+              ? "Reloads automatically when you're back online."
+              : "Check the error below, then retry from your plans."
           }
           railTitle="Your plan is safe"
-          railCopy="Nothing was deleted. You can reopen it from your plans."
+          railCopy="Nothing deleted. Reopen it from your plans."
           error={error}
         />
       ) : plan ? (
@@ -220,9 +220,9 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
           phase="finalizing"
           eyebrow="Plan detail"
           title="Unlxcking your plan…"
-          copy="We are rebuilding the saved output and athlete-safe view now."
+          copy="Rebuilding the saved output and athlete view."
           railTitle="Current action"
-          railCopy="Pulling the latest saved version from your workspace before the plan viewer opens."
+          railCopy="Loading the latest saved version."
           statusMessage="Restoring the latest saved plan output now."
         />
       )}

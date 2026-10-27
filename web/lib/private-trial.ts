@@ -10,7 +10,7 @@ import type { MeResponse } from "@/lib/types";
 export const PRIVATE_TRIAL_TITLE = "UNLXCK PRIVATE TRIAL";
 
 export const PRIVATE_TRIAL_INTRO =
-  "You are testing an early version of UNLXCK. Use the app normally and report anything confusing, incorrect or broken.";
+  "You're testing an early UNLXCK. Use it normally and report anything confusing, wrong or broken.";
 
 export const PRIVATE_TRIAL_DUTIES: readonly string[] = [
   "Complete onboarding honestly.",
@@ -29,7 +29,7 @@ export const PRIVATE_TRIAL_CHECKS: readonly string[] = [
 ];
 
 export const PRIVATE_TRIAL_CLOSING =
-  "Some features may be incomplete, slow or incorrect. Finding these problems is the purpose of the trial.";
+  "Some features may be incomplete, slow or wrong. Finding those problems is the point of the trial.";
 
 export const PRIVATE_TRIAL_ACKNOWLEDGE_LABEL = "I UNDERSTAND AND CONTINUE";
 

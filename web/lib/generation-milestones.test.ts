@@ -52,6 +52,6 @@ test("running with real job_loaded milestone does not fake advanced progress", (
     { code: "job_loaded", label: "Generation job loaded", detail: "Worker loaded job.", at: new Date().toISOString() },
   ]);
   assert.equal(view.current.title, "Worker started");
-  assert.equal(view.current.detail, "Worker loaded the generation job and is preparing request parsing.");
+  assert.equal(view.current.detail, "Worker loaded the job and is parsing the request.");
   assert.notEqual(view.current.title, "Running final coach review");
 });

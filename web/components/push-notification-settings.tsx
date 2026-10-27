@@ -24,7 +24,7 @@ type BooleanPreferenceKey = Exclude<
 const MASTER_ROW: { key: BooleanPreferenceKey; title: string; detail: string } = {
   key: "push_enabled",
   title: "Intelligent coaching notifications",
-  detail: "Pause or resume every account-level coaching notification.",
+  detail: "Pause or resume all coaching notifications.",
 };
 
 const PREFERENCE_ROWS: Array<{
@@ -180,7 +180,7 @@ export function PushNotificationSettings({ token }: { token: string }) {
       : state === "server-disabled"
         ? "Notifications aren't enabled on the server yet."
         : state === "denied"
-          ? "Blocked in browser settings. Allow notifications for UNLXCK to turn these on."
+          ? "Blocked in browser settings. Allow UNLXCK notifications to turn these on."
           : "Coach-led check-ins, session actions and plan alerts on this device.";
 
   const canToggle = state === "subscribed" || state === "unsubscribed" || state === "working";
@@ -256,7 +256,7 @@ export function PushNotificationSettings({ token }: { token: string }) {
                   disabled={paused || !preferences.session_reminders || workingPreference !== null}
                   onChange={(event) => setTrainingTime(event.target.value)}
                 />
-                <small>Optional. Without a time, UNLXCK will not guess when you train.</small>
+                <small>Optional. Without it, UNLXCK won’t guess when you train.</small>
               </label>
             </div>
             <div className="form-actions settings-subsection-actions">
@@ -284,7 +284,7 @@ export function PushNotificationSettings({ token }: { token: string }) {
               <span>
                 <span className="settings-toggle-title">Hold routine notifications</span>
                 <span className="settings-toggle-detail">
-                  Routine coaching notifications wait outside this window.
+                  Routine notifications wait until this window ends.
                 </span>
               </span>
               <input

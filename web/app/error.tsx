@@ -44,8 +44,8 @@ export default function RouteError({
       <h1><span className={styles.brand}>UNLXCK</span><span className={styles.headline}>{connectionProblem ? "your connection." : "hit a snag."}</span></h1>
       <p className={styles.description}>
         {connectionProblem
-          ? "Your plan and logs are safe on our side. Reconnect and we’ll pick up where you left off."
-          : "Your data is safe. Try again — if it keeps happening, head back to your dashboard."}
+          ? "Your plan and logs are safe. Reconnect to pick up where you left off."
+          : "Your data is safe. Try again, or head back to your dashboard."}
       </p>
       {retryFailed ? <p className={styles.description} role="status">Still can’t reach UNLXCK. Try again shortly.</p> : null}
       <div>

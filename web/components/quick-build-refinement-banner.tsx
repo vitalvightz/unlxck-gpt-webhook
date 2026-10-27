@@ -33,7 +33,7 @@ export function QuickBuildRefinementBanner({
         <p className="quick-build-refine-banner__kicker">Quick Build plan</p>
         <h2 className="quick-build-refine-banner__title">Built fast. Make it sharper.</h2>
         <p className="quick-build-refine-banner__copy">
-          This plan was built with Quick Build using safe defaults. Open Camp Setup to refine fatigue, injuries, sparring, and goals.
+          Built with Quick Build defaults. Open Camp Setup to refine fatigue, injuries, sparring and goals.
         </p>
       </div>
       <div className="quick-build-refine-banner__actions">
@@ -49,7 +49,7 @@ export function QuickBuildRefinementBanner({
         </button>
       </div>
       <p className="quick-build-refine-banner__note">
-        Your current plan stays. A new one is only created if you submit Camp Setup.
+        Your plan stays until you submit Camp Setup.
       </p>
     </aside>
   );

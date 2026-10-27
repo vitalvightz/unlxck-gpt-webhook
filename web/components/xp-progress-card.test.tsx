@@ -209,10 +209,10 @@ test("Progress route keeps the compact card, athlete identity and latest-three h
   assert.doesNotMatch(pageCss, /xp-award-toggle/);
   assert.match(page, /<details className="xp-page-panel xp-explanation xp-explanation-disclosure">/);
   assert.match(page, /UNLXCK XP tracks your progress inside the app\./);
-  assert.match(page, /Earn XP by completing training, check-ins and plan milestones\./);
-  assert.match(page, /Your rank reflects personal progress, not your official amateur or professional status\./);
-  assert.match(page, /In future, XP may also unlock discounts, rewards and opportunities through UNLXCK\./);
-  assert.match(page, /Public leaderboards are not available during private beta\./);
+  assert.match(page, /Earn XP from training, check-ins and plan milestones\./);
+  assert.match(page, /Rank reflects personal progress, not official amateur or pro status\./);
+  assert.match(page, /XP may later unlock discounts, rewards and opportunities\./);
+  assert.match(page, /No public leaderboards during private beta\./);
   assert.doesNotMatch(page, /Work banked\. Level earned\./);
   assert.doesNotMatch(page, /Available XP actions/);
   assert.doesNotMatch(page, /global leaderboard/i);

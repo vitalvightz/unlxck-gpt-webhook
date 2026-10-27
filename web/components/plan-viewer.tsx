@@ -1210,7 +1210,7 @@ function BlockedPlanDecisionCard({
             : "Only already-approved rehab or clinician-led guidance should continue until clearance."}
         </li>
         {triage.clinician_clearance_required ? (
-          <li>Clinician clearance is required before return to loading or sparring.</li>
+          <li>Clinician clearance required before loading or sparring.</li>
         ) : null}
       </ul>
     </section>
@@ -2790,7 +2790,7 @@ export function PlanViewer({
 
         {completedFightCamp && !archivedPreview ? (
           <div className="quick-build-refine-banner cm-archived-banner" role="status">
-            This fight camp has ended. It remains available as completed history and cannot be set active.
+            This fight camp has ended. It stays in history and can’t be set active.
           </div>
         ) : null}
 
@@ -2874,7 +2874,7 @@ export function PlanViewer({
               {handoffText.trim() ? (
                 <>
                   <p className="muted">
-                    The exact Stage 2 handoff is already saved for this plan, so you can run a manual Stage 2 pass quickly if you want.
+                    The Stage 2 handoff is saved, so a manual Stage 2 pass is quick.
                   </p>
                   <ArtifactActions
                     artifactKey="stage2_handoff_text"
@@ -2885,7 +2885,7 @@ export function PlanViewer({
               ) : null}
               {retryText.trim() ? (
                 <>
-                  <p className="muted">A repair prompt is also ready if you want to run the retry step manually.</p>
+                  <p className="muted">A repair prompt is ready for a manual retry.</p>
                   <ArtifactActions
                     artifactKey="stage2_retry_text"
                     text={retryText}
@@ -2957,7 +2957,7 @@ export function PlanViewer({
                 id={`structured-card-rebuild-note-${plan.plan_id}`}
                 className="structured-card-rebuild-note"
               >
-                Rebuild reruns conversion and every safety check. It cannot override a safety block.
+                Rebuild reruns conversion and all safety checks. It can’t override a safety block.
               </p>
               {structuredCardRebuildMessage ? (
                 <div className="success-banner" role="status">
@@ -3035,9 +3035,7 @@ export function PlanViewer({
                         <h3>Building the enhanced card…</h3>
                       </div>
                       <p className="muted">
-                        Server-side structured generation is running in the background. This page
-                        checks automatically and swaps the full card in when it lands. The plan
-                        below stays live in the meantime.
+                        Structured generation is running. The full card appears here when ready; the plan below stays live meanwhile.
                       </p>
                     </section>
                   ) : null}
@@ -3084,7 +3082,7 @@ export function PlanViewer({
                         <h3>Retry in progress</h3>
                       </div>
                       <p className="muted">
-                        Validating the submitted plan now. The validator results below are from the previous attempt and will be replaced when this retry completes.
+                        Validating now. Results below are from the previous attempt until this retry completes.
                       </p>
                     </section>
                   ) : null}
@@ -3219,7 +3217,7 @@ export function PlanViewer({
                   <h3>Plan not yet released</h3>
                 </div>
                 <p className="muted">
-                  The automation flow generated a plan that still needs manual review before it can be shown to the athlete.
+                  This generated plan needs manual review before the athlete sees it.
                 </p>
                 {canApproveForRelease ? (
                   <>
@@ -3284,10 +3282,10 @@ export function PlanViewer({
               <>
                 <p className="muted">
                   {injuryTriage?.mode === "restricted_rehab_only"
-                    ? "This intake requires clinician clearance before normal planning can resume. Stage 2 finalization was intentionally skipped."
+                    ? "Clinician clearance needed before planning resumes. Stage 2 finalization skipped."
                     : injuryTriage?.mode === "medical_hold"
-                      ? "This intake contains urgent or medically disqualifying signals. No planning should continue until medical review is complete."
-                      : "Normal planning is paused for this intake. Stage 2 was skipped intentionally until additional review is complete."}
+                      ? "This intake has urgent or medically disqualifying signals. No planning until medical review is complete."
+                      : "Planning paused for this intake. Stage 2 skipped until review is complete."}
                 </p>
                 {canRetryResumeGeneration ? (
                   <div className="support-panel support-panel-alert">
@@ -3297,7 +3295,7 @@ export function PlanViewer({
                     </div>
                 
                     <p className="muted">
-                      This protected triage plan cannot be approved for athlete release until admin resume generation completes and a real final plan replaces the triage stub.
+                      This triage plan can’t be released until admin resume completes and a real final plan replaces the stub.
                     </p>
                 
                     <div className="field">
@@ -3332,7 +3330,7 @@ export function PlanViewer({
                       <h3>This plan is not currently resumable</h3>
                     </div>
                     <p className="muted">
-                      Resume was approved before, but this plan is not currently in a resumable triage mode. Medical holds or unresolved protected states must stay blocked until the intake is corrected or reviewed.
+                      Resume was approved, but this plan isn’t in a resumable triage mode. Medical holds and unresolved protected states stay blocked until the intake is corrected or reviewed.
                     </p>
                     {resumeError ? <div className="error-banner">{resumeError}</div> : null}
                   </div>
@@ -3341,7 +3339,7 @@ export function PlanViewer({
             ) : (
               <>
                 <p className="muted">
-                  Paste a manual Stage 2 final plan here. The app will validate it, publish it if it passes, or refresh the retry prompt if it still needs work.
+                  Paste a manual Stage 2 final plan. It’s validated, then published if it passes or the retry prompt refreshes.
                 </p>
 
                 {canApproveForRelease ? (
@@ -3404,7 +3402,7 @@ export function PlanViewer({
               <h3>Open one artifact at a time</h3>
             </div>
             <p className="muted">
-              Internal notes, planning artifacts, and validator details now stay collapsed until you open the one you need.
+              Internal notes, artifacts and validator details stay collapsed until opened.
             </p>
             <div className="accordion-list">
               {adminSections.map((section) => (

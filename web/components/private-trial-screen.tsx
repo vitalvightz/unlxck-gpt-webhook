@@ -93,7 +93,7 @@ function PrivateTrialAcknowledgement() {
         )}
       </div>
       <p className="private-trial-settings-note muted">
-        You can read this again at any time in Settings under Private Trial Guide.
+        Reread this any time in Settings → Private Trial Guide.
       </p>
     </section>
   );

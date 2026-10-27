@@ -159,6 +159,6 @@ export function TrainingRhythm(props: Props) {
 }
 
 function Loading({ loading, error, onLoadMore }: Pick<Props, "loading" | "error" | "onLoadMore"> & { complete: false }) {
-  return error ? <div role="alert"><p className={styles.note}>Some sessions could not be loaded. Trends are unavailable until the period is complete.</p><button type="button" className="secondary-button" disabled={loading} onClick={() => void onLoadMore()}>Retry trends</button></div>
+  return error ? <div role="alert"><p className={styles.note}>Some sessions failed to load. Trends unavailable until the period is complete.</p><button type="button" className="secondary-button" disabled={loading} onClick={() => void onLoadMore()}>Retry trends</button></div>
     : <p role="status" className={styles.note}>Loading every session in this period…</p>;
 }

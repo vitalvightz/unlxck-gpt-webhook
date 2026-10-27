@@ -10,8 +10,8 @@ import styles from "./create.module.css";
 // The one place to start any kind of plan, reached from + Create. Each option
 // opens its existing flow; this screen only routes, it saves nothing.
 const OPTIONS = [
-  { href: "/quick-build", title: "Quick Build", body: "Generate a personalised training programme in minutes." },
-  { href: "/onboarding", title: "Full Camp Setup", body: "Build a detailed programme around your fight and training schedule." },
+  { href: "/quick-build", title: "Quick Build", body: "A personalised programme in minutes." },
+  { href: "/onboarding", title: "Full Camp Setup", body: "A detailed programme around your fight and schedule." },
   { href: "/plans/custom", title: "Build Your Own", body: "Create and customise your own training programme." },
 ] as const;
 

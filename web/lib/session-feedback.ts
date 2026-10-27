@@ -15,7 +15,7 @@ import type {
 export const SESSION_FEEDBACK_PROMPT = "How did this session feel?";
 export const SESSION_FEEDBACK_TITLE = "HOW DID THAT SESSION GO?";
 export const SESSION_FEEDBACK_INTRO =
-  "Your feedback helps improve your future training and the UNLXCK private trial.";
+  "Your feedback improves your training and the private trial.";
 
 export const SESSION_DIFFICULTY_OPTIONS: ReadonlyArray<
   readonly [label: string, value: SessionFeedbackDifficulty]

@@ -839,7 +839,7 @@ export function GlobalGenerationStatus() {
             <div className="global-generation-status-content">
               <span className="global-generation-status-text">
                 <span className="global-generation-status-message">
-                  Your plan finished but could not be opened. Support can recover it.
+                  Plan finished but couldn’t open. Support can recover it.
                 </span>
                 <TotalBuildTime label={passiveTotalLabel} />
               </span>
@@ -1030,7 +1030,7 @@ export function GlobalGenerationStatus() {
           aria-label={
             isCompleted
               ? "Plan ready. Tap to view."
-              : "Generation in progress. Tap to open generation status."
+              : "Generating. Tap for status."
           }
         >
           {content}

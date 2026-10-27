@@ -47,7 +47,7 @@ import styles from "./auth-form.module.css";
 const CAPTCHA_HINT_DELAY_MS = 2500;
 
 const CAPTCHA_REQUIRED_MESSAGE = "Complete the security check, then try again.";
-const CAPTCHA_UNAVAILABLE_MESSAGE = "The security check could not load. Refresh the page and try again.";
+const CAPTCHA_UNAVAILABLE_MESSAGE = "Security check failed to load. Refresh and try again.";
 
 /** Supabase allows one confirmation email per address per minute. */
 const SIGNUP_CODE_RESEND_COOLDOWN_S = 60;

@@ -515,7 +515,7 @@ export default function AdminPage() {
 
   async function handleRejectBuild(id: string, name: string, kind: "job" | "plan") {
     if (!session?.access_token || rejectingBuildId || resumingJobId) return;
-    if (!window.confirm(`Reject build for ${name}? ${kind === "plan" ? "The plan will be archived and kept in history." : "This closes the suspended build without generating a plan."}`)) return;
+    if (!window.confirm(`Reject build for ${name}? ${kind === "plan" ? "The plan will be archived and kept in history." : "Closes the suspended build without a plan."}`)) return;
     setRejectingBuildId(id);
     setError(null);
     setMessage(null);
@@ -637,7 +637,7 @@ export default function AdminPage() {
             <p className="kicker">Admin</p>
             <h1>Fight camp control room</h1>
             <Link href="/admin/analytics" className="secondary-button">Product Analytics</Link>
-            <p className="muted">Live generation queues, athlete risk signals, and plan-review decisions in one operator view.</p>
+            <p className="muted">Generation queues, risk signals and plan reviews in one view.</p>
             <div className="admin-priority-rail" role="region" aria-label="Admin priority status">
               <span className="admin-priority-label">{adminActionLabel}</span>
               <span>{lastCheckedLabel}</span>
@@ -791,17 +791,17 @@ export default function AdminPage() {
           ) : activeDisplayWarning ? (
             <div className="support-panel">
               <p className="error-text">{activeDisplayWarning}</p>
-              <p className="muted">Triage, athlete, and plan history can still be reviewed while this feed retries.</p>
+              <p className="muted">Triage, athlete and plan history stay reviewable while this feed retries.</p>
             </div>
           ) : activeProfileError && activeJobs.length === 0 ? (
             <div className="support-panel">
-              <p className="muted">Live generation details are limited while the profile service recovers. See the notice above.</p>
+              <p className="muted">Live generation details limited while the profile service recovers. See notice above.</p>
             </div>
           ) : activeJobs.length === 0 ? (
             <div className="support-panel support-panel-success">
               <p className="kicker">Idle</p>
               <h3 className="form-section-title">No plans are generating right now.</h3>
-              <p className="muted">Queued and running jobs will appear here with athlete, timing, and plan context.</p>
+              <p className="muted">Queued and running jobs appear here with athlete, timing and plan.</p>
             </div>
           ) : filteredActiveJobs.length === 0 ? (
             <div className="support-panel">
@@ -884,17 +884,17 @@ export default function AdminPage() {
           ) : triageDisplayWarning ? (
             <div className="support-panel">
               <p className="error-text">{triageDisplayWarning}</p>
-              <p className="muted">Athlete accounts and plan history can still be reviewed while the queue retries.</p>
+              <p className="muted">Accounts and plan history stay reviewable while the queue retries.</p>
             </div>
           ) : triageProfileError && triageJobs.length === 0 ? (
             <div className="support-panel">
-              <p className="muted">Triage details are limited while the profile service recovers. See the notice above.</p>
+              <p className="muted">Triage details limited while the profile service recovers. See notice above.</p>
             </div>
           ) : triageJobs.length === 0 ? (
             <div className="support-panel support-panel-success">
               <p className="kicker">Clear</p>
               <h3 className="form-section-title">No suspended triage generations need approval.</h3>
-              <p className="muted">New protected triage outcomes will appear here even when no plan row was created.</p>
+              <p className="muted">New protected triage outcomes appear here, even without a plan row.</p>
             </div>
           ) : (
             <AdminQueueList className="plans-grid admin-queue-grid" label="Suspended builds">
@@ -968,17 +968,17 @@ export default function AdminPage() {
           ) : reviewPlansDisplayWarning ? (
             <div className="support-panel">
               <p className="error-text">{reviewPlansDisplayWarning}</p>
-              <p className="muted">Live jobs, triage, and athlete records can still be reviewed while this queue retries.</p>
+              <p className="muted">Jobs, triage and athlete records stay reviewable while this queue retries.</p>
             </div>
           ) : reviewPlansProfileError && reviewPlans.length === 0 ? (
             <div className="support-panel">
-              <p className="muted">Held plan details are limited while the profile service recovers. See the notice above.</p>
+              <p className="muted">Held plan details limited while the profile service recovers. See notice above.</p>
             </div>
           ) : reviewPlans.length === 0 ? (
             <div className="support-panel support-panel-success">
               <p className="kicker">Clear</p>
               <h3 className="form-section-title">No plans are held for review.</h3>
-              <p className="muted">Held, blocked, and review-required plans appear here so they stay visible even when athlete details are unavailable.</p>
+              <p className="muted">Held, blocked and review-required plans stay visible here, even without athlete details.</p>
             </div>
           ) : (
             <AdminQueueList className="plans-grid admin-queue-grid" label="Held plans">
@@ -1039,14 +1039,14 @@ export default function AdminPage() {
             </div>
           ) : attentionProfileError && attentionReviews.length === 0 ? (
             <div className="support-panel">
-              <p className="muted">Attention queue details are limited while the profile service recovers. See the notice above.</p>
+              <p className="muted">Attention queue details limited while the profile service recovers. See notice above.</p>
             </div>
           ) : attentionReviews.length === 0 ? (
             <div className="support-panel support-panel-success">
               <p className="kicker">Clear</p>
               <h3 className="form-section-title">No athletes are flagged for review.</h3>
               <p className="muted">
-                Injury reports, sustained high fatigue, and repeated missed sessions land here automatically from daily check-ins and session logs.
+                Injury reports, sustained high fatigue and repeated missed sessions land here from check-ins and session logs.
               </p>
             </div>
           ) : (

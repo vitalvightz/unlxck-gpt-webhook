@@ -163,7 +163,7 @@ export function InstallPrompt() {
       </div>
       <h2 id="install-prompt-title"><span className={styles.headline}>Your training. One tap away.</span></h2>
       <p id="install-prompt-description" className={`${promptStyles.description} ${styles.description}`}>
-        Add UNLXCK to your Home Screen for quick access, just like an app.
+        Add UNLXCK to your Home Screen, like an app.
       </p>
       {guide === "native" ? (
         <button type="button" className={promptStyles.enable} onClick={() => void install()} disabled={busy}>
@@ -315,7 +315,7 @@ export function InstallUnlxck({ variant = "panel" }: { variant?: "panel" | "inli
             </div>
             <p id="pwa-install-sheet-description" className="muted">
               {sheetBrowser === "unsupported"
-                ? "This browser can’t add apps to your Home Screen. Open UNLXCK in Safari, then:"
+                ? "This browser can’t add to Home Screen. Open UNLXCK in Safari, then:"
                 : "Your browser’s Share menu adds UNLXCK to your Home Screen."}
             </p>
             <ol className="pwa-install-steps">
@@ -342,7 +342,7 @@ export function InstallUnlxck({ variant = "panel" }: { variant?: "panel" | "inli
           <div className="pwa-install-inline-copy">
             <p className="pwa-install-label">Mobile access</p>
             <p className="muted pwa-install-inline-text">
-              Add UNLXCK to your phone’s home screen and open it like an app.
+              Add UNLXCK to your home screen, like an app.
             </p>
           </div>
           <button
@@ -373,7 +373,7 @@ export function InstallUnlxck({ variant = "panel" }: { variant?: "panel" | "inli
             </div>
           </div>
           <p className="muted pwa-install-description">
-            Open your control room from a home-screen icon in a focused, standalone window.
+            Open UNLXCK from your home screen in its own window.
           </p>
         </div>
         <div className="pwa-install-actions">
