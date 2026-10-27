@@ -92,13 +92,13 @@ test("installed standalone mode hides the Settings install action", async () => 
   }
 });
 
-test("iPhone Settings action shows only the Safari Add to Home Screen flow", async () => {
+test("iPhone Settings action shows Safari's own Add to Home Screen flow", async () => {
   setMatchMedia(false);
   const userAgentDescriptor = Object.getOwnPropertyDescriptor(navigator, "userAgent");
   const touchDescriptor = Object.getOwnPropertyDescriptor(navigator, "maxTouchPoints");
   Object.defineProperty(navigator, "userAgent", {
     configurable: true,
-    value: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)",
+    value: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1",
   });
   Object.defineProperty(navigator, "maxTouchPoints", { configurable: true, value: 5 });
   const { container, root } = mount();
@@ -116,10 +116,11 @@ test("iPhone Settings action shows only the Safari Add to Home Screen flow", asy
     assert.ok(dialog);
     assert.equal(container.contains(dialog), false);
     const dialogText = dialog?.textContent ?? "";
-    assert.match(dialogText, /Open the Share menu/);
-    assert.match(dialogText, /Select “Add to Home Screen”/);
-    assert.match(dialogText, /Tap “Add”/);
-    assert.doesNotMatch(dialogText, /browser menu|Install app/i);
+    assert.match(dialogText, /Tap ••• in Safari’s toolbar/);
+    assert.match(dialogText, /Select Share/);
+    assert.match(dialogText, /Tap Add to Home Screen/);
+    assert.match(dialogText, /Open as Web App/);
+    assert.doesNotMatch(dialogText, /Chrome|browser menu|Install app/i);
 
     const close = dialog?.querySelector<HTMLButtonElement>(
       '[aria-label="Close install instructions"]',
@@ -152,12 +153,12 @@ test("iPhone Settings action shows only the Safari Add to Home Screen flow", asy
   }
 });
 
-test("inline install variant on public pages opens the same iPhone guide", async () => {
+test("inline install variant gives iPhone Chrome its own steps", async () => {
   setMatchMedia(false);
   const userAgentDescriptor = Object.getOwnPropertyDescriptor(navigator, "userAgent");
   Object.defineProperty(navigator, "userAgent", {
     configurable: true,
-    value: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)",
+    value: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/141.0.0.0 Mobile/15E148 Safari/604.1",
   });
   const { container, root } = mount();
   try {
@@ -173,7 +174,33 @@ test("inline install variant on public pages opens the same iPhone guide", async
     const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
     assert.ok(dialog);
     assert.equal(container.contains(dialog), false);
+    assert.match(dialog.textContent ?? "", /Chrome’s address bar/);
     assert.match(dialog.textContent ?? "", /Add to Home Screen/);
+    assert.doesNotMatch(dialog.textContent ?? "", /Safari/);
+  } finally {
+    cleanup(container, root);
+    if (userAgentDescriptor) Object.defineProperty(navigator, "userAgent", userAgentDescriptor);
+    else Reflect.deleteProperty(navigator, "userAgent");
+  }
+});
+
+test("an in-app iPhone browser is sent to Safari instead of shown steps it cannot follow", async () => {
+  setMatchMedia(false);
+  const userAgentDescriptor = Object.getOwnPropertyDescriptor(navigator, "userAgent");
+  Object.defineProperty(navigator, "userAgent", {
+    configurable: true,
+    value: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 400.0.0",
+  });
+  const { container, root } = mount();
+  try {
+    await act(async () => renderInstallSurface(root));
+    await settle();
+    const trigger = Array.from(container.querySelectorAll<HTMLButtonElement>("button")).find(
+      (button) => button.textContent === "View iPhone steps",
+    );
+    assert.ok(trigger);
+    await act(async () => trigger.click());
+    assert.match(document.querySelector('[role="dialog"]')?.textContent ?? "", /Open UNLXCK in Safari/);
   } finally {
     cleanup(container, root);
     if (userAgentDescriptor) Object.defineProperty(navigator, "userAgent", userAgentDescriptor);

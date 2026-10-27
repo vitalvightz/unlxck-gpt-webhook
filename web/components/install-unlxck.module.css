@@ -1,0 +1,24 @@
+/* Layered on push-notification-prompt.module.css so both opt-ins share one look. */
+.dialog { padding: 28px; }
+.headline { display: block; color: #fff; font-size: clamp(25px, 7vw, 31px); font-weight: 500; letter-spacing: -.045em; line-height: 1.08; }
+.description { margin: 14px 0 20px; }
+.steps { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.steps li { display: grid; grid-template-columns: 32px 1fr; align-items: center; gap: 12px; }
+.steps strong { display: block; color: #fff; font-size: 14px; font-weight: 600; line-height: 1.35; }
+.steps small { display: block; color: #a2a2ad; font-size: 12px; line-height: 1.45; }
+.stepIcon { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid #ffffff1c; border-radius: 8px; background: #ffffff08; color: #d8d8de; }
+.stepIcon svg, .dialog button svg { width: 16px; height: 16px; flex: none; }
+.done { color: #b4b4be; font-size: 13px; line-height: 1.5; margin: 16px 0 18px; }
+@media (max-width: 380px) { .dialog { padding: 24px 20px; } }
+@media (max-height: 640px) {
+  .dialog { padding-top: 20px; padding-bottom: 14px; }
+  .header { padding-bottom: 14px; margin-bottom: 16px; }
+  .headline { font-size: 24px; }
+  .description { margin: 10px 0 14px; line-height: 1.5; }
+  .steps { gap: 8px; }
+  .done { margin: 12px 0 14px; }
+}
+@media (max-height: 600px) {
+  .done { display: none; }
+  .steps { margin-bottom: 16px; }
+}

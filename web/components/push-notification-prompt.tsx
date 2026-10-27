@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useAppSession } from "@/components/auth-provider";
 import { getPushSettings } from "@/lib/api";
 import { isPushSupported, subscribeToPushNotifications } from "@/lib/push";
-import { PUSH_PROMPT_EVENT } from "@/lib/push-prompt";
+import { installPromptClaimed, PUSH_PROMPT_EVENT } from "@/lib/push-prompt";
 import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 import styles from "./push-notification-prompt.module.css";
 
@@ -48,7 +48,7 @@ export function DevicePushPrompt({ token, athleteId }: { token: string; athleteI
         if (cancelled || offered.current || subscription) return;
         // Let completion review, sparring safety reports and other modals finish.
         timer = setInterval(() => {
-          if (offered.current) { clearInterval(timer); timer = undefined; return; }
+          if (offered.current || installPromptClaimed()) { clearInterval(timer); timer = undefined; return; }
           if (document.visibilityState !== "visible" || document.querySelector('dialog[open], [aria-modal="true"]')) return;
           clearInterval(timer);
           timer = undefined;
