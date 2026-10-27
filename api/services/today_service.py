@@ -2938,9 +2938,17 @@ def _legacy_intake_injury_candidates(injuries_text: object, *, plan_id: str) -> 
         if side and side.lower() not in location.lower():
             location = f"{side} {location}"
         body_area = location[:1].upper() + location[1:]
-        condition = _humanized_guided_token(entry.get("injury_type"))
-        if not condition or condition.lower() in {"unspecified", "unknown", "general"}:
-            condition = str(entry.get("original_phrase") or "").strip() or "pain"
+        # The athlete's own words after the area ("bruise after sparring"),
+        # falling back to the parsed condition when the phrase is only the area.
+        phrase = str(entry.get("original_phrase") or "").strip()
+        start = cleaned.lower().find(phrase.lower()) if phrase else -1
+        if start >= 0:
+            phrase = cleaned[start:start + len(phrase)]
+        bare_location = re.escape(_humanized_guided_token(entry.get("canonical_location")))
+        area_prefix = rf"^(?:(?:left|right|both)\s+)?{bare_location}s?\b[\s:,.-]*"
+        condition = re.sub(area_prefix, "", phrase, flags=re.IGNORECASE).strip()
+        if not condition:
+            condition = _humanized_guided_token(entry.get("injury_type")) or "pain"
         key = (body_area.lower(), condition.lower())
         if key in seen:
             continue

@@ -555,7 +555,7 @@ def test_free_text_intake_with_two_injuries_tracks_each() -> None:
     flags = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=plan)
 
     assert sorted((flag["body_area"], flag["description"]) for flag in flags) == [
-        ("Knee", "soreness [training_impact:limiting]"),
+        ("Knee", "sore knee [training_impact:limiting]"),
         ("Left shoulder", "strain [training_impact:limiting]"),
     ]
 

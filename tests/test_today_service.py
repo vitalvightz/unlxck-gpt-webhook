@@ -1359,7 +1359,8 @@ class TestCommandView:
         assert seeded["source"] == "intake"
         assert seeded["severity"] == "moderate"
         assert seeded["status"] == "open"
-        assert seeded["description"] == "Shoulder bruise after sparring"
+        assert seeded["body_area"] == "Shoulder"
+        assert seeded["description"] == "bruise after sparring"
 
     def test_intake_injury_dedupes_against_existing_open_flag(self):
         store = _store_with_plan()
