@@ -282,6 +282,7 @@ export function InstallUnlxck({ variant = "panel" }: { variant?: "panel" | "inli
   // The sheet is fixed-position, so it must escape ancestors whose entrance
   // animations retain a transform (they become the containing block and push
   // the sheet off-screen). Portaling to <body> keeps it viewport-anchored.
+  const sheetBrowser = showGuide ? resolveIosInstallBrowser(navigator.userAgent) : "unsupported";
   const installSheet = showGuide
     ? createPortal(
         <div
@@ -313,21 +314,17 @@ export function InstallUnlxck({ variant = "panel" }: { variant?: "panel" | "inli
               </button>
             </div>
             <p id="pwa-install-sheet-description" className="muted">
-              Safari uses the Share menu to add a web app to your Home Screen.
+              {sheetBrowser === "unsupported"
+                ? "This browser can’t add apps to your Home Screen. Open UNLXCK in Safari, then:"
+                : "Your browser’s Share menu adds UNLXCK to your Home Screen."}
             </p>
             <ol className="pwa-install-steps">
-              <li>
-                <span className="pwa-install-step-icon"><ShareIcon /></span>
-                <span><strong>Open the Share menu</strong><small>Tap the Share icon in Safari’s toolbar.</small></span>
-              </li>
-              <li>
-                <span className="pwa-install-step-icon"><AddToHomeIcon /></span>
-                <span><strong>Select “Add to Home Screen”</strong><small>Scroll the actions list if it is not immediately visible.</small></span>
-              </li>
-              <li>
-                <span className="pwa-install-step-number">03</span>
-                <span><strong>Tap “Add”</strong><small>UNLXCK will appear with its own icon and launch standalone.</small></span>
-              </li>
+              {IOS_STEPS[sheetBrowser === "unsupported" ? "safari" : sheetBrowser].map((step) => (
+                <li key={step.title}>
+                  <span className="pwa-install-step-icon">{step.icon}</span>
+                  <span><strong>{step.title}</strong><small>{step.hint}</small></span>
+                </li>
+              ))}
             </ol>
             <button type="button" className="ghost-button pwa-install-sheet-done" onClick={dismissGuide}>
               Done
