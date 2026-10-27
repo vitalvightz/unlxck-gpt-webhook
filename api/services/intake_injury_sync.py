@@ -34,7 +34,7 @@ from .today_service import (
     _guided_intake_injury_candidate,
     _intake_payload_from_row,
     _intake_row_for_plan,
-    _legacy_intake_injury_candidate,
+    _legacy_intake_injury_candidates,
 )
 
 logger = logging.getLogger(__name__)
@@ -149,11 +149,10 @@ def _intake_injury_candidates(
         candidate = _guided_candidate(guided_injury, plan_id=plan_id)
         return [candidate] if candidate else []
 
-    legacy = _legacy_intake_injury_candidate(
+    return _legacy_intake_injury_candidates(
         intake_payload.get("injuries"),
         plan_id=plan_id,
     )
-    return [legacy] if legacy else []
 
 
 def _list_flags(

@@ -526,3 +526,101 @@ def test_a_newly_built_camp_injury_reaches_today_before_the_camp_is_active() -> 
     store.set_active_plan_id(ATHLETE, built["id"])
     build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC")
     assert len(_live(store)) == 1
+
+
+def test_free_text_intake_injury_is_parsed_into_area_and_condition() -> None:
+    """Quick build / onboarding free text must not become one opaque area string."""
+    store = FakeStore()
+    plan = _seed_generated_plan(
+        store,
+        intake_id="intake-free-text",
+        intake={"injuries": "hip tightness [training_impact:not_limiting]"},
+    )
+
+    flags = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=plan)
+
+    assert [(flag["body_area"], flag["description"]) for flag in flags] == [
+        ("Hip", "tightness [training_impact:not_limiting]")
+    ]
+
+
+def test_free_text_intake_with_two_injuries_tracks_each() -> None:
+    store = FakeStore()
+    plan = _seed_generated_plan(
+        store,
+        intake_id="intake-free-text-two",
+        intake={"injuries": "left shoulder strain, sore knee [training_impact:limiting]"},
+    )
+
+    flags = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=plan)
+
+    assert sorted((flag["body_area"], flag["description"]) for flag in flags) == [
+        ("Knee", "sore knee [training_impact:limiting]"),
+        ("Left shoulder", "strain [training_impact:limiting]"),
+    ]
+
+
+def test_unplaceable_free_text_keeps_one_flag_without_the_impact_marker_in_its_area() -> None:
+    store = FakeStore()
+    plan = _seed_generated_plan(
+        store,
+        intake_id="intake-free-text-vague",
+        intake={"injuries": "something weird [training_impact:cant_train]"},
+    )
+
+    flags = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=plan)
+
+    assert [(flag["body_area"], flag["description"]) for flag in flags] == [
+        ("something weird", "something weird [training_impact:cant_train]")
+    ]
+
+
+def _sync_free_text(intake_id: str, text: str) -> tuple[FakeStore, dict, list[dict]]:
+    store = FakeStore()
+    plan = _seed_generated_plan(store, intake_id=intake_id, intake={"injuries": text})
+    return store, plan, sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=plan)
+
+
+def test_free_text_denying_an_injury_creates_no_flag() -> None:
+    _store, _plan, flags = _sync_free_text("intake-negated", "No knee pain [training_impact:not_limiting]")
+
+    assert flags == []
+
+
+def test_free_text_keeps_the_injury_next_to_a_denied_one() -> None:
+    _store, _plan, flags = _sync_free_text("intake-mixed", "left knee pain. no shoulder issues")
+
+    assert [(flag["body_area"], flag["description"]) for flag in flags] == [("Left knee", "pain")]
+
+
+def test_free_text_restriction_names_the_area_and_keeps_the_athletes_words() -> None:
+    _store, _plan, flags = _sync_free_text(
+        "intake-restriction", "tight hips, avoid deep squats [training_impact:limiting]"
+    )
+
+    assert [(flag["body_area"], flag["description"]) for flag in flags] == [
+        ("Hip", "tight hips, avoid deep squats [training_impact:limiting]")
+    ]
+
+
+def test_free_text_describing_one_injury_twice_tracks_it_once() -> None:
+    _store, _plan, flags = _sync_free_text("intake-overlap", "hip tightness, tight hip")
+
+    assert [(flag["body_area"], flag["description"]) for flag in flags] == [("Hip", "tightness")]
+
+
+def test_free_text_without_words_creates_no_flag() -> None:
+    _store, _plan, flags = _sync_free_text("intake-malformed", "??? [training_impact:limiting]")
+
+    assert flags == []
+
+
+def test_repeated_free_text_sync_does_not_duplicate_flags() -> None:
+    store, plan, first = _sync_free_text(
+        "intake-repeat", "left shoulder strain, sore knee [training_impact:limiting]"
+    )
+
+    second = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=plan)
+
+    assert len(first) == 2
+    assert sorted(flag["id"] for flag in second) == sorted(flag["id"] for flag in first)
