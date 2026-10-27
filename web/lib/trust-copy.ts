@@ -20,18 +20,18 @@ export const TRUST_INTRO_HEADING = "How Unlxck works";
 export const TRUST_POINTS: readonly { title: string; body: string }[] = [
   {
     title: "Your answers build your camp",
-    body: "Everything starts with your sport, fight date, schedule, equipment and goals.",
+    body: "It starts with your sport, fight date, schedule, equipment and goals.",
   },
   {
     title: "Daily check-ins adjust today",
-    body: "Your camp stays the same. Today's session changes only when it needs to.",
+    body: "Your camp stays put. Today's session changes only when needed.",
   },
   {
     title: "Every change has a reason",
-    body: "You always see the signals behind a change, and what it was based on.",
+    body: "You always see what's behind a change.",
   },
   {
     title: "You're always in control",
-    body: "Follow the change, log what you actually did, or take your coach's call instead.",
+    body: "Follow the change, log what you did, or take your coach's call.",
   },
 ];

@@ -94,7 +94,7 @@ test("a persisted report is still acknowledged when refresh fails", async () => 
   try {
     ui.set("assessed_at", "2026-10-05T12:00"); await ui.submit();
     assert.match(ui.container.querySelector('[role="status"]')?.textContent ?? "", /saved/);
-    assert.match(ui.container.querySelector('[role="alert"]')?.textContent ?? "", /report was saved/);
+    assert.match(ui.container.querySelector('[role="alert"]')?.textContent ?? "", /Report saved/);
   } finally { ui.cleanup(); }
 });
 
@@ -126,6 +126,6 @@ test("coach observations cannot claim clinician pathology exclusion", async () =
   const ui = await mount();
   try {
     ui.set("assessed_at", "2026-10-05T12:00"); ui.set("assessor", "coach_observed"); ui.set("incompatible_pathology", "excluded");
-    await ui.submit(); assert.equal(ui.calls.length, 0); assert.match(ui.container.textContent ?? "", /Only record pathology exclusion/);
+    await ui.submit(); assert.equal(ui.calls.length, 0); assert.match(ui.container.textContent ?? "", /Only record a clinician- or physio-reported pathology exclusion/);
   } finally { ui.cleanup(); }
 });

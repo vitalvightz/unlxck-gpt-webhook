@@ -55,9 +55,9 @@ const demoWeek = [
 ] as const;
 
 const demoCoachNotes = [
-  "Hard days are spaced so the nervous system has 48h to recover before another high-intent session.",
-  "Strength sits the day after hard sparring on purpose - it preserves the skill quality of the next sparring day.",
-  "Conditioning is round-specific (3 x 5 here), so the energy systems trained match what the fight will demand.",
+  "Hard days are spaced 48h apart so the nervous system recovers.",
+  "Strength follows hard sparring on purpose, protecting skill quality for the next sparring day.",
+  "Conditioning is round-specific (3 x 5 here), matching the fight's energy demands.",
 ];
 
 export default function DemoPlanPage() {
@@ -68,10 +68,10 @@ export default function DemoPlanPage() {
           <p className="eyebrow">Demo plan</p>
           <h1 className="hero-title">This is what a generated camp looks like.</h1>
           <p className="overview-command-summary">
-            A static sample of one week from a structured camp. No data is generated and nothing is saved.
+            A sample week from a structured camp. Nothing is generated or saved.
           </p>
           <p className="muted welcome-context">
-            When you build your own, the planner uses your fight date, training days, restrictions, and goals to shape every week.
+            Your own plan is shaped by your fight date, training days, restrictions and goals.
           </p>
           <div className="hero-actions welcome-actions">
             <Link href="/quick-build" className="cta">

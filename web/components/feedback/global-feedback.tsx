@@ -53,7 +53,7 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
     event.preventDefault();
     if (!hasSubmission) {
       setMessage(null);
-      setError("Add a description or screenshot before sending feedback.");
+      setError("Add a description or screenshot first.");
       return;
     }
     if (submissionLockRef.current) return;
@@ -121,12 +121,12 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
           accept="image/png,image/jpeg,image/webp"
           onChange={(event) => selectScreenshot(event.target.files?.[0] ?? null)}
         />
-        <p className="feedback-privacy-copy">Add a description or screenshot before sending feedback.</p>
+        <p className="feedback-privacy-copy">Add a description or screenshot first.</p>
         <p className="feedback-privacy-copy">
-          Avoid uploading screenshots containing private messages, contact details, payment information, or unrelated health information.
+          Don’t upload screenshots with private messages, contact details, payment info or unrelated health info.
         </p>
         <p className="feedback-privacy-copy">
-          Sanitisation removes metadata. It does not remove sensitive information visible inside the image.
+          Metadata is removed, but anything visible in the image is not.
         </p>
         {screenshot && previewUrl ? (
           <div className="feedback-attachment-preview">

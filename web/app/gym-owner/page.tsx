@@ -5,7 +5,7 @@ export default function GymOwnerPage() {
     <RoleComingSoon
       kicker="Gym owner"
       title="Gym accounts are coming soon"
-      message="Gym accounts will be available in public beta. For now, Unlxck private beta is open to athletes."
+      message="Gym accounts arrive in public beta. Private beta is athletes only."
     />
   );
 }

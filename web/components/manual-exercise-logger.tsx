@@ -339,7 +339,7 @@ export function ManualExerciseLogger({ token, session, reference, onClose }: {
             </li>)}
           </ul> : null}
           {searching ? <p className={styles.quiet} role="status">Searching library…</p> : null}
-          {catalogueError && trimmed ? <p className={styles.quiet} role="status">Library search is unavailable. You can still add it by name.</p> : null}
+          {catalogueError && trimmed ? <p className={styles.quiet} role="status">Library search unavailable. Add it by name instead.</p> : null}
         </div> : <div className={styles.editor}>
           <div className={styles.pickedHead}>
             <strong className={styles.pickedName}>{picked.name}</strong>

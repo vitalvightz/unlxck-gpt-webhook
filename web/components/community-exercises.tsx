@@ -46,7 +46,7 @@ function CommunityEquipmentPicker({ equipment, onChange }: { equipment: string |
         })}</div>
       </fieldset>)}
     </div>
-    {full ? <p role="status" className={layout.notice}>Equipment list is full. Remove an item to add another.</p> : null}
+    {full ? <p role="status" className={layout.notice}>Equipment list full. Remove one to add another.</p> : null}
   </details>;
 }
 /** The private exercise and immutable submitted revision must never be conflated. */
@@ -99,18 +99,18 @@ export function CommunityContributionSheet({ token, exercise, onClose, onIdentit
         <button type="button" className="ghost-button" onClick={() => setEditVideoOpen(true)}>{candidate.media_id ? 'Replace video' : 'Add video'}</button>
         {candidate.media_id ? <button type="button" className="ghost-button" onClick={() => setWorkingExercise(current => ({ ...current, media_id: null }))}>Remove video</button> : null}
       </div></details> : null}
-      {videoChanged ? <p role="status" className={layout.notice}>Video not included in community submission yet. Update this revision to send your new video for review.</p> : null}
-      {changed && !videoChanged ? <p role="status" className={layout.notice}>Your exercise details have changed since this submission. Update it for another review.</p> : null}
+      {videoChanged ? <p role="status" className={layout.notice}>Video not yet submitted. Update this revision to send it for review.</p> : null}
+      {changed && !videoChanged ? <p role="status" className={layout.notice}>Details changed since submission. Update it for another review.</p> : null}
       {entry?.media_id ? entry.media ? <><p className="muted">Video currently submitted for review</p><PrivateVideoPlayer key={entry.revision_id} media={entry.media} name={entry.name} /></> :
-        <p role="alert">The submitted video cannot be previewed. Do not publish until it is available.</p> :
+        <p role="alert">Submitted video can’t be previewed. Don’t publish until it can.</p> :
         <p className="muted">No video attached to this community submission.</p>}
       {videoChanged && candidate.media_id ? <><p className="muted">New video in your private exercise</p><PrivateExerciseVideo token={token} id={candidate.media_id} name={candidate.name} /></> : null}
       {canSubmit ? <>
         <CommunityEquipmentPicker equipment={candidate.equipment} onChange={equipment => standalone
           ? setWorkingExercise(current => ({ ...current, equipment })) : onEquipment?.(equipment)} />
         <p className="muted">{changed ? 'A new revision will require fresh admin approval. Your previous publication stays unchanged until then.' : 'Approval makes this exercise public.'}</p>
-        <label className={layout.check}><input type="checkbox" checked={rights} disabled={busy} onChange={e => setRights(e.target.checked)} /><span>I have permission to share this exercise and any video.</span></label>
-        <label className={layout.check}><input type="checkbox" checked={consent} disabled={busy} onChange={e => setConsent(e.target.checked)} /><span>I agree to show my username and profile picture publicly.</span></label>
+        <label className={layout.check}><input type="checkbox" checked={rights} disabled={busy} onChange={e => setRights(e.target.checked)} /><span>I have permission to share this exercise and video.</span></label>
+        <label className={layout.check}><input type="checkbox" checked={consent} disabled={busy} onChange={e => setConsent(e.target.checked)} /><span>Show my username and profile picture publicly.</span></label>
         <button type="button" className="cta" disabled={busy || !rights || !consent} onClick={() => void save(true)}>{busy ? 'Submitting…' : changed ? 'Update community submission' : 'Submit for review'}</button>
       </> : <p className="muted">{entry?.status === 'published' ? 'This exact revision is public.' : 'This revision is awaiting review.'}</p>}
       {entry && (entry.has_publication || entry.status !== 'private') ? <details><summary>Submission options</summary><button type="button" className="ghost-button" disabled={busy} onClick={async () => {

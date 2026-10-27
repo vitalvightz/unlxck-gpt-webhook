@@ -459,7 +459,7 @@ function QuickBuildFormInner() {
       setMessage(
         removedStrengthForHardSparring
           ? HARD_SPARRING_STRENGTH_REMOVAL_MESSAGE
-          : "Some picks were removed because they are not available this close to fight day.",
+          : "Some picks were removed: not available this close to fight day.",
       );
       return {
         ...current,
@@ -821,7 +821,7 @@ function QuickBuildFormInner() {
         <p className="eyebrow">Quick Build</p>
         <h1 className="hero-title">Generate a plan in about two minutes.</h1>
         <p className="muted">
-          Uses safe defaults for fatigue, sparring and goals. You can refine it later in Camp Setup.
+          Safe defaults for fatigue, sparring and goals. Refine later in Camp Setup.
         </p>
       </section>
 
@@ -829,7 +829,7 @@ function QuickBuildFormInner() {
         <div className="quick-build-starters-copy">
           <span className="checkbox-group-label">One-tap starters</span>
           <p className="muted">
-            Fills your schedule, equipment and focus in one tap. Tap again to clear.
+            Fills schedule, equipment and focus. Tap again to clear.
           </p>
         </div>
         <div className="quick-build-starter-grid">
@@ -1057,7 +1057,7 @@ function QuickBuildFormInner() {
             disabled={sessionsSelectDisabled}
             onChange={(value) => patch("weekly_training_frequency", Number(value) || 1)}
           />
-          <p className="muted">Total weekly sessions, including boxing and double days. Available days and session count are separate.</p>
+          <p className="muted">Total weekly sessions, including boxing and double days. Separate from available days.</p>
           <FieldError message={visibleError("weekly_training_frequency")} />
           <FieldError message={visibleError("training_availability")} />
         </div>
@@ -1151,7 +1151,7 @@ function QuickBuildFormInner() {
           />
           {input.guided_injuries?.length ? <p className="muted">
             Saved injury details. Update training impact below, or <a href="/onboarding?from=quick_build">edit injury details</a>.
-          </p> : <p className="muted">Be specific. Include body area, injury type, and what to avoid.</p>}
+          </p> : <p className="muted">Be specific: body area, injury type, what to avoid.</p>}
           {input.injuries.trim() ? <div className="gi-field">
             <span id="qb-injury-impact" className="gi-label">How much is it affecting you?</span>
             <div className="injury-severity-chips" role="group" aria-labelledby="qb-injury-impact">
@@ -1169,7 +1169,7 @@ function QuickBuildFormInner() {
           <p className="quick-build-action-title">
             {readyToGenerate ? "Ready to generate." : "Quick Build is almost ready."}
           </p>
-          <p className="muted">Refine fatigue, sparring days, and detailed weaknesses later from the plan page.</p>
+          <p className="muted">Refine fatigue, sparring days and weaknesses later from the plan page.</p>
         </div>
         {message ? (
           <div className="quick-build-action-feedback" role="status" aria-live="polite">

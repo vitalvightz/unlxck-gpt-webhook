@@ -204,13 +204,13 @@ export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = tr
             <span className={styles.manualName}>{block.name}</span>
             {block.actual.set_entries?.length ? <SetResults entries={block.actual.set_entries} completed={block.actual.sets} /> : <span className={styles.manualValues}>{summarise(block.actual, block.format) || NO_MEASUREMENTS}</span>}
             {block.notes ? <p className={styles.note}>{block.notes}</p> : null}
-          </li>)}</ol> : <p className={styles.quiet}>No exercises recorded. Only the session’s activity, duration and effort were logged.</p>}
+          </li>)}</ol> : <p className={styles.quiet}>No exercises recorded. Only activity, duration and effort were logged.</p>}
           {details.sparring ? <><h3>Sparring report</h3><p>{details.sparring.rounds_completed} rounds{details.sparring.round_seconds != null ? ` · ${details.sparring.round_seconds} sec` : ""} · {details.sparring.intensity}</p>
             {details.sparring.head_contact ? <p>Head contact: {details.sparring.head_contact}</p> : null}
             {details.sparring.rocked != null ? <p>Rocked: {details.sparring.rocked ? "Yes" : "No"}</p> : null}
             {details.sparring.notes ? <p className={styles.note}>{details.sparring.notes}</p> : null}</> : null}
         </section> : <section className={styles.section}><h3>Exercises & training blocks</h3>
-          {details.prescription_source === "exercise_logs" ? <p className={styles.quiet}>Saved exercise logs only. The full prescription and original block order are unavailable.</p> : null}
+          {details.prescription_source === "exercise_logs" ? <p className={styles.quiet}>Saved exercise logs only. Full prescription and block order unavailable.</p> : null}
           {details.blocks.length ? <ol className={styles.blocks}>{details.blocks.map((block, index) => <TrainingBlock key={index} block={block} index={index}
             open={expanded.has(index)} onToggle={() => setOpen(new Set(expanded.has(index) ? [...expanded].filter(item => item !== index) : [...expanded, index]))} />)}</ol> : null}
         </section>}

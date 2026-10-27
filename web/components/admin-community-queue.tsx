@@ -47,7 +47,7 @@ function ReviewSheet({ token, initial, onClose, onChanged }: { token: string; in
               {mediaId ? <button type="button" className="ghost-button" disabled={busy} onClick={() => setMediaId(null)}>Remove video</button> : null}</div>
             <button className="secondary-button" disabled={busy || !changed}>Save revision</button>
           </form></details> : null}
-          {changed ? <p role="status" className={layout.notice}>Save or discard the edited revision before taking a moderation action.</p> : null}
+          {changed ? <p role="status" className={layout.notice}>Save or discard the edit before moderating.</p> : null}
           {entry.status === 'in_review' ? <>
             {entry.verified ? <label className={layout.check}><input type="checkbox" checked={confirmation} disabled={busy || changed} onChange={e => setConfirmation(e.target.checked)} /><span>{entry.media_id ? 'I confirm this final exercise and its demonstration.' : 'I confirm this exercise is being reviewed and published without a demonstration video.'}</span></label> : null}
             <button type="button" className="cta" disabled={busy || changed || Boolean(entry.media_id && !entry.media) || (entry.verified && !confirmation)} onClick={() => void perform(!entry.verified ? 'verify' : !entry.confirmed ? 'confirm' : 'approve')}>

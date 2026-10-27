@@ -42,7 +42,7 @@ test("a failed post-save refresh keeps the check-in form mounted and offers retr
     await act(async () => { submit.click(); });
     assert.equal(todayReads, 2);
     assert.equal(container.querySelector("form"), form);
-    assert.match(container.textContent ?? "", /Today could not refresh/);
+    assert.match(container.textContent ?? "", /Today couldn’t refresh/);
     assert.match(container.textContent ?? "", /Retry Today/);
     assert.equal(submit.disabled, false);
   } finally {
@@ -119,7 +119,7 @@ test("without health-data consent the injury form is not offered", async () => {
     {...CONSENTED, profile: {...CONSENTED.profile, health_consent_granted: false}});
   try {
     assert.equal(container.querySelector(".today-injury-add-trigger"), null);
-    assert.match(container.querySelector("#today-injury")?.textContent ?? "", /needs your health-data consent/);
+    assert.match(container.querySelector("#today-injury")?.textContent ?? "", /needs health-data consent/);
   } finally { await cleanup(); }
 });
 
@@ -131,7 +131,7 @@ test("withdrawn consent never hides an injury that is already restricting traini
     {...CONSENTED, profile: {...CONSENTED.profile, health_consent_granted: false}});
   try {
     assert.ok(container.querySelector(".today-injury-item"));
-    assert.doesNotMatch(container.textContent ?? "", /needs your health-data consent/);
+    assert.doesNotMatch(container.textContent ?? "", /needs health-data consent/);
   } finally { await cleanup(); }
 });
 

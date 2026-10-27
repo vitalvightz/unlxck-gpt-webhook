@@ -1023,7 +1023,7 @@ test("renders a coach-led / sparring day with no app blocks as its own card", ()
   assert.equal(html.includes("Technical-only contact today"), false);
   assert.equal(html.includes("no hard sparring"), true);
   assert.equal(countOccurrences(html, 'aria-label="Why this changed: Technical Combat"'), 1);
-  assert.equal(html.includes("This is your declared hard-sparring/contact work"), false);
+  assert.equal(html.includes("This is your declared hard-sparring/contact day"), false);
   assert.equal(html.includes("sp-day-card-technical"), true);
   // The genuine rest day renders as a single compact, non-expandable rest row.
   assert.equal(countOccurrences(html, "cm-rest-day"), 1);
@@ -1139,7 +1139,7 @@ test("a hard-sparring day carries the hard-sparring note, not the technical note
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
 
   assert.equal(html.includes("Hard sparring — controlled hard contact"), true);
-  assert.equal(html.includes("This is your declared hard-sparring/contact work"), true);
+  assert.equal(html.includes("This is your declared hard-sparring/contact day"), true);
   // A hard-sparring day must not borrow the technical-only "no hard sparring" wording.
   assert.equal(html.includes("Technical-only contact today"), false);
   assert.equal(html.includes("sp-day-card-sparring"), true);
@@ -2195,7 +2195,7 @@ test("open plan week overview headlines the block-week intent", () => {
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} openOngoing />);
 
   // Week 1 is selected by default → baseline intent line in the overview.
-  assert.equal(html.includes("Run every dose as written and groove technical consistency."), true);
+  assert.equal(html.includes("Run every dose as written and build consistency."), true);
 
   const datedHtml = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
   assert.equal(datedHtml.includes("Run every dose as written"), false);

@@ -5,7 +5,7 @@ import type { PlanActivationState } from "@/lib/types";
 // frontend consumes only this derived state so list and detail views cannot
 // drift from Today, Overview or the activation endpoint.
 export const ACTIVE_PLAN_OVERLAP_MESSAGE =
-  "This overlaps with your current active plan. Do you want to replace the current plan, pause it, or choose a new start date?";
+  "This overlaps your active plan. Replace it, pause it, or pick a new start date?";
 export const ACTIVE_PLAN_OVERLAP_CODE = "active_plan_overlap";
 
 export type ActivePlanOverlapAction = "replace" | "pause";

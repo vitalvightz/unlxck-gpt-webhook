@@ -157,7 +157,7 @@ const DEFAULT_COPY_BY_TIER: Record<
   },
   modify: {
     title: "Follow today's limits",
-    detail: "Today's session has not been rewritten. Follow the limits below and skip extra work.",
+    detail: "Today's session is unchanged. Follow the limits below and skip extra work.",
     action: "Follow today's limits.",
   },
   green: {

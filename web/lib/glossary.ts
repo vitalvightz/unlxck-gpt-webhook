@@ -37,7 +37,7 @@ const GLOSSARY: Readonly<Record<string, GlossaryEntry>> = {
   rpe: {
     term: "RPE",
     definition:
-      "How hard the work should feel, from 1 (very easy) to 10 (maximum effort). RPE 7–8 feels hard but controlled. RPE 3 or below is easy recovery work.",
+      "How hard the work should feel, from 1 (very easy) to 10 (max). RPE 7–8 is hard but controlled; 3 or below is easy recovery.",
   },
   rir: {
     term: "RIR",
@@ -47,27 +47,27 @@ const GLOSSARY: Readonly<Record<string, GlossaryEntry>> = {
   intent: {
     term: "Intent",
     definition:
-      "How hard you try to move, not how heavy the load is. Max intent means driving every rep as fast as you can, even when the weight itself is light.",
+      "How hard you try to move, not how heavy the load is. Max intent means driving every rep as fast as possible, even when light.",
   },
   velocity: {
     term: "Velocity",
     definition:
-      "Bar or limb speed, usually in metres per second. Hold the prescribed speed and drop the load once you fall below it, rather than grinding slower reps.",
+      "Bar or limb speed, usually in metres per second. Hold the prescribed speed; drop the load once you fall below it instead of grinding.",
   },
   heart_rate_zone: {
     term: "Heart rate zone",
     definition:
-      "The heart-rate band to stay inside. Zones 1-2 are easy aerobic work you could hold a conversation through, zones 3-4 are hard breathing, zone 5 is close to your maximum.",
+      "The heart-rate band to stay in. Zones 1-2 are conversational, 3-4 are hard breathing, 5 is near max.",
   },
   pace: {
     term: "Pace",
     definition:
-      "The speed to hold, usually time per kilometre or per round. Pace is the target, so let effort rise and fall with terrain or fatigue to keep it honest.",
+      "The speed to hold, usually time per kilometre or round. Pace is the target; let effort rise and fall with terrain or fatigue.",
   },
   max_effort_percent: {
     term: "Max effort %",
     definition:
-      "A percentage of your maximum for this movement. 90% sits near your top end; 60% is comfortably submaximal work you can repeat cleanly.",
+      "A percentage of your max for this movement. 90% is near your top end; 60% is comfortable, repeatable work.",
   },
   load: {
     term: "Load",
@@ -82,32 +82,32 @@ const GLOSSARY: Readonly<Record<string, GlossaryEntry>> = {
   mode: {
     term: "Mode",
     definition:
-      "How the work is paced rather than how much of it there is. Continuous = keep going without breaks. AMRAP = as many rounds or reps as possible in the time. EMOM = every minute on the minute, start the next set at the top of each minute.",
+      "How the work is paced. Continuous = no breaks. AMRAP = as many rounds or reps as possible in the time. EMOM = every minute on the minute: start each set at the top of the minute.",
   },
   rehab: {
     term: "Rehab",
     definition:
-      "Targeted work for an injury you are still carrying. It settles the area down and rebuilds it. Shorten or skip it on a day it hurts, and keep it well inside pain-free range.",
+      "Targeted work for a current injury that settles and rebuilds the area. Shorten or skip it on painful days, and stay well inside pain-free range.",
   },
   prehab: {
     term: "Prehab",
     definition:
-      "The same work as rehab, kept in the plan after an injury has cleared so it does not come back. Preventative, not treatment.",
+      "Rehab work kept in the plan after an injury clears so it doesn't return. Preventative, not treatment.",
   },
   mobility: {
     term: "Mobility",
     definition:
-      "Controlled range-of-motion work: moving a joint through its full range under your own control. It is preparation and maintenance, not stretching for its own sake.",
+      "Moving a joint through its full range under your own control. Preparation and maintenance, not stretching for its own sake.",
   },
   "stop rule": {
     term: "Stop rule",
     definition:
-      "When to stop this block early. If this happens, stop. Finishing the session is not worth risking injury or illness.",
+      "When to stop this block early. If it happens, stop. Finishing isn't worth injury or illness.",
   },
   deload: {
     term: "Deload",
     definition:
-      "A planned easy week. Working sets drop roughly by half and loads stay light so the training you have already done can turn into adaptation.",
+      "A planned easy week. Working sets roughly halve and loads stay light so recent training turns into adaptation.",
   },
   taper: {
     term: "Taper",

@@ -9,7 +9,7 @@ import { buildAuthRedirectUrl } from "@/lib/site-url";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 const CAPTCHA_REQUIRED_MESSAGE = "Complete the security check, then try again.";
-const CAPTCHA_UNAVAILABLE_MESSAGE = "The security check could not load. Refresh the page and try again.";
+const CAPTCHA_UNAVAILABLE_MESSAGE = "Security check failed to load. Refresh and try again.";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -71,7 +71,7 @@ export default function ForgotPasswordPage() {
         return;
       }
 
-      setMessage("If an account exists for that email, you'll receive a password reset link shortly.");
+      setMessage("If that email has an account, a reset link is on its way.");
     });
   }
 
@@ -107,7 +107,7 @@ export default function ForgotPasswordPage() {
             <div className="success-banner">{message}</div>
             <div className="support-panel">
               <p className="kicker">Next step</p>
-              <p className="muted">Open your email app and look for a message from us. The reset link expires after a short window, so use it soon.</p>
+              <p className="muted">Check your email. The reset link expires soon.</p>
             </div>
             <div className="form-actions">
               <Link href="/login" className="ghost-button">

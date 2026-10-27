@@ -123,16 +123,16 @@ export async function subscribeToPushNotifications(
   }
   const registration = prepared?.registration ?? await getReadyRegistration();
   if (!registration) {
-    throw new Error("The app isn't installed as a PWA yet, so notifications can't be enabled.");
+    throw new Error("Install the app first to enable notifications.");
   }
   const permission = await Notification.requestPermission();
   if (permission !== "granted") {
-    throw new Error("Notifications were not allowed. You can enable them in browser settings.");
+    throw new Error("Notifications blocked. Enable them in browser settings.");
   }
 
   const existing = await registration.pushManager.getSubscription();
   if (existing && !(await existing.unsubscribe())) {
-    throw new Error("The old notification subscription couldn't be reset. Reload the app and try again.");
+    throw new Error("Couldn't reset the old notification subscription. Reload and try again.");
   }
 
   const subscription = await registration.pushManager.subscribe({

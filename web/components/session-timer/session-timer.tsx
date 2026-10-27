@@ -790,8 +790,7 @@ function SettingsSheet({ timer, onClose }: { timer: SessionTimerController; onCl
           </label>
         ) : null}
         <p className="st-sheet-note">
-          Bells keep playing in the background. Voice and vibration may stop, and calls or closing
-          the browser can interrupt audio.
+          Bells play in the background. Voice and vibration may stop; calls or closing the browser can cut audio.
         </p>
       </details>
     </div>

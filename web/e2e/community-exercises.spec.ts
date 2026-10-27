@@ -119,7 +119,7 @@ test('Video added after submission requires a new reviewed revision',async({page
   await video.getByRole('button',{name:'Preview clip'}).click();
   await video.getByRole('button',{name:'Use video'}).click();
   sheet=page.getByRole('dialog',{name:'Community exercise',exact:true});
-  await expect(sheet.getByText(/Video not included in community submission yet/)).toBeVisible();
+  await expect(sheet.getByText(/Video not yet submitted/)).toBeVisible();
   await expect(sheet.getByRole('button',{name:'Update community submission'})).toBeDisabled();
   await sheet.getByRole('checkbox').nth(0).check();await sheet.getByRole('checkbox').nth(1).check();
   await sheet.getByRole('button',{name:'Update community submission'}).click();

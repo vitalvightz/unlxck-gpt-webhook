@@ -202,7 +202,7 @@ export function WeightTracker() {
               ) : (
                 <div className={styles.empty}>
                   <h2>No weigh-ins yet</h2>
-                  <p className="muted">Weigh in at the same time each day, ideally in the morning after the toilet, so your trend compares like with like.</p>
+                  <p className="muted">Weigh in at the same time daily, ideally mornings after the toilet, so readings compare fairly.</p>
                 </div>
               )}
               <button type="button" className={`cta ${styles.logButton}`} onClick={() => setEditing({ mode: "new" })}>
@@ -244,9 +244,9 @@ export function WeightTracker() {
                 )}
                 <details className={progress.about}>
                   <summary>About these numbers</summary>
-                  <p>Your weight is the scale reading you logged. Weight swings from day to day with water, food and training, so the trend line smooths those swings into an estimate of where your weight is heading. It is not an official weigh-in.</p>
+                  <p>Weight is your logged scale reading. It swings daily with water, food and training; the trend line smooths that into where you’re heading. Not an official weigh-in.</p>
                   <p>The trend, 7-day average and weekly pace use one reading per day: your earliest fasted weigh-in, or your earliest weigh-in if none was fasted.</p>
-                  <p>Weekly pace appears once you have at least six weigh-in days spanning two weeks, with one in the last week.</p>
+                  <p>Weekly pace needs six weigh-in days over two weeks, including one in the last week.</p>
                 </details>
               </section>
             ) : null}

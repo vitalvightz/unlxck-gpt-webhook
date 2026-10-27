@@ -844,18 +844,18 @@ function getReviewStepBlockingIssue(
     noScheduledFight: boolean;
   },
 ): { message: string; step: number; fieldId: string } | null {
-  if (!isValidRecordFormat(nextForm.athlete.record ?? "")) return { message: "Record must use x-x or x-x-x format, like 5-1 or 12-2-1.", step: 0, fieldId: "record" };
-  if (!nextForm.athlete.technical_style.length) return { message: "Select a combat sport before continuing to review.", step: 0, fieldId: "technicalStyle" };
-  if (!nextForm.fight_date && !options.noScheduledFight) return { message: "Choose your fight date or mark \"No scheduled fight\" before continuing to review.", step: 1, fieldId: "fightDate" };
+  if (!isValidRecordFormat(nextForm.athlete.record ?? "")) return { message: "Use x-x or x-x-x, like 5-1 or 12-2-1.", step: 0, fieldId: "record" };
+  if (!nextForm.athlete.technical_style.length) return { message: "Select a combat sport to continue.", step: 0, fieldId: "technicalStyle" };
+  if (!nextForm.fight_date && !options.noScheduledFight) return { message: "Choose a fight date or mark \"No scheduled fight\" to continue.", step: 1, fieldId: "fightDate" };
   if (!options.noScheduledFight && isFightDateInPast(nextForm.fight_date)) return { message: FIGHT_DATE_IN_PAST_MESSAGE, step: 1, fieldId: "fightDate" };
-  if (!nextForm.training_availability.length) return { message: "Pick at least one training availability option before continuing to review.", step: 2, fieldId: "trainingAvailabilityGroup" };
+  if (!nextForm.training_availability.length) return { message: "Pick at least one training day to continue.", step: 2, fieldId: "trainingAvailabilityGroup" };
   if (!nextForm.weekly_training_frequency || nextForm.weekly_training_frequency < 1) return { message: "Planned sessions per week must be at least 1.", step: 1, fieldId: "sessionsPerWeek" };
   if (nextForm.weekly_training_frequency > 14) return { message: "Planned sessions per week cannot exceed 14.", step: 1, fieldId: "sessionsPerWeek" };
   const parsedRounds = parseRoundsFormat(nextForm.rounds_format);
-  if (!parsedRounds.roundCount) return { message: "Choose both round count and round duration before continuing to review.", step: 1, fieldId: "roundCount" };
-  if (!parsedRounds.roundDuration) return { message: "Choose both round count and round duration before continuing to review.", step: 1, fieldId: "roundDuration" };
+  if (!parsedRounds.roundCount) return { message: "Choose round count and duration to continue.", step: 1, fieldId: "roundCount" };
+  if (!parsedRounds.roundDuration) return { message: "Choose round count and duration to continue.", step: 1, fieldId: "roundDuration" };
   if (options.hardSparringWarningLocked) {
-    return { message: "Acknowledge the hard sparring warning in the Training step before continuing to review.", step: 2, fieldId: "hardSparringAck" };
+    return { message: "Acknowledge the hard sparring warning in Training to continue.", step: 2, fieldId: "hardSparringAck" };
   }
   const focusValidation = validatePerformanceFocusSelections(
     nextForm.fight_date,
@@ -864,7 +864,7 @@ function getReviewStepBlockingIssue(
   );
   if (focusValidation.isOverCap) {
     return {
-      message: focusValidation.errorMessage ?? "Goals and weak areas exceed the current cap. Update your selections before continuing.",
+      message: focusValidation.errorMessage ?? "Too many goals and weak areas. Remove some to continue.",
       step: PERFORMANCE_STEP_INDEX,
       fieldId: "keyGoalsGroup",
     };
@@ -1231,7 +1231,7 @@ export function PlanIntakeForm() {
     setMessage(
       removedStrengthForHardSparring
         ? HARD_SPARRING_STRENGTH_REMOVAL_MESSAGE
-        : "Some picks were removed because they are not available this close to fight day.",
+        : "Some picks were removed: not available this close to fight day.",
     );
     setError(null);
   }, [daysUntilFight, form.key_goals, form.weak_areas, hasHardSparring, hydrated]);
@@ -1320,7 +1320,7 @@ export function PlanIntakeForm() {
     setMessage(null);
     setError(
       performanceFocusValidation.errorMessage
-        ?? "This saved intake is over the current focus cap. Remove some goal or weak-area selections before generating.",
+        ?? "This intake has too many focus picks. Remove some goals or weak areas before generating.",
     );
     setInvalidFieldId("keyGoalsGroup");
     setValidationFocusRequest({ fieldId: "keyGoalsGroup", nonce: Date.now() });
@@ -1721,7 +1721,7 @@ export function PlanIntakeForm() {
     if (currentStep === 0) {
       if (!isValidRecordFormat(nextForm.athlete.record ?? "")) {
         return reportInvalidField({
-          message: "Record must use x-x or x-x-x format, like 5-1 or 12-2-1.",
+          message: "Use x-x or x-x-x, like 5-1 or 12-2-1.",
           fieldId: "record",
         });
       }
@@ -1794,7 +1794,7 @@ export function PlanIntakeForm() {
       );
       if (focusValidation.isOverCap) {
         return reportInvalidField({
-          message: focusValidation.errorMessage ?? "Goals and weak areas exceed the current cap. Update your selections before continuing.",
+          message: focusValidation.errorMessage ?? "Too many goals and weak areas. Remove some to continue.",
           fieldId: "keyGoalsGroup",
         });
       }
@@ -1875,7 +1875,7 @@ export function PlanIntakeForm() {
     );
     if (focusValidation.isOverCap) {
       return reportInvalidField({
-        message: focusValidation.errorMessage ?? "Goals and weak areas exceed the current cap. Update your selections before continuing.",
+        message: focusValidation.errorMessage ?? "Too many goals and weak areas. Remove some to continue.",
         fieldId: "keyGoalsGroup",
         step: PERFORMANCE_STEP_INDEX,
       });
@@ -2491,7 +2491,7 @@ export function PlanIntakeForm() {
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
               {refiningFromQuickBuild ? (
                 <p className="quick-build-refine-notice" role="status">
-                  Refining your Quick Build plan. Your existing plan stays until you generate again.
+                  Refining your Quick Build plan. It stays until you generate again.
                 </p>
               ) : null}
               <OnboardingTrustNote />
@@ -2500,7 +2500,7 @@ export function PlanIntakeForm() {
                   <p className="kicker">Identity</p>
                   <h2 className="form-section-title">{t("coreDetails")}</h2>
                 </div>
-                <p className="muted">Only your name and combat sport are required here. Everything else is optional.</p>
+                <p className="muted">Only name and combat sport are required.</p>
                 <div className="form-grid onboarding-profile-core-grid">
                   <div className="field">
                     <label htmlFor="fullName">Full name</label>
@@ -2828,7 +2828,7 @@ export function PlanIntakeForm() {
                   <h2 className="form-section-title">{t("combatLoad")}</h2>
                 </div>
                 <p className="muted">
-                  Mark which combat days are hard sparring and which are light or technical. These still count within your weekly session total.
+                  Mark combat days as hard sparring or light/technical. Both count toward weekly sessions.
                 </p>
                 {shouldHideField(daysOutCtx, "hard_sparring_days") ? (
                   <div className="field">
@@ -2882,7 +2882,7 @@ export function PlanIntakeForm() {
                           );
                         }}
                       />
-                      <span className="inline-warning-ack-copy">I understand this requires deliberate recovery planning.</span>
+                      <span className="inline-warning-ack-copy">I understand this needs deliberate recovery planning.</span>
                     </label>
                     {invalidFieldId === "hardSparringAck" && error ? (
                       <p id="hardSparringAck-error" className="error-text" role="alert">{error}</p>
@@ -3020,7 +3020,7 @@ export function PlanIntakeForm() {
                     {showClearInjuriesConfirm ? (
                       <div className="gi-clear-confirm-panel" role="alertdialog" aria-live="polite">
                         <p className="gi-clear-confirm-title">Clear injury cards?</p>
-                        <p className="muted">This will remove current injury entries from this intake.</p>
+                        <p className="muted">This removes current injuries from this intake.</p>
                         <div className="gi-clear-confirm-actions">
                           <button type="button" className="secondary-button" onClick={() => setShowClearInjuriesConfirm(false)}>{t("keepInjuries")}</button>
                           <button type="button" className="danger-button" onClick={handleConfirmClearInjuries}>{t("clearInjuries")}</button>
@@ -3030,7 +3030,7 @@ export function PlanIntakeForm() {
                     {pendingInjuryRemovalIndex !== null ? (
                       <div ref={pendingRemovalRef} className="gi-clear-confirm-panel gi-remove-confirm-panel" role="alertdialog" aria-live="polite">
                         <p className="gi-clear-confirm-title">Remove injury?</p>
-                        <p className="muted">This injury has details filled in. Removing will delete them.</p>
+                        <p className="muted">Removing this injury deletes its details.</p>
                         <div className="gi-clear-confirm-actions">
                           <button type="button" className="secondary-button" onClick={handleCancelRemovePendingInjury}>{t("keepInjury")}</button>
                           <button type="button" className="danger-button" onClick={handleConfirmRemovePendingInjury}>{t("removeInjury")}</button>
@@ -3238,7 +3238,7 @@ export function PlanIntakeForm() {
                   </div>
                   <div className="priority-clarification-copy">
                     <p>{overlapClarificationPrompt}</p>
-                    <p className="muted">Coming soon. Clarifying overlapping goals and weak areas is not available yet.</p>
+                    <p className="muted">Coming soon: clarifying overlapping goals and weak areas.</p>
                   </div>
                   <fieldset disabled className="priority-clarification-options" role="radiogroup" aria-label="Goal and weak area clarification" aria-disabled="true">
                     {goalWeakAreaOverlaps.map((overlap, overlapIndex) => {
@@ -3279,7 +3279,7 @@ export function PlanIntakeForm() {
               ) : null}
               <OptionalDetails
                 title="Add coach notes"
-                hint="Coming soon. Mental / confidence issues, or anything else the planner should know."
+                hint="Coming soon. Mental or confidence issues, or anything else relevant."
                 comingSoon
               >
                 <fieldset disabled className="form-grid" aria-disabled="true">
@@ -3292,7 +3292,7 @@ export function PlanIntakeForm() {
                       maxLength={MENTAL_BLOCKERS_MAX}
                       placeholder="Optional: anxiety under pressure, low confidence late in camp, trouble switching on"
                     />
-                    <p className="muted">Only use this if there is a real mental or confidence issue the plan should respect.</p>
+                    <p className="muted">Only for a real mental or confidence issue the plan should respect.</p>
                   </div>
                   <div className="field">
                     <label htmlFor="notes">Anything else we should know?</label>
@@ -3301,9 +3301,9 @@ export function PlanIntakeForm() {
                       value={form.notes ?? ""}
                       onChange={(event) => updateField("notes", event.target.value)}
                       maxLength={PREVIOUS_PLAN_FEEDBACK_MAX}
-                      placeholder="Optional: travel, school/work load, sparring schedule, recovery issue, or anything else the planner should know"
+                      placeholder="Optional: travel, school/work load, sparring schedule, recovery, or anything else relevant"
                     />
-                    <p className="muted">Use this for extra coach context that does not fit the other fields.</p>
+                    <p className="muted">Extra coach context that fits nowhere else.</p>
                   </div>
                 </fieldset>
               </OptionalDetails>
@@ -3366,7 +3366,7 @@ export function PlanIntakeForm() {
             <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
               <div className="support-panel">
                 <p className="kicker">Weight tracker</p>
-                <p className="muted">Log weigh-ins and track your trend toward fight weight.</p>
+                <p className="muted">Log weigh-ins and track your trend to fight weight.</p>
                 <div className="plan-summary-actions">
                   <Link href="/nutrition" className="ghost-button">
                     Open weight tracker

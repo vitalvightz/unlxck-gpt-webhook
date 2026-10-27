@@ -415,9 +415,7 @@ export function ProductAnalytics() {
                   </p>
                   {f.feature === "plans" ? (
                     <p>
-                      Usage includes custom plan creation/edit and completed
-                      training linked to a plan. It does not imply a plan screen
-                      visit.
+                      Usage covers custom plan creation/edits and plan-linked training, not plan screen visits.
                     </p>
                   ) : null}
                   {Object.entries(f.actions).map(([a, n]) => (
@@ -447,8 +445,7 @@ export function ProductAnalytics() {
                   ) : null}
                   {!f.uses && !f.discovered ? (
                     <p>
-                      No recorded evidence. Missing historical tracking is not
-                      proof of non-use.
+                      No recorded evidence. Missing history isn’t proof of non-use.
                     </p>
                   ) : null}
                 </details>
@@ -458,9 +455,7 @@ export function ProductAnalytics() {
           <section id="analytics-3">
             <h2>Conversion & Drop-offs</h2>
             <p className="muted">
-              Signup-cohort conversions. Onboarding stages use server-owned
-              workflow timestamps recorded prospectively. Plan-free onboarding
-              does not require a generated plan.
+              Signup-cohort conversions. Onboarding stages use server workflow timestamps. Plan-free onboarding needs no generated plan.
             </p>
             <details open className={styles.note}>
               <summary>
@@ -539,8 +534,7 @@ export function ProductAnalytics() {
           <section id="analytics-4">
             <h2>Athlete Activity</h2>
             <p className="muted">
-              Admin-only recorded activity. Open a profile for its chronological
-              timeline.
+              Admin-only activity. Open a profile for its timeline.
             </p>
             <div className={styles.table}>
               <table>
@@ -609,8 +603,7 @@ export function ProductAnalytics() {
               ))
             ) : (
               <p>
-                No recorded failures in this period. This does not imply
-                complete historical error coverage.
+                No recorded failures this period. Error history may be incomplete.
               </p>
             )}
             {data.friction_followup.map((f) => (
@@ -707,8 +700,7 @@ export function AthleteActivityPanel({ athleteId }: { athleteId: string }) {
               data.summary.signals.map((signal) => <p key={signal}>{signal}</p>)
             ) : (
               <p>
-                No observed drop-off signals. Missing historical data is not
-                proof of successful engagement.
+                No drop-off signals. Missing history isn’t proof of engagement.
               </p>
             )}
           </details>

@@ -40,12 +40,12 @@ export function ExerciseLibrary({ library, token, cache }: { library: ExerciseLi
     <label className="history-exercise-search">Find an exercise
       <input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search your exercise records" />
     </label>
-    <p className={styles.scope}>Best loads from your saved performances. Each weight unit is kept separate.</p>
+    <p className={styles.scope}>Best saved loads, kept separate per weight unit.</p>
     {canonical.length ? <ul className={`history-list ${styles.library}`} aria-label="Your exercises">
       {canonical.map(exercise => <ExerciseCard key={exercise.id} exercise={exercise} onSelect={() => setSelected(exercise)} />)}
     </ul> : null}
     {legacy.length ? <section className={styles.legacy} aria-label="Unlinked legacy records">
-      <h2>Unlinked legacy records</h2><p className={styles.scope}>These records have no saved exercise key. They stay separate so different movements aren’t combined.</p>
+      <h2>Unlinked legacy records</h2><p className={styles.scope}>These records have no exercise key, so they stay separate.</p>
       <ul className={`history-list ${styles.library}`}>{legacy.map(exercise => <ExerciseCard key={exercise.id} exercise={exercise} onSelect={() => setSelected(exercise)} />)}</ul>
     </section> : null}
     {!matching.length ? <p className="muted" role="status">No matching exercises in your saved history.</p> : null}
@@ -144,7 +144,7 @@ export function ExerciseDetails({ exercise, asOf, token, cache, onDismiss }: {
         {data ? <ol ref={timeline} className={sheet.blocks}>{data.performances.slice(0, limit ?? undefined).map((item, index) => <TrainingBlock key={item.id} block={item.block} index={index} heading={formatAppDate(item.training_day)} recordId={item.id} numbered={false}
           open={open.has(item.id)} onToggle={() => setOpen(current => { const next = new Set(current); if (!next.delete(item.id)) next.add(item.id); return next; })} />)}</ol> : null}
         {data?.performances.length === 0 ? <p className={sheet.quiet}>No remaining records for this exercise.</p> : null}
-        {error ? <div role="alert"><p>{data ? "Unable to load earlier records. Your loaded records are still available." : "Unable to load exercise records. Try again."}</p><button type="button" className="secondary-button" onClick={() => { setError(false); if (data?.next_cursor) void more(); else setAttempt(value => value + 1); }}>Retry</button></div> : null}
+        {error ? <div role="alert"><p>{data ? "Couldn't load earlier records. Loaded records are still here." : "Unable to load exercise records. Try again."}</p><button type="button" className="secondary-button" onClick={() => { setError(false); if (data?.next_cursor) void more(); else setAttempt(value => value + 1); }}>Retry</button></div> : null}
         {data?.next_cursor && !error && limit === null ? <button type="button" className="secondary-button" disabled={busy} onClick={() => void more()}>{busy ? "Loading…" : "Load earlier performances"}</button> : null}
       </section>
       </div>

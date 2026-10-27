@@ -20,7 +20,7 @@ test("unsafe guidance is visible from selection through the saved state", () => 
   assert.equal(shouldShowUnsafeGuidance("no", "no"), false);
   assert.equal(
     UNSAFE_GUIDANCE,
-    "Do not continue this recommendation if it feels unsafe. Update your injury or readiness information and seek qualified medical help when necessary.",
+    "Stop this recommendation if it feels unsafe. Update your injury or readiness info and seek qualified medical help if needed.",
   );
 });
 
@@ -79,13 +79,13 @@ test("submission failures remain separate from feedback loading", () => {
 test("global attachment privacy copy is explicit and adjacent to the control", () => {
   assert.match(
     GLOBAL_SOURCE,
-    /Avoid uploading screenshots containing private messages, contact details, payment information, or unrelated health information\./,
+    /Don’t upload screenshots with private messages, contact details, payment info or unrelated health info\./,
   );
   assert.match(
     GLOBAL_SOURCE,
-    /Sanitisation removes metadata\. It does not remove sensitive information visible inside the image\./,
+    /Metadata is removed, but anything visible in the image is not\./,
   );
-  assert.ok(GLOBAL_SOURCE.indexOf("global-feedback-screenshot") < GLOBAL_SOURCE.indexOf("Avoid uploading"));
+  assert.ok(GLOBAL_SOURCE.indexOf("global-feedback-screenshot") < GLOBAL_SOURCE.indexOf("Don’t upload"));
 });
 
 test("changing a negative response to yes clears its reason and complaint", () => {

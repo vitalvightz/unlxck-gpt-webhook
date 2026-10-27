@@ -12,7 +12,7 @@ export const PROFILE_SERVICE_WARNING_BODY =
   "Queues are shown with limited athlete details.";
 export const ADMIN_SERVICE_WARNING_TITLE = "Support data temporarily unavailable.";
 export const ADMIN_SERVICE_WARNING_BODY =
-  "Dashboard sections are shown with the latest available details.";
+  "Sections show the latest available details.";
 export const PROFILE_UNAVAILABLE_ROW_LABEL = "Profile unavailable";
 
 // Lower-cased fragments of the transient profile/store errors surfaced by the

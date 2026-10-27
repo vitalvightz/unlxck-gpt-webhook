@@ -113,7 +113,7 @@ export default function ProgressPage() {
       <section className="panel loading-card">
         <p className="kicker">Progress</p>
         <h1>Athlete account required</h1>
-        <p className="muted">Sign in with an athlete account to view XP progress.</p>
+        <p className="muted">Sign in as an athlete to view XP.</p>
         <Link href="/login" className="cta">Sign in</Link>
       </section>
     );
@@ -145,7 +145,7 @@ export default function ProgressPage() {
           {fighterIdentity.length > 0 ? (
             <p className="xp-athlete-style-line">{fighterIdentity.join(" · ")}</p>
           ) : (
-            <p className="xp-athlete-style-line">Complete your fighter profile to personalise this page.</p>
+            <p className="xp-athlete-style-line">Complete your profile to personalise this page.</p>
           )}
           {statusAndRecord.length > 0 ? (
             <p className="xp-athlete-record-line">{statusAndRecord.join(" · ")}</p>
@@ -189,7 +189,7 @@ export default function ProgressPage() {
                 <strong>{xp.progress.currentWeek.completedSessions}</strong>
                 <span>/ {xp.progress.currentWeek.plannedSessions} XP-eligible cards</span>
               </p>
-              <p className="muted">App sessions and trackable support cards. Coach-led days are separate.</p>
+              <p className="muted">App sessions and support cards. Coach-led days are separate.</p>
               <div className="xp-week-track" aria-hidden="true">
                 <span
                   style={{
@@ -214,7 +214,7 @@ export default function ProgressPage() {
               </p>
             </>
           ) : (
-            <p className="xp-page-empty">Activate a structured plan to track weekly progress.</p>
+            <p className="xp-page-empty">Activate a plan to track weekly progress.</p>
           )}
         </article>
 
@@ -238,7 +238,7 @@ export default function ProgressPage() {
               ))}
             </ol>
           ) : (
-            <p className="xp-page-empty">Completed phases, plans and fight camps will appear here.</p>
+            <p className="xp-page-empty">Completed phases, plans and camps appear here.</p>
           )}
         </article>
       </section>
@@ -264,7 +264,7 @@ export default function ProgressPage() {
             ))}
           </div>
         ) : (
-          <p className="xp-page-empty">Complete your first real action to begin the ledger.</p>
+          <p className="xp-page-empty">Complete your first action to start the ledger.</p>
         )}
       </section>
 
@@ -277,10 +277,10 @@ export default function ProgressPage() {
           <span className="xp-details-chevron" aria-hidden="true">⌄</span>
         </summary>
         <div className="xp-explanation-content">
-          <p>Earn XP by completing training, check-ins and plan milestones. As your XP grows, so does your UNLXCK rank.</p>
-          <p>Your rank reflects personal progress, not your official amateur or professional status.</p>
-          <p>In future, XP may also unlock discounts, rewards and opportunities through UNLXCK.</p>
-          <p>Public leaderboards are not available during private beta.</p>
+          <p>Earn XP from training, check-ins and plan milestones. More XP, higher rank.</p>
+          <p>Rank reflects personal progress, not official amateur or pro status.</p>
+          <p>XP may later unlock discounts, rewards and opportunities.</p>
+          <p>No public leaderboards during private beta.</p>
         </div>
       </details>
     </div>

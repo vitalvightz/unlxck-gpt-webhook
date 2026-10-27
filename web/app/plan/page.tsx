@@ -58,7 +58,7 @@ export default function PlanAliasPage() {
       <p className="muted">
         {connectionLost
           ? "We’ll open it the moment you’re back online."
-          : "If there is no active plan, you will go to the plan workspace."}
+          : "No active plan? You'll go to the plan workspace."}
       </p>
       {connectionLost ? (
         <div className="hero-actions">

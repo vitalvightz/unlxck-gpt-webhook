@@ -35,7 +35,7 @@ const DAILY_REASONS = [
 ] as const;
 
 export const UNSAFE_GUIDANCE =
-  "Do not continue this recommendation if it feels unsafe. Update your injury or readiness information and seek qualified medical help when necessary.";
+  "Stop this recommendation if it feels unsafe. Update your injury or readiness info and seek qualified medical help if needed.";
 
 export function shouldShowUnsafeGuidance(
   choice: FeedbackResponseValue | null,

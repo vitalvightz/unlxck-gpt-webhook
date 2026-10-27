@@ -116,7 +116,7 @@ test("every failure kind offers a way out of the screen", () => {
 test("engineering error text never reaches the athlete verbatim", () => {
   assert.equal(
     humanizeGenerationError("Stage 2 first_pass prompt too large: 214880 chars"),
-    "Your camp was too large to finalize in one pass. A retry usually clears it.",
+    "Camp too large to finalize in one pass. A retry usually works.",
   );
   assert.equal(
     humanizeGenerationError("Cancelled by athlete."),

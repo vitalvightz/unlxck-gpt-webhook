@@ -340,7 +340,7 @@ export function TodayScreen() {
     <div className="today-page">
       {error ? (
         <section className="panel" role="alert">
-          <p>Today could not refresh. Your entries are still here. Refresh before starting or saving a session.</p>
+          <p>Today couldn’t refresh. Your entries are safe. Refresh before starting or saving a session.</p>
           <button type="button" className="secondary-button" onClick={() => void refresh()}>Retry Today</button>
         </section>
       ) : null}
@@ -356,7 +356,7 @@ export function TodayScreen() {
                   ? humanizeIfRawEnum(activePlan.phase)
                   : null}</p>
             ) : (
-              <p className={styles.heroIntro}>Your training, your record. Log sessions from your coach or your own training.</p>
+              <p className={styles.heroIntro}>Your training, your record. Log coach-led or solo sessions.</p>
             )}
           </div>
           {/* Without a programme the logger itself leads directly below. */}
@@ -436,7 +436,7 @@ export function TodayScreen() {
       ) : token ? (
         <section id="today-injury" className={`panel ${styles.injuryConsent}`} aria-labelledby="today-injury-consent-heading">
           <h2 id="today-injury-consent-heading">Injuries</h2>
-          <p className="muted">Reporting an injury uses health information, so it needs your health-data consent.</p>
+          <p className="muted">Reporting an injury needs health-data consent.</p>
           <Link href="/settings#privacy" className="secondary-button">Review consent</Link>
         </section>
       ) : null}

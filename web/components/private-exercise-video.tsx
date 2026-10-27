@@ -180,7 +180,7 @@ export function PrivateExerciseVideoSheet({ token, name, onClose, onAttach, init
         {error ? <p role="alert">{error}</p> : null}
         {/* Personal uploads stay disabled; the upload API remains server-side for later. */}
         {!settings ? (error ? null : <p role="status">Opening video options…</p>)
-          : !settings.youtube_available ? <p className="muted">Video links are unavailable right now. You can save without a video.</p>
+          : !settings.youtube_available ? <p className="muted">Video links unavailable. Save without a video.</p>
           : media ? <details><summary>Edit clip</summary>{clipForm}</details> : clipForm}
         </div>
         {media ? <div className={layout.preview}><PrivateVideoPlayer key={media.id} media={media} name={name} />

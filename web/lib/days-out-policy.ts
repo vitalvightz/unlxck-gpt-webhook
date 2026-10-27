@@ -20,10 +20,10 @@ export type PerformanceFocusOptionAvailability = {
 };
 
 export const HARD_SPARRING_STRENGTH_BLOCK_REASON =
-  "Strength is blocked this close to fight day because hard sparring is selected. The plan will preserve freshness and use primers/support work instead.";
+  "Strength is blocked this close to fight day with hard sparring selected. Primers/support work keep you fresh instead.";
 
 export const HARD_SPARRING_STRENGTH_REMOVAL_MESSAGE =
-  "Strength was removed because hard sparring is selected this close to fight day. The plan will preserve freshness and use primers/support work instead.";
+  "Strength removed: hard sparring is selected this close to fight day. Primers/support work keep you fresh instead.";
 
 export function computeDaysUntilFight(
   fightDate: string | null | undefined,

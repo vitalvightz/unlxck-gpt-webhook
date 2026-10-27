@@ -327,8 +327,7 @@ export function GuidedVisualisation({
             {crowdReady && crowdOn ? <li>{level === "professional" ? "Arena crowd" : "Fight-hall crowd"}</li> : null}
           </ul>
           <p className="gv-hint">
-            Sit or lie down somewhere quiet. Headphones help. The voice gives each step, then goes
-            quiet so you can run the picture yourself.
+            Sit or lie somewhere quiet. Headphones help. The voice guides each step, then goes quiet so you can run the picture yourself.
           </p>
           <div className="gv-toggles">
             {canSpeak ? (

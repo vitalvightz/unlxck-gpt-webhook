@@ -364,7 +364,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
               ))}
             </ol></ExerciseMediaProvider></PrivateExerciseMediaProvider> : <p className="muted">{REST_DAY_REMINDER}</p>}
         {!s.exercises.length && s.session_type !== "rest" ? <p className="muted">{s.session_type === "recovery" ? REST_DAY_REMINDER : ["sparring", "skill"].includes(s.session_type ?? "mixed") ? "Coach-led day — Add editable rounds if useful." : "Workout needs exercises."}</p> : null}
-        {s.session_type === "recovery" && s.exercises.length ? <p className="muted">Optional recovery work — No workout completion required.</p> : null}
+        {s.session_type === "recovery" && s.exercises.length ? <p className="muted">Optional recovery work. No completion required.</p> : null}
         {s.session_type !== "rest" ? (
           <button type="button" className={styles.addExercise} aria-label={`Add exercise to ${s.name}`}
             disabled={s.exercises.length >= 100} onClick={() => setAdding(s.id)}>
@@ -531,7 +531,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
           </h1>
           <span className={styles.badge}>{dirty ? "Unsaved" : draft.id ? "Saved" : "New"}</span>
         </div>
-        <p className="muted">Choose what happens each day. Unselected days are rest days.</p>
+        <p className="muted">Choose each day’s work. Unselected days are rest.</p>
       </header>
       {error ? (
         <p className="error-banner" role="alert">

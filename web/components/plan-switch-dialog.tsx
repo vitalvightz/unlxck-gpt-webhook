@@ -94,7 +94,7 @@ export function PlanSwitchDialog({
           </p>
         </div>
         <p id={bodyId} className="muted">
-          This plan will become your active training plan. Your previous plan stays saved unless you archive it.
+          This becomes your active plan. Your previous plan stays saved unless archived.
         </p>
         <label className="plan-switch-archive">
           <input type="checkbox" checked={archivePrevious} disabled={isPending} onChange={(event) => setArchivePrevious(event.target.checked)} />

@@ -8,7 +8,7 @@ export const PROFILE_REFRESH_FAILED_BANNER_TITLE =
   "Profile refresh failed during generation.";
 
 export const PROFILE_REFRESH_FAILED_BANNER_BODY =
-  "This plan was generated from the submitted intake, but the saved athlete profile/onboarding data may still show older information. Review the latest intake before approving or editing this plan.";
+  "Generated from the submitted intake, but the saved profile/onboarding data may be outdated. Review the latest intake before approving or editing.";
 
 type WarningCarrier = {
   warnings?: string[];
@@ -26,7 +26,7 @@ export function hasProfileRefreshFailedWarning(job: WarningCarrier | null | unde
 // The admin banner above is for support/ops; this is for the athlete reading
 // their own plan.
 export const PROFILE_REFRESH_FAILED_ATHLETE_NOTICE =
-  "Built from your latest intake. Your saved profile couldn't be refreshed and may be outdated.";
+  "Built from your latest intake. Your saved profile couldn't refresh and may be outdated.";
 
 type PlanWithProfileRefreshFlag = {
   profile_refresh_failed?: boolean | null;

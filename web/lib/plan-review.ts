@@ -9,5 +9,5 @@ export function getPlanReviewReason(plan: Pick<PlanSummary, "status" | "review_r
   if (!isHeldForAdminReviewPlan(plan)) {
     return null;
   }
-  return plan.review_reason?.trim() || "Admin review is required before this plan can be released or set active.";
+  return plan.review_reason?.trim() || "Needs admin review before release or activation.";
 }

@@ -13,7 +13,7 @@ const REQUIREMENTS: Record<string, string> = {
 };
 const REASONS: Record<string, string> = {
   episode_setback_loading_held: "Your injury got worse. Follow today’s guidance and your clinician’s limits.",
-  ankle_uncomplicated_lateral_not_reported: "This starter is for a clinician-described uncomplicated outer ankle sprain. Update the sprain type in Edit injury if you know it; otherwise follow today's guidance.",
+  ankle_uncomplicated_lateral_not_reported: "This starter is for a clinician-described uncomplicated outer ankle sprain. Set the sprain type in Edit injury if known; otherwise follow today's guidance.",
   ankle_conflicting_or_unsupported_presentation: "Your ankle details include another sprain type, instability or a concern needing assessment. Loading stays on hold.",
   ankle_loading_severity_not_supported: "This starter is only available for a mild uncomplicated sprain. Follow today's conservative guidance.",
   assessment_observation_missing: "LOAD is on hold. Your elbow records do not confirm grip, movement or exercise tolerance. Follow today’s guidance.",
@@ -24,7 +24,7 @@ const REASONS: Record<string, string> = {
   elbow_hand_weight_option_not_recommended: "Your clinician has not recommended this exact starter.",
   elbow_conflicting_or_unsupported_presentation: "Your injury details include a different elbow presentation or another concern.",
   elbow_loading_severity_not_supported: "Your current injury severity does not support this starter. Follow today's conservative guidance.",
-  assessment_observation_stale_or_future: "Existing suitability evidence is not current for this injury episode. Loading stays on hold; continue today's guidance.",
+  assessment_observation_stale_or_future: "Suitability evidence isn't current for this injury. Loading on hold; follow today's guidance.",
   assessment_history_incomplete: "Assessment history is unavailable. Loading stays on hold.",
   assessment_medical_or_setback_hold: "A worsening response or medical concern is holding progression.",
   rehabilitation_loading_not_reported: "Confirm the rehab loading your clinician allows in Clearance & restrictions.",
@@ -39,7 +39,7 @@ const REASONS: Record<string, string> = {
   no_prior_rehab_response_to_resolve: "No past rehab response is recorded. This does not prove tolerance.",
   history_truncated: "Your full rehab history is unavailable. Progression stays on hold.",
   reviewed_target_content_unavailable: "No approved next-stage exercise matches your current injury and equipment.",
-  target_equipment_unavailable: "This exercise needs equipment you haven’t listed. Update your equipment if you have it. Otherwise, follow today’s rehab.",
+  target_equipment_unavailable: "This needs equipment you haven’t listed. Add it if you have it; otherwise follow today’s rehab.",
   target_adverse_response_unresolved: "This loading exercise is held after a worse response. Follow today’s rehab and clinician advice.",
   target_stage_not_activated: "The next stage is not available in Unlxck yet.",
   no_clinical_criteria_declared: "This progression has not been activated in Unlxck.",

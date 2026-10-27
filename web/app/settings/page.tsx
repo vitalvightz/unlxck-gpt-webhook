@@ -173,9 +173,9 @@ const DEFAULT_PROGRAMME_CONTROLS: ProgrammeControls = {
 };
 
 const DEFAULT_ADMIN_TEMPLATES: AdminTemplateDraft = {
-  welcomeMessage: "Welcome to camp. Complete Camp Setup so your plan starts with the right context.",
+  welcomeMessage: "Welcome to camp. Complete Camp Setup so your plan starts right.",
   planEmail: "Your updated training plan is ready.",
-  coachNotes: "Keep review notes short, specific, and tied to athlete risk.",
+  coachNotes: "Keep review notes short, specific and tied to risk.",
 };
 
 function getInitials(name: string): string {
@@ -1005,7 +1005,7 @@ export default function SettingsPage() {
                   }}
                 />
                 <p className="muted">
-                  Changing this can affect age-based training and safety recommendations.
+                  Affects age-based training and safety recommendations.
                 </p>
               </div>
 
@@ -1046,7 +1046,7 @@ export default function SettingsPage() {
                 </div>
               </div>
               <p className="muted">
-                Sets your age across UNLXCK, including age-based safety rules. Change it here only.
+                Sets your age across UNLXCK, including safety rules. Change it only here.
               </p>
               {dateOfBirthMessage ? <p className="success-text">{dateOfBirthMessage}</p> : null}
               {dateOfBirthError ? <p className="error-text">{dateOfBirthError}</p> : null}
@@ -1303,7 +1303,7 @@ export default function SettingsPage() {
             <SettingsSummaryItem label="Payment method" value="Not connected" />
             <SettingsSummaryItem label="Invoices" value="No invoices yet" />
           </div>
-          <p className="settings-coming-soon">Billing controls will be available after subscriptions launch.</p>
+          <p className="settings-coming-soon">Billing arrives with subscriptions.</p>
         </article>
 
         <article id="privacy" className="step-card settings-card">
@@ -1346,9 +1346,7 @@ export default function SettingsPage() {
           ) : null}
           {healthConsentGranted ? (
             <p className="muted">
-              Withdrawing stops UNLXCK using your health information for new personalised
-              guidance. Plans already generated stay readable, and you can give consent again at
-              any time.
+              Withdrawing stops UNLXCK using your health information for new guidance. Existing plans stay readable. You can consent again any time.
             </p>
           ) : (
             <p className="muted">{consentCopy.declineNote}</p>
@@ -1377,8 +1375,7 @@ export default function SettingsPage() {
           </div>
           {deletionRequestHref ? null : (
             <p className="muted">
-              To request access to your data or deletion of your account, send a request using
-              Send feedback below and we will action it under our retention policy.
+              To access your data or delete your account, use Send feedback below. We’ll action it under our retention policy.
             </p>
           )}
         </article>
@@ -1401,7 +1398,7 @@ export default function SettingsPage() {
             <p className="kicker">Beta feedback</p>
             <h2 className="form-section-title">Send feedback</h2>
           </div>
-          <p className="muted">Report a bug, request a feature, flag a safety issue, or share general feedback.</p>
+          <p className="muted">Report a bug, request a feature, flag a safety issue or share feedback.</p>
           {session?.access_token ? <GlobalFeedback token={session.access_token} /> : null}
         </article>
       </div>
@@ -1430,7 +1427,7 @@ export default function SettingsPage() {
             <SettingsSummaryItem label="Logo" value="Not connected" />
             <SettingsSummaryItem label="Contact email" value="Not connected" />
           </div>
-          <p className="settings-coming-soon">Organisation settings will appear here once backend organisation records are connected.</p>
+          <p className="settings-coming-soon">Organisation settings appear once organisation records are connected.</p>
         </article>
 
         <article id="coaches-roles" className="step-card settings-card">
@@ -1443,7 +1440,7 @@ export default function SettingsPage() {
             <SettingsSummaryItem label="Role" value="Admin" />
             <SettingsSummaryItem label="Coach seats" value="Not configured" />
           </div>
-          <p className="settings-coming-soon">Coach invites and role permissions will be available after team management is connected.</p>
+          <p className="settings-coming-soon">Coach invites and roles arrive with team management.</p>
         </article>
 
         <article id="programme-controls" className="step-card settings-card">
@@ -1552,7 +1549,7 @@ export default function SettingsPage() {
               />
             </div>
           </div>
-          <p className="settings-coming-soon">Template changes are local drafts until template storage is connected.</p>
+          <p className="settings-coming-soon">Template changes stay local until template storage is connected.</p>
           <div className="settings-profile-summary-grid">
             <SettingsSummaryItem label="Plan" value="Admin beta access" />
             <SettingsSummaryItem label="Active users" value="Not connected" />
@@ -1563,7 +1560,7 @@ export default function SettingsPage() {
               Sign out
             </button>
           </div>
-          <p className="settings-coming-soon">Billing controls will be available after subscriptions launch.</p>
+          <p className="settings-coming-soon">Billing arrives with subscriptions.</p>
         </article>
 
         <article id="send-feedback" className="step-card settings-card">
@@ -1571,7 +1568,7 @@ export default function SettingsPage() {
             <p className="kicker">Beta feedback</p>
             <h2 className="form-section-title">Send feedback</h2>
           </div>
-          <p className="muted">Report a bug, request a feature, flag a safety issue, or share general feedback.</p>
+          <p className="muted">Report a bug, request a feature, flag a safety issue or share feedback.</p>
           {session?.access_token ? <GlobalFeedback token={session.access_token} /> : null}
         </article>
       </div>

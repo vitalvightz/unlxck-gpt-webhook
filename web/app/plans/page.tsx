@@ -57,7 +57,7 @@ function HeldPlansReviewNotice({ plans }: { plans: PlanSummary[] }) {
           <p className="kicker">Admin review hold</p>
           <h2>{plans.length === 1 ? "A plan is held for review" : `${plans.length} plans are held for review`}</h2>
           <p className="muted">
-            These plans are saved, but they are not released to Overview or Today until admin approval clears the hold.
+            Saved, but held from Overview and Today until an admin approves.
           </p>
         </div>
         <span className="badge">HELD</span>
