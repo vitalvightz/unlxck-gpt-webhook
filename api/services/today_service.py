@@ -2889,6 +2889,12 @@ def _guided_intake_injury_candidate(
 
 
 _INTAKE_MARKER_RE = re.compile(r"\s*\[[a-z_]+:[^\]]*\]", re.IGNORECASE)
+_NEGATED_PHRASE_RE = re.compile(r"^(?:no|not|never|without|zero)\b", re.IGNORECASE)
+# "no knee pain" denies a symptom; "no deep squats" is a real restriction.
+_NEGATED_SYMPTOM_RE = re.compile(
+    r"^(?:no|not|never|without|zero)\b.*\b(?:pain|injur\w*|issues?|problems?|sore\w*|tight\w*|niggles?)\b",
+    re.IGNORECASE,
+)
 _TRAINING_IMPACT_MARKER_RE = re.compile(
     r"\[training_impact:(?:not_limiting|limiting|cant_train)\]", re.IGNORECASE
 )
@@ -2901,13 +2907,18 @@ def _legacy_intake_injury_candidates(injuries_text: object, *, plan_id: str) -> 
     condition ("Hip" / "tightness"), the shape guided intake produces. The
     stored training-impact marker is metadata: it rides on the description,
     where the impact readers look for it, and never becomes part of the area.
+    Free text carries one impact choice for the whole field, so every injury
+    parsed from it shares that choice.
     Text the parser cannot place keeps a single flag over the cleaned text.
     """
     text = str(injuries_text or "").strip()
     impact_match = _TRAINING_IMPACT_MARKER_RE.search(text)
     impact_marker = impact_match.group(0).lower() if impact_match else ""
     cleaned = " ".join(_INTAKE_MARKER_RE.sub(" ", text).split())
-    if not cleaned or cleaned.lower() in {"none", "n/a", "na", "no", "no injuries"}:
+    if (
+        not re.search(r"[a-z]", cleaned, re.IGNORECASE)
+        or cleaned.lower() in {"none", "n/a", "na", "no", "no injuries"}
+    ):
         return []
 
     def candidate(body_area: str, condition: str) -> dict[str, object]:
@@ -2930,7 +2941,12 @@ def _legacy_intake_injury_candidates(injuries_text: object, *, plan_id: str) -> 
 
     candidates: list[dict[str, object]] = []
     seen: set[tuple[str, str]] = set()
+    negated_only = bool(parsed)
     for entry in parsed:
+        # "no knee pain" names a body part the athlete does not have trouble with.
+        if _NEGATED_PHRASE_RE.match(str(entry.get("original_phrase") or "").strip()):
+            continue
+        negated_only = False
         location = _humanized_guided_token(entry.get("canonical_location"))
         if not location:
             continue
@@ -2949,19 +2965,29 @@ def _legacy_intake_injury_candidates(injuries_text: object, *, plan_id: str) -> 
         condition = re.sub(area_prefix, "", phrase, flags=re.IGNORECASE).strip()
         if not condition:
             condition = _humanized_guided_token(entry.get("injury_type")) or "pain"
-        key = (body_area.lower(), condition.lower())
+        # One injury per area and condition type: "hip tightness, tight hip" is one hip.
+        key = (body_area.lower(), str(entry.get("injury_type") or condition).lower())
         if key in seen:
             continue
         seen.add(key)
         candidates.append(candidate(body_area, condition))
     if candidates:
         return candidates
+    if negated_only:
+        return []
     # A constraint ("tight hips, avoid deep squats") can still name the area.
-    regions = {
-        region
+    restrictions = [
+        restriction
         for restriction in _restrictions
         if isinstance(restriction, Mapping)
-        and (region := _humanized_guided_token(restriction.get("region")))
+        and not _NEGATED_SYMPTOM_RE.match(str(restriction.get("original_phrase") or "").strip())
+    ]
+    if _restrictions and not restrictions:
+        return []
+    regions = {
+        region
+        for restriction in restrictions
+        if (region := _humanized_guided_token(restriction.get("region")))
     }
     if len(regions) == 1:
         region = regions.pop()

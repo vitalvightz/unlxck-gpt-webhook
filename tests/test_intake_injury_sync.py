@@ -573,3 +573,54 @@ def test_unplaceable_free_text_keeps_one_flag_without_the_impact_marker_in_its_a
     assert [(flag["body_area"], flag["description"]) for flag in flags] == [
         ("something weird", "something weird [training_impact:cant_train]")
     ]
+
+
+def _sync_free_text(intake_id: str, text: str) -> tuple[FakeStore, dict, list[dict]]:
+    store = FakeStore()
+    plan = _seed_generated_plan(store, intake_id=intake_id, intake={"injuries": text})
+    return store, plan, sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=plan)
+
+
+def test_free_text_denying_an_injury_creates_no_flag() -> None:
+    _store, _plan, flags = _sync_free_text("intake-negated", "No knee pain [training_impact:not_limiting]")
+
+    assert flags == []
+
+
+def test_free_text_keeps_the_injury_next_to_a_denied_one() -> None:
+    _store, _plan, flags = _sync_free_text("intake-mixed", "left knee pain. no shoulder issues")
+
+    assert [(flag["body_area"], flag["description"]) for flag in flags] == [("Left knee", "pain")]
+
+
+def test_free_text_restriction_names_the_area_and_keeps_the_athletes_words() -> None:
+    _store, _plan, flags = _sync_free_text(
+        "intake-restriction", "tight hips, avoid deep squats [training_impact:limiting]"
+    )
+
+    assert [(flag["body_area"], flag["description"]) for flag in flags] == [
+        ("Hip", "tight hips, avoid deep squats [training_impact:limiting]")
+    ]
+
+
+def test_free_text_describing_one_injury_twice_tracks_it_once() -> None:
+    _store, _plan, flags = _sync_free_text("intake-overlap", "hip tightness, tight hip")
+
+    assert [(flag["body_area"], flag["description"]) for flag in flags] == [("Hip", "tightness")]
+
+
+def test_free_text_without_words_creates_no_flag() -> None:
+    _store, _plan, flags = _sync_free_text("intake-malformed", "??? [training_impact:limiting]")
+
+    assert flags == []
+
+
+def test_repeated_free_text_sync_does_not_duplicate_flags() -> None:
+    store, plan, first = _sync_free_text(
+        "intake-repeat", "left shoulder strain, sore knee [training_impact:limiting]"
+    )
+
+    second = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=plan)
+
+    assert len(first) == 2
+    assert sorted(flag["id"] for flag in second) == sorted(flag["id"] for flag in first)
