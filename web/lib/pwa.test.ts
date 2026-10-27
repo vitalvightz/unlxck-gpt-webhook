@@ -3,10 +3,14 @@ import test from "node:test";
 
 import {
   createPwaWorkerUrl,
+  hasSeenInstallPrompt,
   isIosDevice,
   isStandaloneDisplay,
   PWA_INSTALL_GUIDE_DISMISSED_KEY,
+  PWA_INSTALL_PROMPT_SEEN_KEY,
   rememberInstallGuideDismissal,
+  rememberInstallPromptSeen,
+  resolveIosInstallBrowser,
   resolvePwaInstallAvailability,
   shouldRegisterServiceWorker,
 } from "./pwa";
@@ -78,4 +82,29 @@ test("install-guide dismissal is stored without making storage mandatory", () =>
       },
     }),
   );
+});
+
+test("iOS install guidance follows the browser's real Add to Home Screen route", () => {
+  const ios = (os: string, browser: string) =>
+    `Mozilla/5.0 (iPhone; CPU iPhone OS ${os} like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) ${browser}`;
+  // iOS 26 reports a frozen 18_6 OS version; Safari's own version moves on.
+  assert.equal(resolveIosInstallBrowser(ios("18_6", "Version/26.0 Mobile/15E148 Safari/604.1")), "safari");
+  assert.equal(resolveIosInstallBrowser(ios("18_0", "Version/18.0 Mobile/15E148 Safari/604.1")), "safari-legacy");
+  assert.equal(resolveIosInstallBrowser(ios("18_6", "CriOS/141.0.0.0 Mobile/15E148 Safari/604.1")), "chrome");
+  assert.equal(resolveIosInstallBrowser(ios("17_4", "FxiOS/140.0 Mobile/15E148 Safari/605.1.15")), "other");
+  assert.equal(resolveIosInstallBrowser(ios("16_3", "CriOS/120.0.0.0 Mobile/15E148 Safari/604.1")), "unsupported");
+  assert.equal(resolveIosInstallBrowser(ios("18_6", "Mobile/15E148 Instagram 400.0.0")), "unsupported");
+  assert.equal(resolveIosInstallBrowser(ios("18_6", "Mobile/15E148 Safari/604.1 GSA/390.0")), "unsupported");
+});
+
+test("the automatic install offer is remembered apart from the Settings dismissal", () => {
+  const values = new Map<string, string>();
+  const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => void values.set(key, value) };
+  // Existing users who closed the Settings sheet still get one offer.
+  rememberInstallGuideDismissal(storage, 1);
+  assert.equal(hasSeenInstallPrompt(storage), false);
+  rememberInstallPromptSeen(storage, 2);
+  assert.equal(values.get(PWA_INSTALL_PROMPT_SEEN_KEY), "2");
+  assert.equal(hasSeenInstallPrompt(storage), true);
+  assert.equal(hasSeenInstallPrompt({ getItem: () => { throw new Error("blocked"); } }), true);
 });

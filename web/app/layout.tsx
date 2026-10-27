@@ -13,6 +13,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { PasswordRecoveryRedirect } from "@/components/password-recovery-redirect";
 import { PwaRegister } from "@/components/pwa-register";
 import { PushNotificationPrompt } from "@/components/push-notification-prompt";
+import { InstallPrompt } from "@/components/install-unlxck";
 import { RoundTimerProvider } from "@/components/session-timer/round-timer-provider";
 import { ToastProvider } from "@/components/toast-provider";
 import { XpAwardFeedback } from "@/components/xp-award-feedback";
@@ -119,6 +120,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                 <XpAwardFeedback />
                 <LanguageSwitcher />
                 <PwaRegister buildVersion={pwaBuildVersion}>
+                  <InstallPrompt />
                   <PushNotificationPrompt />
                   <GenerationStatusShell>
                     <RoundTimerProvider>
