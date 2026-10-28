@@ -87,17 +87,44 @@
   line-height: 1.45;
 }
 
-.public-hero-summary {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--type-body);
-  line-height: 1.5;
-}
-
 .public-hero-cta {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   width: 100%;
   min-height: 48px;
   margin-top: var(--space-1);
+}
+
+/* A light streak sweeps across the primary CTA, then rests, so the eye lands
+   on "Get started" without the button feeling busy. */
+.public-hero-cta::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: -1;
+  width: 45%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 30%,
+    rgba(255, 255, 255, 0.42) 50%,
+    rgba(255, 255, 255, 0.08) 70%,
+    transparent 100%
+  );
+  transform: translateX(-120%) skewX(-18deg);
+  animation: public-cta-shine 3.6s cubic-bezier(0.4, 0, 0.2, 1) 0.8s infinite;
+  pointer-events: none;
+}
+
+@keyframes public-cta-shine {
+  0% { transform: translateX(-120%) skewX(-18deg); }
+  45%,
+  100% { transform: translateX(340%) skewX(-18deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-hero-cta::after { animation: none; display: none; }
 }
 
 .public-cta-note {
@@ -210,7 +237,7 @@
   line-height: 1.4;
 }
 
-/* Session blocks: one line each — change glyph, name, dose. */
+/* Session blocks: one line each — change glyph, name, change tag, dose. */
 .public-today-blocks {
   display: grid;
   margin: 0;
@@ -261,6 +288,32 @@
   text-overflow: ellipsis;
 }
 
+/* The change is spelled out, not left to the arrow, so it reads at a glance. */
+.public-today-block-tag {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-sm);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.public-today-block-row[data-change="down"] .public-today-block-tag {
+  background: rgba(240, 170, 90, 0.12);
+  color: #f4c48a;
+}
+
+.public-today-block-row[data-change="up"] .public-today-block-tag {
+  background: rgba(39, 174, 96, 0.12);
+  color: #7de2a8;
+}
+
 .public-today-block-dose {
   flex-shrink: 0;
   color: var(--text-secondary);
@@ -269,7 +322,7 @@
   white-space: nowrap;
 }
 
-/* Training flexibility: a compact list, not a wall of cards */
+/* Three benefits: a compact list, not a wall of cards */
 
 .public-flex {
   gap: var(--space-3);
@@ -323,7 +376,7 @@
   margin-top: 0;
 }
 
-/* Tablet: roomier padding, flexibility list in two columns */
+/* Tablet: roomier padding */
 @media (min-width: 640px) {
   .public-landing {
     gap: var(--space-4);
@@ -354,11 +407,6 @@
   .public-final-cta .public-hero-cta {
     justify-self: center;
   }
-
-  .public-flex-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-4) var(--space-5);
-  }
 }
 
 /* Desktop: hero and preview side by side; flexibility and CTA span both */
@@ -384,6 +432,7 @@
 
   .public-flex-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-5);
   }
 
   .public-final-cta {

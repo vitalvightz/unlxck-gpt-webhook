@@ -250,11 +250,11 @@ export default function HomePage() {
   const landingPreviewBlocks = [
     { name: publicT("exHeavyBag"), sets: 4, minutes: 3, change: "down" as const, tag: publicT("tagReduced") },
     { name: publicT("exReaction"), sets: 3, minutes: 2, change: "up" as const, tag: publicT("tagAdded") },
-    { name: publicT("exShadow"), sets: 3, minutes: 3, change: null, tag: null },
+    { name: publicT("exShadow"), sets: 3, minutes: 3, change: null, tag: publicT("tagUnchanged") },
   ];
-  const landingFlexibilityItems = [1, 2, 3, 4, 5, 6].map((index) => ({
-    title: publicT(`flex${index}Title`),
-    body: publicT(`flex${index}Body`),
+  const landingBenefits = [1, 2, 3].map((index) => ({
+    title: publicT(`benefit${index}Title`),
+    body: publicT(`benefit${index}Body`),
   }));
   const { isReady, isMeHydrated, hasTransientMeError, session, me, signOut, refreshMe } = useAppSession();
   const router = useRouter();
@@ -754,7 +754,6 @@ export default function HomePage() {
           <span>{publicT("heroLine2")}</span>
         </h1>
         <p className="public-hero-lead">{publicT("lead")}</p>
-        <p className="public-hero-summary">{publicT("summary")}</p>
         <Link href="/signup" className="cta public-hero-cta">
           {publicT("getStarted")}
         </Link>
@@ -784,10 +783,8 @@ export default function HomePage() {
                 <span className="public-today-block-glyph" aria-hidden="true">
                   {block.change === "up" ? "↑" : block.change === "down" ? "↓" : "·"}
                 </span>
-                <span className="public-today-block-name">
-                  {block.name}
-                  {block.tag ? <span className="sr-only"> ({block.tag})</span> : null}
-                </span>
+                <span className="public-today-block-name">{block.name}</span>
+                <span className="public-today-block-tag">{block.tag}</span>
                 <span className="public-today-block-dose">
                   {block.sets} × {formatMinutes(block.minutes)}
                 </span>
@@ -803,7 +800,7 @@ export default function HomePage() {
           <h2 id="public-flex-heading">{publicT("flexTitle")}</h2>
         </div>
         <ul className="public-flex-list">
-          {landingFlexibilityItems.map((item) => (
+          {landingBenefits.map((item) => (
             <li key={item.title} className="public-flex-item">
               <h3>{item.title}</h3>
               <p>{item.body}</p>
