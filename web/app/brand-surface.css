@@ -638,6 +638,12 @@
   line-height: 1.5;
 }
 
+/* Back-to-back panels (Beyond the Bell, In Your Corner) read as one pair,
+   so the second sits close under the first instead of a full section gap. */
+.public-flex + .public-flex {
+  margin-top: -40px;
+}
+
 /* Closing banner */
 
 /* Sits a little closer to the benefits than the other section gaps, so the
@@ -725,19 +731,20 @@
   .public-flex-list[data-seen="true"] .icon-bar-2 { animation-delay: calc(var(--icon-delay, 0ms) + 90ms); }
   .public-flex-list[data-seen="true"] .icon-bar-3 { animation-delay: calc(var(--icon-delay, 0ms) + 180ms); }
 
-  /* "Lxcked in.": the X tears once, after the motto has unlocked. */
+  /* "Lxcked in.": the X tears as soon as the headline lands, then fades to
+     white once the tear has passed. */
   .public-hero-x {
     animation:
-      unlock-jitter 140ms steps(2) 1.9s 4 both,
-      hero-x-settle 2.6s ease-in-out 2.5s both;
+      unlock-jitter 140ms steps(2) 0.35s 4 both,
+      hero-x-settle 2.6s ease-in-out 0.95s both;
   }
 
   .public-hero-x::before {
-    animation: hero-x-tear-a 560ms steps(1) 1.9s both;
+    animation: hero-x-tear-a 560ms steps(1) 0.35s both;
   }
 
   .public-hero-x::after {
-    animation: hero-x-tear-b 560ms steps(1) 1.9s both;
+    animation: hero-x-tear-b 560ms steps(1) 0.35s both;
   }
 
   @supports (animation-timeline: view()) {
@@ -839,6 +846,10 @@
     gap: 72px;
   }
 
+  .public-flex + .public-flex {
+    margin-top: -56px;
+  }
+
   .public-hero-actions {
     justify-items: start;
   }
@@ -916,6 +927,10 @@
   .public-final-cta {
     margin-top: -40px;
     padding: 72px 40px;
+  }
+
+  .public-flex + .public-flex {
+    margin-top: -92px;
   }
 
   .public-final-cta h2 {
