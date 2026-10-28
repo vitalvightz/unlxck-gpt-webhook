@@ -252,7 +252,7 @@
     "granted": "Accès autorisé",
     "grantedTitle": "Tu es dedans.",
     "grantedLead": "Bienvenue dans la bêta privée. Préparation de ton compte…",
-    "dmUs": "Écris-nous en DM sur Instagram et on t’envoie une invitation.",
+    "dmUs": "Écris-nous en DM sur Instagram pour demander une invitation.",
     "dmButton": "Écrire à @{handle}"
   }
 }
