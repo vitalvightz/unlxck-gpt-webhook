@@ -68,6 +68,7 @@ import {
 } from "@/lib/open-block";
 import {
   isRehabBlock,
+  isCalmRehabBlock,
   resolveBlockRehabLabel,
   resolveSessionTypeLabel,
   resolveRehabSummaryLabel,
@@ -1118,7 +1119,7 @@ export function SessionCard({
 
   const card = day?.today_card;
   const title = stripLeadingWeekday(
-    cleanText(session.title) ||
+    ((session.blocks?.length ?? 0) > 0 && session.blocks!.every(isCalmRehabBlock) ? (cleanText(session.title) ?? "").replace(/rehab/gi, "guidance") : cleanText(session.title)) ||
     cleanText(card?.headline) ||
     titleize(cleanText(session.session_type) || "Session"),
   );

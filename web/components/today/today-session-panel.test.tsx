@@ -964,7 +964,8 @@ function guidanceDayState(): TodayCommandView {
 test("calm-stage guidance is checked off, never started", () => {
   const html = renderToStaticMarkup(<AuthProvider><ToastProvider><TodaySessionPanel state={guidanceDayState()} structuredPlan={null} token="token" onRefresh={async () => {}} /></ToastProvider></AuthProvider>);
   assert.match(html, /Chest strain recovery support/);
-  assert.match(html, /No rehab exercises at this stage/);
+  assert.match(html, /Follow the guidance, then check it off/);
+  assert.doesNotMatch(html, /Today.s rehab|No rehab exercises/);
   assert.match(html, />Completed</);
   assert.doesNotMatch(html, />Start session<|>Skip session<|How much rehab did you do/);
 });
