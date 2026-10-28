@@ -8,6 +8,7 @@ import { TAKEAWAY_MAX_CHARS, type TrainingHistorySession } from "@/lib/training-
 import sheet from "./log-training.module.css";
 import styles from "./session-takeaway.module.css";
 import { useToast } from "./toast-provider";
+import { useSheetExit } from "@/lib/use-sheet-exit";
 
 const PLACEHOLDER = "e.g. Keep my right hand up after the jab";
 const label = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
@@ -74,9 +75,12 @@ export function SessionTakeawayPrompt({ token, row, onSaved, onDismiss, sheet: a
   const [text, setText] = useState("");
   const { busy, error, save } = useTakeawaySave(token, row, onSaved);
   useModalSheet(dialog, asSheet && !suspended);
+  // As a sheet it slides away first; inline, its Collapse eases it out.
+  const { closing, close: exitSheet } = useSheetExit(onDismiss);
+  const dismiss = asSheet ? exitSheet : onDismiss;
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!text.trim()) { onDismiss(); return; }
+    if (!text.trim()) { dismiss(); return; }
     void save(text);
   }
   const card = (
@@ -100,7 +104,7 @@ export function SessionTakeawayPrompt({ token, row, onSaved, onDismiss, sheet: a
         placeholder={PLACEHOLDER} disabled={busy} enterKeyHint="done" autoComplete="off" onChange={event => setText(event.target.value)} />
       {error ? <p className={styles.error} role="alert">{error}</p> : null}
       <div className={styles.footer}>
-        <button className={styles.skip} type="button" disabled={busy} onClick={onDismiss}>Optional — skip anytime</button>
+        <button className={styles.skip} type="button" disabled={busy} onClick={() => dismiss()}>Optional — skip anytime</button>
         <button className={styles.add} type="submit" disabled={busy || !text.trim()}>
           {busy ? "Saving…" : <>Add takeaway <span aria-hidden="true">→</span></>}
         </button>
@@ -109,8 +113,8 @@ export function SessionTakeawayPrompt({ token, row, onSaved, onDismiss, sheet: a
   );
   if (!asSheet) return card;
   return (
-    <dialog ref={dialog} className={sheet.dialog} aria-label="Session saved"
-      onCancel={event => { event.preventDefault(); if (!busy) onDismiss(); }}>
+    <dialog ref={dialog} className={sheet.dialog} aria-label="Session saved" data-closing={closing || undefined}
+      onCancel={event => { event.preventDefault(); if (!busy) dismiss(); }}>
       {card}
     </dialog>
   );
@@ -140,15 +144,16 @@ function TakeawaySheet({ token, row, onClose, onSaved }: {
   const [text, setText] = useState(row.takeaway ?? "");
   const { busy, error, save } = useTakeawaySave(token, row, onSaved);
   useModalSheet(dialog);
+  const { closing, close } = useSheetExit(onClose);
   return (
-    <dialog ref={dialog} className={sheet.dialog} aria-labelledby={`${fieldId}-title`}
-      onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}>
+    <dialog ref={dialog} className={sheet.dialog} aria-labelledby={`${fieldId}-title`} data-closing={closing || undefined}
+      onCancel={event => { event.preventDefault(); if (!busy) close(); }}>
       <header className={sheet.header}>
         <div>
           <h2 id={`${fieldId}-title`}>Takeaway</h2>
           <p className={sheet.source}>{sessionMeta(row)}</p>
         </div>
-        <button className={sheet.close} type="button" aria-label="Close takeaway" disabled={busy} onClick={onClose}>×</button>
+        <button className={sheet.close} type="button" aria-label="Close takeaway" disabled={busy} onClick={() => close()}>×</button>
       </header>
       <form className={sheet.form} onSubmit={event => { event.preventDefault(); void save(text); }}>
         <div className={sheet.body}>

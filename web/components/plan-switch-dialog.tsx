@@ -6,6 +6,7 @@ import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 
 import type { ActivePlanOverlapAction } from "@/lib/plan-active";
 import { formatPlanFightDate } from "@/lib/plan-format";
+import { useSheetExit } from "@/lib/use-sheet-exit";
 
 export function PlanSwitchDialog({
   plan,
@@ -25,12 +26,14 @@ export function PlanSwitchDialog({
   const titleId = useId();
   const bodyId = useId();
   const pendingRef = useRef(isPending);
-  const cancelRef = useRef(onCancel);
+  // Fades away before the parent removes it.
+  const { closing, close: dismiss } = useSheetExit(onCancel);
+  const cancelRef = useRef(dismiss);
 
   useEffect(() => {
     pendingRef.current = isPending;
-    cancelRef.current = onCancel;
-  }, [isPending, onCancel]);
+    cancelRef.current = dismiss;
+  }, [isPending, dismiss]);
 
   useEffect(() => {
     const previousFocus = document.activeElement as HTMLElement | null;
@@ -74,7 +77,7 @@ export function PlanSwitchDialog({
   const hasCustomName = name && name !== plan.fight_date;
 
   return createPortal(
-    <div className="plan-dialog-backdrop" onClick={() => { if (!isPending) onCancel(); }}>
+    <div className="plan-dialog-backdrop" data-closing={closing || undefined} onClick={() => { if (!isPending) dismiss(); }}>
       <div
         ref={dialogRef}
         className="plan-dialog plan-switch-dialog"
@@ -105,7 +108,7 @@ export function PlanSwitchDialog({
           <button type="button" className="secondary-button plan-switch-confirm" disabled={isPending} onClick={() => void onConfirm(archivePrevious ? "replace" : "pause")}>
             {isPending ? "Switching…" : "Switch plan"}
           </button>
-          <button type="button" className="ghost-button plan-switch-cancel" disabled={isPending} onClick={onCancel}>Cancel</button>
+          <button type="button" className="ghost-button plan-switch-cancel" disabled={isPending} onClick={() => dismiss()}>Cancel</button>
         </div>
       </div>
     </div>,

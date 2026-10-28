@@ -5,6 +5,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { ExerciseLibrary, type ExerciseHistoryCache } from "./exercise-library";
 import type { ExerciseLibraryResponse } from "@/lib/api-schema.generated";
+import { SHEET_EXIT_MS } from "@/lib/use-sheet-exit";
 
 window.HTMLDialogElement.prototype.showModal ??= function () { this.setAttribute("open", ""); };
 window.HTMLDialogElement.prototype.close ??= function () { this.removeAttribute("open"); };
@@ -58,6 +59,8 @@ test("complete library search, record detail pagination, failure retry and visit
     assert.equal(container.querySelectorAll("dialog ol > li").length, 2);
     assert.equal(pageCalls, 3);
     await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Close exercise history"]')!.click());
+    // The sheet slides away, then focus returns to what opened it.
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, SHEET_EXIT_MS + 20)); });
     assert.equal(document.activeElement, trigger);
     await act(async () => trigger.click());
     assert.equal(pageCalls, 3);

@@ -14,6 +14,7 @@ import { resolveCurrentDay, resolveTrainingDay, toISODate } from "@/lib/camp-map
 import type { StructuredPlan, TodayCommandView } from "@/lib/types";
 import { buildTimerItems } from "@/lib/session-timer/plan";
 import { createTimerState, endSession } from "@/lib/session-timer/engine";
+import { SHEET_EXIT_MS } from "@/lib/use-sheet-exit";
 
 test("weekday fallback never presents a stale template date as today", () => {
   const plan = {
@@ -451,10 +452,11 @@ test("a previewed multi-part day is named by its parts and opens on its own prev
     );
     assert.ok(sections.every((section) => !section.open));
 
-    // Escape closes only the topmost sheet; Back closes the preview.
+    // Escape closes only the topmost sheet (after it slides away); Back closes the preview.
     await act(async () => {
       domWindow.document.dispatchEvent(new domWindow.KeyboardEvent("keydown", { key: "Escape" }));
     });
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, SHEET_EXIT_MS + 20)); });
     assert.equal(domWindow.document.querySelectorAll('[role="dialog"]').length, 1);
 
     // A banked mindset drill's instructions read as numbered steps, not one

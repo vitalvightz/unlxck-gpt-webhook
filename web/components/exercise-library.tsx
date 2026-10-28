@@ -11,6 +11,7 @@ import { exerciseResult } from "@/lib/exercise-library";
 import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 import sheet from "./session-details.module.css";
 import styles from "./exercise-library.module.css";
+import { useSheetExit } from "@/lib/use-sheet-exit";
 
 export type ExerciseHistoryCache = Map<string, Promise<ExercisePerformancesResponse>>;
 
@@ -56,6 +57,8 @@ export function ExerciseLibrary({ library, token, cache }: { library: ExerciseLi
 export function ExerciseDetails({ exercise, asOf, token, cache, onDismiss }: {
   exercise: PersonalExercise; asOf: string; token: string; cache: ExerciseHistoryCache; onDismiss: () => void;
 }) {
+  // Slides away before the parent removes it.
+  const { closing, close: dismiss } = useSheetExit(onDismiss);
   const dialog = useRef<HTMLDialogElement>(null);
   const alive = useRef(false);
   const loadingMore = useRef(false);
@@ -111,15 +114,15 @@ export function ExerciseDetails({ exercise, asOf, token, cache, onDismiss }: {
     finally { loadingMore.current = false; if (alive.current) setBusy(false); }
   }
   const result = exerciseResult(exercise);
-  return <dialog ref={dialog} className={`${sheet.dialog} ${sheet.workspace}`} aria-labelledby={heading}
-    onCancel={event => { event.preventDefault(); onDismiss(); }}
+  return <dialog ref={dialog} className={`${sheet.dialog} ${sheet.workspace}`} aria-labelledby={heading} data-closing={closing || undefined}
+    onCancel={event => { event.preventDefault(); dismiss(); }}
     onClick={event => { if (event.target === event.currentTarget) {
       const bounds = event.currentTarget.getBoundingClientRect();
-      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onDismiss();
+      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dismiss();
     } }}>
     <header className={sheet.header}><div className={styles.detailHeading}><div><p className={sheet.eyebrow}>Exercise record</p><h2 id={heading}>{exercise.name}</h2></div>
       <div><p className={styles.resultLabel}>{result.label}</p><strong className={styles.detailResult} data-weight={exercise.best_loads.length > 0 || undefined}>{result.value}</strong></div></div>
-      <button type="button" className={sheet.close} aria-label="Close exercise history" onClick={onDismiss}>×</button></header>
+      <button type="button" className={sheet.close} aria-label="Close exercise history" onClick={() => dismiss()}>×</button></header>
     <div className={sheet.body} tabIndex={0} role="region" aria-label="Exercise performance record">
       {/* Phones and tablets switch between the chart and the list; wide screens show both. */}
       <div className={styles.views} role="tablist" aria-label="Exercise record views">

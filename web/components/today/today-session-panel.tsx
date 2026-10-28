@@ -899,7 +899,8 @@ export function TodaySessionPanel({
         clearSavedRun(timerStorageKey);
         setActiveTimer((timer) => (timer?.source === "session" ? null : timer));
         setTimerNotes("");
-        setReviewOpen(false);
+        // The full-screen review fades through black back to the logged card.
+        fadeThrough(() => setReviewOpen(false));
       }
       setRehabPerformance(undefined);
       showToast(getCompletionLabel(nextStatus), { tone: "success", mergeKeys: XP_TOAST_KEYS.session });
@@ -1701,7 +1702,7 @@ export function TodaySessionPanel({
             sessionHasRehab && !rehabPerformance ? "Choose Completed, Modified or Skipped for rehab." : undefined
           }
           isSubmitting={isSubmitting}
-          onClose={() => setReviewOpen(false)}
+          onClose={() => fadeThrough(() => setReviewOpen(false))}
           onSave={(nextStatus, details) => saveCompletion(nextStatus, details)}
         />
       ) : null}

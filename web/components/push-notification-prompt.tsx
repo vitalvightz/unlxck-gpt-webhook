@@ -8,6 +8,7 @@ import { isPushSupported, subscribeToPushNotifications } from "@/lib/push";
 import { installPromptClaimed, PUSH_PROMPT_EVENT } from "@/lib/push-prompt";
 import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 import styles from "./push-notification-prompt.module.css";
+import { useSheetExit } from "@/lib/use-sheet-exit";
 
 type Setup = { public_key: string; registration: ServiceWorkerRegistration };
 
@@ -103,10 +104,12 @@ export function DevicePushPrompt({ token, athleteId }: { token: string; athleteI
     } finally { working.current = false; setBusy(false); }
   }
 
+  // Slides away before it is removed.
+  const { closing, close: dismiss } = useSheetExit(() => setSetup(null));
   if (!setup) return null;
   return (
-    <dialog ref={dialog} className={styles.dialog} aria-labelledby="push-prompt-title" aria-describedby="push-prompt-description" aria-busy={busy}
-      onCancel={(event) => { event.preventDefault(); if (!working.current) setSetup(null); }}>
+    <dialog ref={dialog} className={styles.dialog} aria-labelledby="push-prompt-title" aria-describedby="push-prompt-description" aria-busy={busy} data-closing={closing || undefined}
+      onCancel={(event) => { event.preventDefault(); if (!working.current) dismiss(); }}>
       <div className={styles.header}>
         <Image src="/brand/unlxck-one-angle-48.png" alt="" width={28} height={28} className={styles.mark} />
         <p className={styles.eyebrow}>STAY READY</p>
@@ -117,7 +120,7 @@ export function DevicePushPrompt({ token, athleteId }: { token: string; athleteI
       <button type="button" className={styles.enable} onClick={() => void enable()} disabled={busy}>
         {busy ? "Enabling…" : "Enable notifications"}<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 12 12 4M4 4h8v8" stroke="currentColor" strokeWidth="1.5" /></svg>
       </button>
-      <button type="button" className={styles.later} disabled={busy} onClick={() => setSetup(null)}>Not now</button>
+      <button type="button" className={styles.later} disabled={busy} onClick={() => dismiss()}>Not now</button>
       <p className={styles.footnote}>You control what comes through in Settings.</p>
     </dialog>
   );
