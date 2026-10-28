@@ -52,7 +52,7 @@ export function DrillPreview({ entry, token, onClose, onAdd, selfDirected = fals
   const current = detail ?? entry;
   return <InjuryDetailSheet title={current.name} onClose={onClose} closeLabel="Close drill preview">
     {/* "Loading drill…" gives way to the drill by fading in, not popping. */}
-    <AutoHeight swapKey={detail ? "loaded" : error ? "error" : "loading"}>
+    <AutoHeight swapKey={detail ? "loaded" : error ? "error" : "loading"} swapMotion="fade">
     <div className={`injury-sheet-body ${styles.preview}`}>
       <p className={styles.meta}>{current.context} · {equipmentText(current)}</p>
       {!selfDirected ? <p className={styles.boundary}>{boundaries[current.category]}</p> : null}

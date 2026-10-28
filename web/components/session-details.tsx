@@ -18,6 +18,8 @@ import { countOnlySetSummary } from "@/lib/set-entries";
 import { SetResults } from "./set-rows";
 import type { ExerciseSetResult } from "@/lib/types";
 import { useSheetExit } from "@/lib/use-sheet-exit";
+import { Skeleton } from "./skeleton";
+import { AutoHeight } from "./today/auto-height";
 
 /** The session's own status as an icon tone. */
 function sessionTone(status: string): RecordStatus {
@@ -130,6 +132,18 @@ export function TrainingBlock({ block, index, heading, recordId, open, onToggle,
 }
 
 /** Native modal supplies focus containment, inert background and Escape handling. */
+/** The rough shape of a session record: its facts, then its exercises. */
+function SessionRecordSkeleton() {
+  return <div className={styles.recordSkeleton}>
+    <p role="status" className="sr-only">Loading session details…</p>
+    <div className={styles.recordSkeletonFacts}>
+      <Skeleton height={58} /><Skeleton height={58} /><Skeleton height={58} />
+    </div>
+    <Skeleton variant="text" width="52%" height={18} />
+    <Skeleton height={64} /><Skeleton height={64} />
+  </div>;
+}
+
 export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = true, onEditExercises }: {
   row: TrainingHistorySession; token: string; cache: SessionDetailsCache; onDismiss: () => void;
   /** A suspended parent sheet owns focus restoration during a modal handoff. */
@@ -182,48 +196,52 @@ export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = tr
         {record ? <span className={styles.sessionStatus} data-status={sessionTone(record.status)}><StatusIcon status={sessionTone(record.status)} />{sessionStatusLabel(record.status)}</span> : null}</p></div>
       <button type="button" className={styles.close} aria-label="Close session details" onClick={() => dismiss()}>×</button></header>
     <div className={styles.body} tabIndex={0} role="region" aria-label="Session record">
-      {!details && !error ? <p role="status">Loading session details…</p> : null}
-      {error ? <div role="alert"><p>Unable to load session details. Try again.</p><button type="button" className="secondary-button" onClick={() => { setError(false); setAttempt(value => value + 1); }}>Retry</button></div> : null}
-      {details && record ? <div className={styles.sessionLayout}>
-        <section className={styles.sessionSummary} aria-label="Session overview">
-          <dl className={styles.sessionFacts}>
-            <div><TileIcon name="source" /><dt>Source</dt><dd>{record.source === "external" ? "Added by you" : "Unlxck"}</dd></div>
-            {record.session_rpe != null ? <div><TileIcon name="effort" /><dt>Session effort</dt><dd>RPE {record.session_rpe}/10</dd></div> : null}
-            {record.effort ? <div><TileIcon name="effort" /><dt>Effort</dt><dd>{record.effort}</dd></div> : null}
-            {record.duration_minutes != null ? <div><TileIcon name="time" /><dt>Recorded time</dt><dd>{record.duration_minutes} min recorded</dd></div> : null}
-            {record.pain_after != null ? <div><TileIcon name="pain" /><dt>Pain after</dt><dd>{record.pain_after}/10</dd></div> : null}
-          </dl>
-        </section>
-        <div className={styles.recordContent}>
-        {record.source === "external" ? <section className={styles.section}>
-          {record.sport || record.session_type ? <dl className={styles.measurements}>
-            {record.sport ? <div><dt>Sport</dt><dd>{sportLabel(record.sport)}</dd></div> : null}
-            {record.session_type ? <div><dt>Session type</dt><dd>{sessionTypes(record.sport).find(item => item.id === record.session_type)?.label || record.session_type.replaceAll("_", " ")}</dd></div> : null}
-          </dl> : null}
-          <div className={styles.manualHead}><h3>Exercises</h3>
-            {onEditExercises && record.activity !== "sparring" ? <button type="button" className={styles.manualAction} aria-haspopup="dialog"
-              onClick={() => onEditExercises({ ...row, ...record })}>{details.blocks.length ? "Edit exercises" : "Add exercises"}</button> : null}</div>
-          {details.blocks.length ? <ol className={styles.manualList}>{details.blocks.map((block, index) => <li key={index}>
-            <span className={styles.manualName}>{block.name}</span>
-            {block.actual.set_entries?.length ? <SetResults entries={block.actual.set_entries} completed={block.actual.sets} /> : <span className={styles.manualValues}>{summarise(block.actual, block.format) || NO_MEASUREMENTS}</span>}
-            {block.notes ? <p className={styles.note}>{block.notes}</p> : null}
-          </li>)}</ol> : <p className={styles.quiet}>No exercises recorded. Only activity, duration and effort were logged.</p>}
-          {details.sparring ? <><h3>Sparring report</h3><p>{details.sparring.rounds_completed} rounds{details.sparring.round_seconds != null ? ` · ${details.sparring.round_seconds} sec` : ""} · {details.sparring.intensity}</p>
-            {details.sparring.head_contact ? <p>Head contact: {details.sparring.head_contact}</p> : null}
-            {details.sparring.rocked != null ? <p>Rocked: {details.sparring.rocked ? "Yes" : "No"}</p> : null}
-            {details.sparring.notes ? <p className={styles.note}>{details.sparring.notes}</p> : null}</> : null}
-        </section> : <section className={styles.section}><h3>Exercises & training blocks</h3>
-          {details.prescription_source === "exercise_logs" ? <p className={styles.quiet}>Saved exercise logs only. Full prescription and block order unavailable.</p> : null}
-          {details.blocks.length ? <ol className={styles.blocks}>{details.blocks.map((block, index) => <TrainingBlock key={index} block={block} index={index}
-            open={expanded.has(index)} onToggle={() => setOpen(new Set(expanded.has(index) ? [...expanded].filter(item => item !== index) : [...expanded, index]))} />)}</ol> : null}
-        </section>}
-        {details.message ? <p className={styles.quiet}>{details.message}</p> : null}
-        {record.notes || record.modification_reason || record.takeaway ? <section className={styles.section}><h3>Session feedback</h3>
-          {record.modification_reason ? <p className={styles.note}>Modification: {record.modification_reason}</p> : null}
-          {record.notes ? <p className={styles.note}>{record.notes}</p> : null}
-          {record.takeaway ? <p className={styles.note}>Takeaway: {record.takeaway}</p> : null}</section> : null}
-        </div>
-      </div> : null}
+      {/* Opens near its loaded size (a skeleton of the record), glides the
+          rest of the way, and fades the record in without moving the sheet. */}
+      <AutoHeight swapKey={details ? "loaded" : error ? "error" : "loading"} swapMotion="fade">
+        {!details && !error ? <SessionRecordSkeleton /> : null}
+        {error ? <div role="alert"><p>Unable to load session details. Try again.</p><button type="button" className="secondary-button" onClick={() => { setError(false); setAttempt(value => value + 1); }}>Retry</button></div> : null}
+        {details && record ? <div className={styles.sessionLayout}>
+          <section className={styles.sessionSummary} aria-label="Session overview">
+            <dl className={styles.sessionFacts}>
+              <div><TileIcon name="source" /><dt>Source</dt><dd>{record.source === "external" ? "Added by you" : "Unlxck"}</dd></div>
+              {record.session_rpe != null ? <div><TileIcon name="effort" /><dt>Session effort</dt><dd>RPE {record.session_rpe}/10</dd></div> : null}
+              {record.effort ? <div><TileIcon name="effort" /><dt>Effort</dt><dd>{record.effort}</dd></div> : null}
+              {record.duration_minutes != null ? <div><TileIcon name="time" /><dt>Recorded time</dt><dd>{record.duration_minutes} min recorded</dd></div> : null}
+              {record.pain_after != null ? <div><TileIcon name="pain" /><dt>Pain after</dt><dd>{record.pain_after}/10</dd></div> : null}
+            </dl>
+          </section>
+          <div className={styles.recordContent}>
+          {record.source === "external" ? <section className={styles.section}>
+            {record.sport || record.session_type ? <dl className={styles.measurements}>
+              {record.sport ? <div><dt>Sport</dt><dd>{sportLabel(record.sport)}</dd></div> : null}
+              {record.session_type ? <div><dt>Session type</dt><dd>{sessionTypes(record.sport).find(item => item.id === record.session_type)?.label || record.session_type.replaceAll("_", " ")}</dd></div> : null}
+            </dl> : null}
+            <div className={styles.manualHead}><h3>Exercises</h3>
+              {onEditExercises && record.activity !== "sparring" ? <button type="button" className={styles.manualAction} aria-haspopup="dialog"
+                onClick={() => onEditExercises({ ...row, ...record })}>{details.blocks.length ? "Edit exercises" : "Add exercises"}</button> : null}</div>
+            {details.blocks.length ? <ol className={styles.manualList}>{details.blocks.map((block, index) => <li key={index}>
+              <span className={styles.manualName}>{block.name}</span>
+              {block.actual.set_entries?.length ? <SetResults entries={block.actual.set_entries} completed={block.actual.sets} /> : <span className={styles.manualValues}>{summarise(block.actual, block.format) || NO_MEASUREMENTS}</span>}
+              {block.notes ? <p className={styles.note}>{block.notes}</p> : null}
+            </li>)}</ol> : <p className={styles.quiet}>No exercises recorded. Only activity, duration and effort were logged.</p>}
+            {details.sparring ? <><h3>Sparring report</h3><p>{details.sparring.rounds_completed} rounds{details.sparring.round_seconds != null ? ` · ${details.sparring.round_seconds} sec` : ""} · {details.sparring.intensity}</p>
+              {details.sparring.head_contact ? <p>Head contact: {details.sparring.head_contact}</p> : null}
+              {details.sparring.rocked != null ? <p>Rocked: {details.sparring.rocked ? "Yes" : "No"}</p> : null}
+              {details.sparring.notes ? <p className={styles.note}>{details.sparring.notes}</p> : null}</> : null}
+          </section> : <section className={styles.section}><h3>Exercises & training blocks</h3>
+            {details.prescription_source === "exercise_logs" ? <p className={styles.quiet}>Saved exercise logs only. Full prescription and block order unavailable.</p> : null}
+            {details.blocks.length ? <ol className={styles.blocks}>{details.blocks.map((block, index) => <TrainingBlock key={index} block={block} index={index}
+              open={expanded.has(index)} onToggle={() => setOpen(new Set(expanded.has(index) ? [...expanded].filter(item => item !== index) : [...expanded, index]))} />)}</ol> : null}
+          </section>}
+          {details.message ? <p className={styles.quiet}>{details.message}</p> : null}
+          {record.notes || record.modification_reason || record.takeaway ? <section className={styles.section}><h3>Session feedback</h3>
+            {record.modification_reason ? <p className={styles.note}>Modification: {record.modification_reason}</p> : null}
+            {record.notes ? <p className={styles.note}>{record.notes}</p> : null}
+            {record.takeaway ? <p className={styles.note}>Takeaway: {record.takeaway}</p> : null}</section> : null}
+          </div>
+        </div> : null}
+      </AutoHeight>
     </div>
   </dialog>;
 }

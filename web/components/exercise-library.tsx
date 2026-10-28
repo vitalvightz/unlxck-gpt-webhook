@@ -12,6 +12,8 @@ import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 import sheet from "./session-details.module.css";
 import styles from "./exercise-library.module.css";
 import { useSheetExit } from "@/lib/use-sheet-exit";
+import { Skeleton } from "./skeleton";
+import { AutoHeight } from "./today/auto-height";
 
 export type ExerciseHistoryCache = Map<string, Promise<ExercisePerformancesResponse>>;
 
@@ -124,33 +126,55 @@ export function ExerciseDetails({ exercise, asOf, token, cache, onDismiss }: {
       <div><p className={styles.resultLabel}>{result.label}</p><strong className={styles.detailResult} data-weight={exercise.best_loads.length > 0 || undefined}>{result.value}</strong></div></div>
       <button type="button" className={sheet.close} aria-label="Close exercise history" onClick={() => dismiss()}>×</button></header>
     <div className={sheet.body} tabIndex={0} role="region" aria-label="Exercise performance record">
-      {/* Phones and tablets switch between the chart and the list; wide screens show both. */}
-      <div className={styles.views} role="tablist" aria-label="Exercise record views">
-        {(["progress", "history"] as const).map(id => <button key={id} type="button" role="tab" id={`${tabs}-${id}`} aria-controls={`${tabs}-${id}-panel`}
-          aria-selected={view === id} onClick={() => setView(id)}>{id === "progress" ? "Progress" : "History"}</button>)}
-      </div>
-      <div className={sheet.exerciseLayout}><div className={sheet.analysisColumn} role="tabpanel" id={`${tabs}-progress-panel`} aria-labelledby={`${tabs}-progress`} data-active={view === "progress"}>
-      {data ? <ExerciseProgress records={data.performances} exercise={exercise} hasMore={data.next_cursor !== null} about={<>
-        <p>{exercise.identity_kind === "legacy" ? "One original legacy record. Movement identity across other dates is unknown."
-          : exercise.identity_kind === "personal" ? "An exercise you named, from training you logged. Only you can see it. These are not individual set records."
-          : "Saved results from your plans and the training you logged. These are not individual set records."}</p>
-        {exercise.best_loads.length ? <p>Highest eligible recorded load by unit; not an estimated one-rep maximum.</p> : null}
-      </>} onInspect={id => { setView("history"); setLimit(null); setOpen(current => new Set(current).add(id)); setReveal({ id }); }} /> : null}
-      </div>
-      <section className={`${sheet.section} ${sheet.performanceColumn}`} role="tabpanel" id={`${tabs}-history-panel`} aria-labelledby={`${tabs}-history`} data-active={view === "history"}>
-        <div className={styles.historyHead}><h3>History</h3>
-          {data && data.performances.length > 3 ? <div className={styles.chips} role="group" aria-label="Show records">
-            {[null, 3, 6, 12].filter(count => count === null || count < data.performances.length).map(count => <button key={count ?? "all"} type="button" aria-pressed={limit === count}
-              onClick={() => setLimit(count)}>{count === null ? "All" : `Last ${count}`}</button>)}
-          </div> : null}</div>
-        {!data && !error ? <p role="status">Loading exercise history…</p> : null}
-        {data ? <ol ref={timeline} className={sheet.blocks}>{data.performances.slice(0, limit ?? undefined).map((item, index) => <TrainingBlock key={item.id} block={item.block} index={index} heading={formatAppDate(item.training_day)} recordId={item.id} numbered={false}
-          open={open.has(item.id)} onToggle={() => setOpen(current => { const next = new Set(current); if (!next.delete(item.id)) next.add(item.id); return next; })} />)}</ol> : null}
-        {data?.performances.length === 0 ? <p className={sheet.quiet}>No remaining records for this exercise.</p> : null}
-        {error ? <div role="alert"><p>{data ? "Couldn't load earlier records. Loaded records are still here." : "Unable to load exercise records. Try again."}</p><button type="button" className="secondary-button" onClick={() => { setError(false); if (data?.next_cursor) void more(); else setAttempt(value => value + 1); }}>Retry</button></div> : null}
-        {data?.next_cursor && !error && limit === null ? <button type="button" className="secondary-button" disabled={busy} onClick={() => void more()}>{busy ? "Loading…" : "Load earlier performances"}</button> : null}
-      </section>
-      </div>
+      {/* Opens near its loaded size (skeletons of the chart and the list),
+          glides the rest of the way, and fades the record in without moving
+          the sheet. */}
+      <AutoHeight swapKey={data ? "loaded" : error ? "error" : "loading"} swapMotion="fade">
+        {/* Phones and tablets switch between the chart and the list; wide screens show both. */}
+        <div className={styles.views} role="tablist" aria-label="Exercise record views">
+          {(["progress", "history"] as const).map(id => <button key={id} type="button" role="tab" id={`${tabs}-${id}`} aria-controls={`${tabs}-${id}-panel`}
+            aria-selected={view === id} onClick={() => setView(id)}>{id === "progress" ? "Progress" : "History"}</button>)}
+        </div>
+        <div className={sheet.exerciseLayout}><div className={sheet.analysisColumn} role="tabpanel" id={`${tabs}-progress-panel`} aria-labelledby={`${tabs}-progress`} data-active={view === "progress"}>
+        {data ? <ExerciseProgress records={data.performances} exercise={exercise} hasMore={data.next_cursor !== null} about={<>
+          <p>{exercise.identity_kind === "legacy" ? "One original legacy record. Movement identity across other dates is unknown."
+            : exercise.identity_kind === "personal" ? "An exercise you named, from training you logged. Only you can see it. These are not individual set records."
+            : "Saved results from your plans and the training you logged. These are not individual set records."}</p>
+          {exercise.best_loads.length ? <p>Highest eligible recorded load by unit; not an estimated one-rep maximum.</p> : null}
+        </>} onInspect={id => { setView("history"); setLimit(null); setOpen(current => new Set(current).add(id)); setReveal({ id }); }} /> : !error ? <ProgressSkeleton /> : null}
+        </div>
+        <section className={`${sheet.section} ${sheet.performanceColumn}`} role="tabpanel" id={`${tabs}-history-panel`} aria-labelledby={`${tabs}-history`} data-active={view === "history"}>
+          <div className={styles.historyHead}><h3>History</h3>
+            {data && data.performances.length > 3 ? <div className={styles.chips} role="group" aria-label="Show records">
+              {[null, 3, 6, 12].filter(count => count === null || count < data.performances.length).map(count => <button key={count ?? "all"} type="button" aria-pressed={limit === count}
+                onClick={() => setLimit(count)}>{count === null ? "All" : `Last ${count}`}</button>)}
+            </div> : null}</div>
+          {!data && !error ? <HistorySkeleton /> : null}
+          {data ? <ol ref={timeline} className={sheet.blocks}>{data.performances.slice(0, limit ?? undefined).map((item, index) => <TrainingBlock key={item.id} block={item.block} index={index} heading={formatAppDate(item.training_day)} recordId={item.id} numbered={false}
+            open={open.has(item.id)} onToggle={() => setOpen(current => { const next = new Set(current); if (!next.delete(item.id)) next.add(item.id); return next; })} />)}</ol> : null}
+          {data?.performances.length === 0 ? <p className={sheet.quiet}>No remaining records for this exercise.</p> : null}
+          {error ? <div role="alert"><p>{data ? "Couldn't load earlier records. Loaded records are still here." : "Unable to load exercise records. Try again."}</p><button type="button" className="secondary-button" onClick={() => { setError(false); if (data?.next_cursor) void more(); else setAttempt(value => value + 1); }}>Retry</button></div> : null}
+          {data?.next_cursor && !error && limit === null ? <button type="button" className="secondary-button" disabled={busy} onClick={() => void more()}>{busy ? "Loading…" : "Load earlier performances"}</button> : null}
+        </section>
+        </div>
+      </AutoHeight>
     </div>
   </dialog>;
+}
+
+/** The rough shape of the progress view: its heading and the chart card. */
+function ProgressSkeleton() {
+  return <div className={styles.recordSkeleton} aria-hidden="true">
+    <Skeleton variant="text" width="48%" height={18} />
+    <Skeleton height={132} />
+    <Skeleton variant="text" width="62%" height={12} />
+  </div>;
+}
+
+/** The rough shape of the history list: a few collapsed rows. */
+function HistorySkeleton() {
+  return <div className={styles.recordSkeleton}>
+    <p role="status" className="sr-only">Loading exercise history…</p>
+    <Skeleton height={64} /><Skeleton height={64} /><Skeleton height={64} />
+  </div>;
 }

@@ -39,3 +39,5 @@
   .detailHeading .resultLabel { margin: 0; font-size: 11px; }
   .detailResult { margin-top: 2px; font-size: 18px; text-wrap: balance; }
 }
+/* Loading placeholders sized like the record they stand in for. */
+.recordSkeleton { display: grid; gap: 12px; }

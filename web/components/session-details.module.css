@@ -2,10 +2,10 @@
 .dialog[open] { display: flex; flex-direction: column; }
 .dialog::backdrop { background: rgb(0 0 0 / 75%); }
 /* Opens and closes in motion rather than appearing and vanishing in a frame. */
-.dialog[open] { animation: sheet-in 240ms cubic-bezier(0.16, 1, 0.3, 1); }
-.dialog[open]::backdrop { animation: backdrop-in 240ms ease-out; }
-.dialog[data-closing] { pointer-events: none; animation: sheet-out 200ms cubic-bezier(0.4, 0, 1, 1) forwards; }
-.dialog[data-closing]::backdrop { animation: backdrop-out 200ms ease-in forwards; }
+.dialog[open] { animation: sheet-in var(--sheet-enter-duration, 280ms) var(--sheet-enter-ease, cubic-bezier(0.32, 0.72, 0, 1)); }
+.dialog[open]::backdrop { animation: backdrop-in var(--sheet-enter-duration, 280ms) ease-out; }
+.dialog[data-closing] { pointer-events: none; animation: sheet-out var(--sheet-exit-duration, 200ms) var(--sheet-exit-ease, cubic-bezier(0.32, 0.72, 0, 1)) forwards; }
+.dialog[data-closing]::backdrop { animation: backdrop-out var(--sheet-exit-duration, 200ms) ease-in forwards; }
 @keyframes sheet-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
 @keyframes sheet-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(8px) scale(0.98); } }
 @keyframes backdrop-in { from { opacity: 0; } to { opacity: 1; } }
@@ -86,6 +86,9 @@
 .response { margin-top: 16px; padding-left: 12px; border-left: 2px solid var(--border-default); font-size: 13px; }
 .response > span { color: var(--text-muted); }
 .response p { margin: 8px 0; }
+/* Loading placeholder sized like the record it stands in for. */
+.recordSkeleton { display: grid; gap: 12px; }
+.recordSkeletonFacts { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 8px; margin-bottom: 8px; }
 .sessionFacts { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 8px; margin: 0; }
 .sessionFacts > div { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 1px 10px; padding: 10px 12px; border-radius: 12px; background: var(--bg-stat); border: 1px solid var(--border-subtle); }
 .sessionFacts svg { grid-row: span 2; color: var(--brand-red); }
@@ -125,8 +128,9 @@
 }
 @media (max-width: 600px) {
   .dialog { position: fixed; inset: auto 0 0; margin: 0; width: 100%; max-width: none; max-height: calc(100dvh - var(--safe-area-top) - 12px); border-radius: 18px 18px 0 0; border-bottom: 0; }
-  .dialog[open] { animation-name: sheet-up; animation-duration: 280ms; }
-  .dialog[data-closing] { animation-name: sheet-down; animation-duration: 200ms; }
+  /* A bottom sheet here: it slides up from, and back down to, the edge. */
+  .dialog[open] { animation-name: sheet-up; }
+  .dialog[data-closing] { animation-name: sheet-down; }
   .header { padding: 16px 16px 14px 20px; }
   .header h2 { margin: 4px 0 4px; font-size: 22px; }
   .section { margin-top: 16px; }
