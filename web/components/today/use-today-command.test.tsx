@@ -214,3 +214,37 @@ test("opening Today reuses the plan Home just read and leaves XP alone; refreshe
     globalThis.fetch = originalFetch;
   }
 });
+
+test("presentationPending covers the plan read behind the blocks, and clears when it lands or fails", async () => {
+  const originalFetch = globalThis.fetch;
+  const reads: Array<{ url: string; resolve: (response: Response) => void }> = [];
+  globalThis.fetch = ((url: string) => new Promise<Response>(resolve => reads.push({ url: String(url), resolve }))) as typeof fetch;
+  const root = createRoot(document.createElement("div"));
+  let current: TodayCommand;
+  function Probe() { current = useTodayCommand("pending-flag-token"); return null; }
+  const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status });
+  const today = (day: string) => json({ active_plan: { id: "plan-1" }, today: { training_day: day },
+    open_injuries: [], risk_watch: [] });
+  try {
+    await act(async () => { root.render(<Probe />); });
+    assert.equal(current!.presentationPending, false);
+    await act(async () => { reads[0].resolve(today("2026-10-07")); });
+    // Today is published; its blocks are still on their way.
+    assert.equal(current!.state?.today.training_day, "2026-10-07");
+    assert.equal(current!.presentationPending, true);
+    const plan = reads.find(read => read.url.includes("/plans/"))!;
+    await act(async () => { plan.resolve(json({ outputs: {} })); });
+    assert.equal(current!.presentationPending, false);
+
+    // A new day needs a fresh plan read; a failed one still clears the flag.
+    let refresh: Promise<void>;
+    await act(async () => { refresh = current!.refresh(); });
+    await act(async () => { reads.findLast(read => read.url.endsWith("/api/today"))!.resolve(today("2026-10-08")); await refresh!; });
+    assert.equal(current!.presentationPending, true);
+    await act(async () => { reads.findLast(read => read.url.includes("/plans/"))!.resolve(json({ detail: "down" }, 500)); });
+    assert.equal(current!.presentationPending, false);
+  } finally {
+    await act(async () => { root.unmount(); });
+    globalThis.fetch = originalFetch;
+  }
+});

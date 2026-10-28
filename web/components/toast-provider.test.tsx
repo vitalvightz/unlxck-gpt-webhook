@@ -197,3 +197,65 @@ test("a reward never joins a confirmation that did not opt in", async (t) => {
     ui.cleanup();
   }
 });
+
+test("a delayed reward still merges while the screen is full and another toast waits", async (t) => {
+  const tick = useMockClock(t);
+  const ui = await mount();
+  try {
+    act(() => {
+      ui.api().showToast("Sparring logged.", { tone: "success", mergeKeys: ["training_logged"] });
+      ui.api().showToast("Two");
+      ui.api().showToast("Three");
+    });
+    tick(400);
+    assert.deepEqual(ui.texts(), ["Sparring logged.", "Two"], "third waits for a slot");
+    act(() => {
+      ui.api().showToast("+25 XP: Session complete", {
+        tone: "success",
+        delayMs: 500,
+        merge: { suffix: "+25 XP", keys: ["training_logged"] },
+      });
+    });
+    tick(500);
+    assert.deepEqual(ui.texts(), ["Sparring logged · +25 XP", "Two"]);
+  } finally {
+    ui.cleanup();
+  }
+});
+
+test("an error skips the stagger and the queue", async (t) => {
+  const tick = useMockClock(t);
+  const ui = await mount();
+  try {
+    act(() => {
+      ui.api().showToast("Saved.");
+      ui.api().showToast("Also saved.");
+      ui.api().showToast("Could not save.", { tone: "error" });
+    });
+    // No 400ms stagger and no waiting behind "Also saved.".
+    assert.deepEqual(ui.texts(), ["Saved.", "Could not save."]);
+    tick(400);
+    assert.deepEqual(ui.texts(), ["Saved.", "Could not save."], "the routine toast waits its turn");
+  } finally {
+    ui.cleanup();
+  }
+});
+
+test("on a full screen an error retires the oldest routine toast, never showing three", async (t) => {
+  const tick = useMockClock(t);
+  const ui = await mount();
+  try {
+    act(() => {
+      ui.api().showToast("One");
+      ui.api().showToast("Two");
+    });
+    tick(400);
+    act(() => { ui.api().showToast("Could not save.", { tone: "error" }); });
+    assert.equal(ui.toasts().length, 2);
+    assert.ok(ui.toasts()[0].classList.contains("is-leaving"), "oldest routine toast exits");
+    tick(220);
+    assert.deepEqual(ui.texts(), ["Two", "Could not save."]);
+  } finally {
+    ui.cleanup();
+  }
+});

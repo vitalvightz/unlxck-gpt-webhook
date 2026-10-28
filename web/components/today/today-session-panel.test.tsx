@@ -609,6 +609,41 @@ function contactDayState(decisionTier: TodayCommandView["today"]["decision_tier"
   };
 }
 
+test("while the next day's parts load, the preview tray holds its place instead of a stand-in summary", () => {
+  const state: TodayCommandView = {
+    active_plan: { id: "plan-1", name: "Fight camp", phase: "GPP", fight_date: "2026-11-05" },
+    today: {
+      training_day: "2026-10-09",
+      recommendation_state: "train_as_planned",
+      decision_tier: "green",
+      warnings: [],
+      next_session: { session_id: "2026-10-10-strength", title: "Strength", calendar_date: "2026-10-10",
+        session_relation: "next", effective_load: "technical" },
+      session_scope: "next",
+      session_label: "Next session",
+      completion_status: "done",
+    },
+    risk_watch: [], open_injuries: [], week_summary: {}, quick_actions: [],
+  };
+  const render = (presentationPending: boolean) => renderToStaticMarkup(
+    <AuthProvider>
+      <ToastProvider>
+        <TodaySessionPanel state={state} structuredPlan={null} token="token" onRefresh={async () => {}}
+          presentationPending={presentationPending} />
+      </ToastProvider>
+    </AuthProvider>,
+  );
+
+  const loading = render(true);
+  assert.match(loading, /<button type="button" class="cta" aria-haspopup="dialog" disabled="">.*?Preview session<\/button>/);
+  assert.doesNotMatch(loading, /today-session-summary/);
+
+  // Once the read is done with no parts for that day, the summary is the answer.
+  const settled = render(false);
+  assert.doesNotMatch(settled, />Preview session</);
+  assert.match(settled, /today-session-summary/);
+});
+
 function renderPanel(state: TodayCommandView): string {
   return renderToStaticMarkup(
     <AuthProvider>

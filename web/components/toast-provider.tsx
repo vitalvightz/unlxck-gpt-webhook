@@ -170,26 +170,39 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
     // Exiting toasts are still on screen, so they hold their slot until removed.
     const onScreen = toastsRef.current.length;
-    const next = pending.find((item) => item.readyAt <= now);
+    const ready = pending.filter((item) => item.readyAt <= now);
+    // A failure must not wait behind routine confirmations: it goes first and
+    // skips the stagger.
+    const next = ready.find((item) => item.toast.tone === "error") ?? ready[0];
+    const urgent = next?.toast.tone === "error";
     const staggerReadyAt = lastShownAtRef.current + STAGGER_MS;
 
-    if (next && onScreen < MAX_VISIBLE && now >= staggerReadyAt) {
+    if (next && onScreen < MAX_VISIBLE && (urgent || now >= staggerReadyAt)) {
       pending = pending.filter((item) => item !== next);
       lastShownAtRef.current = now;
       shownAtRef.current.set(next.toast.id, now);
       commit([...toastsRef.current, next.toast]);
       armDismissTimer(next.toast);
+    } else if (urgent && !toastsRef.current.some((toast) => toast.leaving)) {
+      // Screen full: retire the oldest routine toast. Its exit frees the slot
+      // and pumps again, so the limit is never exceeded.
+      const routine = toastsRef.current.find((toast) => toast.tone !== "error");
+      if (routine) dismissToast(routine.id);
     }
     syncPending(pending);
 
     if (pending.length === 0) return;
-    // A full screen frees up when dismissToast removes a toast, which pumps again.
-    const slotFree = toastsRef.current.length < MAX_VISIBLE;
-    const earliestReady = Math.min(...pending.map((item) => item.readyAt));
-    const wakeAt = slotFree ? Math.max(earliestReady, lastShownAtRef.current + STAGGER_MS) : earliestReady;
-    if (!slotFree && earliestReady <= now) return;
-    pumpTimerRef.current = window.setTimeout(() => pumpRef.current(), Math.max(0, wakeAt - now));
-  }, [armDismissTimer, commit, mergeIntoRecent, syncPending]);
+    // Wake for the next delayed toast even when the screen is full: a delayed
+    // merge needs no slot, and its confirmation may be gone by the time one frees.
+    // Otherwise a full screen frees up when dismissToast removes a toast, which
+    // pumps again.
+    const wakes = pending.filter((item) => item.readyAt > now).map((item) => item.readyAt);
+    if (toastsRef.current.length < MAX_VISIBLE && pending.some((item) => item.readyAt <= now)) {
+      wakes.push(lastShownAtRef.current + STAGGER_MS);
+    }
+    if (wakes.length === 0) return;
+    pumpTimerRef.current = window.setTimeout(() => pumpRef.current(), Math.max(0, Math.min(...wakes) - now));
+  }, [armDismissTimer, commit, dismissToast, mergeIntoRecent, syncPending]);
 
   useEffect(() => {
     pumpRef.current = pump;

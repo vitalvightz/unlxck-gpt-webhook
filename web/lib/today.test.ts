@@ -708,7 +708,11 @@ test("Today renders one recommendation and feedback prompt in the required DOM o
   assert.equal((screen.match(/surface="daily_recommendation"/g) ?? []).length, 1);
   assert.ok(screen.includes("resolvedDecision.useSafeReplacement"));
   const normalizedScreen = screen.replace(/\r\n/g, "\n");
-  assert.ok(normalizedScreen.indexOf("{sessionPanel}\n          {readinessForm}") >= 0);
+  // Safe replacement puts the check-in after the session; the session keeps
+  // one slot either way so a reorder never remounts it.
+  assert.ok(normalizedScreen.indexOf(
+    "{resolvedDecision.useSafeReplacement ? null : readinessForm}\n      {sessionPanel}\n      {resolvedDecision.useSafeReplacement ? readinessForm : null}",
+  ) >= 0);
   assert.equal(sessionPanel.includes("TodayDecisionPanel"), false);
   assert.equal(sessionPanel.includes("ContextualFeedback"), false);
   assert.ok(screen.includes('resolvedDecision.displayTier === "preview"'));

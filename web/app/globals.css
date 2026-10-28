@@ -7148,8 +7148,91 @@ button.mobile-step-rail-item {
    so its label overflows the pill on both sides. Let a lone CTA span the row. */
 
 .today-page {
+  --today-page-gap: 16px;
   display: grid;
-  gap: 16px;
+  gap: var(--today-page-gap);
+}
+
+/* ---- Today motion: sections ease in and out instead of snapping ---- */
+
+.today-collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  min-width: 0;
+}
+
+.today-collapse-inner {
+  min-width: 0;
+  min-height: 0;
+}
+
+.today-collapse[data-phase="entering"] {
+  animation: today-collapse-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.today-collapse[data-phase="leaving"] {
+  pointer-events: none;
+  animation: today-collapse-out 240ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.today-collapse[data-phase="entering"] > .today-collapse-inner,
+.today-collapse[data-phase="leaving"] > .today-collapse-inner {
+  overflow: hidden;
+}
+
+@keyframes today-collapse-in {
+  from {
+    grid-template-rows: 0fr;
+    margin-top: calc(-1 * var(--today-collapse-gap, 0px));
+    opacity: 0;
+  }
+  to {
+    grid-template-rows: 1fr;
+    margin-top: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes today-collapse-out {
+  from {
+    grid-template-rows: 1fr;
+    margin-top: 0;
+    opacity: 1;
+  }
+  to {
+    grid-template-rows: 0fr;
+    margin-top: calc(-1 * var(--today-collapse-gap, 0px));
+    opacity: 0;
+  }
+}
+
+/* The wrapper stands in for the card's own children, so it keeps their gap. */
+.today-auto-height,
+.today-auto-height-inner {
+  display: grid;
+  gap: inherit;
+  min-width: 0;
+}
+
+.today-fade-in {
+  animation: today-fade-in 200ms ease-out;
+}
+
+@keyframes today-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .today-collapse[data-phase="entering"],
+  .today-collapse[data-phase="leaving"],
+  .today-fade-in {
+    animation: none;
+  }
 }
 
 .today-shell {
@@ -9556,7 +9639,7 @@ html[data-theme="light"] .today-injury-other-warning {
 
 @media (max-width: 720px) {
   .today-page {
-    gap: 14px;
+    --today-page-gap: 14px;
   }
 
   .today-shell,
