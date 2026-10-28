@@ -137,7 +137,7 @@ function SessionRecordSkeleton() {
   return <div className={styles.recordSkeleton}>
     <p role="status" className="sr-only">Loading session details…</p>
     <div className={styles.recordSkeletonFacts}>
-      <Skeleton height={58} /><Skeleton height={58} /><Skeleton height={58} />
+      <Skeleton height={62} /><Skeleton height={62} /><Skeleton height={62} />
     </div>
     <Skeleton variant="text" width="52%" height={18} />
     <Skeleton height={64} /><Skeleton height={64} />
