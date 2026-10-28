@@ -47,7 +47,7 @@ test("the benefits section groups every capability into three benefits", () => {
   const titles = [1, 2, 3].map((index) => copy[`benefit${index}Title` as keyof typeof copy]);
   assert.deepEqual(titles, ["Build your training", "Adapt your sessions", "Track your progress"]);
   const bodies = [copy.benefit1Body, copy.benefit2Body, copy.benefit3Body].join(" ").toLowerCase();
-  for (const capability of ["fight camps", "ongoing programmes", "your own sessions", "check in", "recovery-based", "customise your workouts", "sparring", "library"]) {
+  for (const capability of ["personalised s&c plans", "your own sessions", "check in", "recovery-based", "customise your workouts", "sparring", "library"]) {
     assert.ok(bodies.includes(capability), `benefits should still cover "${capability}"`);
   }
 });

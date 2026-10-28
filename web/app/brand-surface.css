@@ -278,10 +278,12 @@
   text-transform: uppercase;
 }
 
+/* The landing is always on a dark surface, so headings are pinned white
+   rather than following the workspace text token (dark in light theme). */
 .public-section-head h2,
 .public-final-cta h2 {
   margin: 0;
-  color: var(--text-primary);
+  color: #ffffff;
   font-size: clamp(26px, 7vw, 36px);
   line-height: 1.08;
   letter-spacing: -0.03em;
@@ -552,8 +554,11 @@
 
 /* Closing banner */
 
+/* Sits a little closer to the benefits than the other section gaps, so the
+   close reads as part of the page rather than a separate block. */
 .public-final-cta {
   position: relative;
+  margin-top: -16px;
   overflow: hidden;
   isolation: isolate;
   display: grid;
@@ -567,6 +572,10 @@
     linear-gradient(180deg, rgba(20, 15, 18, 0.98), rgba(11, 11, 13, 0.98));
   box-shadow: var(--public-highlight);
   text-align: center;
+}
+
+.public-final-cta h2 {
+  text-shadow: 0 0 32px rgba(255, 255, 255, 0.12);
 }
 
 .public-final-cta .public-hero-cta {
@@ -704,6 +713,7 @@
   }
 
   .public-final-cta {
+    margin-top: -40px;
     padding: 72px 40px;
   }
 
