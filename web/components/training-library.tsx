@@ -9,6 +9,7 @@ import type { LibraryEntry, LibraryPreview, LibrarySearchResponse } from "@/lib/
 import { ExerciseDemo } from "./exercise-demo";
 import { ExerciseGlyphIcon, type ExerciseGlyphName } from "./exercise-glyph";
 import { demoThumbnailUrl } from "@/lib/exercise-demo";
+import { AutoHeight } from "./today/auto-height";
 import { InjuryDetailSheet } from "./today/injury-detail-sheet";
 import { libraryEquipmentText as equipmentText } from "@/lib/equipment-requirements";
 import styles from "./training-library.module.css";
@@ -50,6 +51,8 @@ export function DrillPreview({ entry, token, onClose, onAdd, selfDirected = fals
   }, [entry.catalogue_id, token, retry]);
   const current = detail ?? entry;
   return <InjuryDetailSheet title={current.name} onClose={onClose} closeLabel="Close drill preview">
+    {/* "Loading drill…" gives way to the drill by fading in, not popping. */}
+    <AutoHeight swapKey={detail ? "loaded" : error ? "error" : "loading"}>
     <div className={`injury-sheet-body ${styles.preview}`}>
       <p className={styles.meta}>{current.context} · {equipmentText(current)}</p>
       {!selfDirected ? <p className={styles.boundary}>{boundaries[current.category]}</p> : null}
@@ -87,6 +90,7 @@ export function DrillPreview({ entry, token, onClose, onAdd, selfDirected = fals
         </>}
       {onAdd && detail?.category === "training" ? <button className="injury-sheet-save" onClick={() => onAdd(detail)}>Add to Session</button> : null}
     </div>
+    </AutoHeight>
   </InjuryDetailSheet>;
 }
 
@@ -268,6 +272,9 @@ export function TrainingLibrary({ accessToken, onSelect, onBack, onSelectCommuni
     </> : null}
     {category === "training" && !count ? <CommunityDiscovery key={accessToken} token={accessToken} query={query} onAdd={onSelectCommunity} /> : null}
     {filterOpen ? <InjuryDetailSheet title={picker ? filterLabels[picker] : "Filters"} onClose={closeFilters} closeLabel="Close filters">
+      {/* Opening a filter slides its options in from the right; Back slides
+          the filter list in from the left, and the sheet glides between sizes. */}
+      <AutoHeight swapKey={picker ?? "filters"} swapMotion={picker ? "forward" : "back"}>
       <div className={`injury-sheet-body ${styles.filters}`}>
         {picker ? <>
           <button ref={pickerBack} className={styles.pickerBack} onClick={() => setPicker(null)}>← Back to filters</button>
@@ -308,6 +315,7 @@ export function TrainingLibrary({ accessToken, onSelect, onBack, onSelectCommuni
         </div>
         </>}
       </div>
+      </AutoHeight>
     </InjuryDetailSheet> : null}
     {selected ? <DrillPreview key={selected.catalogue_id} entry={selected} token={accessToken} onClose={() => setSelected(null)} onAdd={onSelect} selfDirected={Boolean(onSelect)} /> : null}
   </section>;

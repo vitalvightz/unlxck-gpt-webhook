@@ -93,7 +93,9 @@ function HeldPlansReviewNotice({ plans }: { plans: PlanSummary[] }) {
 
 function PlansSyncState() {
   return (
-    <article className="list-card plans-sync-card" aria-busy="true">
+    // Waits 250ms before it shows: most loads finish first, and a card that
+    // appears for a split second reads as a flicker.
+    <article className="list-card plans-sync-card loading-reveal" aria-busy="true">
       <div className="plans-dashboard-card-header">
         <div className="plans-dashboard-card-copy">
           <p className="kicker">Unlxcking…</p>
@@ -343,11 +345,11 @@ export default function PlansPage() {
 
         {isLoading ? (
           <div className={`athlete-motion-slot athlete-motion-main ${styles.section}`} aria-busy="true">
-            <div className={styles.sectionHead}>
+            <div className={`${styles.sectionHead} loading-reveal`}>
               <h2 className={styles.sectionTitle}>{t("previousPlans")}</h2>
               <span className={styles.sectionMeta}>{t("loading")}</span>
             </div>
-            <div className="plan-history-list plans-history-list">
+            <div className="plan-history-list plans-history-list loading-reveal">
               <PlanHistoryRowSkeleton />
               <PlanHistoryRowSkeleton />
             </div>
