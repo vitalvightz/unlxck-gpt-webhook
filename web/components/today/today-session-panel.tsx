@@ -924,15 +924,22 @@ export function TodaySessionPanel({
     }
   }
 
-  function openTimer(source: TimerSource) {
+  /** Whether a timer may open, unlocking its audio if so. Call it inside the
+   * tap itself, never from a fade or other delayed callback: iOS Safari only
+   * unlocks audio during the user's gesture. */
+  function readyTimer(): boolean {
     if (commandUnavailable) {
       showToast("Refresh Today before opening a training timer.", { tone: "error" });
-      return;
+      return false;
     }
     // The round timer is up: it keeps the screen until it closes.
-    if (roundTimer.shown) return;
-    // Audio only unlocks inside the tap itself, so before the fade.
+    if (roundTimer.shown) return false;
     timerAudio().unlock();
+    return true;
+  }
+
+  function openTimer(source: TimerSource) {
+    if (!readyTimer()) return;
     fadeThrough(() => setActiveTimer({ source, mode: "open" }));
   }
 
@@ -978,12 +985,15 @@ export function TodaySessionPanel({
   /** Leave the visualisation for what comes next in the session. */
   function continueAfterGuided() {
     const next = guidedNext;
+    // Checked and unlocked now, in the tap: inside the fade would be too late
+    // for iOS audio.
+    const toTimer = next === "timer" && timerAvailable && readyTimer();
     // One fade: the visualisation leaves and what follows arrives in the dark.
     fadeThrough(() => {
       setGuidedOpen(false);
       setGuidedNext(null);
-      if (next === "timer" && timerAvailable) {
-        openTimer("session");
+      if (toTimer) {
+        setActiveTimer({ source: "session", mode: "open" });
       } else if (next === "review" && !reviewOpen) {
         openReview(false);
       }

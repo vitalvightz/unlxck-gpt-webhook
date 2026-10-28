@@ -6,6 +6,8 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 
 import { ToastProvider } from "@/components/toast-provider";
+import { FadeThroughProvider } from "@/components/fade-through";
+import { timerAudio } from "@/lib/session-timer/audio";
 import { AuthProvider, AppSessionContext } from "@/components/auth-provider";
 import { TodaySessionBlocks, TodaySessionPanel } from "./today-session-panel";
 import { resolveCurrentDay, resolveTrainingDay, toISODate } from "@/lib/camp-map";
@@ -1223,6 +1225,52 @@ test("start session runs the day's visualisation first, then hands on to the tim
     assert.equal(document.querySelector('[aria-label="Guided Tactical Picture"]'), null);
     assert.ok(document.querySelector(".st-root"), "then the timer takes over");
   } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
+});
+
+test("handing on from the visualisation unlocks timer audio in the tap, not after the fade", async () => {
+  const container = document.createElement("div"); document.body.appendChild(container);
+  const root = createRoot(container);
+  const state = contactDayState("green");
+  state.today.next_session = { ...state.today.next_session, coach_led_contact: undefined, title: "Fight Visualisation" };
+  state.live_prescription = { revision: "a".repeat(64), frozen: false, safety_hold: false, changes: [],
+    session: { session_id: state.today.next_session.session_id!, session_type: "skill", title: "Fight Visualisation",
+      blocks: [
+        { block_id: "vis-1", block_type: "mindset", display_name: "Tactical Picture",
+          coaching_cues: ["See the opponent clearly.", "Cue: Take the space."] },
+        { block_id: "rdl", block_type: "strength", display_name: "Romanian Deadlift", sets: 3, reps: "8" },
+      ] } };
+  const original = globalThis.fetch;
+  globalThis.fetch = (async (_input, init) => init?.method === "POST"
+    ? new Response(JSON.stringify({ completion: { id: "completion-1" }, rehab_response_prompts: [] }), { status: 200 })
+    : new Response('{"response_sets":[],"history_truncated":false,"logs":[]}', { status: 200 })) as typeof fetch;
+  const audio = timerAudio();
+  const originalUnlock = audio.unlock.bind(audio);
+  let unlocks = 0;
+  audio.unlock = () => { unlocks += 1; originalUnlock(); };
+  const button = (scope: ParentNode, label: string) =>
+    Array.from(scope.querySelectorAll("button")).find((b) => b.textContent?.trim() === label);
+  const wait = (ms: number) => act(async () => { await new Promise((resolve) => setTimeout(resolve, ms)); });
+  try {
+    await act(async () => { root.render(<AuthProvider><ToastProvider><FadeThroughProvider>
+      <TodaySessionPanel state={state} structuredPlan={null} token="token" onRefresh={async () => {}} />
+    </FadeThroughProvider></ToastProvider></AuthProvider>); });
+    await act(async () => { button(container, "Start session")!.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
+    await wait(500);
+    const player = document.querySelector<HTMLElement>('[aria-label="Guided Tactical Picture"]');
+    assert.ok(player, "the visualisation opens first");
+
+    unlocks = 0;
+    act(() => { button(player, "Skip to training")!.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
+    // Within the tap: unlocked, while the screen is still only going dark.
+    assert.equal(unlocks, 1);
+    assert.equal(document.querySelector(".st-root"), null);
+    await wait(500);
+    assert.ok(document.querySelector(".st-root"), "the timer takes over after the fade");
+    assert.equal(unlocks, 1, "and nothing unlocks again from inside the fade");
+  } finally {
+    audio.unlock = originalUnlock;
+    globalThis.fetch = original; act(() => root.unmount()); container.remove();
+  }
 });
 
 test("rehab replacement drops the held day's strength and combat coaching", async () => {
