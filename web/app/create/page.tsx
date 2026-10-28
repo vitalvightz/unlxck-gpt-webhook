@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { RequireAuth } from "@/components/auth-guard";
+import { useFadeNavigate } from "@/components/fade-through";
 import { hasInternalPreviousPage } from "@/lib/internal-back";
 import styles from "./create.module.css";
 
 // The one place to start any kind of plan, reached from + Create. Each option
-// opens its existing flow; this screen only routes, it saves nothing.
+// opens its existing flow behind the same fade through black; this screen only
+// routes, it saves nothing.
 const OPTIONS = [
   { href: "/quick-build", title: "Quick Build", body: "A personalised programme in minutes." },
   { href: "/onboarding", title: "Full Camp Setup", body: "A detailed programme around your fight and schedule." },
@@ -17,6 +19,7 @@ const OPTIONS = [
 
 export default function CreatePage() {
   const router = useRouter();
+  const fadeNavigate = useFadeNavigate();
 
   function goBack() {
     const internal = hasInternalPreviousPage({
@@ -46,7 +49,16 @@ export default function CreatePage() {
         <ol className={styles.options} aria-label="Create options">
           {OPTIONS.map((option, index) => (
             <li key={option.href}>
-              <Link href={option.href} className={styles.option}>
+              <Link
+                href={option.href}
+                className={styles.option}
+                onClick={(event) => {
+                  // /plans links already fade at the document; the rest fade here.
+                  if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                  event.preventDefault();
+                  fadeNavigate(() => router.push(option.href));
+                }}
+              >
                 <span className={`kicker ${styles.index}`} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
                 <span className={styles.copy}><strong>{option.title}</strong><span>{option.body}</span></span>
                 <span className={styles.arrow} aria-hidden="true">

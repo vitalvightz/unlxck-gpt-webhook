@@ -6031,6 +6031,50 @@ button.mobile-step-rail-item {
   box-shadow: var(--shadow-support);
 }
 
+/* Same footprint as .plan-next-session, so the real session lands in place. */
+.plan-next-session-pending {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--border-default);
+  border-radius: var(--radius-support);
+  background: var(--bg-surface);
+}
+
+.plan-next-session-pending .plan-next-session-copy {
+  gap: 6px;
+}
+
+/* The resolved session (or Set active) slides across into the held slot. */
+.plan-hero-arrive {
+  animation: plan-hero-arrive 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.plan-hero-arrive .plan-next-session-cta {
+  animation: plan-hero-arrive 420ms cubic-bezier(0.22, 1, 0.36, 1) 90ms both;
+}
+
+@keyframes plan-hero-arrive {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plan-hero-arrive,
+  .plan-hero-arrive .plan-next-session-cta {
+    animation: none;
+  }
+}
+
 .plan-next-session-copy {
   display: grid;
   gap: 2px;
@@ -7084,38 +7128,6 @@ button.mobile-step-rail-item {
   gap: 18px;
 }
 
-.plans-sync-card {
-  gap: 20px;
-  border-color: rgba(181, 18, 43, 0.2);
-  background:
-    linear-gradient(180deg, rgba(24, 17, 21, 0.96), rgba(15, 17, 21, 0.98)),
-    var(--bg-panel);
-}
-
-.plans-sync-grid {
-  display: grid;
-  gap: 10px;
-}
-
-.plans-sync-line {
-  height: 13px;
-  overflow: hidden;
-  border-radius: var(--radius-pill);
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.045)),
-    rgba(255, 255, 255, 0.035);
-  background-size: 220% 100%;
-  animation: skeleton-shimmer 1.6s ease-in-out infinite;
-}
-
-.plans-sync-line-short {
-  width: min(240px, 56%);
-}
-
-.plans-sync-line-mid {
-  width: min(520px, 78%);
-}
-
 .plans-dashboard-card > * {
   position: relative;
   z-index: 1;
@@ -7203,7 +7215,7 @@ button.mobile-step-rail-item {
 @keyframes injury-sheet-push {
   from {
     opacity: 0;
-    transform: translateX(28px);
+    transform: translateX(20px);
   }
   to {
     opacity: 1;

@@ -55,25 +55,3 @@ export function PlansFeaturedSkeleton() {
     </article>
   );
 }
-
-export function PlanHistoryRowSkeleton() {
-  return (
-    <article className="plan-history-row plan-history-row-card" aria-busy="true">
-      <div className="plan-history-copy" style={{ display: "grid", gap: 8 }}>
-        <Skeleton variant="text" width={120} height={11} />
-        <Skeleton variant="text" width="55%" height={20} />
-        <div style={{ display: "flex", gap: 12 }}>
-          <Skeleton variant="text" width={120} height={12} />
-          <Skeleton variant="text" width={140} height={12} />
-        </div>
-      </div>
-      <div className="plan-history-meta" style={{ display: "grid", gap: 10, justifyItems: "end" }}>
-        <Skeleton variant="block" width={92} height={24} style={{ borderRadius: 999 }} />
-        <div style={{ display: "flex", gap: 8 }}>
-          <Skeleton variant="block" width={88} height={36} style={{ borderRadius: 10 }} />
-          <Skeleton variant="block" width={88} height={36} style={{ borderRadius: 10 }} />
-        </div>
-      </div>
-    </article>
-  );
-}

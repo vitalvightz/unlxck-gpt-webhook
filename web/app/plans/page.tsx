@@ -21,7 +21,7 @@ import {
   CustomDraftRow,
 } from "@/components/plans/plan-dashboard";
 import styles from "@/components/plans/plans.module.css";
-import { PlanHistoryRowSkeleton } from "@/components/skeleton";
+import { Skeleton } from "@/components/skeleton";
 import { useToast } from "@/components/toast-provider";
 import { ApiError, getActivePlan, getToday, listCustomPlans, listPlans, setActivePlan } from "@/lib/api";
 import { describeLoadFailure } from "@/lib/connectivity";
@@ -88,27 +88,47 @@ function HeldPlansReviewNotice({ plans }: { plans: PlanSummary[] }) {
   );
 }
 
-function PlansSyncState() {
+// Loading stand-ins keep the real card and list shapes, so nothing jumps when
+// the plans arrive. Each waits 250ms before it shows (loading-reveal): most
+// loads finish first, and a card that appears for a split second is a flicker.
+function CampCardSkeleton() {
   return (
-    // Waits 250ms before it shows: most loads finish first, and a card that
-    // appears for a split second reads as a flicker.
-    <article className="list-card plans-sync-card loading-reveal" aria-busy="true">
-      <div className="plans-dashboard-card-header">
-        <div className="plans-dashboard-card-copy">
-          <p className="kicker">Unlxcking…</p>
-          <h2>Loading saved fight camps</h2>
-          <p className="muted">
-            One moment.
-          </p>
-        </div>
-        <span className="badge status-badge-neutral">Syncing</span>
+    <article className={`${styles.campCard} loading-reveal`} aria-busy="true" aria-label="Loading current camp">
+      <div className={styles.campHead}>
+        <Skeleton variant="text" width={110} height={12} />
+        <Skeleton variant="block" width={72} height={26} style={{ borderRadius: 999 }} />
       </div>
-      <div className="plans-sync-grid" aria-hidden="true">
-        <div className="plans-sync-line plans-sync-line-short" />
-        <div className="plans-sync-line" />
-        <div className="plans-sync-line plans-sync-line-mid" />
+      <Skeleton variant="text" width="48%" height={26} />
+      <div className={styles.fightRow}>
+        <div style={{ display: "grid", gap: 8 }}>
+          <Skeleton variant="text" width={84} height={11} />
+          <Skeleton variant="text" width={150} height={18} />
+        </div>
+        <div style={{ display: "grid", gap: 8, justifyItems: "end" }}>
+          <Skeleton variant="text" width={64} height={30} />
+          <Skeleton variant="text" width={84} height={11} />
+        </div>
+      </div>
+      <Skeleton variant="text" width="70%" height={14} />
+      <Skeleton variant="block" width="100%" height={52} style={{ borderRadius: 12 }} />
+      <div className={styles.quietLinks}>
+        <Skeleton variant="text" width={96} height={14} />
+        <Skeleton variant="text" width={72} height={14} />
       </div>
     </article>
+  );
+}
+
+function PlanRowSkeleton() {
+  return (
+    <li>
+      <div className={styles.row}>
+        <span className={styles.rowText} style={{ gap: 8 }}>
+          <Skeleton variant="text" width="45%" height={18} />
+          <Skeleton variant="text" width="70%" height={13} />
+        </span>
+      </div>
+    </li>
   );
 }
 
@@ -295,9 +315,14 @@ export default function PlansPage() {
 
   return (
     <RequireAuth>
-      <section className={styles.page} data-plan-workspace>
+      {/* While loading, data-route-pending keeps the fade into this page dark, so
+          a quick load reveals the finished page rather than a stand-in. */}
+      <section className={styles.page} data-plan-workspace data-route-pending={isLoading || undefined}>
         <header className={styles.pageHeader}>
-          <h1 className={`athlete-motion-slot athlete-motion-header ${styles.pageTitle}`}>{activePlan?.fight_date ? t("fightCampHeading") : t("planWorkspace")}</h1>
+          <h1 className={`athlete-motion-slot athlete-motion-header ${styles.pageTitle}`}>
+            {/* The heading depends on the active plan: hold its space, never guess. */}
+            {isLoading ? <Skeleton variant="text" width="6em" height="0.9em" /> : activePlan?.fight_date ? t("fightCampHeading") : t("planWorkspace")}
+          </h1>
           <p className={styles.pageSubtitle}>Follow and manage your training.</p>
         </header>
 
@@ -319,7 +344,7 @@ export default function PlansPage() {
 
         <div className="athlete-motion-slot athlete-motion-main">
           {isPlanListLoading ? (
-            <PlansSyncState />
+            <CampCardSkeleton />
           ) : (
             <CurrentCampCard
               plan={activePlan}
@@ -341,10 +366,11 @@ export default function PlansPage() {
               <h2 className={styles.sectionTitle}>{t("previousPlans")}</h2>
               <span className={styles.sectionMeta}>{t("loading")}</span>
             </div>
-            <div className="plan-history-list plans-history-list loading-reveal">
-              <PlanHistoryRowSkeleton />
-              <PlanHistoryRowSkeleton />
-            </div>
+            <ul className={`${styles.rows} loading-reveal`}>
+              <PlanRowSkeleton />
+              <PlanRowSkeleton />
+              <PlanRowSkeleton />
+            </ul>
           </div>
         ) : null}
 
