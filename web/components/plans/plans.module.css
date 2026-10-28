@@ -1,5 +1,4 @@
-/* Plans tab: the current camp at a glance, saved plans as compact rows, and the
-   athlete profile as one line. Management lives in a sheet, not on the page. */
+/* Plans tab: active plan first, saved plans next, supporting tools last. */
 
 .page {
   display: grid;
@@ -20,8 +19,8 @@
 /* -- Current camp ----------------------------------------------------------- */
 .campCard {
   display: grid;
-  gap: 16px;
-  padding: 20px;
+  gap: 10px;
+  padding: 16px;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-card);
   background: var(--bg-panel);
@@ -59,9 +58,10 @@
 }
 
 .campTitle {
-  margin: -6px 0 0;
+  margin: 0;
   font-size: var(--type-title-md);
   line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .fightRow {
@@ -74,8 +74,7 @@
 }
 
 .factLabel,
-.facts dt,
-.campFacts dt {
+.facts dt {
   margin: 0;
   color: var(--text-secondary);
   font-family: var(--font-mono);
@@ -103,20 +102,22 @@
   font-variant-numeric: tabular-nums;
 }
 
-.campFacts {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin: 0;
-}
-
-.campFacts dd,
-.facts dd {
-  margin: 4px 0 0;
-  font-size: var(--type-body);
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
+.campSummary { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; color: var(--text-secondary); }
+.campSummary > div { display: inline-flex; gap: 6px; min-width: 0; }
+.campSummary dt { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.campSummary dd { margin: 0; font-size: var(--type-body-sm); overflow-wrap: anywhere; }
+.campSummary > div + div::before { content: "·"; }
+.facts dd { margin: 4px 0 0; font-size: var(--type-body); font-weight: 600; overflow-wrap: anywhere; }
+.tools { display: grid; gap: 12px; padding-top: 16px; border-top: 1px solid var(--border-subtle); }
+.shortcuts > div { min-width: 0; }
+.shortcuts button[aria-label="Log session"],
+.shortcuts > a { min-height: 64px; padding: 12px; align-items: center; background: var(--bg-panel); border-color: var(--border-default); }
+.shortcuts button[aria-label="Log session"] strong,
+.shortcuts > a strong { font-size: var(--type-body-sm); }
+.shortcuts button[aria-label="Log session"] strong + span,
+.shortcuts > a strong + span,
+.shortcuts > a > svg,
+.shortcuts button[aria-label="Log session"] > svg { display: none; }
 
 .primaryAction {
   display: flex;
@@ -340,10 +341,4 @@
 
 .inlineForm label {
   font-weight: 600;
-}
-
-@media (max-width: 380px) {
-  .campFacts {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }

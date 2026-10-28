@@ -32,9 +32,8 @@ import type { MeResponse, PlanRequest, PlanSummary, ProfileRecord } from "@/lib/
 
 import styles from "./plans.module.css";
 
-// The Plans tab: the current camp at a glance, saved plans as compact rows,
-// and the athlete profile as one line. Managing a plan (make active, rename,
-// archive) happens in its sheet, never on the page itself.
+// The Plans tab: the active plan and compact saved rows.
+// Plan management (make active, rename, archive) lives in its sheet.
 
 type SummaryLine = {
   label: string;
@@ -531,7 +530,7 @@ export function CurrentCampCard({
           ) : null}
         </div>
       ) : null}
-      <dl className={styles.campFacts}>
+      <dl className={styles.campSummary}>
         {facts.map((fact) => (
           <div key={fact.label}>
             <dt>{fact.label}</dt>

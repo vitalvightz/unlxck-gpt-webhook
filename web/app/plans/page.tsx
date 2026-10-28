@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { MyCommunitySubmissions } from "@/components/community-exercises";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -12,10 +11,8 @@ import { LogTraining } from "@/components/log-training";
 import { useAppSession } from "@/components/auth-provider";
 import { useOnReconnect } from "@/components/connection-status-banner";
 import { TrainingLibraryLink } from "@/components/training-library-link";
-import { FeaturedDrill } from "@/components/featured-drill";
 import actionStyles from "@/components/training-action-tile.module.css";
 import {
-  AthleteProfileRow,
   canSetActive,
   CurrentCampCard,
   getIntakeSource,
@@ -119,7 +116,7 @@ export default function PlansPage() {
   const t = useTranslations("Workspace");
   const router = useRouter();
   const { showToast } = useToast();
-  const { isMeHydrated, me, session } = useAppSession();
+  const { me, session } = useAppSession();
   const [customDrafts, setCustomDrafts] = useState<CustomPlan[]>([]);
   const [customError, setCustomError] = useState<string | null>(null);
   const [plans, setPlans] = useState<PlanSummary[]>([]);
@@ -295,19 +292,14 @@ export default function PlansPage() {
   }
 
   const isPlanListLoading = isLoading;
-  const isProfileLoading = !isMeHydrated;
 
   return (
     <RequireAuth>
-      <section className={styles.page}>
+      <section className={styles.page} data-plan-workspace>
         <header className={styles.pageHeader}>
           <h1 className={`athlete-motion-slot athlete-motion-header ${styles.pageTitle}`}>{activePlan?.fight_date ? t("fightCampHeading") : t("planWorkspace")}</h1>
           <p className={styles.pageSubtitle}>Follow and manage your training.</p>
         </header>
-        <div className={actionStyles.actions}>
-          <LogTraining accessToken={session?.access_token ?? null} variant="tile" />
-          <TrainingLibraryLink variant="tile" />
-        </div>
 
         {error ? (
           <div className="error-banner athlete-motion-slot athlete-motion-status" role="alert">
@@ -325,10 +317,6 @@ export default function PlansPage() {
           </div>
         ) : null}
 
-        {!isLoading && heldForReviewPlans.length > 0 ? (
-          <HeldPlansReviewNotice plans={heldForReviewPlans} />
-        ) : null}
-
         <div className="athlete-motion-slot athlete-motion-main">
           {isPlanListLoading ? (
             <PlansSyncState />
@@ -342,6 +330,10 @@ export default function PlansPage() {
             />
           )}
         </div>
+
+        {!isLoading && heldForReviewPlans.length > 0 ? (
+          <HeldPlansReviewNotice plans={heldForReviewPlans} />
+        ) : null}
 
         {isLoading ? (
           <div className={`athlete-motion-slot athlete-motion-main ${styles.section}`} aria-busy="true">
@@ -416,18 +408,13 @@ export default function PlansPage() {
           </section>
         ) : null}
 
-        <div className={`athlete-motion-slot athlete-motion-main ${styles.section}`}>
-          {isProfileLoading ? null : <AthleteProfileRow me={me} />}
-        </div>
-
-        <FeaturedDrill accessToken={session?.access_token ?? null} />
-
-        {/* Occasional, contributor-only: lives at the end instead of above the daily actions. */}
-        {session?.access_token ? (
-          <section aria-label="Community submissions" className={styles.section}>
-            <MyCommunitySubmissions token={session.access_token} />
-          </section>
-        ) : null}
+        <section className={styles.tools} aria-label="Training tools">
+          <h2 className={styles.sectionTitle}>Training tools</h2>
+          <div className={`${actionStyles.actions} ${styles.shortcuts}`}>
+            <LogTraining accessToken={session?.access_token ?? null} variant="tile" />
+            <TrainingLibraryLink variant="tile" />
+          </div>
+        </section>
 
         {managedPlan ? (
           <PlanManageSheet

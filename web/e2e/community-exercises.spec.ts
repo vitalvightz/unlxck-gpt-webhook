@@ -154,7 +154,7 @@ test('Reject and request changes use visible, reason-gated confirmation sheets',
 test('Unsaved-plan submissions can be corrected from My submissions',async({page,baseURL})=>{
   await setup(page,baseURL!);
   const actions=await mockCommunity(page,entry('changes_requested'));
-  await page.goto('/plans');
+  await page.goto('/plans/library');
   await page.getByRole('button',{name:'My submissions',exact:true}).click();
   await expect(page.getByText('My defensive drill',{exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Manage',exact:true}).click();

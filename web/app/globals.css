@@ -22705,3 +22705,6 @@ fieldset.priority-clarification-options,
 .ex-log-details { min-width: 0; }
 .ex-log-details > summary { min-height: 44px; align-content: center; color: var(--text-muted); font-size: 13px; cursor: pointer; }
 .ex-log-details > summary[hidden] { display: none; }
+
+/* Plan management has no prescriptions; safety guidance stays in training flows. */
+.app-content:has([data-plan-workspace]) > .app-safety-footer { display: none; }
