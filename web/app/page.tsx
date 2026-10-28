@@ -243,22 +243,20 @@ function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watc
 // Staggers the landing entrance: each element fades up after its own delay.
 const riseDelay = (ms: number) => ({ "--rise-delay": `${ms}ms` }) as CSSProperties;
 
-// Line icons for the three landing benefits: build (stacked blocks), adapt
-// (sliders), track (rising chart). Decorative; the headings carry the meaning.
+// Line icons for the three landing benefits: build (calendar), adapt
+// (sliders), track (bar chart). Decorative; the headings carry the meaning.
 const LANDING_BENEFIT_ICONS: ReactNode[] = [
   <svg key="build" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 3 3 7.5l9 4.5 9-4.5L12 3Z" />
-    <path d="m3 12 9 4.5 9-4.5" />
-    <path d="m3 16.5 9 4.5 9-4.5" />
+    <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
+    <path d="M3.5 10h17M8 3v4M16 3v4" />
+    <path d="M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01" strokeWidth="2.2" />
   </svg>,
   <svg key="adapt" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-    <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
-    <circle cx="16" cy="7" r="2" />
-    <circle cx="8" cy="17" r="2" />
+    <path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1" />
+    <path d="M15 4v4M9 10v4M17 16v4" />
   </svg>,
-  <svg key="track" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 20V4M4 20h16" />
-    <path d="m8 15 4-4 3 3 5-6" />
+  <svg key="track" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <path d="M7 19v-5M12 19V9M17 19V5" />
   </svg>,
 ];
 
@@ -841,19 +839,21 @@ export default function HomePage() {
         </article>
       </section>
 
-      <section className="public-flex" aria-labelledby="public-flex-heading">
-        <div className="public-section-head public-reveal">
+      <section className="public-flex public-reveal" aria-labelledby="public-flex-heading">
+        <div className="public-section-head">
           <p className="kicker">{publicT("flexKicker")}</p>
           <h2 id="public-flex-heading">{publicT("flexTitle")}</h2>
         </div>
         <ul className="public-flex-list">
           {landingBenefits.map((item, index) => (
-            <li key={item.title} className="public-flex-item public-reveal">
+            <li key={item.title} className="public-flex-item">
               <span className="public-flex-icon" aria-hidden="true">
                 {LANDING_BENEFIT_ICONS[index]}
               </span>
-              <h3>{item.title}</h3>
-              <p>{item.body}</p>
+              <div className="public-flex-copy">
+                <h3>{item.title}</h3>
+                <p>{item.body}</p>
+              </div>
             </li>
           ))}
         </ul>
