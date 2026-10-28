@@ -6,7 +6,7 @@ import sheet from "@/components/log-training.module.css";
 
 import { useAppSession } from "@/components/auth-provider";
 import { useToast } from "@/components/toast-provider";
-import { submitSparringLog } from "@/lib/api";
+import { submitSparringLog, trackProductEvent } from "@/lib/api";
 import { formatAppDate } from "@/lib/date-format";
 import { hasHealthDataConsent } from "@/lib/compliance";
 import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
@@ -149,6 +149,12 @@ export function SparringLogPrompt({
   const contactFloor = existing ? HEAD_CONTACT_ORDER.indexOf(existing.head_contact) : -1;
   const protectedEvidence = Boolean(existing && (existing.rocked || contactFloor > 0));
   const consented = hasHealthDataConsent(me);
+  // Optional, consent-gated: a shown new report marks a started log so an
+  // unsaved one is measurable. Corrections of a saved report are not starts.
+  const isNew = !existing;
+  useEffect(() => {
+    if (consented && isNew) void trackProductEvent(token, "sparring_log_started", "sparring");
+  }, [consented, isNew, token]);
 
   useEffect(() => {
     const element = dialog.current;

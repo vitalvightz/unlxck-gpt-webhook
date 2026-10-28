@@ -774,3 +774,55 @@ def test_completed_training_proves_linked_plan_use_but_not_a_plan_or_history_vis
     assert plan["athletes"] == 1 and plan["uses"] == 1 and plan["repeat_athletes"] == 0
     assert plan["discovered"] is None
     assert next(f for f in r["features"] if f["feature"] == "history")["uses"] is None
+
+
+@pytest.mark.parametrize(
+    "event_name,feature",
+    [("checkin_started", "recovery"), ("sparring_log_started", "sparring")],
+)
+def test_workflow_starts_are_controlled_and_never_activity(event_name, feature):
+    c, s = api_client()
+    body = dict(event_name=event_name, feature=feature, request_id=str(uuid4()))
+    assert c.post("/api/analytics/events", json=body).status_code == 202
+    assert s.client.calls[0][1]["p_event_name"] == event_name
+    assert (
+        c.post("/api/analytics/events", json={**body, "feature": "plans"}).status_code
+        == 422
+    )
+    # A start alone is not a meaningful action: the athlete stays never-active.
+    r = report(
+        [athlete()],
+        [fact("2026-10-20", action=event_name, meaningful=False, feature=feature)],
+    )
+    assert r["ever_active"] == 0 and r["active"] == 0
+
+
+def test_preference_tolerates_a_profile_without_email():
+    c, store = api_client()
+    c.app.dependency_overrides[require_profile] = lambda: SimpleNamespace(
+        athlete_id="owner", email=None
+    )
+
+    class Query:
+        def __init__(self, table):
+            self.table = table
+
+        def select(self, *_):
+            return self
+
+        def eq(self, *_):
+            return self
+
+        def limit(self, *_):
+            return self
+
+        def execute(self):
+            return SimpleNamespace(
+                data=[{"enabled": True}]
+                if self.table == "product_analytics_preferences"
+                else []
+            )
+
+    store.client.table = Query
+    response = c.get("/api/analytics/preference")
+    assert response.status_code == 200 and response.json() == {"enabled": True}

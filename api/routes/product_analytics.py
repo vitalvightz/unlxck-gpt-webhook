@@ -46,20 +46,17 @@ def build_product_analytics_router():
             .execute()
         )
         enabled = bool(result.data and result.data[0]["enabled"])
+        email = (getattr(profile, "email", None) or "").strip().lower()
         if enabled:
             internal = (
                 store.client.table("product_analytics_excluded_emails")
                 .select("email")
-                .eq("email", getattr(profile, "email", "").strip().lower())
+                .eq("email", email)
                 .limit(1)
                 .execute()
                 .data
             )
-            enabled = (
-                not internal
-                and getattr(profile, "email", "").strip().lower()
-                not in store.admin_emails
-            )
+            enabled = not internal and email not in store.admin_emails
         return {"enabled": enabled}
 
     @router.put("/api/analytics/preference")
