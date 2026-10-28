@@ -30,6 +30,8 @@ EVENT_FEATURES = {
     "nutrition_opened": "nutrition",
     "nutrition_saved": "nutrition",
     "feedback_prompt_shown": "feedback",
+    "checkin_started": "recovery",
+    "sparring_log_started": "sparring",
 }
 
 
