@@ -37,7 +37,7 @@
 
 .eyebrow {
   margin: 0;
-  color: var(--danger-ink);
+  color: var(--brand-red);
   font-family: var(--font-mono);
   font-size: var(--type-label-sm);
   font-weight: 600;
@@ -48,8 +48,8 @@
 .activePill {
   padding: 4px 10px;
   border-radius: var(--radius-pill);
-  background: var(--danger-soft);
-  color: var(--danger-ink);
+  background: var(--brand-red-soft);
+  color: var(--brand-red);
   font-family: var(--font-mono);
   font-size: var(--type-label-sm);
   font-weight: 600;
@@ -95,7 +95,7 @@
 
 .countdownValue {
   margin: 0;
-  color: var(--danger-ink);
+  color: var(--brand-red);
   font-size: 30px;
   font-weight: 700;
   line-height: 1;

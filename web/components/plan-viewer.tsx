@@ -41,6 +41,7 @@ import {
 } from "@/lib/push";
 import { QuickBuildRefinementBanner } from "@/components/quick-build-refinement-banner";
 import { ContextualFeedback } from "@/components/feedback/contextual-feedback";
+import { Skeleton } from "@/components/skeleton";
 import { StructuredPlanRenderer } from "@/components/structured-plan-renderer";
 import { ExerciseCustomisationProvider, type ExerciseCustomisation } from "@/components/exercise-customisation";
 import { patchPlanSession } from "@/lib/exercise-customisation";
@@ -55,7 +56,6 @@ import {
 } from "@/lib/plan-text-adapter";
 import { athleteFacingSessionTitle } from "@/lib/plan-labels";
 import { shouldRenderStructuredPlan } from "@/lib/structured-plan";
-import { selectInjuryRiskAdvisory } from "@/lib/sparring-advisory";
 import { explainRiskBand } from "@/lib/sparring-reason-codes";
 import {
   formatAthletePlanStatus,
@@ -1217,41 +1217,6 @@ function BlockedPlanDecisionCard({
   );
 }
 
-function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
-  // Surfaced only for advisories carrying a real injury-risk band (see
-  // selectInjuryRiskAdvisory). The directive leads; generated rationale is
-  // intentionally omitted because it is too noisy for the athlete view.
-  const directive = (advisory.replacement || advisory.suggestion || "").trim();
-  const daysLabel = (advisory.days || []).join(", ").trim();
-  const riskBandLabel = advisory.risk_band ? formatRiskBandLabel(advisory.risk_band) : null;
-  const explanation = advisory.risk_band ? explainRiskBand(advisory.risk_band) : null;
-
-  return (
-    <section
-      className={`support-panel sparring-advisory-card sparring-advisory-${advisory.action}`}
-    >
-      <div className="plan-header-row">
-        <div>
-          <p className="kicker">Sparring risk</p>
-          {daysLabel ? <h3>{daysLabel}</h3> : <h3>Hard sparring</h3>}
-        </div>
-        {riskBandLabel ? (
-          <span
-            className={`sparring-risk-chip sparring-risk-${advisory.risk_band}`}
-            aria-label={`Injury risk ${riskBandLabel}`}
-          >
-            <span className="sparring-risk-dot" aria-hidden="true" />
-            <span>Injury risk: {riskBandLabel}</span>
-            {explanation ? <WhyTooltip title={explanation.title} body={explanation.body} /> : null}
-          </span>
-        ) : null}
-      </div>
-      {directive ? <p className="sparring-advisory-suggestion">{directive}</p> : null}
-      <p className="muted sparring-advisory-disclaimer">{advisory.disclaimer}</p>
-    </section>
-  );
-}
-
 function downloadArtifact(text: string, filename: string) {
   if (!text.trim()) {
     return;
@@ -1675,7 +1640,6 @@ export function PlanViewer({
   const completedFightCamp = isCompletedFightCamp(plan.activation_state);
   // Only surface an advisory that carries a real injury-risk band; the rest just
   // restate load tweaks the plan already applied, so they are suppressed.
-  const primaryAdvisory = selectInjuryRiskAdvisory(plan.advisories);
 
   const athletePlanText = plan.outputs.plan_text.trim();
   const hasPublishedPlan = isPlanReleasedToAthlete(plan);
@@ -2608,15 +2572,15 @@ export function PlanViewer({
     ? `Block ${plan.schedule_context?.block_number ?? 1} · Week ${openWeekNumber} of 4`
     : null;
 
-  const showStatusLabel = !isCurrentActivePlan || completedFightCamp || isTriageBlocked || !hasPublishedPlan;
+  // While the active plan is still unknown, show only SYNCING: a guessed
+  // status would widen the badge and reflow the title when it resolves.
+  const checkingActivePlan = canManagePlan && !completedFightCamp && !activePlanStateResolved;
+  const showStatusLabel =
+    (activePlanStateResolved && !isCurrentActivePlan) || completedFightCamp || isTriageBlocked || !hasPublishedPlan;
   // At most one primary action sits under the hero; everything secondary
   // (All plans, Edit Plan, Rename, Archive…) lives in the ••• menu.
   const heroPrimaryAction =
-    canManagePlan && !completedFightCamp && !activePlanStateResolved ? (
-      <button type="button" className="cta" disabled>
-        Checking plan state…
-      </button>
-    ) : canManagePlan && isCurrentActivePlan && !nextSessionAction ? (
+    canManagePlan && isCurrentActivePlan && !nextSessionAction ? (
       <Link href="/today" className="cta">
         Open Today
       </Link>
@@ -2804,8 +2768,21 @@ export function PlanViewer({
           </div>
         ) : null}
 
+        {/* Hold the next session's space while the active plan resolves, then
+            slide the real session in rather than swapping a button for it. */}
+        {checkingActivePlan ? (
+          <div className="plan-next-session-pending" role="status" aria-label="Checking plan state">
+            <div className="plan-next-session-copy">
+              <Skeleton variant="text" width={84} height={10} />
+              <Skeleton variant="text" width="58%" height={18} />
+              <Skeleton variant="text" width="44%" height={12} />
+            </div>
+            <Skeleton variant="block" width={96} height={44} style={{ borderRadius: 12 }} />
+          </div>
+        ) : null}
+
         {isCurrentActivePlan && nextSessionAction ? (
-          <div className="plan-next-session" role="region" aria-label={nextSessionRelation}>
+          <div className="plan-next-session plan-hero-arrive" role="region" aria-label={nextSessionRelation}>
             <div className="plan-next-session-copy">
               <p className="label">{nextSessionRelation}</p>
               <h2>{nextSessionTitle}</h2>
@@ -2818,7 +2795,7 @@ export function PlanViewer({
         ) : null}
 
         {heroPrimaryAction ? (
-          <div className="plan-summary-actions plan-detail-actions">{heroPrimaryAction}</div>
+          <div className="plan-summary-actions plan-detail-actions plan-hero-arrive">{heroPrimaryAction}</div>
         ) : null}
         {planActionMessage ? <div className="success-banner">{planActionMessage}</div> : null}
         {planActionError ? <div className="error-banner">{planActionError}</div> : null}
@@ -2971,8 +2948,6 @@ export function PlanViewer({
               ) : null}
             </div>
           ) : null}
-
-          {primaryAdvisory ? <SparringAdvisoryCard advisory={primaryAdvisory} /> : null}
 
           {isTriageBlocked && injuryTriage ? (
             <BlockedPlanDecisionCard
