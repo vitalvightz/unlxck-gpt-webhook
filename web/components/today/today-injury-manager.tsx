@@ -44,6 +44,7 @@ import type {
   TodayInjuryDeclaration,
   TodayCommandView,
 } from "@/lib/types";
+import { XP_TOAST_KEYS } from "@/lib/xp-events";
 
 const INJURY_STATUS_ACTIONS: Array<{ value: TodayInjuryCheckinStatus; label: string }> = [
   { value: "improving", label: "Better" },
@@ -581,7 +582,7 @@ export function TodayInjuryManager({
       setNewZone("");
       setAddMissing(null);
       setIsAddFormOpen(false);
-      showToast(editingFlagId ? "Injury updated." : "Injury added.", { tone: "success" });
+      showToast(editingFlagId ? "Injury updated." : "Injury added.", { tone: "success", mergeKeys: XP_TOAST_KEYS.injury });
       setEditingFlagId(null);
       // A skin injury is routed by what the skin is doing, so ask the five
       // surface questions immediately instead of waiting for a later easing /

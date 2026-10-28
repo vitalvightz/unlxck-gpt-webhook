@@ -17255,6 +17255,8 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
   gap: 10px;
   width: min(360px, calc(100vw - var(--safe-area-left) - var(--safe-area-right) - 32px));
   pointer-events: none;
+  /* Toasts slide in from (and back out toward) the edge they sit on. */
+  --toast-shift: -10px;
 }
 
 .toast {
@@ -17271,7 +17273,12 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
   color: var(--text-primary);
   font-size: 14px;
   line-height: 1.4;
-  animation: toast-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: toast-in 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast.is-leaving {
+  pointer-events: none;
+  animation: toast-out 220ms cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
 .toast-dot {
@@ -17302,6 +17309,13 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
 
 .toast-message {
   min-width: 0;
+}
+
+.toast-suffix {
+  color: var(--progress-gold);
+  font-weight: 600;
+  white-space: nowrap;
+  animation: toast-suffix-in 360ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .toast-action {
@@ -17344,11 +17358,49 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(var(--toast-shift)) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(var(--toast-shift)) scale(0.98);
+  }
+}
+
+@keyframes toast-suffix-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes toast-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes toast-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
   }
 }
 
@@ -17359,11 +17411,20 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
     bottom: calc(var(--mobile-tab-bar-clearance) + 12px);
     left: 12px;
     width: auto;
+    --toast-shift: 10px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .toast {
+    animation: toast-fade-in 200ms ease-out;
+  }
+
+  .toast.is-leaving {
+    animation: toast-fade-out 220ms ease-in forwards;
+  }
+
+  .toast-suffix {
     animation: none;
   }
 }
