@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ActionLink } from "@/components/action-link";
 import { useRouter } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { type CSSProperties, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
@@ -12,6 +12,8 @@ import { getAuthenticatedLandingHref, needsStartingPath } from "@/lib/auth-routi
 import { EmptyState } from "@/components/empty-state";
 import { FightCountdown } from "@/components/fight-countdown";
 import { InstallUnlxck } from "@/components/install-unlxck";
+import { LandingPreviewCard } from "@/components/landing-preview-card";
+import { LandingStickyCta } from "@/components/landing-sticky-cta";
 import { UnlockGlitchText } from "@/components/unlock-glitch-text";
 import { PlansFeaturedSkeleton, Skeleton } from "@/components/skeleton";
 import { XpProgressCard, XpProgressCardSkeleton } from "@/components/xp-progress-card";
@@ -20,6 +22,7 @@ import { useXp } from "@/components/xp-provider";
 import { getPlan, getToday, getTrainingHistory } from "@/lib/api";
 import { describeLoadFailure } from "@/lib/connectivity";
 import { SHARED_READ_MAX_AGE_MS } from "@/lib/shared-reads";
+import { useInView } from "@/lib/use-in-view";
 import { hasHealthDataConsent } from "@/lib/compliance";
 import { getTrackingHome } from "@/lib/tracking-home";
 import type { TrainingHistorySession } from "@/lib/training-history";
@@ -246,37 +249,41 @@ const riseDelay = (ms: number) => ({ "--rise-delay": `${ms}ms` }) as CSSProperti
 
 // Line icons for the three landing benefits: build (calendar), adapt
 // (sliders), track (bar chart). Decorative; the headings carry the meaning.
+// Their parts carry classes so each draws in once when the list is seen.
 const LANDING_BENEFIT_ICONS: ReactNode[] = [
   <svg key="build" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
-    <path d="M3.5 10h17M8 3v4M16 3v4" />
-    <path d="M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01" strokeWidth="2.2" />
+    <rect className="icon-draw" pathLength={1} x="3.5" y="5" width="17" height="15" rx="2.5" />
+    <path className="icon-draw" pathLength={1} d="M3.5 10h17M8 3v4M16 3v4" />
+    <path className="icon-fade" d="M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01" strokeWidth="2.2" />
   </svg>,
   <svg key="adapt" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-    <path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1" />
-    <path d="M15 4v4M9 10v4M17 16v4" />
+    <path d="M4 6h16M4 12h16M4 18h16" opacity="0.45" />
+    <path className="icon-knob icon-knob-1" d="M15 4v4" />
+    <path className="icon-knob icon-knob-2" d="M9 10v4" />
+    <path className="icon-knob icon-knob-3" d="M17 16v4" />
   </svg>,
   <svg key="track" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <path d="M7 19v-5M12 19V9M17 19V5" />
+    <path className="icon-bar icon-bar-1" d="M7 19v-5" />
+    <path className="icon-bar icon-bar-2" d="M12 19V9" />
+    <path className="icon-bar icon-bar-3" d="M17 19V5" />
   </svg>,
 ];
 
 export default function HomePage() {
   const publicT = useTranslations("PublicHome");
-  const locale = useLocale();
-  // Minutes are formatted by Intl, so the example session reads naturally in
-  // every locale without a translated "min" string per dose.
-  const formatMinutes = (minutes: number) =>
-    new Intl.NumberFormat(locale, { style: "unit", unit: "minute", unitDisplay: "short" }).format(minutes);
-  const landingPreviewBlocks = [
-    { name: publicT("exHeavyBag"), sets: 4, minutes: 3, change: "down" as const, tag: publicT("tagReduced") },
-    { name: publicT("exReaction"), sets: 3, minutes: 2, change: "up" as const, tag: publicT("tagAdded") },
-    { name: publicT("exShadow"), sets: 3, minutes: 3, change: null, tag: publicT("tagUnchanged") },
-  ];
   const landingBenefits = [1, 2, 3].map((index) => ({
     title: publicT(`benefit${index}Title`),
     body: publicT(`benefit${index}Body`),
   }));
+  // Landing motion: the sticky phone CTA shows only while neither Get started
+  // is on screen, and the benefit icons animate once when the list is seen.
+  const [heroCtaRef, heroCtaInView] = useInView<HTMLDivElement>();
+  const [finalCtaRef, finalCtaInView] = useInView<HTMLElement>();
+  const [benefitsRef, benefitsSeen] = useInView<HTMLUListElement>({ threshold: 0.4, once: true });
+  const heroLine2 = publicT("heroLine2");
+  // English "Lxcked in." glitches its X once, echoing the motto; other
+  // locales' lines have no X and render plainly.
+  const heroX = heroLine2.indexOf("x");
   const { isReady, isMeHydrated, hasTransientMeError, session, me, signOut, refreshMe } = useAppSession();
   const router = useRouter();
   const [commandState, setCommandState] = useState<TodayCommandView | null>(null);
@@ -777,8 +784,7 @@ export default function HomePage() {
       <section className="public-hero" aria-labelledby="public-hero-heading">
         <p className="public-hero-motto public-rise" style={riseDelay(0)}>
           <span className="sr-only">UNLXCK {publicT("mottoTagline")}</span>
-          <UnlockGlitchText text="UNLXCK" className="public-hero-motto-brand" delayMs={150} />
-          <UnlockGlitchText text={publicT("mottoTagline")} className="public-hero-motto-tagline" delayMs={450} />
+          <UnlockGlitchText text={`UNLXCK ${publicT("mottoTagline")}`} accentLength={6} delayMs={150} durationMs={1100} />
         </p>
         <h1
           id="public-hero-heading"
@@ -787,12 +793,24 @@ export default function HomePage() {
           aria-label={publicT("heroTitle")}
         >
           <span>{publicT("heroLine1")}</span>
-          <span>{publicT("heroLine2")}</span>
+          <span>
+            {heroX < 0 ? (
+              heroLine2
+            ) : (
+              <>
+                {heroLine2.slice(0, heroX)}
+                <span className="public-hero-x" data-char={heroLine2[heroX]}>
+                  {heroLine2[heroX]}
+                </span>
+                {heroLine2.slice(heroX + 1)}
+              </>
+            )}
+          </span>
         </h1>
         <p className="public-hero-lead public-rise" style={riseDelay(140)}>
           {publicT("lead")}
         </p>
-        <div className="public-hero-actions public-rise" style={riseDelay(210)}>
+        <div ref={heroCtaRef} className="public-hero-actions public-rise" style={riseDelay(210)}>
           {getStartedLink}
         </div>
       </section>
@@ -802,43 +820,7 @@ export default function HomePage() {
           <p className="kicker">{publicT("previewKicker")}</p>
           <h2 id="public-preview-heading">{publicT("previewTitle")}</h2>
         </div>
-        <article
-          className="public-today-card public-rise"
-          style={riseDelay(330)}
-          aria-label={publicT("previewCardLabel")}
-        >
-          <header className="public-today-head">
-            <p className="public-today-eyebrow">{publicT("todaySession")}</p>
-            <span className="public-today-example">{publicT("example")}</span>
-          </header>
-          <p className="public-today-title">{publicT("sessionTitle")}</p>
-          <p className="public-today-meta">
-            {publicT("sessionSport")} · ~{formatMinutes(50)} · {publicT("previewPlan")}
-          </p>
-          <p className="public-today-decision-row">
-            <span className="public-today-decision">{publicT("decision")}</span>
-            <span className="public-today-reason">{publicT("reasonText")}</span>
-          </p>
-          <ol className="public-today-blocks">
-            {landingPreviewBlocks.map((block, index) => (
-              <li
-                key={block.name}
-                className="public-today-block-row"
-                data-change={block.change ?? undefined}
-                style={{ "--tag-delay": `${900 + index * 140}ms` } as CSSProperties}
-              >
-                <span className="public-today-block-glyph" aria-hidden="true">
-                  {block.change === "up" ? "↑" : block.change === "down" ? "↓" : "·"}
-                </span>
-                <span className="public-today-block-name">{block.name}</span>
-                <span className="public-today-block-tag">{block.tag}</span>
-                <span className="public-today-block-dose">
-                  {block.sets} × {formatMinutes(block.minutes)}
-                </span>
-              </li>
-            ))}
-          </ol>
-        </article>
+        <LandingPreviewCard className="public-rise" style={riseDelay(330)} />
       </section>
 
       <section className="public-flex public-reveal" aria-labelledby="public-flex-heading">
@@ -846,7 +828,7 @@ export default function HomePage() {
           <p className="kicker">{publicT("flexKicker")}</p>
           <h2 id="public-flex-heading">{publicT("flexTitle")}</h2>
         </div>
-        <ul className="public-flex-list">
+        <ul ref={benefitsRef} className="public-flex-list" data-seen={benefitsSeen === true}>
           {landingBenefits.map((item, index) => (
             <li key={item.title} className="public-flex-item">
               <span className="public-flex-icon" aria-hidden="true">
@@ -861,10 +843,12 @@ export default function HomePage() {
         </ul>
       </section>
 
-      <section className="public-final-cta public-reveal" aria-labelledby="public-final-cta-heading">
+      <section ref={finalCtaRef} className="public-final-cta public-reveal" aria-labelledby="public-final-cta-heading">
         <h2 id="public-final-cta-heading">{publicT("finalTitle")}</h2>
         {getStartedLink}
       </section>
+
+      <LandingStickyCta label={publicT("getStarted")} visible={heroCtaInView === false && finalCtaInView === false} />
     </div>
   );
 }

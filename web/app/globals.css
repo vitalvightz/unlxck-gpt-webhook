@@ -10325,6 +10325,29 @@ html[data-theme="light"] .today-injury-other-warning {
   outline-offset: 2px;
 }
 
+/* Scroll progress: a red hairline along the bar's bottom edge that fills as
+   the page scrolls. Scroll-linked, so it only moves when the reader does;
+   browsers without scroll timelines simply don't show it. */
+@supports (animation-timeline: scroll()) {
+  .brand-topbar::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    height: 1px;
+    background: var(--brand-red);
+    transform: scaleX(0);
+    transform-origin: left;
+    animation: brand-topbar-progress linear both;
+    animation-timeline: scroll(root);
+  }
+}
+
+@keyframes brand-topbar-progress {
+  to { transform: scaleX(1); }
+}
+
 /* Clear the bar on the landing only; auth routes keep their own spacing. */
 .app-shell:has(> .brand-topbar) .app-main {
   padding-top: calc(var(--safe-area-top) + 64px + var(--space-5));
