@@ -82,8 +82,16 @@ export function TodayDecisionPanel({
     return !(name.length > 3 && detailText.includes(name));
   });
   const contextLabels = clean(isPreview || isSafetyNotice ? undefined : context);
-  const checks = (isPreview ? [] : (safetyChecks ?? [])).filter(
-    (check) => check.label?.trim() && check.result_label?.trim(),
+  const safetyRows = (isPreview ? [] : (safetyChecks ?? [])).filter(
+    (check, index, all) => check.code?.trim() && check.label?.trim() &&
+      check.result_label?.trim() && SAFETY_RESULTS.has(check.result) &&
+      // Incomplete payloads prove nothing. If duplicate evidence conflicts,
+      // keep the restriction and omit the clearance rather than showing both.
+      !(check.result === "no_session_change" && all.some(
+        (other) => other.code === check.code && other.result !== check.result,
+      )) && !all.slice(0, index).some(
+        (other) => other.code === check.code && other.result === check.result,
+      ),
   ).filter((check) => !isSafetyNotice || check.code === "surface_injury");
   const usedSources = clean(
     isCompactPreview
@@ -94,6 +102,16 @@ export function TodayDecisionPanel({
         ? ["your tracked injuries"]
         : sources,
   );
+  // Only structured engine results can describe an assessed check. Contributor
+  // labels and source coverage are not a complete record of check-in answers.
+  const checks: CheckedRow[] = [
+    ...safetyRows.map((check) => ({
+      code: check.code,
+      label: check.label,
+      result_label: check.result_label,
+      clear: check.result === "no_session_change",
+    })),
+  ];
   const note = isPreview || isSafetyNotice ? "" : (confidenceNote ?? "").trim();
   const hasEvidence =
     triggerLabels.length > 0 ||
@@ -160,7 +178,9 @@ export function TodayDecisionPanel({
               <dd>
                 <ul className="today-decision-values">
                   {checks.map((check) => (
-                    <li key={check.code}>{`${check.label}: ${check.result_label}`}</li>
+                    <li key={check.code} data-result={check.clear ? "clear" : "flag"}>
+                      {`${check.label}: ${check.result_label}`}
+                    </li>
                   ))}
                 </ul>
               </dd>
@@ -199,6 +219,13 @@ export function TodayDecisionPanel({
     </div>
   );
 }
+
+type CheckedRow = { code: string; label: string; result_label: string; clear: boolean };
+
+const SAFETY_RESULTS = new Set<TodaySafetyCheck["result"]>([
+  "no_session_change", "local_protection_only", "no_contact",
+  "direct_impact_removed", "multiple_restrictions", "medical_review",
+]);
 
 /** "Keep it controlled: skip sparring, …" reads as a short title over the
  * specifics. Only a short lead splits; anything else stays one sentence. */

@@ -7743,7 +7743,7 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
   position: relative;
   overflow: hidden;
   margin: 0 0 12px;
-  padding: 20px 22px 0;
+  padding: 14px 16px 0;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 16px;
   background:
@@ -7777,7 +7777,8 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
 }
 
 .today-decision-banner[data-current-guidance="true"] {
-  padding-bottom: 14px;
+  padding-bottom: 6px;
+  margin-bottom: 0;
 }
 
 .today-decision-banner[data-current-guidance="true"] .today-decision-heading {
@@ -7793,7 +7794,7 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
 }
 
 .today-decision-banner[data-current-guidance="true"] .today-decision-action {
-  margin-top: 12px;
+  margin-top: 8px;
   font-size: clamp(16px, 1.5vw, 18px);
 }
 
@@ -7810,7 +7811,7 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
 }
 
 .today-decision-banner[data-current-guidance="true"] .today-decision-disclosure {
-  margin-top: 10px;
+  margin-top: 4px;
 }
 
 .today-decision-banner[data-current-guidance="true"] .today-decision-disclosure summary {
@@ -8005,6 +8006,25 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* Checked rows carry their outcome: a tick for clear, a mark for a flag. */
+.today-decision-values li[data-result]::before {
+  display: inline-block;
+  width: 14px;
+  margin-right: 6px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.today-decision-values li[data-result="clear"]::before {
+  content: "✓";
+  color: var(--success-ink);
+}
+
+.today-decision-values li[data-result="flag"]::before {
+  content: "!";
+  color: var(--progress-gold);
 }
 
 .today-decision-inputs {
@@ -8680,6 +8700,7 @@ html[data-theme="light"] .today-terminal-status {
    .cta or .secondary-button elsewhere can carry dynamic text, and that would
    rather wrap than overflow its container. */
 .today-injury-card .today-segment,
+.today-injury-add .today-segment,
 .today-checkin-form .today-segment {
   white-space: nowrap;
 }
@@ -9067,12 +9088,8 @@ html[data-theme="light"] .today-injury-other-warning {
   height: 8px;
   border-right: 2px solid currentColor;
   border-bottom: 2px solid currentColor;
-  transform: rotate(45deg) translate(-2px, 2px);
-  transition: transform var(--transition-fast);
-}
-
-.today-injury-add-trigger[aria-expanded="true"] .today-injury-add-chevron {
-  transform: rotate(225deg) translate(-2px, 2px);
+  /* Points right: the trigger opens a sheet rather than expanding in place. */
+  transform: rotate(-45deg);
 }
 
 .today-injury-add-toolbar {
@@ -9082,20 +9099,30 @@ html[data-theme="light"] .today-injury-other-warning {
   gap: 12px;
 }
 
-.today-injury-add-title {
-  margin: 0 0 11px;
-  color: var(--text-primary);
-  font-weight: 600;
-  scroll-margin-top: calc(var(--mobile-nav-clearance, 96px) + 16px);
-}
-
-.today-injury-add-title:focus {
-  outline: none;
-}
-
 .today-injury-add .body-map-panel {
   width: 100%;
   margin-inline: auto;
+}
+
+/* The add / edit form lives in its own sheet, so the body map gets the full
+   width of the panel rather than the inset of the injury card. */
+.today-injury-add-sheet .today-injury-add {
+  margin: 0;
+  padding: 16px 20px 20px;
+}
+
+.today-injury-add-sheet .injury-sheet-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding-bottom: 8px;
+  background: var(--bg-panel);
+}
+
+@media (max-width: 600px) {
+  .today-injury-add-sheet .today-injury-add {
+    padding: 12px 16px max(16px, env(safe-area-inset-bottom));
+  }
 }
 
 .today-injury-map-control {
@@ -9603,10 +9630,6 @@ html[data-theme="light"] .today-injury-other-warning {
     transition: none;
   }
 
-  .today-injury-add-chevron {
-    transition: none;
-  }
-
   .today-readiness-strip a:hover::after,
   .today-readiness-strip a:focus-visible::after {
     transform: none;
@@ -9917,10 +9940,6 @@ html[data-theme="light"] .today-injury-other-warning {
     align-items: stretch;
     flex-direction: column;
     gap: 8px;
-  }
-
-  .today-injury-add-title {
-    margin-bottom: 0;
   }
 
   .today-readiness-strip dd {
@@ -21677,16 +21696,24 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   }
 }
 
-/* Today feedback trails the full session at the end of the page flow — spacing
-   comes from normal document flow, not absolute/sticky positioning. */
+/* Today feedback sits under the guidance it asks about, inside the command
+   card — spacing comes from normal document flow, not absolute/sticky
+   positioning. */
 .today-feedback-card {
-  margin-top: 24px;
+  margin-top: 0;
 }
 
-@media (max-width: 768px) {
-  .today-feedback-card {
-    margin-top: 20px;
-  }
+.today-feedback-disclosure > summary {
+  min-height: 44px;
+  align-content: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.today-feedback-disclosure > summary:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 2px;
 }
 
 .feedback-question {

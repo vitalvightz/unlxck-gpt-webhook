@@ -10,6 +10,7 @@ import {
 } from "@/components/body-map";
 import { AutoHeight } from "@/components/today/auto-height";
 import { Collapse } from "@/components/today/collapse";
+import { InjuryDetailSheet } from "@/components/today/injury-detail-sheet";
 import { EffectiveClinicianClearanceStatus, InjuryCareStatus, InjuryClearance } from "@/components/today/injury-care-status";
 import { RehabStageMeter, rehabStageLabel } from "@/components/today/rehab-progress-status";
 import { SegmentGroup } from "@/components/today/segment-group";
@@ -365,7 +366,6 @@ export function TodayInjuryManager({
   const addErrorId = useId();
   const impactGroupRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
-  const editTitleRef = useRef<HTMLParagraphElement>(null);
   const newInjurySelections: BodyMapSelection[] = newArea.trim()
     ? [
         {
@@ -730,16 +730,21 @@ export function TodayInjuryManager({
                         setNewDetail(typeWord ? description.replace(new RegExp(`^${typeWord}\\.?\\s*`, "i"), "") : description);
                         setNewZone(""); setBodyMapVisible(false); setManualArea(false); setNotesOpen(false); setAddMissing(null);
                         setIsAddFormOpen(true);
-                        // The form sits below every injury card; bring it to the athlete.
-                        requestAnimationFrame(() => {
-                          editTitleRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                          editTitleRef.current?.focus({ preventScroll: true });
-                        });
                       }}>
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
                         <span className="sr-only">Edit</span>
                       </button> : null}
                     </p>
+                  ) : null}
+                  {surfaceGuidance && showSurfaceGuidance ? (
+                    <div
+                      className="today-injury-guidance"
+                      data-tone={surfaceGuidance.tone}
+                      role="note"
+                    >
+                      <span>{surfaceGuidance.label}</span>
+                      <p>{surfaceGuidance.message}</p>
+                    </div>
                   ) : null}
                   <div id={bodyId} className="today-injury-controls" hidden={!isOpen}>
                   <div className="today-injury-meta">
@@ -751,16 +756,6 @@ export function TodayInjuryManager({
                       </small>
                     </span>
                   </div>
-                  {surfaceGuidance && showSurfaceGuidance ? (
-                    <div
-                      className="today-injury-guidance"
-                      data-tone={surfaceGuidance.tone}
-                      role="note"
-                    >
-                      <span>{surfaceGuidance.label}</span>
-                      <p>{surfaceGuidance.message}</p>
-                    </div>
-                  ) : null}
                   {!isSurface && (injury.rehab_decision || injury.episode_id) ? <InjuryCareStatus rehabHref={rehabTargets[injury.id]} injury={injury} token={token} onRefresh={onRefresh} showClearance={false} summaryVisible /> : null}
                   <div className="today-injury-update-head">
                     <p className="today-field-label today-injury-status-label">{delayedPrompts.some(prompt =>
@@ -976,177 +971,185 @@ export function TodayInjuryManager({
         <p className="muted">No injuries tracked.</p>
       )}
 
+      {/* Adding or editing opens its own sheet, so the body map gets the full
+          width and Today never turns into a long form. */}
       <button
         type="button"
         className="today-risk-more today-injury-add-trigger"
-        aria-controls={addFormId}
-        aria-expanded={isAddFormOpen}
-        data-expanded={isAddFormOpen ? "true" : "false"}
+        aria-haspopup="dialog"
         onClick={() => {
-        if (editingFlagId) { clearBodyMapSelection(); setEditingFlagId(null); setIsAddFormOpen(true); }
-        else setIsAddFormOpen((current) => !current);
-      }}
+          if (editingFlagId) { clearBodyMapSelection(); setEditingFlagId(null); }
+          setIsAddFormOpen(true);
+        }}
       >
-        <span>
-          {isAddFormOpen ? "" : "+ "}
-          {openInjuries.length ? "Add another injury" : "Add injury"}
-        </span>
+        <span>+ {openInjuries.length ? "Add another injury" : "Add injury"}</span>
         <span className="today-injury-add-chevron" aria-hidden="true" />
       </button>
 
-      <form
-        id={addFormId}
-        className="today-injury-add"
-        hidden={!isAddFormOpen}
-        onSubmit={addInjury}
-      >
-        {editingFlagId ? <p ref={editTitleRef} tabIndex={-1} className="today-injury-add-title">Edit injury</p> : null}
-        {bodyMapVisible ? (
-          <div ref={mapRef}>
-            <BodyMap side={bodyMapSide} selections={newInjurySelections}
-              onZoneSelect={selectBodyMapZone} onSideChange={setBodyMapSide} />
-          </div>
-        ) : null}
-        {newArea.trim() ? (
-          <div className="today-injury-selection" aria-live="polite">
-            <span aria-hidden="true">✓</span><strong>{newArea.trim()}</strong>
-            <button type="button" onClick={() => setBodyMapVisible(true)} disabled={isAdding}>Change</button>
-            <button type="button" className="today-injury-selection-clear" onClick={clearBodyMapSelection} disabled={isAdding}>Clear</button>
-          </div>
-        ) : null}
-        <button type="button" className="gi-notes-toggle injury-manual-entry" aria-expanded={manualArea}
-          onClick={() => setManualArea((current) => !current)}>
-          {manualArea ? "Use the body map" : "Can’t find the area? Enter it manually"}
-        </button>
-        {manualArea ? <div className="field">
-          <label htmlFor="today-injury-area">
-            Affected area
-            <span className="today-field-required">Required</span>
-          </label>
-          <input
-            id="today-injury-area"
-            ref={areaInputRef}
-            value={newArea}
-            spellCheck
-            placeholder="e.g. left shoulder"
-            aria-invalid={addMissing === "area" || undefined}
-            aria-describedby={addMissing === "area" ? addErrorId : undefined}
-            onChange={(event) => {
-              const raw = event.target.value;
-              const value = limitInjuryEntryText(raw);
-              setAreaLimited(value !== raw);
-              setNewArea(value);
-              setNewZone("");
-              if (value.trim()) {
-                setAddMissing((current) => (current === "area" ? null : current));
-              } else {
+      {isAddFormOpen ? (
+        <InjuryDetailSheet
+          title={editingFlagId ? "Edit injury" : openInjuries.length ? "Add another injury" : "Add injury"}
+          busy={isAdding}
+          onClose={() => {
+            // An abandoned edit must not leave its answers behind for the next add.
+            if (editingFlagId) { clearBodyMapSelection(); setEditingFlagId(null); }
+            setIsAddFormOpen(false);
+          }}
+          panelClassName="today-injury-add-sheet"
+        >
+        <form
+          id={addFormId}
+          className="today-injury-add"
+          onSubmit={addInjury}
+        >
+          {bodyMapVisible ? (
+            <div ref={mapRef}>
+              <BodyMap side={bodyMapSide} selections={newInjurySelections}
+                onZoneSelect={selectBodyMapZone} onSideChange={setBodyMapSide} />
+            </div>
+          ) : null}
+          {newArea.trim() ? (
+            <div className="today-injury-selection" aria-live="polite">
+              <span aria-hidden="true">✓</span><strong>{newArea.trim()}</strong>
+              <button type="button" onClick={() => setBodyMapVisible(true)} disabled={isAdding}>Change</button>
+              <button type="button" className="today-injury-selection-clear" onClick={clearBodyMapSelection} disabled={isAdding}>Clear</button>
+            </div>
+          ) : null}
+          <button type="button" className="gi-notes-toggle injury-manual-entry" aria-expanded={manualArea}
+            onClick={() => setManualArea((current) => !current)}>
+            {manualArea ? "Use the body map" : "Can’t find the area? Enter it manually"}
+          </button>
+          {manualArea ? <div className="field">
+            <label htmlFor="today-injury-area">
+              Affected area
+              <span className="today-field-required">Required</span>
+            </label>
+            <input
+              id="today-injury-area"
+              ref={areaInputRef}
+              value={newArea}
+              spellCheck
+              placeholder="e.g. left shoulder"
+              aria-invalid={addMissing === "area" || undefined}
+              aria-describedby={addMissing === "area" ? addErrorId : undefined}
+              onChange={(event) => {
+                const raw = event.target.value;
+                const value = limitInjuryEntryText(raw);
+                setAreaLimited(value !== raw);
+                setNewArea(value);
                 setNewZone("");
-              }
-            }}
-          />
-          <small
-            className="today-injury-limit-hint"
-            data-limit-hit={areaLimited}
-            aria-live="polite"
-          >
-            {areaLimited
-              ? `${TODAY_INJURY_MAX_WORDS}-word limit. Extra removed`
-              : `Up to ${TODAY_INJURY_MAX_WORDS} words`}
-          </small>
-        </div> : null}
-        <div ref={typeGroupRef}>
-          <SegmentGroup
-            label="Type"
-            value={newType}
-            options={TODAY_INJURY_TYPE_OPTIONS}
-            onChange={(value) => {
-              setNewType(value);
-              if (value !== "other") setNewOtherType("");
-              setAddMissing((current) => (current === "type" ? null : current));
-            }}
-            columns={2}
-            required
-            invalid={addMissing === "type"}
-          />
-          {newType === "other" ? <TodayOtherTypePicker area={newArea.trim()} value={newOtherType}
-            onChange={setNewOtherType} onDescribe={() => { setNewOtherType(""); setNotesOpen(true); }} /> : null}
-        </div>
-        {/achilles/i.test(newArea) ? <div className="field">
-          <label htmlFor="today-achilles-site">Where is the Achilles problem?</label>
-          <select id="today-achilles-site" value={achillesSite} onChange={event => setAchillesSite(event.target.value as AchillesSite)}>
-            <option value="unknown">Not sure</option>
-            <option value="midportion">Above the heel</option>
-            <option value="insertional">Where the tendon meets the heel</option>
-          </select>
-        </div> : null}
-        {/elbow/i.test(newArea) && newOtherType === "tendonitis" ? <SegmentGroup
-          label="Where is the elbow problem?"
-          value={elbowSite}
-          options={[{ value: "lateral", label: "Outside of elbow" }, { value: "other", label: "Elsewhere" }, { value: "unknown", label: "Not sure" }]}
-          onChange={value => setElbowSite(value as ElbowSite)}
-        /> : null}
-        {/shoulder/i.test(newArea) && newOtherType === "tendonitis" ? <SegmentGroup
-          label="What shoulder problem did your clinician describe?"
-          value={shoulderScope}
-          options={[{ value: "nontraumatic_cuff", label: "Rotator cuff tendinopathy, no injury accident or tear" }, { value: "other", label: "Another problem" }, { value: "unknown", label: "Not sure" }]}
-          onChange={value => setShoulderScope(value as ShoulderScope)}
-        /> : null}
-        {/ankle/i.test(newArea) && newOtherType === "sprain" ? <SegmentGroup
-          label="What type of sprain did your clinician describe?"
-          value={ankleScope}
-          options={[{ value: "uncomplicated_lateral", label: "Uncomplicated outer ankle sprain" }, { value: "other", label: "Another type" }, { value: "unknown", label: "Not sure" }]}
-          onChange={value => setAnkleScope(value as AnkleScope)}
-        /> : null}
-        <div ref={impactGroupRef} className="injury-impact-input">
-          <SegmentGroup label="How much is it affecting you?" value={newImpact}
-            options={INJURY_IMPACT_OPTIONS.map(({ value, label }) => ({ value, label }))}
-            required invalid={addMissing === "impact"}
-            onChange={(value) => { setNewImpact(value as InjuryImpact); setAddMissing((current) => current === "impact" ? null : current); }} />
-        </div>
-        <button type="button" className="gi-notes-toggle injury-optional-note" aria-expanded={notesOpen} onClick={() => setNotesOpen((current) => !current)}>
-          {notesOpen ? "Hide optional note" : "+ Add note (optional)"}
-        </button>
-        {notesOpen ? (
-        <div className="field today-injury-detail">
-          <label htmlFor="today-injury-detail">Note (optional)</label>
-          <input
-            id="today-injury-detail"
-            value={newDetail}
-            spellCheck
-            placeholder="e.g. worse when sprinting"
-            onChange={(event) => {
-              const raw = event.target.value;
-              setDetailLimited(isInjuryEntryLimited(raw));
-              setNewDetail(limitInjuryEntryText(raw));
-            }}
-          />
-          <small
-            className="today-injury-limit-hint"
-            data-limit-hit={detailLimited}
-            aria-live="polite"
-          >
-            {detailLimited
-              ? `${TODAY_INJURY_MAX_WORDS}-word limit. Extra removed`
-              : `Up to ${TODAY_INJURY_MAX_WORDS} words`}
-          </small>
-        </div>
-        ) : null}
-        {addMissing ? (
-          <p id={addErrorId} className="today-inline-error" role="alert">
-            {addMissing === "area"
-              ? "Say where it is first. Tap an area or enter it manually."
-              : addMissing === "impact" ? "Choose how much it is affecting your training."
-              : "Pick a type first. If none of these fit, tap “Other”."}
-          </p>
-        ) : null}
-        {/* Deliberately not disabled on an incomplete form. A disabled submit is
-            the reason a missing type read as the app being broken: the only
-            feedback was a button that would not respond. Let the tap land, then
-            name what is missing. */}
-        <button type="submit" className="secondary-button" disabled={isAdding}>
-          {isAdding ? "Saving..." : editingFlagId ? "Save update" : "Save injury"}
-        </button>
-      </form>
+                if (value.trim()) {
+                  setAddMissing((current) => (current === "area" ? null : current));
+                } else {
+                  setNewZone("");
+                }
+              }}
+            />
+            <small
+              className="today-injury-limit-hint"
+              data-limit-hit={areaLimited}
+              aria-live="polite"
+            >
+              {areaLimited
+                ? `${TODAY_INJURY_MAX_WORDS}-word limit. Extra removed`
+                : `Up to ${TODAY_INJURY_MAX_WORDS} words`}
+            </small>
+          </div> : null}
+          <div ref={typeGroupRef}>
+            <SegmentGroup
+              label="Type"
+              value={newType}
+              options={TODAY_INJURY_TYPE_OPTIONS}
+              onChange={(value) => {
+                setNewType(value);
+                if (value !== "other") setNewOtherType("");
+                setAddMissing((current) => (current === "type" ? null : current));
+              }}
+              columns={2}
+              required
+              invalid={addMissing === "type"}
+            />
+            {newType === "other" ? <TodayOtherTypePicker area={newArea.trim()} value={newOtherType}
+              onChange={setNewOtherType} onDescribe={() => { setNewOtherType(""); setNotesOpen(true); }} /> : null}
+          </div>
+          {/achilles/i.test(newArea) ? <div className="field">
+            <label htmlFor="today-achilles-site">Where is the Achilles problem?</label>
+            <select id="today-achilles-site" value={achillesSite} onChange={event => setAchillesSite(event.target.value as AchillesSite)}>
+              <option value="unknown">Not sure</option>
+              <option value="midportion">Above the heel</option>
+              <option value="insertional">Where the tendon meets the heel</option>
+            </select>
+          </div> : null}
+          {/elbow/i.test(newArea) && newOtherType === "tendonitis" ? <SegmentGroup
+            label="Where is the elbow problem?"
+            value={elbowSite}
+            options={[{ value: "lateral", label: "Outside of elbow" }, { value: "other", label: "Elsewhere" }, { value: "unknown", label: "Not sure" }]}
+            onChange={value => setElbowSite(value as ElbowSite)}
+          /> : null}
+          {/shoulder/i.test(newArea) && newOtherType === "tendonitis" ? <SegmentGroup
+            label="What shoulder problem did your clinician describe?"
+            value={shoulderScope}
+            options={[{ value: "nontraumatic_cuff", label: "Rotator cuff tendinopathy, no injury accident or tear" }, { value: "other", label: "Another problem" }, { value: "unknown", label: "Not sure" }]}
+            onChange={value => setShoulderScope(value as ShoulderScope)}
+          /> : null}
+          {/ankle/i.test(newArea) && newOtherType === "sprain" ? <SegmentGroup
+            label="What type of sprain did your clinician describe?"
+            value={ankleScope}
+            options={[{ value: "uncomplicated_lateral", label: "Uncomplicated outer ankle sprain" }, { value: "other", label: "Another type" }, { value: "unknown", label: "Not sure" }]}
+            onChange={value => setAnkleScope(value as AnkleScope)}
+          /> : null}
+          <div ref={impactGroupRef} className="injury-impact-input">
+            <SegmentGroup label="How much is it affecting you?" value={newImpact}
+              options={INJURY_IMPACT_OPTIONS.map(({ value, label }) => ({ value, label }))}
+              required invalid={addMissing === "impact"}
+              onChange={(value) => { setNewImpact(value as InjuryImpact); setAddMissing((current) => current === "impact" ? null : current); }} />
+          </div>
+          <button type="button" className="gi-notes-toggle injury-optional-note" aria-expanded={notesOpen} onClick={() => setNotesOpen((current) => !current)}>
+            {notesOpen ? "Hide optional note" : "+ Add note (optional)"}
+          </button>
+          {notesOpen ? (
+          <div className="field today-injury-detail">
+            <label htmlFor="today-injury-detail">Note (optional)</label>
+            <input
+              id="today-injury-detail"
+              value={newDetail}
+              spellCheck
+              placeholder="e.g. worse when sprinting"
+              onChange={(event) => {
+                const raw = event.target.value;
+                setDetailLimited(isInjuryEntryLimited(raw));
+                setNewDetail(limitInjuryEntryText(raw));
+              }}
+            />
+            <small
+              className="today-injury-limit-hint"
+              data-limit-hit={detailLimited}
+              aria-live="polite"
+            >
+              {detailLimited
+                ? `${TODAY_INJURY_MAX_WORDS}-word limit. Extra removed`
+                : `Up to ${TODAY_INJURY_MAX_WORDS} words`}
+            </small>
+          </div>
+          ) : null}
+          {addMissing ? (
+            <p id={addErrorId} className="today-inline-error" role="alert">
+              {addMissing === "area"
+                ? "Say where it is first. Tap an area or enter it manually."
+                : addMissing === "impact" ? "Choose how much it is affecting your training."
+                : "Pick a type first. If none of these fit, tap “Other”."}
+            </p>
+          ) : null}
+          {/* Deliberately not disabled on an incomplete form. A disabled submit is
+              the reason a missing type read as the app being broken: the only
+              feedback was a button that would not respond. Let the tap land, then
+              name what is missing. */}
+          <button type="submit" className="secondary-button" disabled={isAdding}>
+            {isAdding ? "Saving..." : editingFlagId ? "Save update" : "Save injury"}
+          </button>
+        </form>
+        </InjuryDetailSheet>
+      ) : null}
     </section>
   );
 }

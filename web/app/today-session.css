@@ -17,7 +17,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 4px 12px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .today-session-head .today-session-eyebrow .kicker {
@@ -51,7 +51,7 @@
 
 .today-session-head h2 {
   margin: 0;
-  font-size: clamp(28px, 7vw, 36px);
+  font-size: clamp(24px, 6vw, 32px);
   line-height: 1.08;
   letter-spacing: -0.02em;
 }
@@ -59,8 +59,8 @@
 .today-session-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin: 12px 0 0;
+  gap: 8px 14px;
+  margin: 10px 0 0;
   padding: 0;
   list-style: none;
 }
@@ -72,11 +72,6 @@
   color: var(--text-secondary);
   font-size: var(--type-body);
   line-height: 1.2;
-}
-
-.today-session-chips {
-  gap: 8px 18px;
-  margin-top: 14px;
 }
 
 .today-session-chips .today-tool-icon {

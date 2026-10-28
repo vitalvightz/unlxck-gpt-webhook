@@ -31,6 +31,7 @@ import {
   hasActivePlan,
   resolveTodayDecision,
   shouldShowTodayCheckin,
+  withoutInjuryTrackingReminder,
 } from "@/lib/today-authoritative";
 import type { TodayCompletionStatus } from "@/lib/types";
 
@@ -72,7 +73,8 @@ const SESSION_TILE_VALUE: Record<TodayCompletionStatus, string> = {
   not_started: "Not started",
   started: "In progress",
   done: "Complete",
-  modified: "Modified",
+  // "modified" is a logged completion (done with changes), not an adjusted plan.
+  modified: "Done, modified",
   skipped: "Skipped",
 };
 
@@ -306,9 +308,10 @@ export function TodayScreen() {
     resolvedDecision.displayTier === "preview" && !resolvedDecision.currentGuidanceBanner
       ? []
       : state.today.recommendation_trigger_labels;
-  const commandRisks = getDistinctTodayRiskWatch(
-    supplementaryRisks,
-    visibleTriggerLabels,
+  const openInjuryCount = state.open_injuries?.length ?? 0;
+  const commandRisks = withoutInjuryTrackingReminder(
+    getDistinctTodayRiskWatch(supplementaryRisks, visibleTriggerLabels),
+    openInjuryCount,
   );
   // With no programme there is no session to preview: the lead is today's
   // readiness, an injury hold or a safety notice, worded without a session.
@@ -414,8 +417,21 @@ export function TodayScreen() {
         </AutoHeight>}
         <TodayRiskWatch
           risks={commandRisks}
-          hasActiveInjury={(state.open_injuries?.length ?? 0) > 0}
+          hasActiveInjury={openInjuryCount > 0}
         />
+        {/* Asked beside the guidance it is about, once a check-in has given
+            the athlete something to judge, rather than at the foot of the page. */}
+        {hasPlan && !error && decisionBanner && resolvedDecision.recommendationState !== "not_checked_in" ? (
+          <details className="today-feedback-disclosure">
+            <summary>Does today&apos;s guidance fit how you feel?</summary>
+            <ContextualFeedback
+              key={`daily-feedback-${state.active_plan?.id ?? "none"}-${state.today.training_day}`}
+              token={token ?? ""}
+              surface="daily_recommendation"
+              className="today-feedback-card"
+            />
+          </details>
+        ) : null}
       </section>
 
       {/* The session keeps one slot, so a change of order never remounts it
@@ -507,14 +523,6 @@ export function TodayScreen() {
         </div>
       </nav>
 
-      {hasPlan && resolvedDecision.recommendationState !== "not_checked_in" ? (
-        <ContextualFeedback
-          key={`daily-feedback-${state.active_plan?.id ?? "none"}-${state.today.training_day}`}
-          token={token ?? ""}
-          surface="daily_recommendation"
-          className="today-feedback-card"
-        />
-      ) : null}
     </div>
   );
 }
