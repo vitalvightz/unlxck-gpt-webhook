@@ -1,5 +1,7 @@
 import type { Page } from "@playwright/test";
 
+import { SIGNUP_ACCESS_COOKIE, signupAccessToken } from "../lib/signup-access";
+
 /**
  * Make a page deterministic by cutting off every dependency on external
  * services. Same-origin assets (the app's own JS/CSS) load normally; anything
@@ -37,3 +39,8 @@ export async function isolateFromNetwork(page: Page, baseURL: string): Promise<v
 
 /** Routes that should render for an anonymous visitor without crashing. */
 export const PUBLIC_ROUTES = ["/", "/login", "/signup", "/forgot-password", "/reset-password"] as const;
+
+/** Signup is invite-only; tests about the signup form itself start unlocked. */
+export async function grantSignupAccess(page: Page, baseURL: string): Promise<void> {
+  await page.context().addCookies([{ name: SIGNUP_ACCESS_COOKIE, value: signupAccessToken(), url: new URL(baseURL).origin }]);
+}

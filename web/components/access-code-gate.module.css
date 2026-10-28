@@ -1,0 +1,71 @@
+/* Beats the global `.auth-card p` reset. */
+p.lead.lead { margin: 16px 0 0; }
+
+.form { display: grid; gap: 12px; }
+
+.label {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-sm);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* The code reads as one wide token, like the signup verification code. */
+.input {
+  width: 100%;
+  min-height: 60px;
+  padding: 0 16px;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.4em;
+  text-align: center;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+}
+
+.input:focus { outline: none; border-color: var(--brand-red); box-shadow: 0 0 0 3px rgba(181, 18, 43, 0.25); }
+.input[aria-invalid="true"] { border-color: #e0354f; }
+
+.error { margin: 0; color: #ff8a9b; font-size: var(--type-body-sm); }
+
+.submit { width: 100%; min-height: 54px; border-radius: 8px; }
+
+.apply { display: grid; gap: 12px; }
+
+/* "No code yet?" between two hairlines. */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: var(--type-body-sm);
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-default);
+}
+
+.apply a { text-decoration: none; }
+
+.applyNote { margin: 0; color: var(--text-muted); font-size: var(--type-meta); text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .input { transition: none; }
+}

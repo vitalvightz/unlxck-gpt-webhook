@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
-import { isolateFromNetwork } from "./support";
+import { grantSignupAccess, isolateFromNetwork } from "./support";
 
 const BASE_URL = "http://127.0.0.1:3100";
 const SUPABASE_ORIGIN = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://stub.supabase.co";
@@ -59,6 +59,7 @@ async function startSignup(page: Page, baseURL: string, verifyStatus: "ok" | "re
     await json(route, me());
   });
 
+  await grantSignupAccess(page, baseURL);
   await page.goto("/signup", { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Continue with email", exact: true }).click();
   // Full name is no longer asked at signup; intake collects it.

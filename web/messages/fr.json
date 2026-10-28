@@ -238,5 +238,19 @@
   "Safety": {
     "footerWide": "L’UNLXCK n’est pas un avis médical et ne diagnostique pas les blessures ni ne fournit d’autorisation médicale. Réduisez ou arrêtez si les symptômes s’aggravent, consultez un médecin pour détecter les signaux d’alerte, et suivez votre coach ou clinicien.",
     "footerTight": "Unlxck n’est pas un avis médical. Arrêtez si les symptômes s’aggravent, cherchez de l’aide pour les signaux d’alerte, et suivez votre coach ou votre clinicien."
+  },
+  "AccessGate": {
+    "title": "Sur invitation.",
+    "lead": "UNLXCK est en bêta privée. Saisis ton code d’accès pour créer ton compte.",
+    "label": "Code d’accès",
+    "placeholder": "Saisis ton code",
+    "submit": "Déverrouiller",
+    "checking": "Vérification…",
+    "error": "Ce code n’est pas bon. Vérifie ton invitation et réessaie.",
+    "noCode": "Pas encore de code ?",
+    "apply": "Demander l’accès à la bêta",
+    "applyNote": "Ouvre un e-mail à l’équipe UNLXCK. On te répond avec un code s’il reste une place.",
+    "applySubject": "Candidature bêta UNLXCK",
+    "applyBody": "Bonjour l’équipe UNLXCK,\n\nJ’aimerais rejoindre la bêta.\n\nNom :\nSport / discipline :\nNiveau (amateur / pro) :\nInstagram (facultatif) :\nPourquoi je veux participer :\n"
   }
 }
