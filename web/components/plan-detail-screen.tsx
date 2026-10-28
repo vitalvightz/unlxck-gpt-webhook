@@ -8,6 +8,7 @@ import { useAppSession } from "@/components/auth-provider";
 import { useOnReconnect } from "@/components/connection-status-banner";
 import { TrainingLibraryLink } from "@/components/training-library-link";
 import actionStyles from "@/components/training-action-tile.module.css";
+import plansStyles from "@/components/plans/plans.module.css";
 import { PlanViewer } from "@/components/plan-viewer";
 import { LogTraining } from "@/components/log-training";
 import { ApiError, getPlan, trackProductEvent } from "@/lib/api";
@@ -155,10 +156,6 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
 
   return (
     <RequireAuth>
-      <div className={actionStyles.actions}>
-        {(!plan || plan.athlete_id === me?.profile.athlete_id) ? <LogTraining accessToken={session?.access_token ?? null} variant="tile" /> : null}
-        <TrainingLibraryLink variant="tile" />
-      </div>
       {recovered ? (
         <section className="panel loading-card loading-shell loading-phase-finalizing athlete-motion-slot athlete-motion-status">
           <article className="status-card loading-context-panel loading-context-panel-compact">
@@ -226,6 +223,14 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
           statusMessage="Restoring the latest saved plan output now."
         />
       )}
+
+      <section className={plansStyles.tools} aria-label="Training tools">
+        <h2 className={plansStyles.sectionTitle}>Training tools</h2>
+        <div className={`${actionStyles.actions} ${plansStyles.shortcuts}`}>
+          {(!plan || plan.athlete_id === me?.profile.athlete_id) ? <LogTraining accessToken={session?.access_token ?? null} variant="tile" /> : null}
+          <TrainingLibraryLink variant="tile" />
+        </div>
+      </section>
     </RequireAuth>
   );
 }
