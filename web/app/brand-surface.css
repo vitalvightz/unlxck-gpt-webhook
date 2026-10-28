@@ -1,59 +1,83 @@
 /* Public landing components only.
  *
- * Four sections — hero, product preview, training flexibility, CTA — laid out
+ * Four sections — hero, product preview, benefits, closing CTA — laid out
  * mobile first in one column, with the hero and the preview side by side from
- * 1024px. These classes are not used by the signed-in workspace or auth forms,
- * so the global body::before grid, borders and workspace dividers remain
- * untouched. The selectors do not depend on the client-set app-surface
- * attribute, so nothing restyles during hydration on `/`.
+ * 1024px. The hero and section headings sit on the page itself under a soft
+ * brand glow; only things that are "objects" get a surface: the preview card,
+ * the benefit cards and the closing banner. These classes are not used by the
+ * signed-in workspace or auth forms, so the global body::before grid, borders
+ * and workspace dividers remain untouched. The selectors do not depend on the
+ * client-set app-surface attribute, so nothing restyles during hydration on `/`.
  */
 :root {
-  --public-hero-wash:
-    linear-gradient(135deg, rgba(181, 18, 43, 0.22), transparent 32%),
-    linear-gradient(315deg, rgba(181, 18, 43, 0.1), transparent 30%),
-    linear-gradient(180deg, rgba(17, 19, 23, 0.98), rgba(9, 10, 12, 0.98));
-  --public-card-bg: linear-gradient(180deg, rgba(18, 20, 24, 0.94), rgba(10, 11, 13, 0.96));
-  --public-card-border: rgba(255, 255, 255, 0.08);
+  --public-surface: linear-gradient(180deg, rgba(22, 24, 29, 0.92), rgba(13, 14, 17, 0.94));
+  --public-border: rgba(255, 255, 255, 0.08);
+  --public-border-strong: rgba(255, 255, 255, 0.14);
+  --public-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --public-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .public-landing {
+  position: relative;
+  isolation: isolate;
   display: grid;
-  gap: var(--space-3);
+  gap: 56px;
+  padding-bottom: var(--space-3);
 }
 
-.public-hero,
-.public-preview,
-.public-flex,
-.public-final-cta {
-  display: grid;
-  align-content: start;
-  min-width: 0;
-  padding: 20px;
-  border: 1px solid var(--public-card-border);
-  border-radius: 20px;
-  background: var(--public-card-bg);
+/* Brand glow behind the hero; decorative, never intercepts taps. */
+.public-landing::before {
+  content: "";
+  position: absolute;
+  top: -120px;
+  left: 0;
+  z-index: -1;
+  width: 100%;
+  height: 640px;
+  background:
+    radial-gradient(closest-side at 30% 40%, rgba(181, 18, 43, 0.28), transparent),
+    radial-gradient(closest-side at 75% 30%, rgba(181, 18, 43, 0.12), transparent);
+  filter: blur(20px);
+  pointer-events: none;
 }
 
 /* Hero */
 
 .public-hero {
-  gap: var(--space-2);
-  background: var(--public-hero-wash);
+  display: grid;
+  align-content: start;
+  gap: 20px;
+  min-width: 0;
+  padding: 8px 4px 0;
 }
 
 .public-hero-motto {
   display: inline-flex;
   align-items: center;
+  justify-self: start;
   gap: 10px;
   margin: 0;
+  padding: 6px 12px 6px 10px;
+  border: 1px solid rgba(181, 18, 43, 0.35);
+  border-radius: 999px;
+  background: rgba(181, 18, 43, 0.08);
   font-family: var(--font-mono);
   font-size: var(--type-label-sm);
   font-weight: 700;
   line-height: 1.2;
 }
 
+.public-hero-motto::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand-red);
+  box-shadow: 0 0 0 3px rgba(181, 18, 43, 0.25);
+}
+
 .public-hero-motto span:first-child {
-  color: var(--brand-red);
+  color: #f2f3f5;
   letter-spacing: 0.22em;
 }
 
@@ -62,38 +86,65 @@
   letter-spacing: 0.04em;
 }
 
-.public-hero-motto::after {
-  content: "";
-  width: 28px;
-  height: 1px;
-  background: rgba(181, 18, 43, 0.68);
-}
-
 .public-hero .public-hero-title {
   display: grid;
   gap: 2px;
   margin: 0;
-  font-size: clamp(32px, 9.5vw, 56px);
-  line-height: 0.96;
-  letter-spacing: -0.035em;
+  font-size: clamp(40px, 11vw, 72px);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
   text-wrap: balance;
 }
 
+/* Second line carries the brand: a quiet white-to-red fade. */
+.public-hero .public-hero-title span:last-child {
+  background: linear-gradient(90deg, #ffffff 0%, #ffd6dc 40%, #e0354f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 .public-hero-lead {
+  max-width: 34em;
   margin: 0;
-  color: var(--text-primary);
-  font-size: var(--type-body-lg);
-  font-weight: 500;
-  line-height: 1.45;
+  color: var(--text-secondary);
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.public-hero-actions {
+  display: grid;
+  margin-top: 4px;
 }
 
 .public-hero-cta {
   position: relative;
   isolation: isolate;
   overflow: hidden;
+  gap: 8px;
   width: 100%;
-  min-height: 48px;
-  margin-top: var(--space-1);
+  min-height: 52px;
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 10px 30px rgba(181, 18, 43, 0.32);
+}
+
+.public-cta-arrow {
+  flex-shrink: 0;
+  transition: transform 220ms var(--public-ease);
+}
+
+.public-hero-cta:hover .public-cta-arrow,
+.public-hero-cta:focus-visible .public-cta-arrow {
+  transform: translateX(3px);
+}
+
+.public-hero-cta:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
 }
 
 /* A light streak sweeps across the primary CTA, then rests, so the eye lands
@@ -113,7 +164,7 @@
     transparent 100%
   );
   transform: translateX(-120%) skewX(-18deg);
-  animation: public-cta-shine 3.6s cubic-bezier(0.4, 0, 0.2, 1) 0.8s infinite;
+  animation: public-cta-shine 3.6s cubic-bezier(0.4, 0, 0.2, 1) 1.2s infinite;
   pointer-events: none;
 }
 
@@ -123,49 +174,55 @@
   100% { transform: translateX(340%) skewX(-18deg); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .public-hero-cta::after { animation: none; display: none; }
-}
-
-.public-cta-note {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: var(--type-meta);
-  line-height: 1.4;
-  text-align: center;
-}
-
-/* Section headings shared by preview and flexibility */
+/* Section headings shared by preview and benefits */
 
 .public-section-head {
   display: grid;
-  gap: 6px;
+  gap: 8px;
+}
+
+.public-section-head .kicker {
+  margin: 0;
+  font-family: var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
 .public-section-head h2,
 .public-final-cta h2 {
   margin: 0;
   color: var(--text-primary);
-  font-size: clamp(22px, 6vw, 28px);
-  line-height: 1.1;
-  letter-spacing: -0.02em;
+  font-size: clamp(26px, 7vw, 36px);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
 }
 
-/* Product preview: one realistic Today card */
+/* Product preview: one realistic Today card, floating on the page */
 
 .public-preview {
-  gap: var(--space-3);
+  display: grid;
+  align-content: start;
+  gap: 20px;
+  min-width: 0;
+  line-height: 1.4;
 }
 
 .public-today-card {
+  position: relative;
   display: grid;
   gap: var(--space-2);
-  padding: 14px;
-  border: 1px solid rgba(181, 18, 43, 0.3);
-  border-radius: 14px;
+  padding: 18px;
+  border: 1px solid var(--public-border-strong);
+  border-radius: 20px;
   background:
-    radial-gradient(circle at 100% 0%, rgba(181, 18, 43, 0.14), transparent 46%),
-    linear-gradient(180deg, rgba(26, 19, 22, 0.92), rgba(14, 12, 14, 0.96));
+    radial-gradient(circle at 100% 0%, rgba(181, 18, 43, 0.16), transparent 46%),
+    linear-gradient(180deg, rgba(24, 20, 23, 0.96), rgba(13, 12, 14, 0.98));
+  box-shadow:
+    var(--public-highlight),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 24px 60px -12px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(181, 18, 43, 0.08);
 }
 
 .public-today-head {
@@ -187,6 +244,9 @@
 
 .public-today-example {
   flex-shrink: 0;
+  padding: 3px 8px;
+  border: 1px solid var(--public-border);
+  border-radius: 999px;
   color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: var(--type-label-xs);
@@ -195,11 +255,12 @@
 }
 
 .public-today-title {
-  margin: -4px 0 0;
+  margin: -2px 0 0;
   color: var(--text-primary);
-  font-size: var(--type-title-sm);
+  font-size: 20px;
   font-weight: 600;
   line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
 .public-today-meta {
@@ -212,11 +273,13 @@
 /* Readiness decision on one line: tier badge, then the reason as plain text. */
 .public-today-decision-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-1);
   margin: 0;
-  padding-top: var(--space-2);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 10px 12px;
+  border: 1px solid rgba(240, 170, 90, 0.18);
+  border-radius: 12px;
+  background: rgba(240, 170, 90, 0.06);
 }
 
 .public-today-decision {
@@ -249,8 +312,12 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 0;
+  padding: 11px 0;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.public-today-block-row:first-child {
+  border-top: 0;
 }
 
 .public-today-block-glyph {
@@ -258,9 +325,10 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: var(--type-meta);
@@ -322,10 +390,12 @@
   white-space: nowrap;
 }
 
-/* Three benefits: a compact list, not a wall of cards */
+/* Benefits: three cards, each an icon, a title and one sentence */
 
 .public-flex {
-  gap: var(--space-3);
+  display: grid;
+  gap: 24px;
+  min-width: 0;
 }
 
 .public-flex-list {
@@ -336,93 +406,183 @@
   list-style: none;
 }
 
+/* Below desktop the icon sits beside the title to keep the cards compact. */
 .public-flex-item {
   display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-content: start;
-  gap: 4px;
-  padding-left: var(--space-2);
-  border-left: 2px solid var(--brand-red);
+  align-items: center;
+  gap: 10px 14px;
+  padding: 18px;
+  border: 1px solid var(--public-border);
+  border-radius: 18px;
+  background: var(--public-surface);
+  box-shadow: var(--public-highlight);
+  transition:
+    transform 260ms var(--public-ease),
+    border-color 260ms var(--public-ease),
+    box-shadow 260ms var(--public-ease);
+}
+
+@media (hover: hover) {
+  .public-flex-item:hover {
+    border-color: rgba(181, 18, 43, 0.4);
+    transform: translateY(-3px);
+    box-shadow:
+      var(--public-highlight),
+      0 18px 40px -16px rgba(181, 18, 43, 0.35);
+  }
+}
+
+.public-flex-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(181, 18, 43, 0.35);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(181, 18, 43, 0.22), rgba(181, 18, 43, 0.08));
+  color: #ff8a9b;
 }
 
 .public-flex-item h3 {
   margin: 0;
   color: var(--text-primary);
-  font-size: var(--type-body-lg);
+  font-size: 17px;
   font-weight: 600;
   line-height: 1.25;
+  letter-spacing: -0.01em;
 }
 
 .public-flex-item p {
+  grid-column: 1 / -1;
   margin: 0;
   color: var(--text-secondary);
-  font-size: var(--type-body-sm);
-  line-height: 1.5;
+  font-size: var(--type-body);
+  line-height: 1.55;
 }
 
-/* Conversion CTA */
+/* Closing banner */
 
 .public-final-cta {
-  gap: var(--space-2);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  display: grid;
+  gap: 20px;
   justify-items: center;
-  border-color: rgba(181, 18, 43, 0.32);
+  padding: 40px 20px;
+  border: 1px solid rgba(181, 18, 43, 0.3);
+  border-radius: 24px;
   background:
-    linear-gradient(90deg, rgba(181, 18, 43, 0.2), rgba(255, 255, 255, 0.03)),
-    linear-gradient(180deg, rgba(18, 20, 24, 0.98), rgba(13, 14, 17, 0.98));
+    radial-gradient(ellipse 80% 120% at 50% 0%, rgba(181, 18, 43, 0.3), transparent 70%),
+    linear-gradient(180deg, rgba(20, 15, 18, 0.98), rgba(11, 11, 13, 0.98));
+  box-shadow: var(--public-highlight);
   text-align: center;
 }
 
 .public-final-cta .public-hero-cta {
   max-width: 360px;
-  margin-top: 0;
 }
 
-/* Tablet: roomier padding */
+/* Motion. The landing renders client-side after auth resolves, so fading in
+   on mount never hides server-rendered content. Below-the-fold sections
+   reveal as they scroll into view where the browser supports scroll-driven
+   animations; elsewhere they are simply visible. */
+@media (prefers-reduced-motion: no-preference) {
+  .public-rise {
+    animation: public-rise 700ms var(--public-ease) var(--rise-delay, 0ms) both;
+  }
+
+  .public-today-block-row[data-change] .public-today-block-tag,
+  .public-today-block-row[data-change] .public-today-block-glyph {
+    animation: public-pop 520ms var(--public-ease) var(--tag-delay, 900ms) both;
+  }
+
+  @supports (animation-timeline: view()) {
+    .public-reveal {
+      animation: public-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 60%;
+    }
+  }
+}
+
+@keyframes public-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes public-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-hero-cta::after { animation: none; display: none; }
+  .public-cta-arrow,
+  .public-flex-item { transition: none; }
+}
+
+/* Tablet: CTA sizes to its label, benefits still stacked for readable lines */
 @media (min-width: 640px) {
   .public-landing {
-    gap: var(--space-4);
+    gap: 72px;
   }
 
-  .public-hero,
-  .public-preview,
-  .public-flex,
-  .public-final-cta {
-    padding: 28px;
-    border-radius: var(--radius-panel);
-  }
-
-  .public-today-card {
-    padding: var(--space-3);
+  .public-hero-actions {
+    justify-items: start;
   }
 
   .public-hero-cta {
     width: auto;
     min-width: 220px;
-    justify-self: start;
+    padding: 0 28px;
   }
 
-  .public-hero .public-cta-note {
-    text-align: left;
+  .public-today-card {
+    padding: var(--space-4, 24px);
   }
 
-  .public-final-cta .public-hero-cta {
-    justify-self: center;
+  .public-final-cta {
+    padding: 56px 40px;
   }
 }
 
-/* Desktop: hero and preview side by side; flexibility and CTA span both */
+/* Desktop: hero and preview side by side; benefits and CTA span both */
 @media (min-width: 1024px) {
   .public-landing {
     grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    column-gap: 56px;
+    row-gap: 112px;
+    padding-top: 24px;
   }
 
   .public-hero {
     align-content: center;
-    gap: var(--space-3);
-    padding: 40px;
+    gap: 24px;
+    padding: 0;
   }
 
   .public-hero-lead {
-    font-size: 18px;
+    font-size: 19px;
+  }
+
+  .public-preview {
+    align-content: center;
   }
 
   .public-flex,
@@ -430,29 +590,37 @@
     grid-column: 1 / -1;
   }
 
+  .public-flex {
+    gap: 40px;
+  }
+
+  .public-flex > .public-section-head {
+    justify-items: center;
+    text-align: center;
+  }
+
   .public-flex-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--space-5);
+    gap: 20px;
+  }
+
+  .public-flex-item {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+    padding: 28px;
+  }
+
+  .public-flex-icon {
+    margin-bottom: 8px;
   }
 
   .public-final-cta {
-    grid-template-columns: minmax(0, 1fr) auto;
-    justify-items: start;
-    align-items: center;
-    column-gap: var(--space-5);
-    text-align: left;
+    padding: 72px 40px;
   }
 
   .public-final-cta h2 {
-    grid-row: 1 / span 2;
-  }
-
-  .public-final-cta .public-hero-cta {
-    justify-self: end;
-  }
-
-  .public-final-cta .public-cta-note {
-    justify-self: end;
+    font-size: 44px;
   }
 }
 
