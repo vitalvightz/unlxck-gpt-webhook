@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useId, useRef, useState } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 
 import {
   BodyMap,
@@ -8,6 +8,7 @@ import {
   type BodyMapSeverity,
   type BodyMapSide,
 } from "@/components/body-map";
+import { LevelSlider } from "@/components/rating-controls";
 import { AutoHeight } from "@/components/today/auto-height";
 import { Collapse } from "@/components/today/collapse";
 import { InjuryDetailSheet } from "@/components/today/injury-detail-sheet";
@@ -365,6 +366,16 @@ export function TodayInjuryManager({
   const addFormId = useId();
   const addErrorId = useId();
   const impactGroupRef = useRef<HTMLDivElement>(null);
+  const addFormRef = useRef<HTMLFormElement>(null);
+  const selectingLocation = bodyMapVisible || manualArea || !newArea.trim();
+  useEffect(() => {
+    if (isAddFormOpen && !selectingLocation) {
+      // Replacing the map shortens this same scroller. Reset its position and
+      // move keyboard focus without scrolling the page behind the sheet.
+      addFormRef.current?.scrollTo?.({ top: 0 });
+      typeGroupRef.current?.focus({ preventScroll: true });
+    }
+  }, [isAddFormOpen, selectingLocation]);
   const mapRef = useRef<HTMLDivElement>(null);
   const newInjurySelections: BodyMapSelection[] = newArea.trim()
     ? [
@@ -544,7 +555,13 @@ export function TodayInjuryManager({
     // the submit silently.
     if (!area) {
       setAddMissing("area");
-      mapRef.current?.querySelector<SVGElement>('[role="button"]')?.focus();
+      if (manualArea) areaInputRef.current?.focus();
+      else mapRef.current?.querySelector<SVGElement>('[role="button"]')?.focus();
+      return;
+    }
+    if (selectingLocation) {
+      setManualArea(false);
+      setBodyMapVisible(false);
       return;
     }
     if (!newType) {
@@ -554,7 +571,7 @@ export function TodayInjuryManager({
     }
     if (!newImpact) {
       setAddMissing("impact");
-      impactGroupRef.current?.querySelector("button")?.focus();
+      impactGroupRef.current?.querySelector("input")?.focus();
       return;
     }
     setAddMissing(null);
@@ -992,29 +1009,29 @@ export function TodayInjuryManager({
           busy={isAdding}
           onClose={() => {
             // An abandoned edit must not leave its answers behind for the next add.
-            if (editingFlagId) { clearBodyMapSelection(); setEditingFlagId(null); }
+            clearBodyMapSelection(); setEditingFlagId(null);
             setIsAddFormOpen(false);
           }}
           panelClassName="today-injury-add-sheet"
         >
         <form
           id={addFormId}
+          ref={addFormRef}
           className="today-injury-add"
           onSubmit={addInjury}
         >
-          {bodyMapVisible ? (
-            <div ref={mapRef}>
+          <p className="today-injury-step">{selectingLocation ? "1. Where is the injury?" : "2. Describe the injury"}</p>
+            <div ref={mapRef} hidden={!selectingLocation || manualArea}>
               <BodyMap side={bodyMapSide} selections={newInjurySelections}
                 onZoneSelect={selectBodyMapZone} onSideChange={setBodyMapSide} />
             </div>
-          ) : null}
-          {newArea.trim() ? (
+          {!selectingLocation ? (
             <div className="today-injury-selection" aria-live="polite">
               <span aria-hidden="true">✓</span><strong>{newArea.trim()}</strong>
               <button type="button" onClick={() => setBodyMapVisible(true)} disabled={isAdding}>Change</button>
-              <button type="button" className="today-injury-selection-clear" onClick={clearBodyMapSelection} disabled={isAdding}>Clear</button>
             </div>
           ) : null}
+          {selectingLocation ? <>
           <button type="button" className="gi-notes-toggle injury-manual-entry" aria-expanded={manualArea}
             onClick={() => setManualArea((current) => !current)}>
             {manualArea ? "Use the body map" : "Can’t find the area? Enter it manually"}
@@ -1054,8 +1071,16 @@ export function TodayInjuryManager({
                 ? `${TODAY_INJURY_MAX_WORDS}-word limit. Extra removed`
                 : `Up to ${TODAY_INJURY_MAX_WORDS} words`}
             </small>
+            <button type="button" className="secondary-button" disabled={!newArea.trim()}
+              onClick={() => { setManualArea(false); setBodyMapVisible(false); setAddMissing(null); }}>
+              Use location
+            </button>
           </div> : null}
-          <div ref={typeGroupRef}>
+          {newArea.trim() && !manualArea ? <button type="button" className="today-tool-link"
+            onClick={() => { setManualArea(false); setBodyMapVisible(false); }}>Keep {newArea.trim()}</button> : null}
+          </> : null}
+          {!selectingLocation ? <>
+          <div ref={typeGroupRef} tabIndex={-1} role="group" aria-label="Describe the injury">
             <SegmentGroup
               label="Type"
               value={newType}
@@ -1099,10 +1124,14 @@ export function TodayInjuryManager({
             onChange={value => setAnkleScope(value as AnkleScope)}
           /> : null}
           <div ref={impactGroupRef} className="injury-impact-input">
-            <SegmentGroup label="How much is it affecting you?" value={newImpact}
-              options={INJURY_IMPACT_OPTIONS.map(({ value, label }) => ({ value, label }))}
-              required invalid={addMissing === "impact"}
-              onChange={(value) => { setNewImpact(value as InjuryImpact); setAddMissing((current) => current === "impact" ? null : current); }} />
+            <p className="today-field-label">Impact on training<span className="today-field-required">Required</span></p>
+            <LevelSlider ariaLabel="Impact on training" invalid={addMissing === "impact"}
+              labels={["Not limiting me", "Limiting me", "Can’t train normally"]}
+              value={INJURY_IMPACT_OPTIONS.find(option => option.value === newImpact)?.guidedSeverity ?? null}
+              onChange={level => {
+                setNewImpact(INJURY_IMPACT_OPTIONS.find(option => option.guidedSeverity === level)!.value);
+                setAddMissing(current => current === "impact" ? null : current);
+              }} />
           </div>
           <button type="button" className="gi-notes-toggle injury-optional-note" aria-expanded={notesOpen} onClick={() => setNotesOpen((current) => !current)}>
             {notesOpen ? "Hide optional note" : "+ Add note (optional)"}
@@ -1132,6 +1161,7 @@ export function TodayInjuryManager({
             </small>
           </div>
           ) : null}
+          </> : null}
           {addMissing ? (
             <p id={addErrorId} className="today-inline-error" role="alert">
               {addMissing === "area"
@@ -1144,9 +1174,9 @@ export function TodayInjuryManager({
               the reason a missing type read as the app being broken: the only
               feedback was a button that would not respond. Let the tap land, then
               name what is missing. */}
-          <button type="submit" className="secondary-button" disabled={isAdding}>
+          {!selectingLocation ? <button type="submit" className="cta today-injury-save" disabled={isAdding}>
             {isAdding ? "Saving..." : editingFlagId ? "Save update" : "Save injury"}
-          </button>
+          </button> : null}
         </form>
         </InjuryDetailSheet>
       ) : null}

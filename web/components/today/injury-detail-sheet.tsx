@@ -28,6 +28,18 @@ export function InjuryDetailSheet({ title, children, onClose, busy = false, vari
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     const release = lockOverlayScroll();
+    // iOS's keyboard changes the visual viewport without resizing the layout
+    // viewport. The injury editor uses these bounds to keep its header in view.
+    const fit = () => {
+      const viewport = window.visualViewport;
+      const backdrop = panel.current?.parentElement;
+      backdrop?.style.setProperty("--sheet-height", `${viewport?.height ?? window.innerHeight}px`);
+      backdrop?.style.setProperty("--sheet-top", `${viewport?.offsetTop ?? 0}px`);
+    };
+    fit();
+    window.visualViewport?.addEventListener("resize", fit);
+    window.visualViewport?.addEventListener("scroll", fit);
+    window.addEventListener("resize", fit);
     panel.current?.focus({ preventScroll: true });
     function keydown(event: KeyboardEvent) {
       const dialogs = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
@@ -40,6 +52,7 @@ export function InjuryDetailSheet({ title, children, onClose, busy = false, vari
       const controls = Array.from(panel.current?.querySelectorAll<HTMLElement>(
         'button:not(:disabled), select:not(:disabled), input:not(:disabled), textarea:not(:disabled), summary, a[href], [tabindex="0"]',
       ) ?? []).filter(control => {
+        if (control.closest("[hidden], [inert]")) return false;
         const details = control.closest("details");
         return !details || details.open || control.tagName === "SUMMARY";
       });
@@ -52,7 +65,13 @@ export function InjuryDetailSheet({ title, children, onClose, busy = false, vari
       }
     }
     document.addEventListener("keydown", keydown);
-    return () => { document.removeEventListener("keydown", keydown); release(); previous?.focus({ preventScroll: true }); };
+    return () => {
+      document.removeEventListener("keydown", keydown);
+      window.visualViewport?.removeEventListener("resize", fit);
+      window.visualViewport?.removeEventListener("scroll", fit);
+      window.removeEventListener("resize", fit);
+      release(); previous?.focus({ preventScroll: true });
+    };
   }, []);
   if (typeof document === "undefined") return null;
   return createPortal(<div className="injury-sheet-backdrop" data-variant={variant} data-entrance={entrance} data-closing={closing || undefined} onClick={() => { if (!busy) dismiss(); }}>
