@@ -83,6 +83,22 @@ async function shot(page: Page, name: string) {
   await page.screenshot({ path: `${process.env.INJURY_SCREENSHOTS}/${name}.png`, animations: "disabled" });
 }
 
+test("sheet backdrop does not fade its text and injury rows have no tap flash", async ({ page, baseURL }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const { sheet } = await setup(page, baseURL!);
+  const backdrop = page.locator(".injury-sheet-backdrop");
+  expect(await backdrop.evaluate(el => getComputedStyle(el).opacity)).toBe("1");
+  await sheet.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(sheet).toHaveCount(0);
+  const summary = page.locator(".today-injury-summary-row").first();
+  expect(await summary.evaluate(el => getComputedStyle(el).getPropertyValue("-webkit-tap-highlight-color"))).toBe("rgba(0, 0, 0, 0)");
+  expect(await summary.evaluate(el => Boolean(el.closest(".today-injury-list")?.parentElement?.classList.contains("today-auto-height-inner")))).toBe(false);
+  await summary.tap();
+  await expect(summary).toHaveAttribute("aria-expanded", "true");
+  await summary.tap();
+  await expect(summary).toHaveAttribute("aria-expanded", "false");
+});
+
 test("expanded decision evidence reaches the rounded card edge", async ({ page, baseURL }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const { sheet } = await setup(page, baseURL!);

@@ -20,6 +20,9 @@ export function PageTransition({ children }: { children: ReactNode }) {
   useLayoutEffect(() => {
     if (shownPath.current === pathname) return;
     shownPath.current = pathname;
+    // Plan navigation already has a black cover; a second opacity animation
+    // exposes the page beneath fixed overlays and makes text shimmer.
+    if (pathname?.startsWith("/plans")) return;
     const page = pageRef.current;
     if (!page || typeof page.animate !== "function" || prefersReducedMotion()) return;
     page.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: "ease-out" });
