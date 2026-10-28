@@ -271,14 +271,16 @@
   100% { transform: translateX(340%) skewX(-18deg); }
 }
 
-/* The X in "Lxcked in." in brand red, echoing the motto's UNLXCK, with red
-   and cyan copies for its one-off tear. It sits outside the line's text
-   gradient, so its colour is set outright. */
+/* The X in "Lxcked in.": it enters in brand red (echoing the motto's
+   UNLXCK), tears once, then slowly settles to white like the rest of the
+   line. It sits outside the line's text gradient, so its colour is set
+   outright; white is the resting state, and the only one under reduced
+   motion. */
 .public-hero-x {
   position: relative;
   display: inline-block;
-  color: #e0354f;
-  -webkit-text-fill-color: #e0354f;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
 }
 
 .public-hero-x::before,
@@ -725,7 +727,9 @@
 
   /* "Lxcked in.": the X tears once, after the motto has unlocked. */
   .public-hero-x {
-    animation: unlock-jitter 140ms steps(2) 1.9s 4 both;
+    animation:
+      unlock-jitter 140ms steps(2) 1.9s 4 both,
+      hero-x-settle 2.6s ease-in-out 2.5s both;
   }
 
   .public-hero-x::before {
@@ -796,6 +800,17 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes hero-x-settle {
+  from {
+    color: #e0354f;
+    -webkit-text-fill-color: #e0354f;
+  }
+  to {
+    color: #ffffff;
+    -webkit-text-fill-color: #ffffff;
   }
 }
 

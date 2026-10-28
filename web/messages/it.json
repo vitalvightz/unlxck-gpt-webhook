@@ -87,6 +87,14 @@
     "benefit2Body": "Check-in, adattamenti in base al recupero e allenamenti su misura.",
     "benefit3Title": "Fai contare ogni sessione",
     "benefit3Body": "Registra allenamenti e sparring, ed esplora gli esercizi nella libreria.",
+    "toolsKicker": "Strumenti da fight",
+    "toolsTitle": "Nel tuo angolo",
+    "tool1Title": "Gestisci i round",
+    "tool1Body": "Timer con preset da incontro, avvisi a metà round e a 10 secondi.",
+    "tool2Title": "Gestisci gli infortuni",
+    "tool2Body": "Registra un infortunio e segui una riabilitazione a fasi.",
+    "tool3Title": "Rientra nel peso",
+    "tool3Body": "Monitora il peso verso l’incontro, con avviso sui tagli drastici.",
     "finalTitle": "Il tuo allenamento inizia qui."
   },
   "Auth": {
