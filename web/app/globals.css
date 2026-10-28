@@ -7389,6 +7389,7 @@ button.mobile-step-rail-item {
 .today-auto-height,
 .today-auto-height-inner {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: inherit;
   min-width: 0;
 }

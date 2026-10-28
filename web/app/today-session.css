@@ -123,11 +123,9 @@
 }
 
 .today-injury-strip-detail {
-  overflow: hidden;
   color: var(--text-secondary);
   font-size: var(--type-body-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .today-injury-strip-chevron {

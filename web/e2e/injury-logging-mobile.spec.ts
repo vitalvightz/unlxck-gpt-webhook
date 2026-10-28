@@ -6,9 +6,14 @@ import { isolateFromNetwork } from "./support";
 
 test.use({ hasTouch: true });
 
-async function setup(page: Page, baseURL: string) {
+async function setup(page: Page, baseURL: string, longNames = false) {
   await isolateFromNetwork(page, baseURL);
   const { view, profile } = structuredClone(fixtures.chest);
+  if (longNames) {
+    view.open_injuries[0].label = "Left shoulder instability";
+    view.open_injuries.push({ ...view.open_injuries[0], id: "second-injury", label: "Left ankle sprain" });
+    view.live_prescription.session.blocks[0].display_name = "Shoulder instability protective guidance";
+  }
   Object.assign(profile.profile, { private_trial_ack_at: "2026-10-05T12:00:00Z" });
   const now = new Date(`${view.today.training_day}T12:05:00Z`);
   await page.clock.setFixedTime(now);
@@ -42,6 +47,29 @@ async function setup(page: Page, baseURL: string) {
   const sheet = page.getByRole("dialog", { name: "Add another injury", exact: true });
   await expect(sheet).toBeVisible();
   return { sheet, trigger, writes, errors };
+}
+
+for (const width of [320, 390]) {
+  test(`long rehab content stays within the session card at ${width}px`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const { sheet } = await setup(page, baseURL!, true);
+    await sheet.getByRole("button", { name: "Close", exact: true }).click();
+    await expect(sheet).toHaveCount(0);
+    const card = page.locator(".today-session-card");
+    await card.scrollIntoViewIfNeeded();
+    const cardBox = (await card.boundingBox())!;
+    for (const selector of [".today-injury-strip", ".ex-row", ".today-injury-guidance", ".today-injury-guidance button"]) {
+      const items = card.locator(selector);
+      expect(await items.count()).toBeGreaterThan(0);
+      for (const item of await items.all()) {
+        const box = (await item.boundingBox())!;
+        expect(box.x).toBeGreaterThanOrEqual(cardBox.x - 1);
+        expect(box.x + box.width).toBeLessThanOrEqual(cardBox.x + cardBox.width + 1);
+      }
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await shot(page, `rehab-long-${width}`);
+  });
 }
 
 async function shot(page: Page, name: string) {
