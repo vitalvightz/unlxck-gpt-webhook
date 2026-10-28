@@ -6,6 +6,7 @@ import { useAppSession } from "./auth-provider";
 import { habitTrainingDay } from "@/lib/training-habits";
 import { ApiError, editExternalTraining, getTrainingHistory, logExternalTraining, recordCompliance } from "@/lib/api";
 import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
+import { prefersReducedMotion } from "@/lib/reduced-motion";
 import { consentCopyForBand, hasHealthDataConsent } from "@/lib/compliance";
 import { PRIVACY_HREF } from "@/lib/legal-documents";
 import { formatAppDate } from "@/lib/date-format";
@@ -21,9 +22,13 @@ import { TrainingActionContent } from "./training-action-tile";
 import tileStyles from "./training-action-tile.module.css";
 import { SparringLogPrompt, type SparringDraft } from "./today/sparring-log-prompt";
 import { SessionTakeawayPrompt } from "./session-takeaway";
+import { Collapse } from "./today/collapse";
 import { ManualExerciseLogger } from "./manual-exercise-logger";
 import { offerPushNotifications } from "@/lib/push-prompt";
 import type { SparringIntensity } from "@/lib/types";
+
+/** Matches sheet-out in log-training.module.css. */
+const SHEET_EXIT_MS = 200;
 
 const DURATION_PICKS = [30, 45, 60, 90];
 
@@ -53,6 +58,12 @@ export function LogTraining(props: Props) {
 
 function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, history, quickSession, onSaved, onSparringReported, variant = "compact" }: Props & { accessToken: string }) {
   const [open, setOpen] = useState(false);
+  // The sheet slides away before it unmounts, rather than vanishing in a frame.
+  const [closing, setClosing] = useState(false);
+  const closeTimer = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
+  }, []);
   const editing = entry?.id;
   const [lastSession, setLastSession] = useState<TrainingHistorySession>();
   const repeatSource = repeatEntry && canRepeatTraining(repeatEntry) ? repeatEntry : recent ? history ? latestRepeatableTraining(history) : lastSession : undefined;
@@ -165,6 +176,20 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
     } finally { saving.current = false; if (currentToken.current === token) setBusy(false); }
   }
 
+  function closeSheet() {
+    if (prefersReducedMotion()) {
+      setOpen(false);
+      return;
+    }
+    setClosing(true);
+    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(() => {
+      closeTimer.current = null;
+      setClosing(false);
+      setOpen(false);
+    }, SHEET_EXIT_MS);
+  }
+
   function startEdit(row?: Partial<TrainingHistorySession>, repeat = false, source = "From previous session") {
     setServerConsentRequired(false);
     setRepeating(repeat);
@@ -188,6 +213,9 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
     setExercisesOpen(false);
     setExerciseCount(0);
     setExerciseReference(repeat && row?.id && row.exercise_count ? row as TrainingHistorySession : null);
+    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
+    closeTimer.current = null;
+    setClosing(false);
     setOpen(true);
   }
 
@@ -217,7 +245,7 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
       if (recent) setLastSession(current => latestRepeatableTraining([row, ...(current ? [current] : [])]));
       onSaved?.(row);
       requestId.current = null;
-      setOpen(false);
+      closeSheet();
       if (!editing) offerPushNotifications(token);
       if (!entry && !repeatEntry && row.source === "external" && row.activity !== "sparring") setTakeawayRow(row);
       else setSaved(`${row.title} logged successfully. Saved to Training History.`);
@@ -284,12 +312,15 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
 
   return (
     <div className={entry || repeatEntry ? styles.editControl : styles.training} role={entry || repeatEntry ? undefined : "region"} aria-label={entry ? `Manage ${entry.title}` : "Log session"}>
+      {/* Appears once a session is logged (or history arrives): eased, not popped. */}
+      <Collapse show={Boolean(quickSession || repeatSource)}>
       {quickSession ? <button className={styles.actionRow} type="button" onClick={() => startEdit(quickSession, true, quickSession.title)} aria-haspopup="dialog" aria-label={quickSession.title} aria-describedby={`${fieldId}-quick`}>
         <span><strong>{quickSession.title}</strong><span className="muted" id={`${fieldId}-quick`}>{trainingLabel(quickSession)} · {quickSession.duration_minutes} min</span></span>
         <svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7" /></svg>
       </button> : repeatSource ? <button className={repeatEntry ? styles.repeatButton : styles.actionRow} type="button" onClick={() => startEdit(repeatSource, true)} aria-haspopup="dialog" aria-label={repeatEntry ? `Repeat ${repeatSource.title}` : "Repeat last session"} aria-describedby={!repeatEntry ? `${fieldId}-recent` : undefined}>
         {repeatEntry ? "Repeat" : <><span><strong>Repeat last session</strong><span className="muted" id={`${fieldId}-recent`}>{trainingLabel(repeatSource)} · {repeatSource.duration_minutes} min</span></span><svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7" /></svg></>}
       </button> : null}
+      </Collapse>
       {repeatEntry ? null : entry ? <button className={styles.editButton} type="button" onClick={() => startEdit(entry)} aria-haspopup="dialog" aria-label={`Edit ${entry.title}`} title="Edit session">
         <svg className="ex-log-edit-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3Z" /><path d="m14.5 7.5 3 3" /></svg>
       </button> :
@@ -297,12 +328,12 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
           {variant === "primary" ? <><span aria-hidden="true">+</span> Log session</> : variant === "tile" ? <TrainingActionContent kind="log" /> : <><span><strong>{recent && (repeatSource || quickSession) ? "Log another session" : "Log session"}</strong><span className="muted">{mySport ? `${sportLabel(mySport)}, strength, conditioning and more.` : "Sparring, boxing, roadwork, strength and more."}</span></span><span aria-hidden="true">+</span></>}
         </button>}
       {open ? (
-        <dialog ref={dialog} className={styles.dialog} aria-label={editing ? "Edit session" : "Log session"} onCancel={event => { if (busy) event.preventDefault(); else setOpen(false); }}>
+        <dialog ref={dialog} className={styles.dialog} aria-label={editing ? "Edit session" : "Log session"} data-closing={closing || undefined} onCancel={event => { event.preventDefault(); if (!busy) closeSheet(); }}>
         <header className={styles.header}>
           <div><h2>{editing ? "Edit session" : repeating && activity ? `Log ${trainingLabel({ activity, sport, session_type: sessionType })}` : "Log session"}</h2>
             {repeating ? <p className={styles.source}>{duration} min · {sourceLabel}</p> : null}
           </div>
-          <button className={styles.close} type="button" aria-label="Close training log" disabled={busy} onClick={() => setOpen(false)}>×</button>
+          <button className={styles.close} type="button" aria-label="Close training log" disabled={busy} onClick={closeSheet}>×</button>
         </header>
         {requiresConsent ? <div className={styles.consent}>
           <p>Training logs include health information, like effort and sparring.</p>
@@ -310,7 +341,7 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
           <p className="muted">Optional. You can withdraw in Settings. <Link href={PRIVACY_HREF}>Privacy Notice</Link></p>
           {error ? <p role="alert">{error}</p> : null}
           <button type="button" className="cta" data-consent-action aria-describedby={`${fieldId}-consent`} disabled={busy || !me} onClick={() => void grantConsent()}>{busy ? "Saving…" : "Allow health-data use and continue"}</button>
-          <button type="button" className="ghost-button" disabled={busy} onClick={() => setOpen(false)}>Not now</button>
+          <button type="button" className="ghost-button" disabled={busy} onClick={closeSheet}>Not now</button>
         </div> : <form className={styles.form} onSubmit={save} aria-label={editing ? "Edit session" : "Log session"}>
           <div className={styles.body}>
             {!repeating ? activityAndDuration : null}
@@ -337,9 +368,11 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
         </dialog>
       ) : null}
       {saved && !entry && !repeatEntry ? <p className="muted" role="status">{saved}</p> : null}
-      {takeawayRow ? <SessionTakeawayPrompt key={takeawayRow.id} token={accessToken} row={takeawayRow} sheet={variant === "tile"}
-        onSaved={() => setTakeawayRow(null)} onDismiss={() => setTakeawayRow(null)}
-        onAddExercises={() => setExercisesOpen(true)} exerciseCount={exerciseCount} suspended={exercisesOpen} /> : null}
+      <Collapse show={Boolean(takeawayRow)}>
+        {takeawayRow ? <SessionTakeawayPrompt key={takeawayRow.id} token={accessToken} row={takeawayRow} sheet={variant === "tile"}
+          onSaved={() => setTakeawayRow(null)} onDismiss={() => setTakeawayRow(null)}
+          onAddExercises={() => setExercisesOpen(true)} exerciseCount={exerciseCount} suspended={exercisesOpen} /> : null}
+      </Collapse>
       {takeawayRow && exercisesOpen ? <ManualExerciseLogger token={accessToken} session={takeawayRow} reference={exerciseReference}
         onClose={entries => { setExercisesOpen(false); if (entries) setExerciseCount(entries.length); }} /> : null}
       {sparringDraft ? <SparringLogPrompt key={sparringDraft.externalSessionId} token={accessToken} draft={sparringDraft}

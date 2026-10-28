@@ -25,6 +25,7 @@ import { stableStringify } from "@/lib/stable-stringify";
 import { offerInstallPrompt } from "@/lib/push-prompt";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 import { PublicGenerationScreen } from "@/components/public-generation-screen";
+import { useFadeNavigate } from "@/components/fade-through";
 
 const STORAGE_KEY = "unlxck:pending-generation:self";
 const ALLOWED_PLAN_SOURCES = new Set(["quick_build", "self_serve"]);
@@ -44,6 +45,7 @@ function getCompletedGeneration() {
 
 export default function GeneratePage() {
   const router = useRouter();
+  const fadeNavigate = useFadeNavigate();
   const { me, session } = useAppSession();
   const autoStartRef = useRef(false);
   const [pendingGeneration] = useState(() => readPendingGenerationPayload());
@@ -149,7 +151,7 @@ export default function GeneratePage() {
       if (pendingGeneration) {
         clearPendingGenerationPayload();
       }
-      router.replace(`/plans/${matchingPayloadAction.planId}`);
+      fadeNavigate(() => router.replace(`/plans/${matchingPayloadAction.planId}`));
       return;
     }
 
@@ -220,7 +222,7 @@ export default function GeneratePage() {
     return () => {
       cancelled = true;
     };
-  }, [controller, payload, payloadHash, pendingGeneration, performanceFocusValidation?.isOverCap, router, session?.access_token]);
+  }, [controller, fadeNavigate, payload, payloadHash, pendingGeneration, performanceFocusValidation?.isOverCap, router, session?.access_token]);
 
   return (
     <RequireAuth>

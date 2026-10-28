@@ -32,6 +32,7 @@ import sheet from "./session-details.module.css";
 import progress from "./training-progress.module.css";
 import summary from "./training-summary.module.css";
 import styles from "./weight-tracker.module.css";
+import { useSheetExit } from "@/lib/use-sheet-exit";
 
 const RANGES: Array<{ value: BodyweightRange; label: string }> = [
   { value: "7D", label: "7 days" },
@@ -325,6 +326,8 @@ function WeighInSheet({ entry, lastWeight, onClose, onSave, onDelete }: {
   onSave: (entry: NutritionBodyweightLogEntry) => Promise<void>;
   onDelete?: () => Promise<void>;
 }) {
+  // Slides away before the parent removes it.
+  const { closing, close: dismiss } = useSheetExit(onClose);
   const dialog = useRef<HTMLDialogElement>(null);
   const weightInput = useRef<HTMLInputElement>(null);
   const heading = useId();
@@ -384,14 +387,14 @@ function WeighInSheet({ entry, lastWeight, onClose, onSave, onDelete }: {
   }
 
   return (
-    <dialog ref={dialog} className={sheet.dialog} aria-labelledby={heading} onCancel={event => { event.preventDefault(); if (!isPending) onClose(); }}>
+    <dialog ref={dialog} className={sheet.dialog} aria-labelledby={heading} data-closing={closing || undefined} onCancel={event => { event.preventDefault(); if (!isPending) dismiss(); }}>
       <header className={sheet.header}>
         <div>
           <p className={sheet.eyebrow}>Weight tracker</p>
           <h2 id={heading}>{entry ? "Edit weigh-in" : "Log weigh-in"}</h2>
           <p className={sheet.quiet}>{entry ? formatAppDate(entry.date) : "Same time each day keeps your trend honest."}</p>
         </div>
-        <button type="button" className={sheet.close} aria-label="Close" onClick={onClose} disabled={isPending}>×</button>
+        <button type="button" className={sheet.close} aria-label="Close" onClick={() => dismiss()} disabled={isPending}>×</button>
       </header>
       <form className={`${sheet.body} ${styles.form}`} noValidate onSubmit={event => { event.preventDefault(); save(); }}>
         <div>

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { isTabActive, visualViewportBottomOffset } from "./mobile-tab-bar";
+import { isOverscrolled, isTabActive, visualViewportBottomOffset } from "./mobile-tab-bar";
 
 test("the tab bar stays at bottom: 0 while the viewports agree", () => {
   assert.equal(visualViewportBottomOffset(800, { height: 800, offsetTop: 0, scale: 1 }), 0);
@@ -34,4 +34,12 @@ test("a tab stays active on its sub-pages, so plan detail and the builder highli
   assert.equal(isTabActive("/timer", "/timer"), true);
   assert.equal(isTabActive("/plans", "/"), false);
   assert.equal(isTabActive("/today", "/timer"), false);
+});
+
+test("a page bouncing past its top or bottom is not measured, so the bar does not shake with it", () => {
+  // 2000px page in an 800px window: scrollable 0..1200.
+  assert.equal(isOverscrolled(0, 800, 2000), false);
+  assert.equal(isOverscrolled(1200, 800, 2000), false);
+  assert.equal(isOverscrolled(-24, 800, 2000), true, "pulled down past the top");
+  assert.equal(isOverscrolled(1236, 800, 2000), true, "bouncing past the bottom");
 });

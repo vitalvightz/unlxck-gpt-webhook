@@ -16,6 +16,7 @@ import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 import { INSTALL_PROMPT_EVENT } from "@/lib/push-prompt";
 import promptStyles from "./push-notification-prompt.module.css";
 import styles from "./install-unlxck.module.css";
+import { useSheetExit } from "@/lib/use-sheet-exit";
 
 function ShareIcon() {
   return (
@@ -153,10 +154,12 @@ export function InstallPrompt() {
     }
   }
 
+  // Slides away before it is removed.
+  const { closing, close: dismiss } = useSheetExit(() => setGuide(null));
   if (!shown) return null;
   return (
-    <dialog ref={dialog} className={`${promptStyles.dialog} ${styles.dialog}`} aria-labelledby="install-prompt-title" aria-describedby="install-prompt-description" aria-busy={busy}
-      onCancel={(event) => { event.preventDefault(); if (!busy) setGuide(null); }}>
+    <dialog ref={dialog} className={`${promptStyles.dialog} ${styles.dialog}`} aria-labelledby="install-prompt-title" aria-describedby="install-prompt-description" aria-busy={busy} data-closing={closing || undefined}
+      onCancel={(event) => { event.preventDefault(); if (!busy) dismiss(); }}>
       <div className={`${promptStyles.header} ${styles.header}`}>
         <Image src="/brand/unlxck-one-angle-48.png" alt="" width={28} height={28} className={promptStyles.mark} />
         <p className={promptStyles.eyebrow}>GET UNLXCK ON YOUR PHONE</p>
@@ -180,12 +183,12 @@ export function InstallPrompt() {
             ))}
           </ol>
           <p className={styles.done}>That’s it. UNLXCK will be on your Home Screen.</p>
-          <button type="button" className={promptStyles.enable} onClick={() => setGuide(null)}>
+          <button type="button" className={promptStyles.enable} onClick={() => dismiss()}>
             Got it<AddIcon />
           </button>
         </>
       )}
-      <button type="button" className={promptStyles.later} disabled={busy} onClick={() => setGuide(null)}>Maybe later</button>
+      <button type="button" className={promptStyles.later} disabled={busy} onClick={() => dismiss()}>Maybe later</button>
     </dialog>
   );
 }
@@ -258,6 +261,8 @@ export function InstallUnlxck({ variant = "panel" }: { variant?: "panel" | "inli
     rememberInstallGuideDismissal(window.localStorage);
     setShowGuide(false);
   }
+  // The steps sheet slides away before it is removed.
+  const { closing: guideClosing, close: closeGuide } = useSheetExit(dismissGuide);
 
   async function handleInstall() {
     if (canPromptInstall) {
@@ -288,9 +293,10 @@ export function InstallUnlxck({ variant = "panel" }: { variant?: "panel" | "inli
         <div
           className="pwa-install-sheet-backdrop"
           role="presentation"
+          data-closing={guideClosing || undefined}
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
-              dismissGuide();
+              closeGuide();
             }
           }}
         >
@@ -307,7 +313,7 @@ export function InstallUnlxck({ variant = "panel" }: { variant?: "panel" | "inli
                 <p className="pwa-install-label">Add to your device</p>
                 <h2 id="pwa-install-sheet-title">Install UNLXCK</h2>
               </div>
-              <button ref={closeRef} type="button" className="pwa-install-sheet-close" onClick={dismissGuide} aria-label="Close install instructions">
+              <button ref={closeRef} type="button" className="pwa-install-sheet-close" onClick={() => closeGuide()} aria-label="Close install instructions">
                 <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
                   <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
                 </svg>
@@ -326,7 +332,7 @@ export function InstallUnlxck({ variant = "panel" }: { variant?: "panel" | "inli
                 </li>
               ))}
             </ol>
-            <button type="button" className="ghost-button pwa-install-sheet-done" onClick={dismissGuide}>
+            <button type="button" className="ghost-button pwa-install-sheet-done" onClick={() => closeGuide()}>
               Done
             </button>
           </section>

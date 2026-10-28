@@ -14,6 +14,7 @@ import type { TrainingHistorySession } from "@/lib/training-history";
 import sheet from "./log-training.module.css";
 import styles from "./manual-exercise-logger.module.css";
 import { SetRows } from "./set-rows";
+import { useSheetExit } from "@/lib/use-sheet-exit";
 
 type Picked = { name: string; choice: ExerciseChoice; format: MeasurementFormat | null; reference: string | null };
 /**
@@ -50,6 +51,8 @@ export function ManualExerciseLogger({ token, session, reference, onClose }: {
   reference?: TrainingHistorySession | null;
   onClose: (entries: ManualExerciseEntry[] | null) => void;
 }) {
+  // Slides away before the parent removes it.
+  const { closing, close: exit } = useSheetExit(onClose);
   const fieldId = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   const search = useRef<HTMLInputElement>(null);
@@ -249,14 +252,14 @@ export function ManualExerciseLogger({ token, session, reference, onClose }: {
   function close() {
     if (busy) return;
     if (unsaved && !window.confirm("Discard this exercise?")) return;
-    onClose(entries);
+    exit(entries);
   }
 
   async function done() {
     // Done keeps the exercise in progress rather than dropping it.
-    if (!unsaved) { onClose(entries); return; }
+    if (!unsaved) { exit(entries); return; }
     const next = await save();
-    if (next) onClose(next);
+    if (next) exit(next);
   }
 
   function measure(field: FieldId) {
@@ -282,7 +285,7 @@ export function ManualExerciseLogger({ token, session, reference, onClose }: {
   const extras = format ? EXTRA_FIELDS[format].filter(field => !individualSets || !["load", "effort"].includes(field)) : [];
   const extraFilled = extras.some(field => editor.draft.values[field]?.trim()) || Boolean(editor.draft.notes.trim());
 
-  return <dialog ref={dialog} className={`${sheet.dialog} ${styles.dialog}`} aria-labelledby={`${fieldId}-title`}
+  return <dialog ref={dialog} className={`${sheet.dialog} ${styles.dialog}`} aria-labelledby={`${fieldId}-title`} data-closing={closing || undefined}
     onCancel={event => { event.preventDefault(); close(); }}>
     <header className={sheet.header}>
       <div><h2 id={`${fieldId}-title`}>Add exercises</h2>

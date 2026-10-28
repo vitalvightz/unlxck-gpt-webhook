@@ -7,6 +7,7 @@ import { ManualExerciseLogger } from "./manual-exercise-logger";
 import { SessionDetails, type SessionDetailsCache } from "./session-details";
 import type { ManualExerciseEntry } from "@/lib/api-schema.generated";
 import type { TrainingHistorySession } from "@/lib/training-history";
+import { SHEET_EXIT_MS } from "@/lib/use-sheet-exit";
 
 const proto = window.HTMLDialogElement.prototype;
 proto.showModal ??= function () { this.setAttribute("open", ""); };
@@ -106,6 +107,8 @@ test("a new name alone is enough, with an explicit no-measurements row, and Done
     await ui.click("Done");
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
     assert.deepEqual(puts(ui.calls)[0].body, { exercise: { name: "Landmine rotation" }, format: "bodyweight", actual: {}, notes: "", revision: 0 });
+    // The sheet slides away before it closes.
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, SHEET_EXIT_MS + 20)); });
     assert.equal(ui.closed.length, 1);
     assert.equal(ui.closed[0]!.length, 1);
   } finally { ui.cleanup(); }
@@ -149,6 +152,7 @@ test("closing with an unfinished exercise asks first", async () => {
     await ui.click("Back Squat");
     await ui.click("Close exercises");
     assert.deepEqual(ui.confirms, ["Discard this exercise?"]);
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, SHEET_EXIT_MS + 20)); });
     assert.equal(ui.closed.length, 1);
   } finally { ui.cleanup(); }
 });

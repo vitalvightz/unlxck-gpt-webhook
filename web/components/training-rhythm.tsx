@@ -10,6 +10,7 @@ import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 import { SessionDetails, type SessionDetailsCache } from "./session-details";
 import sheet from "./session-details.module.css";
 import styles from "./training-progress.module.css";
+import { useSheetExit } from "@/lib/use-sheet-exit";
 
 type Metric = "sessions" | "minutes";
 type Props = {
@@ -111,7 +112,9 @@ export function TrainingRhythm(props: Props) {
     (sessionButton ?? element.querySelector<HTMLButtonElement>("button"))?.focus({ preventScroll: true });
     return () => { scrollTop.current = content?.scrollTop ?? scrollTop.current; element.close(); release(); };
   }, [open, session]);
-  function close() { dialog.current?.close(); setOpen(false); returnSession.current = null; scrollTop.current = 0; trigger.current?.focus(); }
+  function finishClose() { dialog.current?.close(); setOpen(false); returnSession.current = null; scrollTop.current = 0; trigger.current?.focus(); }
+  // Slides away first, then closes.
+  const { closing, close } = useSheetExit(finishClose);
   function show(start?: string) { if (start) setSelectedWeek(start); setOpen(true); }
   const last = preview.at(-2)!;
   return <>
@@ -125,9 +128,9 @@ export function TrainingRhythm(props: Props) {
       </> : <p className={styles.note}>No sessions recorded in this period.</p>
         : <Loading complete={false} loading={loading} error={error} onLoadMore={onLoadMore} />}
     </section>
-    {open ? <dialog ref={dialog} className={sheet.dialog} aria-labelledby={heading} onCancel={event => { event.preventDefault(); close(); }}>
+    {open ? <dialog ref={dialog} className={sheet.dialog} aria-labelledby={heading} data-closing={closing || undefined} onCancel={event => { event.preventDefault(); close(); }}>
       <header className={sheet.header}><div><p className={sheet.eyebrow}>Your training</p><h2 id={heading}>Training Rhythm</h2><p className={sheet.quiet}>Recorded training, week by week.</p></div>
-        <button type="button" className={sheet.close} aria-label="Close training trends" onClick={close}>×</button></header>
+        <button type="button" className={sheet.close} aria-label="Close training trends" onClick={() => close()}>×</button></header>
       <div ref={body} className={sheet.body} role="region" aria-label="Training trends" tabIndex={0}>
         <div className={styles.controls}>
           <div className={styles.segment} role="group" aria-label="Trend range">{([4, 12] as const).map(value => <button key={value} type="button" aria-pressed={range === value} onClick={() => setRange(value)}>{value} weeks</button>)}</div>

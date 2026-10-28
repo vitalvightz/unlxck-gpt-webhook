@@ -68,6 +68,7 @@ import {
   type TrainingPreset,
   type TrainingPresetKey,
 } from "@/lib/recommended-setup";
+import { useFadeNavigate } from "@/components/fade-through";
 
 const WEEKLY_FREQUENCY_OPTIONS: IntakeOption[] = Array.from({ length: 14 }, (_, index) => ({
   label: String(index + 1),
@@ -290,6 +291,7 @@ function PresetSelect({
 
 function QuickBuildFormInner() {
   const router = useRouter();
+  const fadeNavigate = useFadeNavigate();
   const { me, session, replaceMe } = useAppSession();
   const savedTimeZone = me?.profile.athlete_timezone?.trim() || "";
   const athleteTimeZone = savedTimeZone || (typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : null);
@@ -791,7 +793,7 @@ function QuickBuildFormInner() {
           return;
         }
         markGenerationIntent();
-        router.push("/generate");
+        fadeNavigate(() => router.push("/generate"));
       } catch (err) {
         const message = err instanceof Error ? err.message : "";
         if (message.toLowerCase().includes("session") || message.includes("401")) {

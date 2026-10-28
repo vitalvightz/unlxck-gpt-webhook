@@ -15,6 +15,7 @@ import {
   requiresComplianceAcceptance,
   validateDateOfBirth,
 } from "@/lib/compliance";
+import { useFadeNavigate } from "@/components/fade-through";
 
 /**
  * The consent step for an account that does not already have one on record.
@@ -30,6 +31,7 @@ import {
  */
 function ComplianceAcceptance() {
   const router = useRouter();
+  const fadeNavigate = useFadeNavigate();
   const { me, session, replaceMe, signOut } = useAppSession();
   const headingId = useId();
   const [dateOfBirth, setDateOfBirth] = useState("");
@@ -90,7 +92,7 @@ function ComplianceAcceptance() {
         ...(needsHealthConsent && healthDataConsent ? { health_data_consent: true } : {}),
       });
       replaceMe(nextMe);
-      router.replace(getAuthenticatedLandingHref(nextMe));
+      fadeNavigate(() => router.replace(getAuthenticatedLandingHref(nextMe)));
     } catch (submitError) {
       setError(
         submitError instanceof Error

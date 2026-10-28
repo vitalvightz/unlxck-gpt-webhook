@@ -9,10 +9,12 @@ import { getAuthenticatedLandingHref, needsStartingPath } from "@/lib/auth-routi
 import { requiresComplianceAcceptance } from "@/lib/compliance";
 import { athleteSport, sportLabel, TRAINING_SPORTS, type TrainingSport } from "@/lib/training-disciplines";
 import styles from "./starting-path-screen.module.css";
+import { useFadeNavigate } from "@/components/fade-through";
 
 export function StartingPathScreen() {
   const { session, me, isMeHydrated, hasTransientMeError, replaceMe, refreshMe, signOut } = useAppSession();
   const router = useRouter();
+  const fadeNavigate = useFadeNavigate();
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSigningOut, setSigningOut] = useState(false);
@@ -47,7 +49,7 @@ export function StartingPathScreen() {
       });
       if (result.profile.starting_path !== path) throw new Error("Your choice could not be saved. Try again.");
       replaceMe(result);
-      router.replace(path === "tracking_first" ? "/" : "/quick-build");
+      fadeNavigate(() => router.replace(path === "tracking_first" ? "/" : "/quick-build"));
     } catch {
       setError("Your choice could not be saved. Try again.");
       locked.current = false; setSaving(null);

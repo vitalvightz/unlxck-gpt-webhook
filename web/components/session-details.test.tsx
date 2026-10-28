@@ -5,6 +5,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { SessionDetails, type SessionDetailsCache } from "./session-details";
 import type { TrainingHistorySession } from "@/lib/training-history";
+import { SHEET_EXIT_MS } from "@/lib/use-sheet-exit";
 
 const proto = window.HTMLDialogElement.prototype;
 proto.showModal ??= function () { this.setAttribute("open", ""); };
@@ -32,6 +33,8 @@ test("details distinguish unknown actuals, reuse visit cache, and dismiss with E
     assert.equal(container.querySelectorAll("ol > li").length, 2);
     const dialog = container.querySelector("dialog")!;
     await act(async () => dialog.dispatchEvent(new window.Event("cancel", { bubbles: true, cancelable: true })));
+    // The sheet slides away before it is dismissed.
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, SHEET_EXIT_MS + 20)); });
     assert.ok(dismissed);
     await act(async () => root.render(null));
     assert.equal(document.activeElement, trigger);

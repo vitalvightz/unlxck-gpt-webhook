@@ -17,6 +17,7 @@ import styles from "./session-details.module.css";
 import { countOnlySetSummary } from "@/lib/set-entries";
 import { SetResults } from "./set-rows";
 import type { ExerciseSetResult } from "@/lib/types";
+import { useSheetExit } from "@/lib/use-sheet-exit";
 
 /** The session's own status as an icon tone. */
 function sessionTone(status: string): RecordStatus {
@@ -138,6 +139,8 @@ export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = tr
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const heading = useId();
+  // Slides away before the parent removes it.
+  const { closing, close: dismiss } = useSheetExit(onDismiss);
   const [details, setDetails] = useState<Details | null>(null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -167,17 +170,17 @@ export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = tr
   const record = details?.session;
   const [open, setOpen] = useState<ReadonlySet<number> | null>(null);
   const expanded = open ?? new Set(details?.blocks.flatMap((block, index) => opensByDefault(block, details.blocks.length) ? [index] : []) ?? []);
-  return <dialog ref={dialog} className={`${styles.dialog} ${styles.workspace}`} aria-labelledby={heading}
-    onCancel={event => { event.preventDefault(); onDismiss(); }}
+  return <dialog ref={dialog} className={`${styles.dialog} ${styles.workspace}`} aria-labelledby={heading} data-closing={closing || undefined}
+    onCancel={event => { event.preventDefault(); dismiss(); }}
     onClick={event => { if (event.target === event.currentTarget) {
       const bounds = event.currentTarget.getBoundingClientRect();
-      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onDismiss();
+      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dismiss();
     } }}>
     <header className={styles.header}><div><p className={styles.eyebrow}>Session details</p>
       <h2 id={heading}>{record?.title || row.title}</h2>
       <p className={styles.quiet}>{formatAppDate(record?.training_day || row.training_day)}
         {record ? <span className={styles.sessionStatus} data-status={sessionTone(record.status)}><StatusIcon status={sessionTone(record.status)} />{sessionStatusLabel(record.status)}</span> : null}</p></div>
-      <button type="button" className={styles.close} aria-label="Close session details" onClick={onDismiss}>×</button></header>
+      <button type="button" className={styles.close} aria-label="Close session details" onClick={() => dismiss()}>×</button></header>
     <div className={styles.body} tabIndex={0} role="region" aria-label="Session record">
       {!details && !error ? <p role="status">Loading session details…</p> : null}
       {error ? <div role="alert"><p>Unable to load session details. Try again.</p><button type="button" className="secondary-button" onClick={() => { setError(false); setAttempt(value => value + 1); }}>Retry</button></div> : null}

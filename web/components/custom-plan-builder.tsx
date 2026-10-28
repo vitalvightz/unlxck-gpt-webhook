@@ -26,6 +26,7 @@ import { CommunityContributionSheet, CommunityExercisePreview, communityDetailsC
 import { PrivateExerciseMediaProvider, PrivateExerciseVideo, PrivateExerciseVideoSheet } from "./private-exercise-video";
 import { blankDose, doseSummary, doseIncomplete } from "@/lib/custom-plan-dose";
 import styles from "./custom-plan-builder.module.css";
+import { useFadeNavigate } from "@/components/fade-through";
 type Exercise = (Omit<CustomExercise, "snapshot"> & { snapshot: LibraryEntry }) | ManualExercise;
 type Session = Omit<CustomSession, "exercises" | "session_type"> & { exercises: Exercise[]; session_type?: CustomSession["session_type"] };
 type Draft = { id?: string; name: string; sessions: Session[]; incomplete?: boolean };
@@ -97,6 +98,7 @@ function PencilIcon() {
 }
 export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { accessToken: string; planId?: string; onboarding?: MeResponse | null }) {
   const router = useRouter();
+  const fadeNavigate = useFadeNavigate();
   const [draft, setDraft] = useState<Draft>(() => ({
     name: "My Training Plan",
     sessions: planId ? [] : customSchedulePrefill(onboarding),
@@ -443,7 +445,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
       loaded.current = true;
       if (viewPlan) {
         const published = await publishCustomPlan(accessToken, saved.id);
-        router.push(`/plans/${published.plan_id}`);
+        fadeNavigate(() => router.push(`/plans/${published.plan_id}`));
       }
     } catch (e) {
       setError(customPlanError(e, "Unable to save plan."));

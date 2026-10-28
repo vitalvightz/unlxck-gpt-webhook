@@ -6,6 +6,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 
 import { PlanSwitchDialog } from "./plan-switch-dialog";
+import { SHEET_EXIT_MS } from "@/lib/use-sheet-exit";
 
 test("switch keeps the previous plan by default and archives only when selected", async () => {
   const container = document.createElement("div");
@@ -31,7 +32,7 @@ test("switch keeps the previous plan by default and archives only when selected"
   }
 });
 
-test("open plan shows no fight date, traps focus, cancels with Escape and restores focus", () => {
+test("open plan shows no fight date, traps focus, cancels with Escape and restores focus", async () => {
   const container = document.createElement("div");
   const trigger = document.createElement("button");
   document.body.append(trigger, container);
@@ -52,6 +53,8 @@ test("open plan shows no fight date, traps focus, cancels with Escape and restor
     act(() => document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true, cancelable: true })));
     assert.equal(document.activeElement, cancel);
     act(() => document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    // The dialog fades away before it cancels.
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, SHEET_EXIT_MS + 20)); });
     assert.equal(cancels, 1);
     act(() => root.unmount());
     assert.equal(document.activeElement, trigger);
@@ -62,7 +65,7 @@ test("open plan shows no fight date, traps focus, cancels with Escape and restor
   }
 });
 
-test("pending switch blocks controls, backdrop and Escape; failures remain visible", () => {
+test("pending switch blocks controls, backdrop and Escape; failures remain visible", async () => {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -81,6 +84,7 @@ test("pending switch blocks controls, backdrop and Escape; failures remain visib
     act(() => root.render(<PlanSwitchDialog plan={{}} isPending={false} errorMessage="Unable to switch plan" onConfirm={async () => {}} onCancel={() => { cancels++; }} />));
     assert.equal(document.querySelector('[role="alert"]')?.textContent, "Unable to switch plan");
     act(() => document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, SHEET_EXIT_MS + 20)); });
     assert.equal(cancels, 1);
   } finally {
     act(() => root.unmount());

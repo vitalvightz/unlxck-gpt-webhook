@@ -20,6 +20,7 @@ import type {
 import { XP_TOAST_KEYS } from "@/lib/xp-events";
 
 import styles from "./sparring-log-prompt.module.css";
+import { useSheetExit } from "@/lib/use-sheet-exit";
 
 /** What the finished timer, or a manual sparring log, knows about the sparring. */
 export type SparringDraft = {
@@ -120,6 +121,8 @@ export function SparringLogPrompt({
   /** After a confirmed save, so Today can refresh its safety guidance. */
   onSaved?: (log: SparringLogRecord) => void;
 }) {
+  // Slides away before the parent removes it.
+  const { closing, close: dismiss } = useSheetExit(onDismiss);
   const { me } = useAppSession();
   const { showToast } = useToast();
   const notesId = useId();
@@ -232,7 +235,7 @@ export function SparringLogPrompt({
         setSavedNotice(result.safety_notice);
       } else {
         showToast(existing ? "Sparring report updated." : "Sparring logged.", { tone: "success", mergeKeys: XP_TOAST_KEYS.session });
-        onDismiss();
+        dismiss();
       }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not save your sparring log.");
@@ -245,10 +248,11 @@ export function SparringLogPrompt({
     <dialog
       ref={dialog}
       className={sheet.dialog}
+      data-closing={closing || undefined}
       aria-label={savedNotice ? "Sparring logged" : existing ? "Update sparring report" : "Log your sparring"}
       onCancel={(event) => {
         event.preventDefault();
-        if (!isSubmitting) onDismiss();
+        if (!isSubmitting) dismiss();
       }}
     >
       <header className={sheet.header}>
@@ -262,7 +266,7 @@ export function SparringLogPrompt({
             </p>
           )}
         </div>
-        <button className={sheet.close} type="button" aria-label="Close sparring log" disabled={isSubmitting} onClick={onDismiss}>
+        <button className={sheet.close} type="button" aria-label="Close sparring log" disabled={isSubmitting} onClick={() => dismiss()}>
           ×
         </button>
       </header>
@@ -272,7 +276,7 @@ export function SparringLogPrompt({
             <p className={styles.safety} role="alert">{savedNotice}</p>
           </div>
           <footer className={sheet.actions}>
-            <button type="button" className="cta" onClick={onDismiss}>Got it</button>
+            <button type="button" className="cta" onClick={() => dismiss()}>Got it</button>
           </footer>
         </div>
       ) : (
@@ -365,7 +369,7 @@ export function SparringLogPrompt({
                 {error}
               </p>
             ) : null}
-            <button type="button" className="ghost-button" disabled={isSubmitting} onClick={onDismiss}>
+            <button type="button" className="ghost-button" disabled={isSubmitting} onClick={() => dismiss()}>
               {existing ? "Cancel" : "Skip"}
             </button>
             <button type="submit" className="cta" disabled={isSubmitting}>
