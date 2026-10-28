@@ -165,35 +165,23 @@ p.lead.lead { margin: 14px 0 0; }
   background: var(--border-default);
 }
 
-/* "DM @unlxckperformance": Instagram's gradient ring around the glyph,
-   otherwise matching the page's secondary button. */
+/* Instagram DM: just the glyph on Instagram's gradient, centred under the
+   line; the handle is its accessible name. */
 .instagram {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 52px;
-  border: 1px solid var(--border-default);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text-primary);
-  font-weight: 600;
-  text-decoration: none;
-  transition: border-color 140ms ease, background 140ms ease;
-}
-
-.instagram svg {
-  flex-shrink: 0;
-  padding: 3px;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   background: linear-gradient(45deg, #f58529, #dd2a7b 50%, #8134af 80%, #515bd4);
   color: #ffffff;
+  transition: transform 140ms ease, box-shadow 140ms ease;
 }
 
-.instagram:hover { border-color: var(--text-secondary); background: rgba(255, 255, 255, 0.06); }
+.instagram svg { width: 26px; height: 26px; }
+
+.instagram:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(221, 42, 123, 0.3); }
 .instagram:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 4px; }
 
 @media (prefers-reduced-motion: reduce) {
