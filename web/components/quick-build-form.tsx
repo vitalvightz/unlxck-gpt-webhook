@@ -1123,7 +1123,7 @@ function QuickBuildFormInner() {
           onToggle={(value) => togglePerformanceFocusField("weak_areas", value)}
           disableAdditionalSelections={input.weak_areas.length >= QUICK_BUILD_WEAK_AREA_CAP || sharedFocusCapReached}
           capDisabledReason={input.weak_areas.length >= QUICK_BUILD_WEAK_AREA_CAP
-            ? `Maximum of ${QUICK_BUILD_WEAK_AREA_CAP} weak areas reached. Unselect one to add another.`
+            ? `You can pick up to ${QUICK_BUILD_WEAK_AREA_CAP} weak areas. Remove one to add another.`
             : FOCUS_CAP_DISABLED_REASON}
           disabledValues={unavailableWeakAreaValues}
           disabledValueReason="Not available for this fight window"

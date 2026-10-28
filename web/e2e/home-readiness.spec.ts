@@ -81,7 +81,7 @@ for (const [width, height, theme] of [
         await balance.check(); await expect(gasTank).toBeDisabled();
         const why = group.getByRole("button", { name: "Why Gas Tank is unavailable", exact: true });
         await expect(why).toBeVisible(); await expect(why).toBeEnabled(); await why.click();
-        const bubble = page.getByRole("tooltip"); await expect(bubble).toContainText("Maximum of 2 weak areas reached");
+        const bubble = page.getByRole("tooltip"); await expect(bubble).toContainText("You can pick up to 2 weak areas");
         await expect(bubble).toBeInViewport({ ratio: 1 });
         if (width === 390 || width === 1280) expect((await new AxeBuilder({ page }).include(quick ? ".quick-build-form" : ".onboarding-panel").withRules(["nested-interactive"]).analyze()).violations).toEqual([]);
         await capture(quick ? "quick-build-limit" : "camp-setup-limit");

@@ -47,7 +47,7 @@ for (const quick of [false, true]) {
   test(`${quick ? "Quick Build" : "Camp Setup"} caps open plans at four combined picks and permits swapping a selected goal`, async () => {
     const ui = await mountFocus(quick, ["strength", "balance"], ["conditioning", "power"]);
     try {
-      assert.match(ui.host.textContent ?? "", quick ? /shared cap: 4/ : /4 of 4 focus picks used/);
+      assert.match(ui.host.textContent ?? "", quick ? /shared cap: 4/ : /4 of 4 picks used/);
       assert.equal(ui.option("Recovery", false).input.disabled, true);
       assert.equal(ui.option("Conditioning", false).input.disabled, false);
       await act(async () => ui.option("Conditioning", false).input.click());
