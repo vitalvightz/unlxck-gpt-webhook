@@ -256,6 +256,6 @@
     "granted": "Accès autorisé",
     "grantedTitle": "Tu es dedans.",
     "grantedLead": "Bienvenue dans la bêta privée. Préparation de ton compte…",
-    "inviteRequired": "Il te faut un code d’invitation pour créer un compte. Saisis ton code, puis continue à nouveau avec Google ou ton e-mail."
+    "inviteRequired": "Il te faut un code d’invitation pour créer un compte. Saisis ton code, puis utilise à nouveau Google ou ton e-mail pour continuer."
   }
 }
