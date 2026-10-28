@@ -114,7 +114,16 @@ export function FadeThroughProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     pathnameNow.current = pathname;
-    if (leavingPath.current !== null && pathname !== leavingPath.current) liftAfterNavigation();
+    if (leavingPath.current === null || pathname === leavingPath.current) return;
+    // Route arrival can still be the editor's loading shell. Keep the cover
+    // until its content commits, with the existing hold timeout as a fallback.
+    const ready = () => {
+      if (leavingPath.current !== null && !document.querySelector("[data-route-pending]")) liftAfterNavigation();
+    };
+    const observer = new MutationObserver(ready);
+    observer.observe(document.body, { childList: true, subtree: true });
+    ready();
+    return () => observer.disconnect();
   }, [liftAfterNavigation, pathname]);
 
   const fadeNavigate = useCallback<FadeThrough>((navigate) => {

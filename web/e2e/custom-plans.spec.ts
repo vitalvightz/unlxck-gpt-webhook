@@ -359,8 +359,20 @@ for (const width of [320, 390, 1280]) {
     await list.scrollIntoViewIfNeeded();
     const accessibility = await new AxeBuilder({ page }).include('section[aria-label="Saved plans"]').analyze();
     expect(accessibility.violations).toEqual([]);
+    await page.evaluate(() => {
+      const phases: string[] = [];
+      Object.assign(window, { planFadePhases: phases });
+      new MutationObserver(() => {
+        const phase = document.querySelector<HTMLElement>(".fade-through")?.dataset.phase;
+        if (phase) phases.push(phase);
+      }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-phase"] });
+    });
     await list.getByRole("link").click();
     await expect(page).toHaveURL(new RegExp(`plans/custom\\?plan=${draftId}`));
+    await expect(page.locator(".fade-through")).toHaveCount(0);
+    const phases = await page.evaluate(() => (window as unknown as { planFadePhases: string[] }).planFadePhases);
+    expect(phases).toContain("covering");
+    expect(phases).toContain("covered");
     expect(errors).toEqual([]);
   });
 }

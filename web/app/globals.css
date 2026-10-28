@@ -7196,10 +7196,7 @@ button.mobile-step-rail-item {
 
 @keyframes sheet-backdrop-in {
   from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
+    background-color: transparent;
   }
 }
 
@@ -7237,11 +7234,8 @@ button.mobile-step-rail-item {
 }
 
 @keyframes sheet-backdrop-out {
-  from {
-    opacity: 1;
-  }
   to {
-    opacity: 0;
+    background-color: transparent;
   }
 }
 
@@ -22740,3 +22734,7 @@ fieldset.priority-clarification-options,
 
 /* Plan management has no prescriptions; safety guidance stays in training flows. */
 .app-content:has([data-plan-workspace]) > .app-safety-footer { display: none; }
+
+/* Native iOS tap shading paints a rectangular flash on custom controls.
+   Keyboard focus remains styled by the existing :focus-visible rules. */
+a, button, summary, [role="button"] { -webkit-tap-highlight-color: transparent; }

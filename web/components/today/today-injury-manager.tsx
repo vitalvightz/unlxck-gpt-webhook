@@ -9,7 +9,6 @@ import {
   type BodyMapSide,
 } from "@/components/body-map";
 import { LevelSlider } from "@/components/rating-controls";
-import { AutoHeight } from "@/components/today/auto-height";
 import { Collapse } from "@/components/today/collapse";
 import { InjuryDetailSheet } from "@/components/today/injury-detail-sheet";
 import { EffectiveClinicianClearanceStatus, InjuryCareStatus, InjuryClearance } from "@/components/today/injury-care-status";
@@ -668,8 +667,7 @@ export function TodayInjuryManager({
           [...(openInjuries[0].clinician_clearance?.scopes ?? [])].sort().join(",")) ?
         <EffectiveClinicianClearanceStatus clearance={effectiveClearance} /> : null}
       {openInjuries.length ? (
-        <AutoHeight>
-          {/* Opening a card or a check-in follow-up glides the list below it. */}
+        <>
           <ul className="today-injury-list">
             {openInjuries.map((injury) => {
               const selectedStatus = selectedStatusByFlagId[injury.id];
@@ -984,7 +982,7 @@ export function TodayInjuryManager({
               );
             })}
           </ul>
-        </AutoHeight>
+        </>
       ) : (
         <p className="muted">No injuries tracked.</p>
       )}

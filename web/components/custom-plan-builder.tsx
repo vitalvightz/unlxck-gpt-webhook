@@ -455,7 +455,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
   }
   if (loading)
     return (
-      <section className={styles.builder}>
+      <section className={styles.builder} data-route-pending>
         <p role="status">Opening custom plan…</p>
       </section>
     );
