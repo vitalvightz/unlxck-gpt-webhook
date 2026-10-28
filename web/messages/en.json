@@ -243,7 +243,6 @@
     "title": "Invite only.",
     "lead": "UNLXCK is in private beta. Enter your access code to create your account.",
     "label": "Access code",
-    "placeholder": "Enter your code",
     "submit": "Unlock",
     "checking": "Checking…",
     "error": "That code isn't right. Check your invite and try again.",
@@ -251,6 +250,11 @@
     "apply": "Apply for beta",
     "applyNote": "Opens an email to the UNLXCK team. We'll reply with a code if there's a spot.",
     "applySubject": "UNLXCK beta application",
-    "applyBody": "Hi UNLXCK team,\n\nI'd like to join the beta.\n\nName:\nSport / discipline:\nLevel (amateur / pro):\nInstagram (optional):\nWhy I want in:\n"
+    "applyBody": "Hi UNLXCK team,\n\nI'd like to join the beta.\n\nName:\nSport / discipline:\nLevel (amateur / pro):\nInstagram (optional):\nWhy I want in:\n",
+    "badge": "Private beta",
+    "hint": "Enter the {length}-character code from your invite. It submits when complete.",
+    "granted": "Access granted",
+    "grantedTitle": "You're in.",
+    "grantedLead": "Welcome to the private beta. Setting up your account…"
   }
 }

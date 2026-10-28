@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { hasSignupAccess, isValidAccessCode, normalizeAccessCode, signupAccessToken } from "./signup-access";
+import { accessCodeShape, hasSignupAccess, isValidAccessCode, normalizeAccessCode, signupAccessToken } from "./signup-access";
 
 test("the launch code unlocks signup, tolerating spaces", () => {
   assert.equal(isValidAccessCode("63839"), true);
@@ -29,4 +29,14 @@ test("the cookie never holds the code itself", () => {
   assert.ok(!signupAccessToken().includes("63839"));
   assert.equal(hasSignupAccess(undefined), false);
   assert.equal(normalizeAccessCode("ab-12"), "AB12");
+});
+
+test("the code's shape (boxes and keypad) is exposed, not the code", () => {
+  assert.deepEqual(accessCodeShape(), { length: 5, numeric: true });
+  process.env.SIGNUP_ACCESS_CODE = "fight-2027";
+  try {
+    assert.deepEqual(accessCodeShape(), { length: 9, numeric: false });
+  } finally {
+    delete process.env.SIGNUP_ACCESS_CODE;
+  }
 });

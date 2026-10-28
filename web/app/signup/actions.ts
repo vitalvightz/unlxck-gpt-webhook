@@ -1,7 +1,6 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 
 import {
   isValidAccessCode,
@@ -10,18 +9,22 @@ import {
   signupAccessToken,
 } from "@/lib/signup-access";
 
-export type AccessCodeState = { error: boolean };
+/** `attempt` counts submissions so the screen can react to each wrong try. */
+export type AccessCodeState = { status: "idle" | "error" | "granted"; attempt: number };
 
 // A short pause on a wrong code makes guessing through the codes slow without
 // being noticeable to someone who simply mistyped.
 const WRONG_CODE_DELAY_MS = 700;
 
-export async function submitAccessCode(_previous: AccessCodeState, formData: FormData): Promise<AccessCodeState> {
+export async function submitAccessCode(previous: AccessCodeState, formData: FormData): Promise<AccessCodeState> {
+  const attempt = previous.attempt + 1;
   const code = String(formData.get("code") ?? "");
   if (!isValidAccessCode(code)) {
     await new Promise((resolve) => setTimeout(resolve, WRONG_CODE_DELAY_MS));
-    return { error: true };
+    return { status: "error", attempt };
   }
+  // Setting the cookie re-renders /signup, which now has access; the client
+  // plays the unlock before showing the account form.
   (await cookies()).set(SIGNUP_ACCESS_COOKIE, signupAccessToken(), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -29,5 +32,5 @@ export async function submitAccessCode(_previous: AccessCodeState, formData: For
     path: "/",
     maxAge: SIGNUP_ACCESS_MAX_AGE_S,
   });
-  redirect("/signup");
+  return { status: "granted", attempt };
 }

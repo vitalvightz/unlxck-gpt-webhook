@@ -28,6 +28,15 @@ export function isValidAccessCode(input: string): boolean {
   return given.length === expected.length && timingSafeEqual(given, expected);
 }
 
+/**
+ * The code's shape, for drawing one box per character and picking the
+ * keypad. Length and digits-only are safe to send; the code itself is not.
+ */
+export function accessCodeShape(): { length: number; numeric: boolean } {
+  const code = normalizeAccessCode(expectedCode());
+  return { length: code.length, numeric: /^\d+$/.test(code) };
+}
+
 /** The cookie value for the current code. */
 export function signupAccessToken(): string {
   return createHash("sha256").update(`unlxck-signup:${normalizeAccessCode(expectedCode())}`).digest("hex");
