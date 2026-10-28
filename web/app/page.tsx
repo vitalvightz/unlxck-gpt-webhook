@@ -777,8 +777,7 @@ export default function HomePage() {
       <section className="public-hero" aria-labelledby="public-hero-heading">
         <p className="public-hero-motto public-rise" style={riseDelay(0)}>
           <span className="sr-only">UNLXCK {publicT("mottoTagline")}</span>
-          <UnlockGlitchText text="UNLXCK" className="public-hero-motto-brand" delayMs={150} />
-          <UnlockGlitchText text={publicT("mottoTagline")} className="public-hero-motto-tagline" delayMs={450} />
+          <UnlockGlitchText text={`UNLXCK ${publicT("mottoTagline")}`} accentLength={6} delayMs={150} durationMs={1100} />
         </p>
         <h1
           id="public-hero-heading"

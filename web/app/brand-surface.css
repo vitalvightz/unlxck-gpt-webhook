@@ -71,14 +71,15 @@
   background: rgba(181, 18, 43, 0.68);
 }
 
-.public-hero-motto-brand {
-  color: #e0354f;
-  letter-spacing: 0.22em;
+/* One phrase, one style: "UNLXCK" in red, the rest muted, decoding together. */
+.public-hero-motto .unlock-glitch {
+  color: var(--text-muted);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
 }
 
-.public-hero-motto-tagline {
-  color: var(--text-muted);
-  letter-spacing: 0.04em;
+.unlock-glitch-accent {
+  color: #e0354f;
 }
 
 /* Unlock glitch: red and cyan copies of the text (from data-text) split
@@ -129,12 +130,12 @@
     animation: unlock-flash 700ms ease-out both;
   }
 
-  .public-hero-motto-brand[data-state="unlocked"]::before {
-    animation: unlock-burst-a 5s steps(1) 2s infinite;
+  .public-hero-motto .unlock-glitch[data-state="unlocked"]::before {
+    animation: unlock-burst-a 7s steps(1) 2.5s infinite;
   }
 
-  .public-hero-motto-brand[data-state="unlocked"]::after {
-    animation: unlock-burst-b 5s steps(1) 2s infinite;
+  .public-hero-motto .unlock-glitch[data-state="unlocked"]::after {
+    animation: unlock-burst-b 7s steps(1) 2.5s infinite;
   }
 }
 
@@ -164,23 +165,23 @@
 /* Idle for most of the cycle; a ~250ms tear near the end. */
 @keyframes unlock-burst-a {
   0%, 92%, 97%, 100% { opacity: 0; clip-path: none; transform: none; }
-  93% { opacity: 0.8; clip-path: inset(0 0 55% 0); transform: translate(-3px, 0); }
-  94.5% { opacity: 0.8; clip-path: inset(45% 0 15% 0); transform: translate(2px, 0); }
-  96% { opacity: 0.6; clip-path: inset(75% 0 0 0); transform: translate(-1px, 0); }
+  93% { opacity: 0.55; clip-path: inset(0 0 55% 0); transform: translate(-2px, 0); }
+  94.5% { opacity: 0.55; clip-path: inset(45% 0 15% 0); transform: translate(2px, 0); }
+  96% { opacity: 0.4; clip-path: inset(75% 0 0 0); transform: translate(-1px, 0); }
 }
 
 @keyframes unlock-burst-b {
   0%, 92%, 97%, 100% { opacity: 0; clip-path: none; transform: none; }
-  93% { opacity: 0.8; clip-path: inset(50% 0 10% 0); transform: translate(3px, 0); }
-  94.5% { opacity: 0.8; clip-path: inset(0 0 65% 0); transform: translate(-2px, 0); }
-  96% { opacity: 0.6; clip-path: inset(25% 0 45% 0); transform: translate(1px, 0); }
+  93% { opacity: 0.55; clip-path: inset(50% 0 10% 0); transform: translate(2px, 0); }
+  94.5% { opacity: 0.55; clip-path: inset(0 0 65% 0); transform: translate(-2px, 0); }
+  96% { opacity: 0.4; clip-path: inset(25% 0 45% 0); transform: translate(1px, 0); }
 }
 
 .public-hero .public-hero-title {
   display: grid;
   gap: 2px;
   margin: 0;
-  font-size: clamp(40px, 11vw, 72px);
+  font-size: clamp(34px, 9vw, 72px);
   line-height: 0.98;
   letter-spacing: -0.04em;
   text-wrap: balance;
@@ -198,7 +199,7 @@
   max-width: 34em;
   margin: 0;
   color: var(--text-secondary);
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 400;
   line-height: 1.55;
   text-wrap: pretty;
@@ -284,7 +285,7 @@
 .public-final-cta h2 {
   margin: 0;
   color: #ffffff;
-  font-size: clamp(26px, 7vw, 36px);
+  font-size: clamp(22px, 5.8vw, 36px);
   line-height: 1.08;
   letter-spacing: -0.03em;
   text-wrap: balance;
