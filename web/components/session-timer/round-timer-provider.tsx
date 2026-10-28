@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 
+import { useFadeThrough } from "@/components/fade-through";
 import { SessionTimer } from "@/components/session-timer/session-timer";
 import { clearSavedRun, hasSavedRun } from "@/components/session-timer/use-session-timer";
 import { resolveTrainingDay, toISODate } from "@/lib/camp-map";
@@ -109,6 +110,7 @@ function subscribeToNothing() {
  */
 export function RoundTimerProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<"open" | "minimized" | null>(null);
+  const fadeThrough = useFadeThrough();
   // Read from storage on the client only, so server and first client render agree.
   const hasSaved = useSyncExternalStore(
     subscribeToNothing,
@@ -126,21 +128,21 @@ export function RoundTimerProvider({ children }: { children: ReactNode }) {
         if (hasSavedTodayRun()) return;
         setItems([freeRoundsItem()]);
       }
-      // Audio only unlocks inside the tap itself.
+      // Audio only unlocks inside the tap itself, so before the fade.
       if (unlockAudio) timerAudio().unlock();
-      setMode("open");
+      fadeThrough(() => setMode("open"));
     };
     return {
       shown: shownMode !== null,
       open: () => show(true),
       show: () => show(false),
     };
-  }, [shownMode]);
+  }, [fadeThrough, shownMode]);
 
-  const close = () => {
+  const close = () => fadeThrough(() => {
     clearSavedRun(ROUND_TIMER_STORAGE_KEY);
     setMode(null);
-  };
+  });
 
   return (
     <RoundTimerContext.Provider value={value}>
@@ -152,7 +154,7 @@ export function RoundTimerProvider({ children }: { children: ReactNode }) {
           sessionTitle="Round timer"
           visible={shownMode === "open"}
           finishLabel="Done"
-          onMinimize={() => setMode("minimized")}
+          onMinimize={() => fadeThrough(() => setMode("minimized"))}
           onExpand={value.open}
           onClose={close}
           onFinish={close}

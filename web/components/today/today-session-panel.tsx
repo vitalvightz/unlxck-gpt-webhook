@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { ExerciseMediaProvider } from "@/components/exercise-demo";
+import { useFadeThrough } from "@/components/fade-through";
 import { Skeleton } from "@/components/skeleton";
 import { AutoHeight } from "@/components/today/auto-height";
 import { Collapse } from "@/components/today/collapse";
@@ -482,6 +483,7 @@ export function TodaySessionPanel({
   onRefresh: () => Promise<void>;
 }) {
   const { showToast } = useToast();
+  const fadeThrough = useFadeThrough();
   const [intent, setIntent] = useState<CompletionIntent>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rehabPerformance, setRehabPerformance] = useState<"done_as_shown" | "changed" | "stopped" | "skipped" | undefined>();
@@ -929,9 +931,9 @@ export function TodaySessionPanel({
     }
     // The round timer is up: it keeps the screen until it closes.
     if (roundTimer.shown) return;
-    // Audio only unlocks inside the tap itself.
+    // Audio only unlocks inside the tap itself, so before the fade.
     timerAudio().unlock();
-    setActiveTimer({ source, mode: "open" });
+    fadeThrough(() => setActiveTimer({ source, mode: "open" }));
   }
 
   /** Lead button on a contact day: time the rounds, and when the contact IS
@@ -952,12 +954,14 @@ export function TodaySessionPanel({
     void saveCompletion("started").then((started) => {
       if (!started || roundTimer.shown) return;
       if (visualisationFirst) {
-        setGuidedNext(timerAvailable ? "timer" : "review");
-        setGuidedOpen(true);
+        fadeThrough(() => {
+          setGuidedNext(timerAvailable ? "timer" : "review");
+          setGuidedOpen(true);
+        });
         return;
       }
       if (timerAvailable) {
-        setActiveTimer({ source: "session", mode: "open" });
+        fadeThrough(() => setActiveTimer({ source: "session", mode: "open" }));
       }
     });
   }
@@ -974,13 +978,16 @@ export function TodaySessionPanel({
   /** Leave the visualisation for what comes next in the session. */
   function continueAfterGuided() {
     const next = guidedNext;
-    setGuidedOpen(false);
-    setGuidedNext(null);
-    if (next === "timer" && timerAvailable) {
-      openTimer("session");
-    } else if (next === "review" && !reviewOpen) {
-      openReview(false);
-    }
+    // One fade: the visualisation leaves and what follows arrives in the dark.
+    fadeThrough(() => {
+      setGuidedOpen(false);
+      setGuidedNext(null);
+      if (next === "timer" && timerAvailable) {
+        openTimer("session");
+      } else if (next === "review" && !reviewOpen) {
+        openReview(false);
+      }
+    });
   }
 
   function openReview(fromTimer: boolean) {
@@ -1055,7 +1062,7 @@ export function TodaySessionPanel({
               if (canCompleteSession && !safeSession && status === "not_started") {
                 startSession();
               } else {
-                setGuidedOpen(true);
+                fadeThrough(() => setGuidedOpen(true));
               }
             }}
           >
@@ -1117,12 +1124,12 @@ export function TodaySessionPanel({
         visible={mode === "open"}
         finishLabel={source === "session" ? "Finish session" : "Done"}
         handOffWhenDone={source === "session"}
-        onMinimize={() => setActiveTimer({ source, mode: "minimized" })}
+        onMinimize={() => fadeThrough(() => setActiveTimer({ source, mode: "minimized" }))}
         onExpand={() => openTimer(source)}
-        onClose={() => {
+        onClose={() => fadeThrough(() => {
           clearSavedRun(storageKey);
           setActiveTimer(null);
-        }}
+        })}
         onFinish={async (summary: SessionTimerSummary) => {
           if (source === "session") {
             setTimerHandoffPending(true);
@@ -1146,10 +1153,12 @@ export function TodaySessionPanel({
             setTimerHandoffPending(false);
           }
           clearSavedRun(storageKey);
-          setActiveTimer(null);
+          // The timer leaves, and the log or sparring sheet arrives, in one
+          // fade: calls made while it is going dark swap together.
+          fadeThrough(() => setActiveTimer(null));
           // Any sparring rounds actually done get the quick sparring log.
           if (summary.sparring && summary.sparring.rounds > 0) {
-            setSparringDraft({
+            const draft: SparringDraft = {
               source,
               planId: activePlanId || null,
               sessionId: source === "session" ? session.session_id ?? null : null,
@@ -1162,10 +1171,11 @@ export function TodaySessionPanel({
               title: title,
               rounds: summary.sparring.rounds,
               roundSeconds: summary.sparring.roundSeconds,
-            });
+            };
+            fadeThrough(() => setSparringDraft(draft));
           }
           if (source === "session") {
-            openReview(true);
+            fadeThrough(() => openReview(true));
             return;
           }
           if (
@@ -1381,7 +1391,7 @@ export function TodaySessionPanel({
               className="cta"
               aria-haspopup="dialog"
               disabled={!showStructuredBlocks}
-              onClick={() => setPreviewOpen(true)}
+              onClick={() => fadeThrough(() => setPreviewOpen(true))}
             >
               <ToolIcon name="play" />
               Preview session
@@ -1398,7 +1408,7 @@ export function TodaySessionPanel({
                 title={shownTitle}
                 variant="screen"
                 closeLabel="Back to Today"
-                onClose={() => setPreviewOpen(false)}
+                onClose={() => fadeThrough(() => setPreviewOpen(false))}
               >
                 <div className="today-preview-screen">
                   <p className="today-preview-meta">
@@ -1522,8 +1532,10 @@ export function TodaySessionPanel({
                   return;
                 }
                 if (guidedLeads) {
-                  setGuidedNext("review");
-                  setGuidedOpen(true);
+                  fadeThrough(() => {
+                    setGuidedNext("review");
+                    setGuidedOpen(true);
+                  });
                   return;
                 }
                 if (contactIsSession && contactTimerAvailable) {
@@ -1619,10 +1631,10 @@ export function TodaySessionPanel({
           finishLabel={guidedNext === "timer" ? "Continue to training" : "Finish session"}
           upNext={guidedNext === "timer" ? timerItems[0]?.title ?? null : null}
           skipLabel="Skip to training"
-          onClose={() => {
+          onClose={() => fadeThrough(() => {
             setGuidedOpen(false);
             setGuidedNext(null);
-          }}
+          })}
           onComplete={logVisualisationDone}
           onFinish={guidedNext ? continueAfterGuided : undefined}
           onSkip={guidedNext === "timer" ? continueAfterGuided : undefined}
@@ -1663,8 +1675,10 @@ export function TodaySessionPanel({
                 onClick={() => {
                   // Played over the review; finishing it ticks the row and
                   // comes straight back here.
-                  setGuidedNext("review");
-                  setGuidedOpen(true);
+                  fadeThrough(() => {
+                    setGuidedNext("review");
+                    setGuidedOpen(true);
+                  });
                 }}
               >
                 <ToolIcon name="voice" />
