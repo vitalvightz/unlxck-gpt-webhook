@@ -165,52 +165,8 @@ p.lead.lead { margin: 14px 0 0; }
   background: var(--border-default);
 }
 
-.apply a { text-decoration: none; }
-
-/* How to send the application: Gmail, the device's mail app, or copy. */
-.applyOptions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.applyOption {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  padding: 0 10px;
-  border: 1px solid var(--border-default);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text-primary);
-  font: inherit;
-  font-size: var(--type-body-sm);
-  font-weight: 600;
-  text-align: center;
-  text-decoration: none;
-  cursor: pointer;
-  transition: border-color 140ms ease, background 140ms ease;
-}
-
-.applyOption:hover { border-color: var(--text-secondary); background: rgba(255, 255, 255, 0.06); }
-.applyOption:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 3px; }
-
-p.applyAddress.applyAddress {
-  grid-column: 1 / -1;
-  margin: 2px 0 0;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: var(--type-meta);
-  text-align: center;
-  user-select: all;
-}
-
-@media (max-width: 380px) {
-  .applyOptions { grid-template-columns: minmax(0, 1fr); }
-}
-
-.applyNote { margin: 0; color: var(--text-muted); font-size: var(--type-meta); text-align: center; }
+/* Beats the global `.auth-card p` reset. */
+p.applyNote.applyNote { margin: 0; color: var(--text-secondary); font-size: var(--type-body-sm); line-height: 1.5; text-align: center; }
 
 @media (prefers-reduced-motion: no-preference) {
   /* Granted: one bright burst. */
