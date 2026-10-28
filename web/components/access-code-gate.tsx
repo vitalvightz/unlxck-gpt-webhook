@@ -5,20 +5,19 @@ import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 
 import { submitAccessCode } from "@/app/signup/actions";
+import { SUPPORT_EMAIL } from "@/lib/legal-documents";
 
 import authStyles from "./auth-form.module.css";
 import styles from "./access-code-gate.module.css";
-
-// Beta applications go to the product inbox that already receives feedback
-// alerts (api/services/feedback_notifications.py).
-const BETA_APPLICATION_EMAIL = "unlxckedmind@gmail.com";
 
 /** Invite-only front door for /signup: an access code, or a way to apply. */
 export function AccessCodeGate() {
   const t = useTranslations("AccessGate");
   const authT = useTranslations("Auth");
   const [state, formAction, isPending] = useActionState(submitAccessCode, { error: false });
-  const applyHref = `mailto:${BETA_APPLICATION_EMAIL}?subject=${encodeURIComponent(t("applySubject"))}&body=${encodeURIComponent(t("applyBody"))}`;
+  // Beta applications go to the public support inbox named in the Terms and
+  // Privacy Notice.
+  const applyHref = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(t("applySubject"))}&body=${encodeURIComponent(t("applyBody"))}`;
 
   return (
     <section className={authStyles.layout} aria-labelledby="access-title">

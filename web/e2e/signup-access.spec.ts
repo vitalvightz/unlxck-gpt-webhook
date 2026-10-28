@@ -14,7 +14,7 @@ test("signup asks for an access code before the account form", async ({ page, ba
   await expect(page.getByRole("button", { name: "Continue with Google" })).toHaveCount(0);
 
   const apply = page.getByRole("link", { name: "Apply for beta" });
-  await expect(apply).toHaveAttribute("href", /^mailto:unlxckedmind@gmail\.com\?subject=UNLXCK%20beta%20application/);
+  await expect(apply).toHaveAttribute("href", /^mailto:support@unlxck\.com\?subject=UNLXCK%20beta%20application/);
 
   await code.fill("12345");
   await page.getByRole("button", { name: "Unlock" }).click();
