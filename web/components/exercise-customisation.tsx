@@ -9,6 +9,8 @@ import { usePastExercises } from "@/components/load-field";
 import { withPastDose } from "@/lib/load-entry";
 import { doseFromBlock, finishedDose, type DoseDraft } from "@/lib/exercise-dose";
 import { useToast } from "@/components/toast-provider";
+import { AutoHeight } from "@/components/today/auto-height";
+import { Collapse } from "@/components/today/collapse";
 import { InjuryDetailSheet } from "@/components/today/injury-detail-sheet";
 import {
   ApiError,
@@ -310,6 +312,7 @@ export function ExerciseActions({ block, title }: { block: StructuredBlock; titl
         <ExerciseOptionsSheet
           mode="swap"
           title={`Swap ${title}`}
+          entrance="push"
           blockId={blockId}
           onClose={close}
           onApply={(option, scopeValue, dose) =>
@@ -320,7 +323,7 @@ export function ExerciseActions({ block, title }: { block: StructuredBlock; titl
           }
         />
       ) : null}
-      {panel === "edit" ? <InjuryDetailSheet title={`Edit ${title}`} onClose={close} busy={busy} panelClassName={styles.sheet}>
+      {panel === "edit" ? <InjuryDetailSheet title={`Edit ${title}`} onClose={close} busy={busy} panelClassName={styles.sheet} entrance="push">
         <div className={styles.editCard}>
           <div className="ex-row" data-open="true">
             <div className="ex-row-head"><span className="ex-row-text">
@@ -428,12 +431,15 @@ function ExerciseOptionsSheet({
   mode,
   title,
   blockId,
+  entrance = "rise",
   onClose,
   onApply,
 }: {
   mode: "swap" | "add";
   title: string;
   blockId?: string;
+  /** "push" when it replaces the exercise menu rather than opening fresh. */
+  entrance?: "rise" | "push";
   onClose: () => void;
   onApply: (option: ExerciseAlternative, scope: Scope, dose: ExerciseChangeDose | null) => Promise<ExerciseChangeResult>;
 }) {
@@ -507,136 +513,145 @@ function ExerciseOptionsSheet({
   const scopes = data?.scopes ?? [];
   const loading = !data && !loadError;
   return (
-    <InjuryDetailSheet title={title} onClose={onClose} busy={Boolean(pending)} panelClassName={styles.sheet}>
-      <div className={styles.body} aria-busy={loading || refreshing}>
-        {mode === "add" ? (
-          <div className={styles.search}>
-            <SearchIcon />
-            <input
-              type="search"
-              aria-label="Search the exercise library"
-              placeholder="Search the library"
-              value={search}
-              maxLength={100}
-              autoComplete="off"
-              enterKeyHint="search"
-              onChange={(event) => setSearch(event.target.value)}
-            />
-            {search ? (
-              <button type="button" aria-label="Clear search" onClick={() => setSearch("")}>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" /></svg>
+    <InjuryDetailSheet title={title} onClose={onClose} busy={Boolean(pending)} panelClassName={styles.sheet} entrance={entrance}>
+      {/* Results arriving, a search narrowing them or "See all" adding more:
+          the sheet glides to its new height instead of jumping. */}
+      <AutoHeight>
+        <div className={styles.body} aria-busy={loading || refreshing}>
+          {mode === "add" ? (
+            <div className={styles.search}>
+              <SearchIcon />
+              <input
+                type="search"
+                aria-label="Search the exercise library"
+                placeholder="Search the library"
+                value={search}
+                maxLength={100}
+                autoComplete="off"
+                enterKeyHint="search"
+                onChange={(event) => setSearch(event.target.value)}
+              />
+              {search ? (
+                <button type="button" aria-label="Clear search" onClick={() => setSearch("")}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" /></svg>
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          {scopes.length > 1 ? (
+            <div className={styles.scopes} role="radiogroup" aria-labelledby={scopeLabelId}>
+              <span id={scopeLabelId} className="sr-only">Apply to</span>
+              {scopes.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={selectedScope === option.value}
+                  className={styles.scope}
+                  onClick={() => setSelectedScope(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {loading ? (
+            <ul className={styles.options} aria-label="Loading options">
+              {[0, 1, 2].map((index) => (
+                <li key={index} className={styles.skeleton} aria-hidden="true" />
+              ))}
+            </ul>
+          ) : null}
+          {loadError ? (
+            <div className={styles.notice} role="alert">
+              <p>{loadError}</p>
+              <button type="button" className={styles.secondary} onClick={() => setReload((value) => value + 1)}>
+                Try again
               </button>
-            ) : null}
-          </div>
-        ) : null}
-        {scopes.length > 1 ? (
-          <div className={styles.scopes} role="radiogroup" aria-labelledby={scopeLabelId}>
-            <span id={scopeLabelId} className="sr-only">Apply to</span>
-            {scopes.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                role="radio"
-                aria-checked={selectedScope === option.value}
-                className={styles.scope}
-                onClick={() => setSelectedScope(option.value)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        ) : null}
-        {loading ? (
-          <ul className={styles.options} aria-label="Loading options">
-            {[0, 1, 2].map((index) => (
-              <li key={index} className={styles.skeleton} aria-hidden="true" />
-            ))}
-          </ul>
-        ) : null}
-        {loadError ? (
-          <div className={styles.notice} role="alert">
-            <p>{loadError}</p>
-            <button type="button" className={styles.secondary} onClick={() => setReload((value) => value + 1)}>
-              Try again
-            </button>
-          </div>
-        ) : null}
-        {data && data.alternatives.length > 0 ? (
-          <ul className={styles.options} data-refreshing={refreshing}>
-            {data.alternatives.map((option) => (
-              <li key={option.catalogue_id} className={styles.option} data-pending={pending === option.catalogue_id}>
-                <div className={styles.optionRow}>
-                  <button
-                    type="button"
-                    className={styles.optionMain}
-                    onClick={() => void choose(option, null)}
-                    disabled={Boolean(pending)}
-                    aria-expanded={option.dose_required ? dosing === option.catalogue_id : undefined}
-                  >
-                    <span className={styles.optionLine}>
-                      <span className={styles.optionName}>{option.name}</span>
-                      <span className={styles.optionDose}>
-                        {pending === option.catalogue_id
-                          ? mode === "swap" ? "Swapping…" : "Adding…"
-                          : option.prescription ?? (option.dose_required ? "Set dose" : null)}
-                      </span>
-                    </span>
-                    {option.reason || option.equipment?.length ? (
-                      <span className={styles.optionLine}>
-                        <span className={styles.optionReason}>{option.reason}</span>
-                        {option.equipment?.length ? (
-                          <span className={styles.optionKit}>{option.equipment.join(", ")}</span>
-                        ) : null}
-                      </span>
-                    ) : null}
-                  </button>
-                  {option.media?.video_id ? (
+            </div>
+          ) : null}
+          {data && data.alternatives.length > 0 ? (
+            <ul className={styles.options} data-refreshing={refreshing}>
+              {data.alternatives.map((option) => (
+                <li key={option.catalogue_id} className={styles.option} data-pending={pending === option.catalogue_id}>
+                  <div className={styles.optionRow}>
                     <button
                       type="button"
-                      className={styles.thumb}
-                      aria-label={`${preview === option.catalogue_id ? "Hide" : "Watch"} ${option.name} demo`}
-                      aria-expanded={preview === option.catalogue_id}
-                      onClick={() => setPreview((current) => (current === option.catalogue_id ? null : option.catalogue_id))}
+                      className={styles.optionMain}
+                      onClick={() => void choose(option, null)}
+                      disabled={Boolean(pending)}
+                      aria-expanded={option.dose_required ? dosing === option.catalogue_id : undefined}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element -- remote YouTube thumbnail, not a local asset */}
-                      <img src={demoThumbnailUrl(option.media.video_id, "mq")} alt="" loading="lazy" />
-                      <span className="ex-demo-play-glyph ex-demo-play-glyph-sm" aria-hidden="true" />
+                      <span className={styles.optionLine}>
+                        <span className={styles.optionName}>{option.name}</span>
+                        <span className={styles.optionDose}>
+                          {pending === option.catalogue_id
+                            ? mode === "swap" ? "Swapping…" : "Adding…"
+                            : option.prescription ?? (option.dose_required ? "Set dose" : null)}
+                        </span>
+                      </span>
+                      {option.reason || option.equipment?.length ? (
+                        <span className={styles.optionLine}>
+                          <span className={styles.optionReason}>{option.reason}</span>
+                          {option.equipment?.length ? (
+                            <span className={styles.optionKit}>{option.equipment.join(", ")}</span>
+                          ) : null}
+                        </span>
+                      ) : null}
                     </button>
-                  ) : null}
-                </div>
-                {preview === option.catalogue_id && option.media ? (
-                  <div className={styles.preview}>
-                    <ExerciseDemo media={option.media} exerciseName={option.name} />
+                    {option.media?.video_id ? (
+                      <button
+                        type="button"
+                        className={styles.thumb}
+                        aria-label={`${preview === option.catalogue_id ? "Hide" : "Watch"} ${option.name} demo`}
+                        aria-expanded={preview === option.catalogue_id}
+                        onClick={() => setPreview((current) => (current === option.catalogue_id ? null : option.catalogue_id))}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element -- remote YouTube thumbnail, not a local asset */}
+                        <img src={demoThumbnailUrl(option.media.video_id, "mq")} alt="" loading="lazy" />
+                        <span className="ex-demo-play-glyph ex-demo-play-glyph-sm" aria-hidden="true" />
+                      </button>
+                    ) : null}
                   </div>
-                ) : null}
-                {dosing === option.catalogue_id ? (
-                  <ExercisePrescriptionEditor
-                    initial={withPastDose({ ...option.suggested_dose, mode: option.dose_mode ?? "text" } as DoseDraft, past?.get(option.exercise_key))}
-                    past={past?.get(option.exercise_key)}
-                    busy={pending === option.catalogue_id}
-                    action={mode === "swap" ? "Swap" : "Add"}
-                    onSubmit={(dose) => void choose(option, dose)}
-                  />
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        {applyError ? <p className={styles.error} role="alert">{applyError}</p> : null}
-        {data?.notice ? (
-          <div className={styles.notice}>
-            <p>{data.notice}</p>
-            {data.alternatives.length === 0 ? (
-              mode === "swap" ? <Link href="/plans/library" className={styles.secondary}>Search the library</Link> : null
-            ) : null}
-          </div>
-        ) : null}
-        {data?.more_available && !showAll ? (
-          <button type="button" className={styles.more} onClick={() => setShowAll(true)}>
-            See all {mode === "swap" ? "alternatives" : "suggestions"}
-          </button>
-        ) : null}
-      </div>
+                  {/* The demo and the dose editor ease open under their option. */}
+                  <Collapse show={preview === option.catalogue_id && Boolean(option.media)}>
+                    {preview === option.catalogue_id && option.media ? (
+                      <div className={styles.preview}>
+                        <ExerciseDemo media={option.media} exerciseName={option.name} />
+                      </div>
+                    ) : null}
+                  </Collapse>
+                  <Collapse show={dosing === option.catalogue_id}>
+                    {dosing === option.catalogue_id ? (
+                      <ExercisePrescriptionEditor
+                        initial={withPastDose({ ...option.suggested_dose, mode: option.dose_mode ?? "text" } as DoseDraft, past?.get(option.exercise_key))}
+                        past={past?.get(option.exercise_key)}
+                        busy={pending === option.catalogue_id}
+                        action={mode === "swap" ? "Swap" : "Add"}
+                        onSubmit={(dose) => void choose(option, dose)}
+                      />
+                    ) : null}
+                  </Collapse>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {applyError ? <p className={styles.error} role="alert">{applyError}</p> : null}
+          {data?.notice ? (
+            <div className={styles.notice}>
+              <p>{data.notice}</p>
+              {data.alternatives.length === 0 ? (
+                mode === "swap" ? <Link href="/plans/library" className={styles.secondary}>Search the library</Link> : null
+              ) : null}
+            </div>
+          ) : null}
+          {data?.more_available && !showAll ? (
+            <button type="button" className={styles.more} onClick={() => setShowAll(true)}>
+              See all {mode === "swap" ? "alternatives" : "suggestions"}
+            </button>
+          ) : null}
+        </div>
+      </AutoHeight>
     </InjuryDetailSheet>
   );
 }

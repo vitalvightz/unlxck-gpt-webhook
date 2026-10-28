@@ -110,6 +110,14 @@
 @media (max-width: 1099px) {
   .analysisColumn[data-active="false"], .performanceColumn[data-active="false"] { display: none; }
   .performanceColumn { margin-top: 0; }
+  /* Switching tabs slides the new one in from its own side, as the tabs sit. */
+  .analysisColumn[data-active="true"] { animation: tab-from-left 220ms cubic-bezier(0.16, 1, 0.3, 1); }
+  .performanceColumn[data-active="true"] { animation: tab-from-right 220ms cubic-bezier(0.16, 1, 0.3, 1); }
+}
+@keyframes tab-from-left { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
+@keyframes tab-from-right { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .analysisColumn[data-active="true"], .performanceColumn[data-active="true"] { animation: none; }
 }
 @media (min-width: 1100px) {
   .exerciseLayout:has([aria-label="Selected performance"]) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 32px; align-items: start; }

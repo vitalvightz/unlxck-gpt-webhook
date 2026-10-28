@@ -10,22 +10,26 @@ const SWAP_MS = 320;
 // the way in one frame on a phone, which read as a jolt rather than a glide.
 const RESIZE_EASE = "cubic-bezier(0.37, 0, 0.63, 1)";
 const SWAP_EASE = "cubic-bezier(0.22, 0.61, 0.36, 1)";
+const SWAP_FROM = { rise: "translateY(8px)", forward: "translateX(24px)", back: "translateX(-24px)" } as const;
 /** A Collapse inside is already easing its own height. */
 const SLIDING_CHILD = '.today-collapse[data-phase="entering"], .today-collapse[data-phase="leaving"]';
 
 /**
  * Glides its height when the content grows or shrinks, instead of snapping
  * everything below it. When `swapKey` changes (a different session took the
- * card) the content also fades and rises in, without remounting it.
+ * card) the content also fades in, without remounting it: rising by default,
+ * or sliding in from the right ("forward", drilling in) or left ("back").
  */
 export function AutoHeight({
   children,
   className,
   swapKey,
+  swapMotion = "rise",
 }: {
   children: ReactNode;
   className?: string;
   swapKey?: string;
+  swapMotion?: "rise" | "forward" | "back";
 }) {
   const outerRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
@@ -94,16 +98,17 @@ export function AutoHeight({
     if (shownKeyRef.current === swapKey) return;
     shownKeyRef.current = swapKey;
     const inner = innerRef.current;
-    if (!inner || typeof inner.animate !== "function") return;
+    // Reduced motion: the new content simply appears.
+    if (!inner || typeof inner.animate !== "function" || prefersReducedMotion()) return;
     inner.animate(
-      prefersReducedMotion()
-        ? [{ opacity: 0 }, { opacity: 1 }]
-        : [
-            { opacity: 0, transform: "translateY(8px)" },
-            { opacity: 1, transform: "none" },
-          ],
-      { duration: prefersReducedMotion() ? 200 : SWAP_MS, easing: SWAP_EASE },
+      [
+        { opacity: 0, transform: SWAP_FROM[swapMotion] },
+        { opacity: 1, transform: "none" },
+      ],
+      { duration: SWAP_MS, easing: SWAP_EASE },
     );
+    // Only a new key animates; the motion is read with it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [swapKey]);
 
   return (

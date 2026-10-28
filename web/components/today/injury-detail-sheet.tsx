@@ -8,9 +8,13 @@ import { useSheetExit } from "@/lib/use-sheet-exit";
 /** Injury details stay off the daily card; reuse the app's iOS scroll lock.
  * `variant="screen"` fills the viewport for a full screen (Today's session
  * preview). Sheets stack: only the topmost one answers Escape and Tab. */
-export function InjuryDetailSheet({ title, children, onClose, busy = false, variant = "sheet", closeLabel = "Close", panelClassName }: {
+export function InjuryDetailSheet({ title, children, onClose, busy = false, variant = "sheet", closeLabel = "Close", panelClassName, entrance = "rise" }: {
   title: string; children: ReactNode; onClose: () => void; busy?: boolean;
   variant?: "sheet" | "screen"; closeLabel?: string;
+  /** "push": this sheet replaces another (a menu choosing Edit), so it slides
+   * in from the right over a backdrop that is already there, rather than
+   * rising up as a fresh pop-up. */
+  entrance?: "rise" | "push";
   panelClassName?: string;
 }) {
   const titleId = useId();
@@ -51,8 +55,8 @@ export function InjuryDetailSheet({ title, children, onClose, busy = false, vari
     return () => { document.removeEventListener("keydown", keydown); release(); previous?.focus({ preventScroll: true }); };
   }, []);
   if (typeof document === "undefined") return null;
-  return createPortal(<div className="injury-sheet-backdrop" data-variant={variant} data-closing={closing || undefined} onClick={() => { if (!busy) dismiss(); }}>
-    <div className={`injury-sheet${panelClassName ? ` ${panelClassName}` : ""}`} data-variant={variant} ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId}
+  return createPortal(<div className="injury-sheet-backdrop" data-variant={variant} data-entrance={entrance} data-closing={closing || undefined} onClick={() => { if (!busy) dismiss(); }}>
+    <div className={`injury-sheet${panelClassName ? ` ${panelClassName}` : ""}`} data-variant={variant} data-entrance={entrance} ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId}
       aria-busy={busy} tabIndex={-1} onClick={event => event.stopPropagation()}>
       <div className="injury-sheet-header"><h2 id={titleId}>{title}</h2>
         <button type="button" className="injury-sheet-close" aria-label={closeLabel} disabled={busy} onClick={() => dismiss()}>
