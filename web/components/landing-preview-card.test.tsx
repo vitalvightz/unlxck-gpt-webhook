@@ -26,3 +26,11 @@ test("the adjusted content is all in the markup, ready to reveal", () => {
     assert.ok(html.includes(text), `${text} is rendered`);
   }
 });
+
+test("collapsed planned-only parts are hidden from assistive tech", () => {
+  const html = render();
+  assert.match(html, /public-today-decision-slot" aria-hidden="true" inert=""/, "readiness call is hidden while planned");
+  assert.match(html, /public-today-collapse public-today-block-slot"[^>]*aria-hidden="true"[^>]*inert=""/, "added drill is hidden while planned");
+  const visibleRows = html.match(/<li class="public-today-block-slot"(?![^>]*aria-hidden)/g) ?? [];
+  assert.equal(visibleRows.length, 2, "only the two planned drills stay exposed");
+});

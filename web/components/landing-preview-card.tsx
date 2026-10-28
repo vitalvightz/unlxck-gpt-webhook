@@ -84,7 +84,9 @@ export function LandingPreviewCard({ className, style }: Readonly<{ className?: 
       <p className="public-today-meta">
         {t("sessionSport")} · {formatMinutes(50)} · {t("previewPlan")}
       </p>
-      <div className="public-today-collapse public-today-decision-slot">
+      {/* Parts that exist only once the session is adjusted are hidden from
+          assistive tech (and focus) while collapsed, not just visually. */}
+      <div className="public-today-collapse public-today-decision-slot" aria-hidden={!adjusted} inert={!adjusted}>
         <div>
           <p className="public-today-decision-row">
             <span className="public-today-decision">{t("decision")}</span>
@@ -97,6 +99,8 @@ export function LandingPreviewCard({ className, style }: Readonly<{ className?: 
           <li
             key={block.name}
             className={"added" in block ? "public-today-collapse public-today-block-slot" : "public-today-block-slot"}
+            aria-hidden={"added" in block && !adjusted ? true : undefined}
+            inert={"added" in block && !adjusted}
             style={{ "--step-delay": `${block.delay}ms` } as CSSProperties}
           >
             <div>
