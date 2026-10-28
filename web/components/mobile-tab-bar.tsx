@@ -78,6 +78,18 @@ export function visualViewportBottomOffset(
   return gap < 0 ? gap : 0;
 }
 
+/**
+ * Whether the page is mid-bounce past its top or bottom (iOS rubber-banding).
+ * The visual viewport swings for a moment then; measuring it then and moving
+ * the bar to match made the bar shake with every bounce.
+ */
+export function isOverscrolled(scrollY: number, innerHeight: number, scrollHeight: number): boolean {
+  return scrollY < 0 || scrollY + innerHeight > scrollHeight + 1;
+}
+
+/** How long scrolling must be still before the bar's position is checked. */
+export const SCROLL_SETTLE_MS = 150;
+
 export function isTabActive(pathname: string, href: string): boolean {
   if (href === "/") {
     return pathname === "/";
@@ -131,11 +143,15 @@ export function MobileTabBar() {
         if (root.dataset.mobileNavOpen === "true") {
           return;
         }
+        if (isOverscrolled(window.scrollY, window.innerHeight, root.scrollHeight)) {
+          return;
+        }
         const bar = barRef.current;
         // Undo the offset already applied to recover where `bottom: 0` lands.
         const fixedBottom = bar ? bar.getBoundingClientRect().bottom + applied : window.innerHeight;
         const offset = visualViewportBottomOffset(fixedBottom, viewport);
-        if (offset === applied) {
+        // A pixel either way is rounding, not a floating bar.
+        if (Math.abs(offset - applied) <= 1) {
           return;
         }
         applied = offset;
@@ -159,6 +175,20 @@ export function MobileTabBar() {
         timers.add(id);
       }
     };
+    // Scrolling moves the visual viewport every frame. Chasing it moved the bar
+    // a frame late each time, so it shook; the floating this corrects is what
+    // remains once scrolling stops, so check then.
+    let scrollTimer: number | null = null;
+    const onScroll = () => {
+      // A correction already applied is released at once, not left in place
+      // for the rest of the scroll.
+      if (applied !== 0) sync();
+      if (scrollTimer !== null) window.clearTimeout(scrollTimer);
+      scrollTimer = window.setTimeout(() => {
+        scrollTimer = null;
+        sync();
+      }, SCROLL_SETTLE_MS);
+    };
     const onVisibility = () => {
       if (document.visibilityState === "visible") {
         settle();
@@ -166,8 +196,8 @@ export function MobileTabBar() {
     };
     settle();
     viewport.addEventListener("resize", sync);
-    viewport.addEventListener("scroll", sync);
-    window.addEventListener("scroll", sync, { passive: true });
+    viewport.addEventListener("scroll", onScroll);
+    window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", settle);
     window.addEventListener("orientationchange", settle);
     window.addEventListener("pageshow", settle);
@@ -176,9 +206,10 @@ export function MobileTabBar() {
     return () => {
       cancelAnimationFrame(frame);
       timers.forEach((id) => window.clearTimeout(id));
+      if (scrollTimer !== null) window.clearTimeout(scrollTimer);
       viewport.removeEventListener("resize", sync);
-      viewport.removeEventListener("scroll", sync);
-      window.removeEventListener("scroll", sync);
+      viewport.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", settle);
       window.removeEventListener("orientationchange", settle);
       window.removeEventListener("pageshow", settle);
