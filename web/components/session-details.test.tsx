@@ -81,3 +81,18 @@ test("completed-as-prescribed blocks start collapsed and never repeat matching r
     assert.match(container.textContent!, /Completed as prescribed · reported values match/);
   } finally { act(() => root.unmount()); container.remove(); globalThis.fetch = fetch; }
 });
+
+test("a hand-logged session shows effort and duration worded like an Unlxck one", async () => {
+  const fetch = globalThis.fetch;
+  const manual: TrainingHistorySession = { ...row, id: "manual", source: "external", activity: "boxing", duration_minutes: 45, effort: "easy" };
+  globalThis.fetch = async () => new Response(JSON.stringify({ ...payload, session: manual, blocks: [] }));
+  const container = document.createElement("div"); document.body.append(container);
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<SessionDetails row={manual} token="token" cache={new Map()} onDismiss={() => {}} />));
+    const facts = [...container.querySelectorAll("dl > div")].map(fact => `${fact.querySelector("dt")?.textContent}: ${fact.querySelector("dd")?.textContent}`);
+    assert.ok(facts.includes("Session effort: Easy"), facts.join(" | "));
+    assert.ok(facts.includes("Duration: 45 min"), facts.join(" | "));
+    assert.doesNotMatch(container.textContent!, /min recorded/);
+  } finally { act(() => root.unmount()); container.remove(); globalThis.fetch = fetch; }
+});

@@ -144,6 +144,13 @@ function SessionRecordSkeleton() {
   </div>;
 }
 
+/** RPE when the athlete rated the session, otherwise the logged effort ("Easy"). */
+function sessionEffort(record: { session_rpe?: number | null; effort?: string | null }): string | null {
+  if (record.session_rpe != null) return `RPE ${record.session_rpe}/10`;
+  if (!record.effort) return null;
+  return record.effort.charAt(0).toUpperCase() + record.effort.slice(1);
+}
+
 export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = true, onEditExercises }: {
   row: TrainingHistorySession; token: string; cache: SessionDetailsCache; onDismiss: () => void;
   /** A suspended parent sheet owns focus restoration during a modal handoff. */
@@ -205,9 +212,10 @@ export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = tr
           <section className={styles.sessionSummary} aria-label="Session overview">
             <dl className={styles.sessionFacts}>
               <div><TileIcon name="source" /><dt>Source</dt><dd>{record.source === "external" ? "Added by you" : "Unlxck"}</dd></div>
-              {record.session_rpe != null ? <div><TileIcon name="effort" /><dt>Session effort</dt><dd>RPE {record.session_rpe}/10</dd></div> : null}
-              {record.effort ? <div><TileIcon name="effort" /><dt>Effort</dt><dd>{record.effort}</dd></div> : null}
-              {record.duration_minutes != null ? <div><TileIcon name="time" /><dt>Recorded time</dt><dd>{record.duration_minutes} min recorded</dd></div> : null}
+              {/* One effort tile and one duration tile, worded the same whether the
+                  session came from Unlxck or was logged by hand. */}
+              {sessionEffort(record) ? <div><TileIcon name="effort" /><dt>Session effort</dt><dd>{sessionEffort(record)}</dd></div> : null}
+              {record.duration_minutes != null ? <div><TileIcon name="time" /><dt>Duration</dt><dd>{record.duration_minutes} min</dd></div> : null}
               {record.pain_after != null ? <div><TileIcon name="pain" /><dt>Pain after</dt><dd>{record.pain_after}/10</dd></div> : null}
             </dl>
           </section>

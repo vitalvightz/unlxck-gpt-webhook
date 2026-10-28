@@ -97,7 +97,7 @@ for (const width of [390, 1280]) {
     await expect(page.getByRole("dialog")).toContainText("Detailed exercise records weren't captured");
     await page.keyboard.press("Escape");
     const manual = page.getByRole("button", { name: /View Boxing details/ });
-    await manual.click(); await expect(page.getByRole("dialog")).toContainText("40 min recorded");
+    await manual.click(); await expect(page.getByRole("dialog")).toContainText("40 min");
     await expect(page.getByRole("dialog")).toContainText("No exercises recorded. Only activity, duration and effort were logged.");
     await expect(page.getByRole("dialog").locator("ol")).toHaveCount(0);
     await page.keyboard.press("Escape");
