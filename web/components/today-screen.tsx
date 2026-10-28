@@ -1,5 +1,7 @@
 "use client";
 
+import { Collapse } from "@/components/today/collapse";
+
 import Link from "next/link";
 import { TrainingHabitLog } from "@/components/training-habit-log";
 import { useMemo, useState } from "react";
@@ -10,7 +12,6 @@ import { useConnectivity, useOnReconnect } from "@/components/connection-status-
 import { hasHealthDataConsent } from "@/lib/compliance";
 import { ContextualFeedback } from "@/components/feedback/contextual-feedback";
 import { Skeleton } from "@/components/skeleton";
-import { Collapse } from "@/components/today/collapse";
 import { formatTrainingDay } from "@/components/today/format";
 import { AutoHeight } from "@/components/today/auto-height";
 import { TodayDecisionPanel } from "@/components/today/today-decision-panel";
@@ -22,6 +23,7 @@ import { TodaySessionPanel } from "@/components/today/today-session-panel";
 import { useTodayCommand } from "@/components/today/use-today-command";
 import { resolvePlanProgress } from "@/lib/camp-map";
 import { isOpenOngoingPlan } from "@/lib/plan-format";
+import { isCalmRehabBlock } from "@/lib/rehab-label";
 import { rehabExerciseTarget } from "@/lib/rehab-exercise-guide";
 import {
   getCompletionLabel,
@@ -390,22 +392,15 @@ export function TodayScreen() {
           injuriesHref={token ? "#today-injury" : undefined}
           sessionHref={resolvedDecision.displayTier === "preview" ? undefined : "#today-session"}
         />
-        <Collapse show={rehabBlocks.length > 0}>
-          {rehabBlocks.length ? <nav className={styles.rehabAccess} aria-label="Your rehab">
-            <p className={styles.rehabAccessTitle}>Your rehab</p>
-            {rehabBlocks.map(block => <a key={block.block_id}
-              href={`#${encodeURIComponent(rehabExerciseTarget(block)!)}`}>
-              <span>{block.display_name}</span><strong>View rehab <span aria-hidden="true">→</span></strong>
-            </a>)}
-          </nav> : null}
-        </Collapse>
         {/* A refresh marks the guidance stale in place; swapping it for a
             one-line notice collapsed the page and pulled everything below up. */}
         {error ? null : <AutoHeight className={styles.decision}>
           <div className={styles.decisionBody} data-refreshing={isRefreshing ? "true" : undefined} aria-busy={isRefreshing || undefined}>
             {isRefreshing ? <p role="status" className={styles.refreshBadge}>Updating Today…</p> : null}
             <TodayDecisionPanel
-              banner={decisionBanner}
+              banner={decisionBanner && state.live_prescription?.session.blocks?.length && state.live_prescription.session.blocks.every(isCalmRehabBlock)
+                ? { ...decisionBanner, action: decisionBanner.action?.replace(/rehab/gi, "guidance"), detail: decisionBanner.detail.replace(/rehab/gi, "guidance") }
+                : decisionBanner}
               compactPreview={resolvedDecision.hasSession && !resolvedDecision.currentGuidanceBanner}
               tier={resolvedDecision.currentGuidanceBanner ? resolvedDecision.authoritativeTier : resolvedDecision.displayTier}
               triggers={state.today.recommendation_trigger_labels}

@@ -42,6 +42,11 @@ export function isRehabBlock(block: StructuredBlock): boolean {
   return /\b(?:prehab|rehab)\b/.test(rawType);
 }
 
+/** Display label only; stage metadata never changes eligibility or logging. */
+export function isCalmRehabBlock(block: StructuredBlock): boolean {
+  return isRehabBlock(block) && block.drill_snapshot?.rehab_stage === "calm";
+}
+
 /**
  * Whether a rehab block targets a region the athlete is currently injured in.
  * Terms match on whole-word runs so "hip" cannot fire on "hip hinge cue"'s
@@ -62,7 +67,8 @@ function matchesActiveInjury(block: StructuredBlock, policy: RehabLabelPolicy): 
 export function resolveBlockRehabLabel(
   block: StructuredBlock,
   policy: RehabLabelPolicy | null | undefined,
-): "Rehab" | "Prehab" {
+): "Rehab" | "Prehab" | "Guidance" {
+  if (isCalmRehabBlock(block)) return "Guidance";
   if (!policy) {
     return "Rehab";
   }
@@ -82,11 +88,12 @@ export function resolveBlockRehabLabel(
 export function resolveRehabSummaryLabel(
   blocks: StructuredBlock[],
   policy: RehabLabelPolicy | null | undefined,
-): "Rehab" | "Prehab" {
+): "Rehab" | "Prehab" | "Guidance" {
   const rehabBlocks = blocks.filter(isRehabBlock);
   if (rehabBlocks.length === 0) {
     return "Rehab";
   }
+  if (rehabBlocks.every(isCalmRehabBlock)) return "Guidance";
   return rehabBlocks.some((block) => resolveBlockRehabLabel(block, policy) === "Rehab")
     ? "Rehab"
     : "Prehab";
