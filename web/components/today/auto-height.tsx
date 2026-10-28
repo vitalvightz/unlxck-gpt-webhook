@@ -98,15 +98,14 @@ export function AutoHeight({
     if (shownKeyRef.current === swapKey) return;
     shownKeyRef.current = swapKey;
     const inner = innerRef.current;
-    if (!inner || typeof inner.animate !== "function") return;
+    // Reduced motion: the new content simply appears.
+    if (!inner || typeof inner.animate !== "function" || prefersReducedMotion()) return;
     inner.animate(
-      prefersReducedMotion()
-        ? [{ opacity: 0 }, { opacity: 1 }]
-        : [
-            { opacity: 0, transform: SWAP_FROM[swapMotion] },
-            { opacity: 1, transform: "none" },
-          ],
-      { duration: prefersReducedMotion() ? 200 : SWAP_MS, easing: SWAP_EASE },
+      [
+        { opacity: 0, transform: SWAP_FROM[swapMotion] },
+        { opacity: 1, transform: "none" },
+      ],
+      { duration: SWAP_MS, easing: SWAP_EASE },
     );
     // Only a new key animates; the motion is read with it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
