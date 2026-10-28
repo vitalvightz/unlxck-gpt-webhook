@@ -82,7 +82,7 @@ export function LandingPreviewCard({ className, style }: Readonly<{ className?: 
       </header>
       <p className="public-today-title">{t("sessionTitle")}</p>
       <p className="public-today-meta">
-        {t("sessionSport")} · ~{formatMinutes(50)} · {t("previewPlan")}
+        {t("sessionSport")} · {formatMinutes(50)} · {t("previewPlan")}
       </p>
       <div className="public-today-collapse public-today-decision-slot">
         <div>
