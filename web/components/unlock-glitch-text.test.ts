@@ -20,3 +20,12 @@ test("scrambleText clamps progress outside 0..1", () => {
   assert.equal(scrambleText("ab", -1, () => 0), "##");
   assert.equal(scrambleText("ab", 2), "ab");
 });
+
+test("the server render is the fixed placeholder, so hydration always matches", async () => {
+  const { createElement } = await import("react");
+  const { renderToString } = await import("react-dom/server");
+  const { UnlockGlitchText } = await import("./unlock-glitch-text");
+  const html = renderToString(createElement(UnlockGlitchText, { text: "UNLXCK" }));
+  assert.match(html, /data-state="locked"/);
+  assert.match(html, />######</);
+});

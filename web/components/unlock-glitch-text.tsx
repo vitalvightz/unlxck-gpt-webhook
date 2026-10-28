@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 // Glyphs a character cycles through before it "unlocks" into place. ASCII
 // only, so the mono font never falls back and the line keeps its width.
@@ -19,6 +19,24 @@ export function scrambleText(text: string, progress: number, random: () => numbe
   }).join("");
 }
 
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+function subscribeReducedMotion(onChange: () => void) {
+  const query = window.matchMedia(REDUCED_MOTION_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+/** False on the server and during hydration, so both render the same markup;
+ *  the real preference applies right after. */
+function usePrefersReducedMotion(): boolean {
+  return useSyncExternalStore(
+    subscribeReducedMotion,
+    () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
+    () => false,
+  );
+}
+
 type UnlockState = "locked" | "unlocking" | "unlocked";
 
 /**
@@ -33,12 +51,9 @@ export function UnlockGlitchText({
   delayMs = 0,
   durationMs = 900,
 }: Readonly<{ text: string; className?: string; delayMs?: number; durationMs?: number }>) {
-  // Reduced motion skips the decode entirely: the text starts unlocked.
-  const [reduceMotion] = useState(
-    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
-  const [display, setDisplay] = useState(() => (reduceMotion ? text : scrambleText(text, 0, () => 0)));
-  const [state, setState] = useState<UnlockState>(reduceMotion ? "unlocked" : "locked");
+  const reduceMotion = usePrefersReducedMotion();
+  const [display, setDisplay] = useState(() => scrambleText(text, 0, () => 0));
+  const [state, setState] = useState<UnlockState>("locked");
 
   useEffect(() => {
     if (reduceMotion) return;
@@ -58,8 +73,13 @@ export function UnlockGlitchText({
   }, [text, delayMs, durationMs, reduceMotion]);
 
   return (
-    <span className={className ? `unlock-glitch ${className}` : "unlock-glitch"} data-text={display} data-state={state} aria-hidden="true">
-      {display}
+    <span
+      className={className ? `unlock-glitch ${className}` : "unlock-glitch"}
+      data-text={reduceMotion ? text : display}
+      data-state={reduceMotion ? "unlocked" : state}
+      aria-hidden="true"
+    >
+      {reduceMotion ? text : display}
     </span>
   );
 }
