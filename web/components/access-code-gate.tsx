@@ -91,9 +91,6 @@ function AccessCodeGate({ codeShape, granted }: Readonly<{ codeShape: CodeShape;
     }
   }
 
-  // Beta applications go to the public support inbox named in the Terms and
-  // Privacy Notice.
-  const applyHref = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(t("applySubject"))}&body=${encodeURIComponent(t("applyBody"))}`;
   const activeSlot = Math.min(code.length, codeShape.length - 1);
 
   return (
@@ -183,13 +180,7 @@ function AccessCodeGate({ codeShape, granted }: Readonly<{ codeShape: CodeShape;
 
         {granted ? null : (
           <>
-            <div className={styles.apply}>
-              <span className={styles.divider}>{t("noCode")}</span>
-              <a href={applyHref} className={`secondary-button ${authStyles.email}`}>
-                {t("apply")}
-              </a>
-              <p className={styles.applyNote}>{t("applyNote")}</p>
-            </div>
+            <ApplyForBeta />
 
             <Link href="/login" className={`auth-text-link ${authStyles.accountLink}`}>
               {authT("alreadyAccount")}
@@ -198,5 +189,63 @@ function AccessCodeGate({ codeShape, granted }: Readonly<{ codeShape: CodeShape;
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * "Apply for beta" as a choice of how to send the email. A bare mailto link
+ * does nothing on computers without a default mail app (common with webmail),
+ * so Gmail's compose page and a copyable address sit alongside it.
+ * Applications go to the public support inbox named in the Terms and Privacy
+ * Notice.
+ */
+function ApplyForBeta() {
+  const t = useTranslations("AccessGate");
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const subject = encodeURIComponent(t("applySubject"));
+  const body = encodeURIComponent(t("applyBody"));
+  const mailtoHref = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
+  const gmailHref = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(SUPPORT_EMAIL)}&su=${subject}&body=${body}`;
+
+  async function copyAddress() {
+    try {
+      await navigator.clipboard.writeText(SUPPORT_EMAIL);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // The address is printed below, so it can still be selected by hand.
+    }
+  }
+
+  return (
+    <div className={styles.apply}>
+      <span className={styles.divider}>{t("noCode")}</span>
+      <button
+        type="button"
+        className={`secondary-button ${authStyles.email}`}
+        aria-expanded={open}
+        aria-controls="apply-options"
+        onClick={() => setOpen((value) => !value)}
+      >
+        {t("apply")}
+      </button>
+      {open ? (
+        <div id="apply-options" className={styles.applyOptions}>
+          <a href={gmailHref} target="_blank" rel="noopener noreferrer" className={styles.applyOption}>
+            {t("applyGmail")}
+          </a>
+          <a href={mailtoHref} className={styles.applyOption}>
+            {t("applyEmailApp")}
+          </a>
+          <button type="button" className={styles.applyOption} onClick={copyAddress} aria-live="polite">
+            {copied ? t("applyCopied") : t("applyCopy")}
+          </button>
+          <p className={styles.applyAddress}>{SUPPORT_EMAIL}</p>
+        </div>
+      ) : (
+        <p className={styles.applyNote}>{t("applyNote")}</p>
+      )}
+    </div>
   );
 }

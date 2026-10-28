@@ -13,8 +13,17 @@ test("signup asks for an access code before the account form", async ({ page, ba
   await expect(code).toBeFocused();
   await expect(page.getByRole("button", { name: "Continue with Google" })).toHaveCount(0);
 
-  const apply = page.getByRole("link", { name: "Apply for beta" });
-  await expect(apply).toHaveAttribute("href", /^mailto:support@unlxck\.com\?subject=UNLXCK%20beta%20application/);
+  // Apply for beta offers Gmail, the device's mail app, or the address to copy.
+  await page.getByRole("button", { name: "Apply for beta" }).click();
+  await expect(page.getByRole("link", { name: "Use my email app" })).toHaveAttribute(
+    "href",
+    /^mailto:support@unlxck\.com\?subject=UNLXCK%20beta%20application/,
+  );
+  await expect(page.getByRole("link", { name: "Open in Gmail" })).toHaveAttribute(
+    "href",
+    /^https:\/\/mail\.google\.com\/mail\/\?view=cm&fs=1&to=support%40unlxck\.com&su=UNLXCK%20beta%20application/,
+  );
+  await expect(page.getByText("support@unlxck.com", { exact: true })).toBeVisible();
 
   // A full code submits itself; a wrong one is rejected and cleared.
   await code.fill("12345");
