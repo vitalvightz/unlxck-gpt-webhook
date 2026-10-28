@@ -672,6 +672,10 @@
 .public-final-cta h2 {
   flex: 1;
   min-width: 0;
+  /* A long localized word (e.g. "entraînement") breaks rather than being
+     clipped by the strip on the narrowest phones. */
+  overflow-wrap: break-word;
+  hyphens: auto;
   font-size: clamp(19px, 5vw, 30px);
   line-height: 1.15;
   text-shadow: 0 0 32px rgba(255, 255, 255, 0.12);
@@ -684,6 +688,19 @@
   min-height: 48px;
   margin: 0;
   padding: 0 18px;
+}
+
+/* The narrowest phones stack the line over a full-width button rather than
+   squeezing the heading into a sliver beside it. */
+@media (max-width: 359px) {
+  .public-final-cta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .public-final-cta .public-hero-cta {
+    width: 100%;
+  }
 }
 
 /* Motion. The landing renders client-side after auth resolves, so fading in
