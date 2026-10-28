@@ -52,6 +52,58 @@ test("a failed post-save refresh keeps the check-in form mounted and offers retr
   }
 });
 
+test("a refresh keeps the guidance in place, dimmed, instead of collapsing it to a line", async () => {
+  const originalFetch = globalThis.fetch;
+  let todayReads = 0;
+  let releaseRefresh!: () => void;
+  const refreshHeld = new Promise<void>(resolve => { releaseRefresh = resolve; });
+  const state: TodayCommandView = { active_plan: {id: "plan-1", name: "Camp", phase: "SPP"},
+    today: {training_day: "2026-10-07", recommendation_state: "not_checked_in",
+      decision_tier: "not_checked_in", warnings: [], next_session: {}, completion_status: "not_started",
+      session_scope: "none", session_label: "No session"},
+    open_injuries: [], risk_watch: [], week_summary: {}, quick_actions: [] };
+  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {status});
+  globalThis.fetch = (async (input: string) => {
+    if (String(input).endsWith("/api/today")) {
+      if (++todayReads > 1) await refreshHeld;
+      return json(state);
+    }
+    if (String(input).endsWith("/api/today/checkin")) return json({recommendation_state: "train_as_planned"});
+    if (String(input).includes("/api/plans/")) return json({outputs: {}});
+    return json({logs: [], pending: [], rehab_response_prompts: []});
+  }) as typeof fetch;
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  try {
+    await act(async () => { root.render(<AppSessionContext.Provider value={{isReady: true,
+      isMeHydrated: true, hasTransientMeError: false, session: {access_token: "test-token"}, me: null,
+      previewAppearanceMode: () => {}, refreshMe: async () => {}, replaceMe: () => {}, signOut: async () => {}}}>
+      <ToastProvider><TodayScreen /></ToastProvider>
+    </AppSessionContext.Provider>); });
+    const banner = container.querySelector(".today-decision-banner");
+    assert.ok(banner);
+    const submit = container.querySelector<HTMLButtonElement>('form [type="submit"]')!;
+    await act(async () => { submit.click(); });
+    assert.equal(todayReads, 2);
+
+    // Mid-refresh: the same guidance element, marked stale, with the status beside it.
+    assert.equal(container.querySelector(".today-decision-banner"), banner);
+    assert.ok(banner.closest('[aria-busy="true"]'));
+    const status = [...container.querySelectorAll('[role="status"]')].find(node => node.textContent === "Updating Today…");
+    assert.ok(status);
+
+    await act(async () => { releaseRefresh(); await new Promise(resolve => setTimeout(resolve, 0)); });
+    assert.equal(container.querySelector('[aria-busy="true"]'), null);
+    assert.ok(![...container.querySelectorAll('[role="status"]')].some(node => node.textContent === "Updating Today…"));
+  } finally {
+    releaseRefresh();
+    await act(async () => { root.unmount(); });
+    container.remove();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 async function renderToday(state: TodayCommandView, me: unknown) {
   const originalFetch = globalThis.fetch;
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {status});

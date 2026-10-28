@@ -31,11 +31,70 @@
   font-size: 13px;
 }
 
+/* -- Decision: during a refresh the guidance stays, dimmed, with a badge -- */
+
+.decision {
+  min-width: 0;
+}
+
+.decisionBody {
+  position: relative;
+  min-width: 0;
+}
+
+.decisionBody > :not(.refreshBadge) {
+  transition: opacity 200ms ease;
+}
+
+.decisionBody[data-refreshing="true"] > :not(.refreshBadge) {
+  opacity: 0.5;
+}
+
+.refreshBadge {
+  position: absolute;
+  z-index: 1;
+  /* Over the tier pill, which is stale while this shows. */
+  top: 16px;
+  right: 16px;
+  margin: 0;
+  padding: 4px 10px;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  border-radius: 999px;
+  background: var(--surface-panel, #111216);
+  color: var(--text-secondary);
+  font-size: 12px;
+  animation: refresh-badge-in 200ms ease-out;
+}
+
+@keyframes refresh-badge-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .decisionBody > :not(.refreshBadge) {
+    transition: none;
+  }
+
+  .refreshBadge {
+    animation: none;
+  }
+}
+
 .rehabAccessTitle {
   margin: 0 0 4px;
   color: var(--text-primary);
   font-size: 15px;
   font-weight: 750;
+}
+
+:global(html[data-theme="light"]) .refreshBadge {
+  background: #fff;
+  border-color: rgba(20, 20, 25, 0.12);
 }
 
 :global(html[data-theme="light"]) .command {

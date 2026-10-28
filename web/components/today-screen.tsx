@@ -10,7 +10,9 @@ import { useConnectivity, useOnReconnect } from "@/components/connection-status-
 import { hasHealthDataConsent } from "@/lib/compliance";
 import { ContextualFeedback } from "@/components/feedback/contextual-feedback";
 import { Skeleton } from "@/components/skeleton";
+import { Collapse } from "@/components/today/collapse";
 import { formatTrainingDay } from "@/components/today/format";
+import { AutoHeight } from "@/components/today/auto-height";
 import { TodayDecisionPanel } from "@/components/today/today-decision-panel";
 import { TodayInjuryManager } from "@/components/today/today-injury-manager";
 import { TodayReadinessForm } from "@/components/today/today-readiness-form";
@@ -205,6 +207,7 @@ export function TodayScreen() {
     exerciseMedia,
     isLoading,
     isRefreshing,
+    presentationPending,
     error,
     refresh,
     patchSession,
@@ -289,7 +292,8 @@ export function TodayScreen() {
       || (state.live_prescription?.session.completion_status ?? state.today.completion_status) === "started" && decision.schedule?.state === "already_completed"
         && /started session/i.test(decision.schedule.reason));
   }).map(injury => injury.id));
-  const rehabBlocks = (hasPlan ? resolvedDecision.sessionIsToday : Boolean(state.live_prescription?.rehab_only)) && !error && !isRefreshing
+  // Plain anchors, so they stay put through a refresh rather than blinking out.
+  const rehabBlocks = (hasPlan ? resolvedDecision.sessionIsToday : Boolean(state.live_prescription?.rehab_only)) && !error
     && !state.live_prescription?.safety_hold
     && !["done", "modified", "skipped"].includes(state.live_prescription?.session.completion_status ?? state.today.completion_status)
     ? (state.live_prescription?.session.blocks ?? []).filter(block => rehabExerciseTarget(block)
@@ -311,14 +315,20 @@ export function TodayScreen() {
   const decisionBanner = hasPlan
     ? resolvedDecision.currentGuidanceBanner ?? resolvedDecision.banner
     : getPlanFreeGuidanceBanner(state, resolvedDecision);
-  const readinessForm = showCheckin ? (
-    <TodayReadinessForm
-      plan={hasPlan ? activePlan : undefined}
-      token={token ?? ""}
-      warnings={state.today.warnings}
-      onRefresh={refresh}
-    />
-  ) : null;
+  // Once checked in, the form eases shut instead of dropping out from under
+  // the sections below it.
+  const readinessForm = (
+    <Collapse show={showCheckin} gap="var(--today-page-gap)">
+      {showCheckin ? (
+        <TodayReadinessForm
+          plan={hasPlan ? activePlan : undefined}
+          token={token ?? ""}
+          warnings={state.today.warnings}
+          onRefresh={refresh}
+        />
+      ) : null}
+    </Collapse>
+  );
   const sessionPanel = hasPlan ? (
     <TodaySessionPanel
       state={state}
@@ -331,10 +341,11 @@ export function TodayScreen() {
       onRefresh={refresh}
       athleteFullName={me?.profile.full_name}
       commandUnavailable={Boolean(error)}
+      presentationPending={presentationPending}
       onPlanSessionChanged={patchSession}
       professionalStatus={me?.profile.professional_status}
     />
-  ) : <StandaloneRehab key={state.live_prescription?.session.session_id ?? "rehab"} state={state} token={token ?? ""} unavailable={Boolean(error) || isRefreshing} onRefresh={refresh} />;
+  ) : <StandaloneRehab key={state.live_prescription?.session.session_id ?? "rehab"} state={state} token={token ?? ""} unavailable={Boolean(error)} refreshing={isRefreshing} onRefresh={refresh} />;
 
   return (
     <div className="today-page">
@@ -373,42 +384,45 @@ export function TodayScreen() {
           injuriesHref={token ? "#today-injury" : undefined}
           sessionHref={resolvedDecision.displayTier === "preview" ? undefined : "#today-session"}
         />
-        {rehabBlocks.length ? <nav className={styles.rehabAccess} aria-label="Your rehab">
-          <p className={styles.rehabAccessTitle}>Your rehab</p>
-          {rehabBlocks.map(block => <a key={block.block_id}
-            href={`#${encodeURIComponent(rehabExerciseTarget(block)!)}`}>
-            <span>{block.display_name}</span><strong>View rehab <span aria-hidden="true">→</span></strong>
-          </a>)}
-        </nav> : null}
-        {isRefreshing ? <p role="status">Updating Today…</p> : error ? null : <TodayDecisionPanel
-          banner={decisionBanner}
-          compactPreview={resolvedDecision.hasSession && !resolvedDecision.currentGuidanceBanner}
-          tier={resolvedDecision.currentGuidanceBanner ? resolvedDecision.authoritativeTier : resolvedDecision.displayTier}
-          triggers={state.today.recommendation_trigger_labels}
-          safetyChecks={state.today.recommendation_safety_checks}
-          context={state.today.recommendation_context_labels}
-          sources={resolvedDecision.currentGuidanceBanner
-            ? state.today.recommendation_sources?.filter((source) => source !== "today's planned session")
-            : state.today.recommendation_sources}
-          confidenceNote={state.today.recommendation_confidence_note}
-        />}
+        <Collapse show={rehabBlocks.length > 0} gap="16px">
+          {rehabBlocks.length ? <nav className={styles.rehabAccess} aria-label="Your rehab">
+            <p className={styles.rehabAccessTitle}>Your rehab</p>
+            {rehabBlocks.map(block => <a key={block.block_id}
+              href={`#${encodeURIComponent(rehabExerciseTarget(block)!)}`}>
+              <span>{block.display_name}</span><strong>View rehab <span aria-hidden="true">→</span></strong>
+            </a>)}
+          </nav> : null}
+        </Collapse>
+        {/* A refresh marks the guidance stale in place; swapping it for a
+            one-line notice collapsed the page and pulled everything below up. */}
+        {error ? null : <AutoHeight className={styles.decision}>
+          <div className={styles.decisionBody} data-refreshing={isRefreshing ? "true" : undefined} aria-busy={isRefreshing || undefined}>
+            {isRefreshing ? <p role="status" className={styles.refreshBadge}>Updating Today…</p> : null}
+            <TodayDecisionPanel
+              banner={decisionBanner}
+              compactPreview={resolvedDecision.hasSession && !resolvedDecision.currentGuidanceBanner}
+              tier={resolvedDecision.currentGuidanceBanner ? resolvedDecision.authoritativeTier : resolvedDecision.displayTier}
+              triggers={state.today.recommendation_trigger_labels}
+              safetyChecks={state.today.recommendation_safety_checks}
+              context={state.today.recommendation_context_labels}
+              sources={resolvedDecision.currentGuidanceBanner
+                ? state.today.recommendation_sources?.filter((source) => source !== "today's planned session")
+                : state.today.recommendation_sources}
+              confidenceNote={state.today.recommendation_confidence_note}
+            />
+          </div>
+        </AutoHeight>}
         <TodayRiskWatch
           risks={commandRisks}
           hasActiveInjury={(state.open_injuries?.length ?? 0) > 0}
         />
       </section>
 
-      {resolvedDecision.useSafeReplacement ? (
-        <>
-          {sessionPanel}
-          {readinessForm}
-        </>
-      ) : (
-        <>
-          {readinessForm}
-          {sessionPanel}
-        </>
-      )}
+      {/* The session keeps one slot, so a change of order never remounts it
+          (and loses a running timer); only the check-in moves around it. */}
+      {resolvedDecision.useSafeReplacement ? null : readinessForm}
+      {sessionPanel}
+      {resolvedDecision.useSafeReplacement ? readinessForm : null}
 
       <div id="today-training-log" className={styles.trainingLog} tabIndex={-1}>
         <TrainingHabitLog

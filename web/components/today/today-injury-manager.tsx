@@ -8,6 +8,8 @@ import {
   type BodyMapSeverity,
   type BodyMapSide,
 } from "@/components/body-map";
+import { AutoHeight } from "@/components/today/auto-height";
+import { Collapse } from "@/components/today/collapse";
 import { EffectiveClinicianClearanceStatus, InjuryCareStatus, InjuryClearance } from "@/components/today/injury-care-status";
 import { RehabStageMeter, rehabStageLabel } from "@/components/today/rehab-progress-status";
 import { SegmentGroup } from "@/components/today/segment-group";
@@ -649,318 +651,327 @@ export function TodayInjuryManager({
           [...(openInjuries[0].clinician_clearance?.scopes ?? [])].sort().join(",")) ?
         <EffectiveClinicianClearanceStatus clearance={effectiveClearance} /> : null}
       {openInjuries.length ? (
-        <ul className="today-injury-list">
-          {openInjuries.map((injury) => {
-            const selectedStatus = selectedStatusByFlagId[injury.id];
-            const injuryType = getInjuryType(injury);
-            const injuryLabel = getInjuryLabel(injury);
-            const impact = readInjuryImpact(injury.description ?? "");
-            const impactLabel = impact?.value === "not_limiting" ? "Low impact today" : impact?.label ?? `${injury.severity} symptoms`;
-            const showInjuryType = injuryType && !injuryLabel.toLowerCase().includes(injuryType.toLowerCase());
-            const surfaceGuidance = getSurfaceGuidance(injury);
-            const isPending = pendingFlagId === injury.id;
-            // Any in-flight write locks every row's status actions, not just its
-            // own. The store refuses concurrent writes, so leaving other rows
-            // clickable only offered an action that could not succeed — and that
-            // discarded a follow-up in progress on its way to failing.
-            const isLockedByOtherWrite = pendingFlagId !== null && !isPending;
+        <AutoHeight>
+          {/* Opening a card or a check-in follow-up glides the list below it. */}
+          <ul className="today-injury-list">
+            {openInjuries.map((injury) => {
+              const selectedStatus = selectedStatusByFlagId[injury.id];
+              const injuryType = getInjuryType(injury);
+              const injuryLabel = getInjuryLabel(injury);
+              const impact = readInjuryImpact(injury.description ?? "");
+              const impactLabel = impact?.value === "not_limiting" ? "Low impact today" : impact?.label ?? `${injury.severity} symptoms`;
+              const showInjuryType = injuryType && !injuryLabel.toLowerCase().includes(injuryType.toLowerCase());
+              const surfaceGuidance = getSurfaceGuidance(injury);
+              const isPending = pendingFlagId === injury.id;
+              // Any in-flight write locks every row's status actions, not just its
+              // own. The store refuses concurrent writes, so leaving other rows
+              // clickable only offered an action that could not succeed — and that
+              // discarded a follow-up in progress on its way to failing.
+              const isLockedByOtherWrite = pendingFlagId !== null && !isPending;
 
-            // A skin injury shows only its skin-care guidance; nothing is staged.
-            const isSurface = Boolean(surfaceGuidance) || injury.rehab_decision?.outcome === "wound_care";
-            // Only an injury with a guided pathway has a stage to show.
-            const hasPathway = !isSurface && Boolean(rehabStageLabel(injury.rehab_decision));
-            const stageLabel = hasPathway ? rehabStageLabel(injury.rehab_decision) : null;
-            // Today's main advice already shows this injury's skin instruction.
-            const showSurfaceGuidance = Boolean(surfaceGuidance) && todaySafetyNoticeInjuryId !== injury.id;
-            const restriction = injury.clinician_clearance?.scopes.includes("contact")
-              ? "Contact training"
-              : injury.clinician_clearance?.scopes.includes("training")
-                ? "Non-contact training"
-                : injury.clinician_clearance?.scopes.includes("rehab")
-                  ? "Rehab only"
-                  : null;
-            // A confirmation or follow-up in progress keeps the controls open.
-            const isOpen = Boolean(openInjuryIds[injury.id]) ||
-              confirmingClearId === injury.id || surfaceFollowUpId === injury.id;
-            const bodyId = `${injury.id}-controls`;
+              // A skin injury shows only its skin-care guidance; nothing is staged.
+              const isSurface = Boolean(surfaceGuidance) || injury.rehab_decision?.outcome === "wound_care";
+              // Only an injury with a guided pathway has a stage to show.
+              const hasPathway = !isSurface && Boolean(rehabStageLabel(injury.rehab_decision));
+              const stageLabel = hasPathway ? rehabStageLabel(injury.rehab_decision) : null;
+              // Today's main advice already shows this injury's skin instruction.
+              const showSurfaceGuidance = Boolean(surfaceGuidance) && todaySafetyNoticeInjuryId !== injury.id;
+              const restriction = injury.clinician_clearance?.scopes.includes("contact")
+                ? "Contact training"
+                : injury.clinician_clearance?.scopes.includes("training")
+                  ? "Non-contact training"
+                  : injury.clinician_clearance?.scopes.includes("rehab")
+                    ? "Rehab only"
+                    : null;
+              // A confirmation or follow-up in progress keeps the controls open.
+              const isOpen = Boolean(openInjuryIds[injury.id]) ||
+                confirmingClearId === injury.id || surfaceFollowUpId === injury.id;
+              const bodyId = `${injury.id}-controls`;
 
-            return (
-              <li key={injury.id} className="today-injury-item" data-severity={injury.severity} data-open={isOpen || undefined}>
-                <button
-                  type="button"
-                  className="today-injury-summary-row"
-                  aria-expanded={isOpen}
-                  aria-controls={bodyId}
-                  onClick={() => setOpenInjuryIds((current) => ({ ...current, [injury.id]: !isOpen }))}
-                >
-                  <span className="today-injury-summary-icon" data-region={injury.region_group ?? undefined} aria-hidden="true" />
-                  <span className="today-injury-summary-text">
-                    <strong>{injuryLabel}</strong>
-                    {stageLabel ? <span>Stage: <em>{stageLabel}</em></span> : <span>{impactLabel}</span>}
-                    {hasPathway ? <RehabStageMeter decision={injury.rehab_decision} /> : null}
-                  </span>
-                  <span className="today-injury-summary-chevron" aria-hidden="true" />
-                </button>
-                {restriction || stageLabel || isOpen ? (
-                  <p className="today-injury-chips">
-                    <span className="today-injury-chip-list">
-                      {restriction ? <span data-kind="clearance">{restriction}</span> : null}
-                      {stageLabel ? <span data-kind="impact">{impactLabel.charAt(0).toUpperCase() + impactLabel.slice(1)}</span> : null}
-                    </span>
-                    {/* Open, a pencil (Edit) rides this line instead of taking a row of its own. */}
-                    {isOpen ? <button type="button" className="today-injury-edit" title="Edit injury" disabled={isAdding || pendingFlagId !== null}
-                    onClick={() => {
-                      setEditingFlagId(injury.id); setNewArea(injury.body_area);
-                      const impact = readInjuryImpact(injury.description ?? "");
-                      setNewImpact(impact?.value ?? "");
-                      setAchillesSite(readAchillesSite(injury.description ?? ""));
-                      setElbowSite(readElbowSite(injury.description ?? ""));
-                      setShoulderScope(readShoulderScope(injury.description ?? ""));
-                      setAnkleScope(readAnkleScope(injury.description ?? ""));
-                      const description = stripShoulderScope(stripAnkleScope(stripElbowSite(stripAchillesSite(writeInjuryImpact(injury.description ?? "", "")))));
-                      const otherType = readTodayOtherInjuryType(description);
-                      const type = otherType ? undefined : TODAY_INJURY_TYPE_OPTIONS.find((option) => option.value !== "other" && new RegExp(`\\b${option.value}\\b`, "i").test(description));
-                      const typeWord = otherType ? TODAY_OTHER_INJURY_TYPES[otherType].word : type?.value;
-                      setNewType(type?.value ?? "other");
-                      setNewOtherType(otherType);
-                      setNewDetail(typeWord ? description.replace(new RegExp(`^${typeWord}\\.?\\s*`, "i"), "") : description);
-                      setNewZone(""); setBodyMapVisible(false); setManualArea(false); setNotesOpen(false); setAddMissing(null);
-                      setIsAddFormOpen(true);
-                      // The form sits below every injury card; bring it to the athlete.
-                      requestAnimationFrame(() => {
-                        editTitleRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                        editTitleRef.current?.focus({ preventScroll: true });
-                      });
-                    }}>
-                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-                      <span className="sr-only">Edit</span>
-                    </button> : null}
-                  </p>
-                ) : null}
-                <div id={bodyId} className="today-injury-controls" hidden={!isOpen}>
-                <div className="today-injury-meta">
-                  <span className="today-injury-name">
-                    <strong>{injuryLabel}</strong>
-                    {showInjuryType ? <small>{injuryType}</small> : null}
-                    <small className="today-injury-summary">
-                      {injury.status === "monitoring" ? "Monitoring" : "Tracking"} · {impactLabel}
-                    </small>
-                  </span>
-                </div>
-                {surfaceGuidance && showSurfaceGuidance ? (
-                  <div
-                    className="today-injury-guidance"
-                    data-tone={surfaceGuidance.tone}
-                    role="note"
+              return (
+                <li key={injury.id} className="today-injury-item" data-severity={injury.severity} data-open={isOpen || undefined}>
+                  <button
+                    type="button"
+                    className="today-injury-summary-row"
+                    aria-expanded={isOpen}
+                    aria-controls={bodyId}
+                    onClick={() => setOpenInjuryIds((current) => ({ ...current, [injury.id]: !isOpen }))}
                   >
-                    <span>{surfaceGuidance.label}</span>
-                    <p>{surfaceGuidance.message}</p>
+                    <span className="today-injury-summary-icon" data-region={injury.region_group ?? undefined} aria-hidden="true" />
+                    <span className="today-injury-summary-text">
+                      <strong>{injuryLabel}</strong>
+                      {stageLabel ? <span>Stage: <em>{stageLabel}</em></span> : <span>{impactLabel}</span>}
+                      {hasPathway ? <RehabStageMeter decision={injury.rehab_decision} /> : null}
+                    </span>
+                    <span className="today-injury-summary-chevron" aria-hidden="true" />
+                  </button>
+                  {restriction || stageLabel || isOpen ? (
+                    <p className="today-injury-chips">
+                      <span className="today-injury-chip-list">
+                        {restriction ? <span data-kind="clearance">{restriction}</span> : null}
+                        {stageLabel ? <span data-kind="impact">{impactLabel.charAt(0).toUpperCase() + impactLabel.slice(1)}</span> : null}
+                      </span>
+                      {/* Open, a pencil (Edit) rides this line instead of taking a row of its own. */}
+                      {isOpen ? <button type="button" className="today-injury-edit" title="Edit injury" disabled={isAdding || pendingFlagId !== null}
+                      onClick={() => {
+                        setEditingFlagId(injury.id); setNewArea(injury.body_area);
+                        const impact = readInjuryImpact(injury.description ?? "");
+                        setNewImpact(impact?.value ?? "");
+                        setAchillesSite(readAchillesSite(injury.description ?? ""));
+                        setElbowSite(readElbowSite(injury.description ?? ""));
+                        setShoulderScope(readShoulderScope(injury.description ?? ""));
+                        setAnkleScope(readAnkleScope(injury.description ?? ""));
+                        const description = stripShoulderScope(stripAnkleScope(stripElbowSite(stripAchillesSite(writeInjuryImpact(injury.description ?? "", "")))));
+                        const otherType = readTodayOtherInjuryType(description);
+                        const type = otherType ? undefined : TODAY_INJURY_TYPE_OPTIONS.find((option) => option.value !== "other" && new RegExp(`\\b${option.value}\\b`, "i").test(description));
+                        const typeWord = otherType ? TODAY_OTHER_INJURY_TYPES[otherType].word : type?.value;
+                        setNewType(type?.value ?? "other");
+                        setNewOtherType(otherType);
+                        setNewDetail(typeWord ? description.replace(new RegExp(`^${typeWord}\\.?\\s*`, "i"), "") : description);
+                        setNewZone(""); setBodyMapVisible(false); setManualArea(false); setNotesOpen(false); setAddMissing(null);
+                        setIsAddFormOpen(true);
+                        // The form sits below every injury card; bring it to the athlete.
+                        requestAnimationFrame(() => {
+                          editTitleRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                          editTitleRef.current?.focus({ preventScroll: true });
+                        });
+                      }}>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                        <span className="sr-only">Edit</span>
+                      </button> : null}
+                    </p>
+                  ) : null}
+                  <div id={bodyId} className="today-injury-controls" hidden={!isOpen}>
+                  <div className="today-injury-meta">
+                    <span className="today-injury-name">
+                      <strong>{injuryLabel}</strong>
+                      {showInjuryType ? <small>{injuryType}</small> : null}
+                      <small className="today-injury-summary">
+                        {injury.status === "monitoring" ? "Monitoring" : "Tracking"} · {impactLabel}
+                      </small>
+                    </span>
                   </div>
-                ) : null}
-                {!isSurface && (injury.rehab_decision || injury.episode_id) ? <InjuryCareStatus rehabHref={rehabTargets[injury.id]} injury={injury} token={token} onRefresh={onRefresh} showClearance={false} summaryVisible /> : null}
-                <div className="today-injury-update-head">
-                  <p className="today-field-label today-injury-status-label">{delayedPrompts.some(prompt =>
-                    prompt.injury_id === injury.id && prompt.injury_episode_id === injury.episode_id)
-                    ? "How’s your injury after yesterday’s rehab?" : "How's your injury?"}</p>
-                </div>
-                <div
-                  className="today-segment-row today-injury-status-row"
-                  role="group"
-                  aria-label={`Update ${getInjuryLabel(injury)}`}
-                >
-                  {INJURY_STATUS_ACTIONS.map((action) => {
-                    // Selected styling means SAVED, and a confirmed backend
-                    // write is the only thing that produces it. An answer that
-                    // is still waiting on a confirmation or a follow-up gets a
-                    // neutral "pending" outline instead, so nothing ever looks
-                    // logged before it is.
-                    const isSelected = action.value === selectedStatus;
-                    const isAwaitingConfirmation =
-                      (confirmingClearId === injury.id && action.value === "resolved") ||
-                      (surfaceFollowUpId === injury.id && action.value === surfaceFollowUpStatus);
-
-                    return (
-                      <button
-                        key={action.value}
-                        type="button"
-                        className={`today-segment${isSelected ? " today-segment-active" : ""}${
-                          isAwaitingConfirmation ? " today-segment-pending" : ""
-                        }`}
-                        disabled={isPending || isLockedByOtherWrite}
-                        // aria-pressed stays false until the backend confirms:
-                        // pressed means SAVED. The pending state is announced
-                        // separately so a screen-reader user still knows the
-                        // answer is captured but not yet written.
-                        aria-pressed={isSelected}
-                        aria-describedby={
-                          isAwaitingConfirmation ? `${injury.id}-pending-hint` : undefined
-                        }
-                        data-awaiting-confirmation={isAwaitingConfirmation || undefined}
-                        onClick={() => handleInjuryAction(injury, action.value)}
-                      >
-                        {action.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                <InjuryClearance key={`${injury.id}:${injury.episode_id}`} injury={injury} token={token} onRefresh={onRefresh} />
-                <button type="button" className={`today-tool-link injury-resolve-link${confirmingClearId === injury.id ? " today-segment-pending" : ""}${selectedStatus === "resolved" ? " today-segment-active" : ""}`} aria-pressed={selectedStatus === "resolved"} aria-describedby={confirmingClearId === injury.id ? `${injury.id}-pending-hint` : undefined}
-                  disabled={isAdding || pendingFlagId !== null} onClick={() => handleInjuryAction(injury, "resolved")}>Mark resolved</button>
-                {confirmingClearId === injury.id || surfaceFollowUpId === injury.id ? (
-                  <p id={`${injury.id}-pending-hint`} className="today-injury-pending-hint">
-                    Not saved yet. Confirm below.
-                  </p>
-                ) : null}
-                {surfaceFollowUpId === injury.id ? (
+                  {surfaceGuidance && showSurfaceGuidance ? (
+                    <div
+                      className="today-injury-guidance"
+                      data-tone={surfaceGuidance.tone}
+                      role="note"
+                    >
+                      <span>{surfaceGuidance.label}</span>
+                      <p>{surfaceGuidance.message}</p>
+                    </div>
+                  ) : null}
+                  {!isSurface && (injury.rehab_decision || injury.episode_id) ? <InjuryCareStatus rehabHref={rehabTargets[injury.id]} injury={injury} token={token} onRefresh={onRefresh} showClearance={false} summaryVisible /> : null}
+                  <div className="today-injury-update-head">
+                    <p className="today-field-label today-injury-status-label">{delayedPrompts.some(prompt =>
+                      prompt.injury_id === injury.id && prompt.injury_episode_id === injury.episode_id)
+                      ? "How’s your injury after yesterday’s rehab?" : "How's your injury?"}</p>
+                  </div>
                   <div
-                    className="today-injury-surface-followup"
-                    data-mode={surfaceFollowUpMode}
+                    className="today-segment-row today-injury-status-row"
                     role="group"
-                    aria-label={
-                      isSurfaceRecheck
-                        ? `Recheck the ${getInjuryLabel(injury)}`
-                        : isSurfaceInitial
-                          ? `Skin check for the ${getInjuryLabel(injury)}`
-                          : `How is the ${getInjuryLabel(injury)} worse?`
-                    }
+                    aria-label={`Update ${getInjuryLabel(injury)}`}
                   >
-                    <div className="today-injury-followup-head">
-                      <p className="today-injury-followup-eyebrow">
-                        {isSurfaceRecheck ? "Skin recheck" : "Skin check"}
-                        <span aria-hidden="true"> · 5 quick questions</span>
+                    {INJURY_STATUS_ACTIONS.map((action) => {
+                      // Selected styling means SAVED, and a confirmed backend
+                      // write is the only thing that produces it. An answer that
+                      // is still waiting on a confirmation or a follow-up gets a
+                      // neutral "pending" outline instead, so nothing ever looks
+                      // logged before it is.
+                      const isSelected = action.value === selectedStatus;
+                      const isAwaitingConfirmation =
+                        (confirmingClearId === injury.id && action.value === "resolved") ||
+                        (surfaceFollowUpId === injury.id && action.value === surfaceFollowUpStatus);
+
+                      return (
+                        <button
+                          key={action.value}
+                          type="button"
+                          className={`today-segment${isSelected ? " today-segment-active" : ""}${
+                            isAwaitingConfirmation ? " today-segment-pending" : ""
+                          }`}
+                          disabled={isPending || isLockedByOtherWrite}
+                          // aria-pressed stays false until the backend confirms:
+                          // pressed means SAVED. The pending state is announced
+                          // separately so a screen-reader user still knows the
+                          // answer is captured but not yet written.
+                          aria-pressed={isSelected}
+                          aria-describedby={
+                            isAwaitingConfirmation ? `${injury.id}-pending-hint` : undefined
+                          }
+                          data-awaiting-confirmation={isAwaitingConfirmation || undefined}
+                          onClick={() => handleInjuryAction(injury, action.value)}
+                        >
+                          {action.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <InjuryClearance key={`${injury.id}:${injury.episode_id}`} injury={injury} token={token} onRefresh={onRefresh} />
+                  <button type="button" className={`today-tool-link injury-resolve-link${confirmingClearId === injury.id ? " today-segment-pending" : ""}${selectedStatus === "resolved" ? " today-segment-active" : ""}`} aria-pressed={selectedStatus === "resolved"} aria-describedby={confirmingClearId === injury.id ? `${injury.id}-pending-hint` : undefined}
+                    disabled={isAdding || pendingFlagId !== null} onClick={() => handleInjuryAction(injury, "resolved")}>Mark resolved</button>
+                  <Collapse show={confirmingClearId === injury.id || surfaceFollowUpId === injury.id} gap="12px">
+                    {confirmingClearId === injury.id || surfaceFollowUpId === injury.id ? (
+                      <p id={`${injury.id}-pending-hint`} className="today-injury-pending-hint">
+                        Not saved yet. Confirm below.
                       </p>
-                      <p className="today-injury-confirm-text">
-                        {isSurfaceRecheck
-                          ? "Quick recheck so we can lift what no longer applies."
-                          : isSurfaceInitial
-                            ? "Quick check so we protect the right thing from the start."
-                            : "Quick check so we only change what we need to."}
-                      </p>
-                    </div>
-                    <SegmentGroup
-                      label={isSurfaceRecheck ? "Is the skin closed now?" : "Is it open or burst?"}
-                      value={surfaceAnswers.skin_integrity}
-                      options={SKIN_INTEGRITY_OPTIONS}
-                      onChange={(value) =>
-                        setSurfaceAnswers((current) => ({ ...current, skin_integrity: value }))
-                      }
-                    />
-                    <SegmentGroup
-                      label="Bleeding or weeping?"
-                      value={surfaceAnswers.bleed}
-                      options={BLEED_OPTIONS}
-                      onChange={(value) => setSurfaceAnswers((current) => ({ ...current, bleed: value }))}
-                      columns={2}
-                    />
-                    <div className="today-field-group">
-                      <p className="today-field-label">Any infection signs?</p>
-                      {/* Multi-select, unlike every other control in this panel — say
-                          so and keep a live count, so "none picked" reads as an
-                          answered question rather than a skipped one. */}
-                      <p className="today-field-hint" aria-live="polite">
-                        {surfaceAnswers.infection_signs.length
-                          ? `${surfaceAnswers.infection_signs.length} selected`
-                          : "Tap any that apply. None is fine."}
-                      </p>
-                      {/* One per row: these labels are the longest in the panel
-                          and will not share a line on a phone without being
-                          broken across two. */}
-                      <div className="today-segment-row today-segment-row-list">
-                        {INFECTION_SIGN_OPTIONS.map((option) => {
-                          const checked = surfaceAnswers.infection_signs.includes(option.value);
-                          return (
-                            <button
-                              key={option.value}
-                              type="button"
-                              className={`today-segment today-segment-multi${
-                                checked ? " today-segment-active" : ""
-                              }`}
-                              aria-pressed={checked}
-                              onClick={() => toggleInfectionSign(option.value)}
-                            >
-                              {option.label}
-                            </button>
-                          );
-                        })}
+                    ) : null}
+                  </Collapse>
+                  <Collapse show={surfaceFollowUpId === injury.id} gap="12px">
+                    {surfaceFollowUpId === injury.id ? (
+                      <div
+                        className="today-injury-surface-followup"
+                        data-mode={surfaceFollowUpMode}
+                        role="group"
+                        aria-label={
+                          isSurfaceRecheck
+                            ? `Recheck the ${getInjuryLabel(injury)}`
+                            : isSurfaceInitial
+                              ? `Skin check for the ${getInjuryLabel(injury)}`
+                              : `How is the ${getInjuryLabel(injury)} worse?`
+                        }
+                      >
+                        <div className="today-injury-followup-head">
+                          <p className="today-injury-followup-eyebrow">
+                            {isSurfaceRecheck ? "Skin recheck" : "Skin check"}
+                            <span aria-hidden="true"> · 5 quick questions</span>
+                          </p>
+                          <p className="today-injury-confirm-text">
+                            {isSurfaceRecheck
+                              ? "Quick recheck so we can lift what no longer applies."
+                              : isSurfaceInitial
+                                ? "Quick check so we protect the right thing from the start."
+                                : "Quick check so we only change what we need to."}
+                          </p>
+                        </div>
+                        <SegmentGroup
+                          label={isSurfaceRecheck ? "Is the skin closed now?" : "Is it open or burst?"}
+                          value={surfaceAnswers.skin_integrity}
+                          options={SKIN_INTEGRITY_OPTIONS}
+                          onChange={(value) =>
+                            setSurfaceAnswers((current) => ({ ...current, skin_integrity: value }))
+                          }
+                        />
+                        <SegmentGroup
+                          label="Bleeding or weeping?"
+                          value={surfaceAnswers.bleed}
+                          options={BLEED_OPTIONS}
+                          onChange={(value) => setSurfaceAnswers((current) => ({ ...current, bleed: value }))}
+                          columns={2}
+                        />
+                        <div className="today-field-group">
+                          <p className="today-field-label">Any infection signs?</p>
+                          {/* Multi-select, unlike every other control in this panel — say
+                              so and keep a live count, so "none picked" reads as an
+                              answered question rather than a skipped one. */}
+                          <p className="today-field-hint" aria-live="polite">
+                            {surfaceAnswers.infection_signs.length
+                              ? `${surfaceAnswers.infection_signs.length} selected`
+                              : "Tap any that apply. None is fine."}
+                          </p>
+                          {/* One per row: these labels are the longest in the panel
+                              and will not share a line on a phone without being
+                              broken across two. */}
+                          <div className="today-segment-row today-segment-row-list">
+                            {INFECTION_SIGN_OPTIONS.map((option) => {
+                              const checked = surfaceAnswers.infection_signs.includes(option.value);
+                              return (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  className={`today-segment today-segment-multi${
+                                    checked ? " today-segment-active" : ""
+                                  }`}
+                                  aria-pressed={checked}
+                                  onClick={() => toggleInfectionSign(option.value)}
+                                >
+                                  {option.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <SegmentGroup
+                          label="Can it stay covered?"
+                          value={surfaceAnswers.coverable}
+                          options={COVERABLE_OPTIONS}
+                          onChange={(value) =>
+                            setSurfaceAnswers((current) => ({ ...current, coverable: value }))
+                          }
+                        />
+                        <SegmentGroup
+                          label={
+                            isSurfaceRecheck
+                              ? "Is rubbing or contact still the problem?"
+                              : "Is rubbing or contact the problem?"
+                          }
+                          value={surfaceAnswers.friction_or_contact_problem}
+                          options={FRICTION_OPTIONS}
+                          onChange={(value) =>
+                            setSurfaceAnswers((current) => ({
+                              ...current,
+                              friction_or_contact_problem: value,
+                            }))
+                          }
+                        />
+                        <div className="today-injury-confirm-actions today-injury-followup-actions">
+                          <button
+                            type="button"
+                            className="today-injury-confirm-yes"
+                            disabled={pendingFlagId !== null}
+                            onClick={() => void submitSurfaceFollowUp(injury.id)}
+                          >
+                            {isPending ? "Saving..." : "Save update"}
+                          </button>
+                          <button
+                            type="button"
+                            className="today-injury-confirm-cancel"
+                            disabled={pendingFlagId !== null}
+                            onClick={() => setSurfaceFollowUpId(null)}
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <SegmentGroup
-                      label="Can it stay covered?"
-                      value={surfaceAnswers.coverable}
-                      options={COVERABLE_OPTIONS}
-                      onChange={(value) =>
-                        setSurfaceAnswers((current) => ({ ...current, coverable: value }))
-                      }
-                    />
-                    <SegmentGroup
-                      label={
-                        isSurfaceRecheck
-                          ? "Is rubbing or contact still the problem?"
-                          : "Is rubbing or contact the problem?"
-                      }
-                      value={surfaceAnswers.friction_or_contact_problem}
-                      options={FRICTION_OPTIONS}
-                      onChange={(value) =>
-                        setSurfaceAnswers((current) => ({
-                          ...current,
-                          friction_or_contact_problem: value,
-                        }))
-                      }
-                    />
-                    <div className="today-injury-confirm-actions today-injury-followup-actions">
-                      <button
-                        type="button"
-                        className="today-injury-confirm-yes"
-                        disabled={pendingFlagId !== null}
-                        onClick={() => void submitSurfaceFollowUp(injury.id)}
+                    ) : null}
+                  </Collapse>
+                  <Collapse show={confirmingClearId === injury.id} gap="12px">
+                    {confirmingClearId === injury.id ? (
+                      <div
+                        className="today-injury-confirm"
+                        role="alertdialog"
+                        aria-label={`Resolve ${getInjuryLabel(injury)}?`}
                       >
-                        {isPending ? "Saving..." : "Save update"}
-                      </button>
-                      <button
-                        type="button"
-                        className="today-injury-confirm-cancel"
-                        disabled={pendingFlagId !== null}
-                        onClick={() => setSurfaceFollowUpId(null)}
-                      >
-                        Cancel
-                      </button>
-                    </div>
+                        <span className="today-injury-confirm-text">
+                          Resolve this injury? It will be removed from today&apos;s tracking.
+                        </span>
+                        <div className="today-injury-confirm-actions">
+                          <button
+                            type="button"
+                            className="today-injury-confirm-yes"
+                            disabled={pendingFlagId !== null}
+                            onClick={() => void confirmClear(injury.id)}
+                          >
+                            {pendingFlagId === injury.id ? "Resolving..." : "Yes, resolve"}
+                          </button>
+                          <button
+                            type="button"
+                            className="today-injury-confirm-cancel"
+                            disabled={pendingFlagId !== null}
+                            onClick={() => setConfirmingClearId(null)}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </Collapse>
                   </div>
-                ) : null}
-                {confirmingClearId === injury.id ? (
-                  <div
-                    className="today-injury-confirm"
-                    role="alertdialog"
-                    aria-label={`Resolve ${getInjuryLabel(injury)}?`}
-                  >
-                    <span className="today-injury-confirm-text">
-                      Resolve this injury? It will be removed from today&apos;s tracking.
-                    </span>
-                    <div className="today-injury-confirm-actions">
-                      <button
-                        type="button"
-                        className="today-injury-confirm-yes"
-                        disabled={pendingFlagId !== null}
-                        onClick={() => void confirmClear(injury.id)}
-                      >
-                        {pendingFlagId === injury.id ? "Resolving..." : "Yes, resolve"}
-                      </button>
-                      <button
-                        type="button"
-                        className="today-injury-confirm-cancel"
-                        disabled={pendingFlagId !== null}
-                        onClick={() => setConfirmingClearId(null)}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+                </li>
+              );
+            })}
+          </ul>
+        </AutoHeight>
       ) : (
         <p className="muted">No injuries tracked.</p>
       )}

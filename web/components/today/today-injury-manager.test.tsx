@@ -106,6 +106,13 @@ test("single injury removes duplicate clearance while retaining overall safety r
   } finally { cleanup(); }
 });
 
+/** Text a person can still read or reach: a closing section fades out inert. */
+function liveText(container: HTMLElement): string {
+  const copy = container.cloneNode(true) as HTMLElement;
+  copy.querySelectorAll("[inert]").forEach((node) => node.remove());
+  return copy.textContent ?? "";
+}
+
 async function settle() {
   await act(async () => {
     await Promise.resolve();
@@ -394,7 +401,7 @@ test("marking a skin injury worse asks the surface follow-up before saving anyth
     });
     // Only now is it marked as saved, and the follow-up closes.
     assertSelected(statusButton(container, "Worse"));
-    assert.doesNotMatch(container.textContent ?? "", /Is it open or burst\?/);
+    assert.doesNotMatch(liveText(container), /Is it open or burst\?/);
 
     cleanup();
   } finally {
@@ -478,7 +485,7 @@ test("a non-surface injury marked worse saves directly, with no skin questions",
     await click(statusButton(container, "Worse"));
 
     assert.deepEqual(calls, [{ injuries: [{ flag_id: "flag-shoulder", status: "worse" }] }]);
-    assert.doesNotMatch(container.textContent ?? "", /Is it open or burst\?/);
+    assert.doesNotMatch(liveText(container), /Is it open or burst\?/);
     assertSelected(statusButton(container, "Worse"));
 
     cleanup();
@@ -542,7 +549,7 @@ test("resolving an injury is not marked selected until the confirmed write succe
     assert.equal(succeeding.calls.length, 1);
     assert.deepEqual(succeeding.calls[0].injuries, [{ flag_id: BLISTER.id, status: "resolved" }]);
     assertSelected(statusButton(container, "Mark resolved"));
-    assert.doesNotMatch(container.textContent ?? "", /Resolve this injury\?/);
+    assert.doesNotMatch(liveText(container), /Resolve this injury\?/);
 
     cleanup();
   } finally {
@@ -1068,7 +1075,7 @@ test("adding a skin injury asks the five surface questions immediately", async (
         },
       ],
     });
-    assert.doesNotMatch(container.textContent ?? "", /Is it open or burst\?/);
+    assert.doesNotMatch(liveText(container), /Is it open or burst\?/);
 
     act(() => root.unmount());
     container.remove();
@@ -1125,7 +1132,7 @@ test("adding a non-surface injury does not open the skin follow-up", async () =>
 
     assert.equal(calls.length, 1);
     assert.equal(container.querySelector(".today-injury-surface-followup"), null);
-    assert.doesNotMatch(container.textContent ?? "", /Is it open or burst\?/);
+    assert.doesNotMatch(liveText(container), /Is it open or burst\?/);
 
     act(() => root.unmount());
     container.remove();
@@ -1189,7 +1196,7 @@ test("adding a medical-review skin injury skips the questions for its banner", a
 
     assert.equal(calls.length, 1);
     assert.equal(container.querySelector(".today-injury-surface-followup"), null);
-    assert.doesNotMatch(container.textContent ?? "", /Is it open or burst\?/);
+    assert.doesNotMatch(liveText(container), /Is it open or burst\?/);
     // Its persistent guidance stands in for the questions.
     assert.match(container.textContent ?? "", /needs checking before training/i);
 
@@ -1261,7 +1268,7 @@ test("existing injury status actions still submit through the current refresh fl
     await click(button(container, "Mark resolved"));
     assert.match(container.textContent ?? "", /Resolve this injury/);
     await click(button(container, "Cancel"));
-    assert.doesNotMatch(container.textContent ?? "", /Resolve this injury/);
+    assert.doesNotMatch(liveText(container), /Resolve this injury/);
   } finally {
     globalThis.fetch = originalFetch;
     unmountMain(container, root);

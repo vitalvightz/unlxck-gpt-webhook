@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { ExerciseMediaProvider } from "@/components/exercise-demo";
+import { Skeleton } from "@/components/skeleton";
+import { AutoHeight } from "@/components/today/auto-height";
+import { Collapse } from "@/components/today/collapse";
 import { PrivateExerciseMediaProvider } from "@/components/private-exercise-video";
 import { ExerciseLogProvider, type ExerciseLogging } from "@/components/exercise-log";
 import { ExerciseCustomisationProvider, type ExerciseCustomisation } from "@/components/exercise-customisation";
@@ -166,7 +169,7 @@ function sessionSummaryChips(
 
 function SummaryChipList({ chips }: { chips: SummaryChip[] }) {
   return (
-    <ul className="today-session-chips" aria-label="Session summary">
+    <ul className="today-session-chips today-fade-in" aria-label="Session summary">
       {chips.map((chip) => (
         <li key={chip.label}>
           <ToolIcon name={chip.icon} />
@@ -451,6 +454,7 @@ export function TodaySessionPanel({
   athleteFullName,
   professionalStatus,
   commandUnavailable = false,
+  presentationPending = false,
   onPlanSessionChanged,
 }: {
   state: TodayCommandView;
@@ -462,6 +466,8 @@ export function TodaySessionPanel({
   professionalStatus?: string | null;
   /** Preserve drafts after a failed refresh; require fresh guidance for actions. */
   commandUnavailable?: boolean;
+  /** The plan read behind the blocks is in flight: hold their space, don't show a stand-in. */
+  presentationPending?: boolean;
   structuredPlan: StructuredPlan | null;
   /** Server-derived per-region Rehab/Prehab policy for the active plan. */
   rehabLabelPolicy?: RehabLabelPolicy | null;
@@ -1295,6 +1301,9 @@ export function TodaySessionPanel({
     ? []
     : sessionSummaryChips(showStructuredBlocks ? current.sessions : [], duration, session.effective_load);
   const injuryText = injuryStripText(state.open_injuries ?? []);
+  // A different session taking the card (today's logged, next one up) fades
+  // in as a handoff rather than swapping in one frame.
+  const cardKey = `${session.session_id ?? ""}:${session.calendar_date ?? ""}:${isSessionPreview ? "preview" : "today"}`;
 
   return (
     <section
@@ -1303,295 +1312,303 @@ export function TodaySessionPanel({
       data-tone={cardTone}
       aria-labelledby="today-session-heading"
     >
-      {customOffDayCopy ? <p className="muted">{customOffDayCopy}</p> : null}
-      <div className="today-card-head today-session-head">
-        <div>
-          <div className="today-session-eyebrow">
-            <p className="kicker">{relationCopy.kicker}</p>
-            {sessionDateLabel ? <p className="today-session-date">{sessionDateLabel}</p> : null}
+      <AutoHeight swapKey={cardKey}>
+        {customOffDayCopy ? <p className="muted">{customOffDayCopy}</p> : null}
+        <div className="today-card-head today-session-head">
+          <div>
+            <div className="today-session-eyebrow">
+              <p className="kicker">{relationCopy.kicker}</p>
+              {sessionDateLabel ? <p className="today-session-date">{sessionDateLabel}</p> : null}
+            </div>
+            <h2 id="today-session-heading">{shownTitle}</h2>
+            {partsSubtitle ? <p className="today-session-parts today-fade-in">{partsSubtitle}</p> : null}
+            {alongsideTitle && !showStructuredBlocks ? (
+              <p className="today-session-alongside">
+                <span className="today-detail-label">{alongsideLabel}</span> {alongsideTitle}
+              </p>
+            ) : null}
+            {summaryChips.length > 0 ? (
+              <SummaryChipList chips={summaryChips} />
+            ) : null}
           </div>
-          <h2 id="today-session-heading">{shownTitle}</h2>
-          {partsSubtitle ? <p className="today-session-parts">{partsSubtitle}</p> : null}
-          {alongsideTitle && !showStructuredBlocks ? (
-            <p className="today-session-alongside">
-              <span className="today-detail-label">{alongsideLabel}</span> {alongsideTitle}
-            </p>
-          ) : null}
-          {summaryChips.length > 0 ? (
-            <SummaryChipList chips={summaryChips} />
-          ) : null}
         </div>
-      </div>
-      {injuryText && !safeSession && !isSessionPreview ? (
-        <a href="#today-injury" className="today-injury-strip">
-          <ToolIcon name="shield" />
-          <span className="today-injury-strip-text">
-            <span className="today-injury-strip-title">Injury-aware session</span>
-            <span className="today-injury-strip-detail">Training around {injuryText}</span>
-          </span>
-          <span className="today-injury-strip-chevron" aria-hidden="true" />
-        </a>
-      ) : null}
-      {canCompleteSession && !rehabOnlyPrescription && !safeSession && status === "not_started" ? (
-        <div className="today-session-actions today-action-tray">
-          {contactCta ? (
-            <button type="button" className="cta" onClick={startContact} disabled={isSubmitting}>
-              Start {contactHeadline.toLowerCase()}
-            </button>
-          ) : null}
-          {contactLeads && contactTimerAvailable && contactIsSession ? null : (
+        {injuryText && !safeSession && !isSessionPreview ? (
+          <a href="#today-injury" className="today-injury-strip">
+            <ToolIcon name="shield" />
+            <span className="today-injury-strip-text">
+              <span className="today-injury-strip-title">Injury-aware session</span>
+              <span className="today-injury-strip-detail">Training around {injuryText}</span>
+            </span>
+            <span className="today-injury-strip-chevron" aria-hidden="true" />
+          </a>
+        ) : null}
+        {canCompleteSession && !rehabOnlyPrescription && !safeSession && status === "not_started" ? (
+          <div className="today-session-actions today-action-tray">
+            {contactCta ? (
+              <button type="button" className="cta" onClick={startContact} disabled={isSubmitting}>
+                Start {contactHeadline.toLowerCase()}
+              </button>
+            ) : null}
+            {contactLeads && contactTimerAvailable && contactIsSession ? null : (
+              <button
+                type="button"
+                className={contactCta ? "secondary-button" : "cta"}
+                onClick={startSession}
+                disabled={isSubmitting}
+              >
+                {contactCta ? null : <ToolIcon name="play" />}
+                {guidedLeads ? "Start guided visualisation" : alongsideTitle ? `Start ${alongsideTitle}` : "Start session"}
+              </button>
+            )}
+            {timerTools(
+              <button
+                type="button"
+                className="today-tool-link"
+                onClick={() => setIntent("skipped")}
+                disabled={isSubmitting}
+              >
+                Skip session
+              </button>,
+              { contactAsPrimary: contactLeads && contactTimerAvailable },
+            )}
+          </div>
+        ) : null}
+        {/* While the day's parts load, the tray already holds its place. */}
+        {isSessionPreview && !safeSession && (showStructuredBlocks || presentationPending) ? (
+          <div className="today-session-actions today-action-tray">
             <button
               type="button"
-              className={contactCta ? "secondary-button" : "cta"}
-              onClick={startSession}
-              disabled={isSubmitting}
+              className="cta"
+              aria-haspopup="dialog"
+              disabled={!showStructuredBlocks}
+              onClick={() => setPreviewOpen(true)}
             >
-              {contactCta ? null : <ToolIcon name="play" />}
-              {guidedLeads ? "Start guided visualisation" : alongsideTitle ? `Start ${alongsideTitle}` : "Start session"}
+              <ToolIcon name="play" />
+              Preview session
             </button>
-          )}
-          {timerTools(
-            <button
-              type="button"
-              className="today-tool-link"
-              onClick={() => setIntent("skipped")}
-              disabled={isSubmitting}
-            >
-              Skip session
-            </button>,
-            { contactAsPrimary: contactLeads && contactTimerAvailable },
-          )}
-        </div>
-      ) : null}
-      {isSessionPreview && showStructuredBlocks && !safeSession ? (
-        <div className="today-session-actions today-action-tray">
-          <button
-            type="button"
-            className="cta"
-            aria-haspopup="dialog"
-            onClick={() => setPreviewOpen(true)}
-          >
-            <ToolIcon name="play" />
-            Preview session
-          </button>
-        </div>
-      ) : null}
-      {safeSession ? (
-        <SafeSessionCard view={safeSession} />
-      ) : showStructuredBlocks ? (
-        // A previewed day is read on its own screen; today's work stays here.
-        isSessionPreview ? (
-          previewOpen ? (
-            <InjuryDetailSheet
-              title={shownTitle}
-              variant="screen"
-              closeLabel="Back to Today"
-              onClose={() => setPreviewOpen(false)}
-            >
-              <div className="today-preview-screen">
-                <p className="today-preview-meta">
-                  <span>{relationCopy.kicker}</span>
-                  {sessionDateLabel ? <span>{sessionDateLabel}</span> : null}
-                </p>
-                {summaryChips.length > 0 ? (
-                  <SummaryChipList chips={summaryChips} />
-                ) : null}
-                <TodaySessionBlocks
-                  planId={state.active_plan?.id}
-                  current={current}
-                  headline={shownTitle}
-                  openWeekIntent={openWeekIntent}
-                  rehabLabelPolicy={rehabLabelPolicy}
-                  exerciseMedia={exerciseMedia}
-                  exerciseLogging={exerciseLogging}
-                  accessToken={token}
-                  exerciseCustomisation={exerciseCustomisation}
-                />
-                <p className="today-pending-line">
-                  <span className="today-pending-pill">Pending</span>
-                  Check in on the day to unlock this session.
-                </p>
-              </div>
-            </InjuryDetailSheet>
-          ) : null
+          </div>
+        ) : null}
+        {safeSession ? (
+          <SafeSessionCard view={safeSession} />
+        ) : showStructuredBlocks ? (
+          // A previewed day is read on its own screen; today's work stays here.
+          isSessionPreview ? (
+            previewOpen ? (
+              <InjuryDetailSheet
+                title={shownTitle}
+                variant="screen"
+                closeLabel="Back to Today"
+                onClose={() => setPreviewOpen(false)}
+              >
+                <div className="today-preview-screen">
+                  <p className="today-preview-meta">
+                    <span>{relationCopy.kicker}</span>
+                    {sessionDateLabel ? <span>{sessionDateLabel}</span> : null}
+                  </p>
+                  {summaryChips.length > 0 ? (
+                    <SummaryChipList chips={summaryChips} />
+                  ) : null}
+                  <TodaySessionBlocks
+                    planId={state.active_plan?.id}
+                    current={current}
+                    headline={shownTitle}
+                    openWeekIntent={openWeekIntent}
+                    rehabLabelPolicy={rehabLabelPolicy}
+                    exerciseMedia={exerciseMedia}
+                    exerciseLogging={exerciseLogging}
+                    accessToken={token}
+                    exerciseCustomisation={exerciseCustomisation}
+                  />
+                  <p className="today-pending-line">
+                    <span className="today-pending-pill">Pending</span>
+                    Check in on the day to unlock this session.
+                  </p>
+                </div>
+              </InjuryDetailSheet>
+            ) : null
+          ) : (
+            <TodaySessionBlocks
+              planId={state.active_plan?.id}
+              current={current}
+              headline={shownTitle}
+              openWeekIntent={openWeekIntent}
+              rehabLabelPolicy={rehabLabelPolicy}
+              exerciseMedia={exerciseMedia}
+              exerciseLogging={exerciseLogging}
+              accessToken={token}
+              exerciseCustomisation={exerciseCustomisation}
+            />
+          )
+        ) : presentationPending ? (
+          // The plan read decides between the blocks and this summary; showing
+          // the summary first made the card change twice.
+          isSessionPreview ? null : <Skeleton variant="block" height={140} />
         ) : (
-          <TodaySessionBlocks
-            planId={state.active_plan?.id}
-            current={current}
-            headline={shownTitle}
-            openWeekIntent={openWeekIntent}
-            rehabLabelPolicy={rehabLabelPolicy}
-            exerciseMedia={exerciseMedia}
-            exerciseLogging={exerciseLogging}
-            accessToken={token}
-            exerciseCustomisation={exerciseCustomisation}
-          />
-        )
-      ) : (
-        <div className="today-session-summary">
-          <div>
-            <p className="today-detail-label">Day</p>
-            <p>{formatSessionDate(session)}</p>
+          <div className="today-session-summary">
+            <div>
+              <p className="today-detail-label">Day</p>
+              <p>{formatSessionDate(session)}</p>
+            </div>
+            <div>
+              <p className="today-detail-label">Focus</p>
+              <p>{getSessionFocus(session)}</p>
+            </div>
+            {session.coach_led_contact ? (
+              <div>
+                <p className="today-detail-label">Coach contact</p>
+                <p>{athleteFacingSessionTitle(session.coach_led_contact)}</p>
+              </div>
+            ) : null}
+            {duration ? (
+              <div>
+                <p className="today-detail-label">Duration</p>
+                <p>{duration}</p>
+              </div>
+            ) : null}
+            {!isSessionPreview ? (
+              <div>
+                <p className="today-detail-label">Status</p>
+                <p>{getCompletionLabel(status)}</p>
+              </div>
+            ) : null}
           </div>
-          <div>
-            <p className="today-detail-label">Focus</p>
-            <p>{getSessionFocus(session)}</p>
+        )}
+        {isSessionPreview && !safeSession ? (
+          <div className="today-next-planned-note">
+            <p className="today-pending-line">
+              <span className="today-pending-pill">Pending</span>
+              Check in on the day to unlock this session.
+            </p>
+            {nextIsHardCombat ? (
+              <div className="today-caution-row">
+                <span className="today-caution-label">Caution</span>
+                <span className="today-caution-text">
+                  Combat session next. Re-check fatigue, pain and injury before clearing.
+                </span>
+              </div>
+            ) : null}
           </div>
-          {session.coach_led_contact ? (
-            <div>
-              <p className="today-detail-label">Coach contact</p>
-              <p>{athleteFacingSessionTitle(session.coach_led_contact)}</p>
-            </div>
-          ) : null}
-          {duration ? (
-            <div>
-              <p className="today-detail-label">Duration</p>
-              <p>{duration}</p>
-            </div>
-          ) : null}
-          {!isSessionPreview ? (
-            <div>
-              <p className="today-detail-label">Status</p>
-              <p>{getCompletionLabel(status)}</p>
-            </div>
-          ) : null}
-        </div>
-      )}
-      {isSessionPreview && !safeSession ? (
-        <div className="today-next-planned-note">
-          <p className="today-pending-line">
-            <span className="today-pending-pill">Pending</span>
-            Check in on the day to unlock this session.
-          </p>
-          {nextIsHardCombat ? (
-            <div className="today-caution-row">
-              <span className="today-caution-label">Caution</span>
-              <span className="today-caution-text">
-                Combat session next. Re-check fatigue, pain and injury before clearing.
-              </span>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+        ) : null}
 
-      {!canCompleteSession && !safeSession && !isSessionPreview ? (
-        <div className="today-terminal-block">
-          <p
-            className="today-terminal-status"
-            data-tone={decisionBlocksCurrentSession || contactClearanceBlocked ? "blocked" : "neutral"}
-          >
-            {terminalStatusCopy}
-          </p>
-          {severeInjuryBlocksCurrentSession ? (
-            <a href="#today-injury" className="secondary-button today-terminal-action">
-              Open injury check-in
-            </a>
-          ) : null}
-        </div>
-      ) : null}
+        {!canCompleteSession && !safeSession && !isSessionPreview ? (
+          <div className="today-terminal-block">
+            <p
+              className="today-terminal-status"
+              data-tone={decisionBlocksCurrentSession || contactClearanceBlocked ? "blocked" : "neutral"}
+            >
+              {terminalStatusCopy}
+            </p>
+            {severeInjuryBlocksCurrentSession ? (
+              <a href="#today-injury" className="secondary-button today-terminal-action">
+                Open injury check-in
+              </a>
+            ) : null}
+          </div>
+        ) : null}
 
-      {canCompleteSession && !rehabOnlyPrescription && status === "started" ? (
-        <div className="today-session-actions today-action-tray">
-          {canResume ? (
-          <button
-            type="button"
-            className="cta"
-            onClick={() => {
-              if (roundTimer.shown && (timerAvailable || guidedLeads || (contactIsSession && contactTimerAvailable))) {
-                showToast("Close the round timer to resume your session timer.", { tone: "info" });
-                return;
-              }
-              if (timerAvailable) {
-                openTimer("session");
-                return;
-              }
-              if (guidedLeads) {
-                setGuidedNext("review");
-                setGuidedOpen(true);
-                return;
-              }
-              if (contactIsSession && contactTimerAvailable) {
-                openTimer("contact");
-                return;
-              }
-              showToast("Session is in progress.", { tone: "info" });
-            }}
-            disabled={isSubmitting}
-          >
-            Resume session
-          </button>
-          ) : null}
-          {/* The session is logged on its own card, from the exercises: there
-              is no separate done / modified pick to make and keep in step. */}
-          <button
-            type="button"
-            className={canResume ? "secondary-button" : "cta"}
-            onClick={() => timerHandoffPending ? openTimer("session") : openReview(false)}
-            disabled={isSubmitting}
-          >
-            <ToolIcon name="check" />
-            {timerHandoffPending ? "Save timer results" : "Finish session"}
-          </button>
-          {timerTools(
+        {canCompleteSession && !rehabOnlyPrescription && status === "started" ? (
+          <div className="today-session-actions today-action-tray">
+            {canResume ? (
             <button
               type="button"
-              className="today-tool-link"
-              onClick={() => setIntent("skipped")}
+              className="cta"
+              onClick={() => {
+                if (roundTimer.shown && (timerAvailable || guidedLeads || (contactIsSession && contactTimerAvailable))) {
+                  showToast("Close the round timer to resume your session timer.", { tone: "info" });
+                  return;
+                }
+                if (timerAvailable) {
+                  openTimer("session");
+                  return;
+                }
+                if (guidedLeads) {
+                  setGuidedNext("review");
+                  setGuidedOpen(true);
+                  return;
+                }
+                if (contactIsSession && contactTimerAvailable) {
+                  openTimer("contact");
+                  return;
+                }
+                showToast("Session is in progress.", { tone: "info" });
+              }}
               disabled={isSubmitting}
             >
-              Skip session
-            </button>,
-          )}
-        </div>
-      ) : null}
+              Resume session
+            </button>
+            ) : null}
+            {/* The session is logged on its own card, from the exercises: there
+                is no separate done / modified pick to make and keep in step. */}
+            <button
+              type="button"
+              className={canResume ? "secondary-button" : "cta"}
+              onClick={() => timerHandoffPending ? openTimer("session") : openReview(false)}
+              disabled={isSubmitting}
+            >
+              <ToolIcon name="check" />
+              {timerHandoffPending ? "Save timer results" : "Finish session"}
+            </button>
+            {timerTools(
+              <button
+                type="button"
+                className="today-tool-link"
+                onClick={() => setIntent("skipped")}
+                disabled={isSubmitting}
+              >
+                Skip session
+              </button>,
+            )}
+          </div>
+        ) : null}
 
-      {canCompleteSession && (status === "done" || status === "modified" || status === "skipped") ? (
-        <p className="today-terminal-status">{getCompletionLabel(status)}</p>
-      ) : null}
+        {canCompleteSession && (status === "done" || status === "modified" || status === "skipped") ? (
+          <p className="today-terminal-status">{getCompletionLabel(status)}</p>
+        ) : null}
 
-      {/* Locked, logged or blocked sessions still get the timer shortcuts. */}
-      {!(canCompleteSession && (status === "not_started" || status === "started")) &&
-      (contactTarget || freeTimerAvailable) &&
-      !anyTimerShown ? (
-        <div className="today-session-actions today-action-tray">{timerTools()}</div>
-      ) : null}
+        {/* Locked, logged or blocked sessions still get the timer shortcuts. */}
+        {!(canCompleteSession && (status === "not_started" || status === "started")) &&
+        (contactTarget || freeTimerAvailable) &&
+        !anyTimerShown ? (
+          <div className="today-session-actions today-action-tray">{timerTools()}</div>
+        ) : null}
 
-      {rehabOnlyPrescription && (canCompleteSession || guidanceCanCheckOff) && !["done", "modified", "skipped"].includes(status) ? <div className="today-injury-guidance" role="group" aria-label="Did you complete your rehab?">
-        <p>Did you complete your rehab?</p>
-        <div className="today-segment-row">
-          {([["done", "Completed"], ["modified", "Modified"], ["skipped", "Skipped"]] as const).map(([value, label]) =>
-            <button key={value} type="button" className="today-segment" disabled={isSubmitting}
-              onClick={() => saveCompletion(value, { modificationReason: value === "done" ? "" : `Rehab ${label.toLowerCase()}` })}>{label}</button>)}
-        </div>
-      </div> : null}
-      {sparringPrompt}
+        {rehabOnlyPrescription && (canCompleteSession || guidanceCanCheckOff) && !["done", "modified", "skipped"].includes(status) ? <div className="today-injury-guidance" role="group" aria-label="Did you complete your rehab?">
+          <p>Did you complete your rehab?</p>
+          <div className="today-segment-row">
+            {([["done", "Completed"], ["modified", "Modified"], ["skipped", "Skipped"]] as const).map(([value, label]) =>
+              <button key={value} type="button" className="today-segment" disabled={isSubmitting}
+                onClick={() => saveCompletion(value, { modificationReason: value === "done" ? "" : `Rehab ${label.toLowerCase()}` })}>{label}</button>)}
+          </div>
+        </div> : null}
+        {sparringPrompt}
 
-      {livePrescription?.safety_hold ? <p role="alert">{livePrescription.safety_hold_reason || "This session is on hold. Follow the current injury guidance before training."}</p> : null}
-      {livePrescription?.safety_hold && resolvedDecision.sessionIsToday ? <div className="today-session-actions">
-        {livePrescription.frozen && status === "started" ? <button type="button" className="secondary-button" disabled={isSubmitting} onClick={() => setIntent("modified")}>Log stopped session</button> : null}
-        <button type="button" className="ghost-button" disabled={isSubmitting} onClick={() => setIntent("skipped")}>Mark skipped</button>
-      </div> : null}
-      {canCompleteSession && !rehabOnlyPrescription && intent === "done" && sessionHasRehab ? rehabChoice : null}
+        {livePrescription?.safety_hold ? <p role="alert">{livePrescription.safety_hold_reason || "This session is on hold. Follow the current injury guidance before training."}</p> : null}
+        {livePrescription?.safety_hold && resolvedDecision.sessionIsToday ? <div className="today-session-actions">
+          {livePrescription.frozen && status === "started" ? <button type="button" className="secondary-button" disabled={isSubmitting} onClick={() => setIntent("modified")}>Log stopped session</button> : null}
+          <button type="button" className="ghost-button" disabled={isSubmitting} onClick={() => setIntent("skipped")}>Mark skipped</button>
+        </div> : null}
+        {canCompleteSession && !rehabOnlyPrescription && intent === "done" && sessionHasRehab ? rehabChoice : null}
 
-      {(!rehabOnlyPrescription && canCompleteSession) || (livePrescription?.safety_hold && (intent === "skipped" || (intent === "modified" && status === "started"))) ? (
-        <SessionCompletionForm
-          key={`${intent ?? "closed"}:${timerNotes}`}
-          intent={intent}
-          initialNotes={timerNotes}
-          isSubmitting={isSubmitting}
-          submissionBlockedReason={rehabChoiceRequired && !rehabPerformance ? "Choose Completed, Modified or Skipped for rehab." : undefined}
-          onCancel={() => setIntent(null)}
-          onSubmit={async (nextStatus, details) => {
-            await saveCompletion(nextStatus, {
-              sessionRpe: details.sessionRpe,
-              painAfter: details.painAfter,
-              modificationReason: details.modificationReason,
-              notes: details.notes,
-            });
-          }}
-        />
-      ) : null}
+        {(!rehabOnlyPrescription && canCompleteSession) || (livePrescription?.safety_hold && (intent === "skipped" || (intent === "modified" && status === "started"))) ? (
+          <SessionCompletionForm
+            key={`${intent ?? "closed"}:${timerNotes}`}
+            intent={intent}
+            initialNotes={timerNotes}
+            isSubmitting={isSubmitting}
+            submissionBlockedReason={rehabChoiceRequired && !rehabPerformance ? "Choose Completed, Modified or Skipped for rehab." : undefined}
+            onCancel={() => setIntent(null)}
+            onSubmit={async (nextStatus, details) => {
+              await saveCompletion(nextStatus, {
+                sessionRpe: details.sessionRpe,
+                painAfter: details.painAfter,
+                modificationReason: details.modificationReason,
+                notes: details.notes,
+              });
+            }}
+          />
+        ) : null}
 
+      </AutoHeight>
       {renderTimer(headline)}
 
       {guidedOpen && guidedVisualisation ? (
@@ -1665,15 +1682,17 @@ export function TodaySessionPanel({
         />
       ) : null}
 
-      {reviewableSession ? (
-        <SessionFeedbackPrompt
-          key={reviewableSession.sessionId}
-          token={token}
-          planId={reviewableSession.planId}
-          sessionId={reviewableSession.sessionId}
-          onDismiss={() => setReviewableSession(null)}
-        />
-      ) : null}
+      <Collapse show={Boolean(reviewableSession)} gap="14px">
+        {reviewableSession ? (
+          <SessionFeedbackPrompt
+            key={reviewableSession.sessionId}
+            token={token}
+            planId={reviewableSession.planId}
+            sessionId={reviewableSession.sessionId}
+            onDismiss={() => setReviewableSession(null)}
+          />
+        ) : null}
+      </Collapse>
     </section>
   );
 }

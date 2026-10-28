@@ -58,6 +58,8 @@ export type TodayCommand = {
   exerciseMedia: Record<string, ExerciseMedia> | null;
   isLoading: boolean;
   isRefreshing: boolean;
+  /** The plan read behind the session card's blocks is still in flight. */
+  presentationPending: boolean;
   error: string | null;
   refresh: () => Promise<void>;
   /** Applies an athlete's exercise change to the shown plan, then reloads it. */
@@ -95,6 +97,7 @@ export function useTodayCommand(token: string | null): TodayCommand {
   const [exerciseMedia, setExerciseMedia] = useState<Record<string, ExerciseMedia> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [presentationPending, setPresentationPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const refreshSequence = useRef(0);
   const loadedPlanId = useRef<string | null>(null);
@@ -131,56 +134,66 @@ export function useTodayCommand(token: string | null): TodayCommand {
       const key = presentationKey(nextState);
       const loaded = presentation.current;
       if (activePlanId && loaded?.token === token && loaded.key === key
-        && Date.now() - loaded.loadedAt < PRESENTATION_TTL_MS) return;
+        && Date.now() - loaded.loadedAt < PRESENTATION_TTL_MS) {
+        setPresentationPending(false);
+        return;
+      }
+      setPresentationPending(Boolean(activePlanId));
       void (async () => {
-        let nextStructuredPlan: StructuredPlan | null = null;
-        let nextPlanSchedule = EMPTY_PLAN_SCHEDULE;
-        let nextRehabLabelPolicy: RehabLabelPolicy | null = null;
-        let nextExerciseMedia: Record<string, ExerciseMedia> | null = null;
+        try {
+          let nextStructuredPlan: StructuredPlan | null = null;
+          let nextPlanSchedule = EMPTY_PLAN_SCHEDULE;
+          let nextRehabLabelPolicy: RehabLabelPolicy | null = null;
+          let nextExerciseMedia: Record<string, ExerciseMedia> | null = null;
 
-        if (activePlanId) {
-          // Read-only and presentation-only: the plan supplies the blocks, the
-          // schedule context and the rehab labels Today renders. Which session is
-          // today is settled by the backend in `nextState` and is never
-          // recomputed from this plan — see today_service.build_today_command_view.
-          try {
-            let pending = pendingPlan.current;
-            if (pending?.token !== token || pending.key !== key) {
-              // Opening Today may reuse the plan Home read seconds ago. Once this
-              // screen has shown blocks, any change of plan, day or injuries,
-              // an expired presentation or an exercise change reads it fresh.
-              const reuseForMs = presentation.current || planChanged.current ? 0 : SHARED_READ_MAX_AGE_MS;
-              planChanged.current = false;
-              pending = { token, key, promise: getPlan(token, activePlanId, { reuseForMs }).catch(() => null) };
-              pendingPlan.current = pending;
+          if (activePlanId) {
+            // Read-only and presentation-only: the plan supplies the blocks, the
+            // schedule context and the rehab labels Today renders. Which session is
+            // today is settled by the backend in `nextState` and is never
+            // recomputed from this plan — see today_service.build_today_command_view.
+            try {
+              let pending = pendingPlan.current;
+              if (pending?.token !== token || pending.key !== key) {
+                // Opening Today may reuse the plan Home read seconds ago. Once this
+                // screen has shown blocks, any change of plan, day or injuries,
+                // an expired presentation or an exercise change reads it fresh.
+                const reuseForMs = presentation.current || planChanged.current ? 0 : SHARED_READ_MAX_AGE_MS;
+                planChanged.current = false;
+                pending = { token, key, promise: getPlan(token, activePlanId, { reuseForMs }).catch(() => null) };
+                pendingPlan.current = pending;
+              }
+              const detail = await pending.promise;
+              if (pendingPlan.current === pending) pendingPlan.current = null;
+              // Several refreshes may share this read. Only the latest one
+              // should parse/adapt the plan and publish its presentation.
+              if (!detail || sequence !== refreshSequence.current) return;
+              nextStructuredPlan = resolveTodayStructuredPlan(detail);
+              nextPlanSchedule = {
+                scheduleContext: detail?.schedule_context ?? null,
+                createdAt: detail?.created_at ?? null,
+              };
+              nextRehabLabelPolicy = detail?.rehab_label_policy ?? null;
+              nextExerciseMedia = detail?.outputs?.exercise_media ?? null;
+            } catch {
+              // Preserve the last good same-plan blocks on a transient read failure.
+              return;
             }
-            const detail = await pending.promise;
-            if (pendingPlan.current === pending) pendingPlan.current = null;
-            // Several refreshes may share this read. Only the latest one
-            // should parse/adapt the plan and publish its presentation.
-            if (!detail || sequence !== refreshSequence.current) return;
-            nextStructuredPlan = resolveTodayStructuredPlan(detail);
-            nextPlanSchedule = {
-              scheduleContext: detail?.schedule_context ?? null,
-              createdAt: detail?.created_at ?? null,
-            };
-            nextRehabLabelPolicy = detail?.rehab_label_policy ?? null;
-            nextExerciseMedia = detail?.outputs?.exercise_media ?? null;
-          } catch {
-            // Preserve the last good same-plan blocks on a transient read failure.
-            return;
           }
-        }
 
-        if (sequence !== refreshSequence.current) return;
-        presentation.current = { token, key, loadedAt: Date.now() };
-        setStructuredPlan(nextStructuredPlan);
-        setPlanSchedule(nextPlanSchedule);
-        setRehabLabelPolicy(nextRehabLabelPolicy);
-        setExerciseMedia(nextExerciseMedia);
+          if (sequence !== refreshSequence.current) return;
+          presentation.current = { token, key, loadedAt: Date.now() };
+          setStructuredPlan(nextStructuredPlan);
+          setPlanSchedule(nextPlanSchedule);
+          setRehabLabelPolicy(nextRehabLabelPolicy);
+          setExerciseMedia(nextExerciseMedia);
+        } finally {
+          // A newer refresh owns the flag from here.
+          if (sequence === refreshSequence.current) setPresentationPending(false);
+        }
       })();
     } catch (loadError) {
       if (sequence !== refreshSequence.current) return;
+      setPresentationPending(false);
       setError(loadError instanceof Error ? loadError.message : "Today failed to load.");
     } finally {
       if (sequence === refreshSequence.current) {
@@ -218,6 +231,7 @@ export function useTodayCommand(token: string | null): TodayCommand {
     exerciseMedia,
     isLoading,
     isRefreshing,
+    presentationPending,
     error,
     patchSession,
     refresh,
