@@ -7,13 +7,17 @@ import { type CSSProperties, type ReactNode, useActionState, useEffect, useRef, 
 
 import { type AccessCodeState, submitAccessCode } from "@/app/signup/actions";
 import { UnlockGlitchText } from "@/components/unlock-glitch-text";
-import { SUPPORT_EMAIL } from "@/lib/legal-documents";
 import { usePrefersReducedMotion } from "@/lib/reduced-motion";
 
 import authStyles from "./auth-form.module.css";
 import styles from "./access-code-gate.module.css";
 
 type CodeShape = { length: number; numeric: boolean };
+
+// Invites are requested by Instagram DM; ig.me/m opens a DM thread directly
+// (in the app on phones, the inbox on desktop).
+const INSTAGRAM_HANDLE = "unlxckperformance";
+const INSTAGRAM_DM_HREF = `https://ig.me/m/${INSTAGRAM_HANDLE}`;
 
 // How long "Access granted" holds before the account form takes over.
 const GRANTED_HOLD_MS = 1600;
@@ -96,9 +100,6 @@ function AccessCodeGate({
     }
   }
 
-  // Beta applications go to the public support inbox named in the Terms and
-  // Privacy Notice.
-  const applyHref = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(t("applySubject"))}&body=${encodeURIComponent(t("applyBody"))}`;
   const activeSlot = Math.min(code.length, codeShape.length - 1);
 
   return (
@@ -195,12 +196,23 @@ function AccessCodeGate({
 
         {granted ? null : (
           <>
+            {/* No public application: invites go out by Instagram DM. */}
             <div className={styles.apply}>
               <span className={styles.divider}>{t("noCode")}</span>
-              <a href={applyHref} className={`secondary-button ${authStyles.email}`}>
-                {t("apply")}
+              <p className={styles.applyNote}>{t("dmUs")}</p>
+              <a
+                href={INSTAGRAM_DM_HREF}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.instagram}
+                aria-label={t("dmButton", { handle: INSTAGRAM_HANDLE })}
+              >
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <rect x="3" y="3" width="18" height="18" rx="5" />
+                  <circle cx="12" cy="12" r="4.2" />
+                  <circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none" />
+                </svg>
               </a>
-              <p className={styles.applyNote}>{t("applyNote")}</p>
             </div>
 
             <Link href="/login" className={`auth-text-link ${authStyles.accountLink}`}>
@@ -212,3 +224,4 @@ function AccessCodeGate({
     </section>
   );
 }
+

@@ -648,30 +648,59 @@
 
 /* Sits a little closer to the benefits than the other section gaps, so the
    close reads as part of the page rather than a separate block. */
+/* A compact strip: the line on the left, Get started beside it, on every
+   width. */
 .public-final-cta {
   position: relative;
   margin-top: -16px;
   overflow: hidden;
   isolation: isolate;
-  display: grid;
-  gap: 20px;
-  justify-items: center;
-  padding: 40px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 18px 18px 22px;
   border: 1px solid rgba(181, 18, 43, 0.3);
-  border-radius: 24px;
+  border-radius: 20px;
   background:
-    radial-gradient(ellipse 80% 120% at 50% 0%, rgba(181, 18, 43, 0.3), transparent 70%),
+    radial-gradient(ellipse 60% 140% at 0% 50%, rgba(181, 18, 43, 0.28), transparent 70%),
     linear-gradient(180deg, rgba(20, 15, 18, 0.98), rgba(11, 11, 13, 0.98));
   box-shadow: var(--public-highlight);
-  text-align: center;
+  text-align: left;
 }
 
 .public-final-cta h2 {
+  flex: 1;
+  min-width: 0;
+  /* A long localized word (e.g. "entraînement") breaks rather than being
+     clipped by the strip on the narrowest phones. */
+  overflow-wrap: break-word;
+  hyphens: auto;
+  font-size: clamp(19px, 5vw, 30px);
+  line-height: 1.15;
   text-shadow: 0 0 32px rgba(255, 255, 255, 0.12);
 }
 
 .public-final-cta .public-hero-cta {
-  max-width: 360px;
+  flex-shrink: 0;
+  width: auto;
+  min-width: 0;
+  min-height: 48px;
+  margin: 0;
+  padding: 0 18px;
+}
+
+/* The narrowest phones stack the line over a full-width button rather than
+   squeezing the heading into a sliver beside it. */
+@media (max-width: 359px) {
+  .public-final-cta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .public-final-cta .public-hero-cta {
+    width: 100%;
+  }
 }
 
 /* Motion. The landing renders client-side after auth resolves, so fading in
@@ -865,7 +894,12 @@
   }
 
   .public-final-cta {
-    padding: 56px 40px;
+    padding: 22px 24px 22px 30px;
+  }
+
+  .public-final-cta .public-hero-cta {
+    min-width: 180px;
+    padding: 0 26px;
   }
 }
 
@@ -926,15 +960,11 @@
 
   .public-final-cta {
     margin-top: -40px;
-    padding: 72px 40px;
+    padding: 28px 28px 28px 40px;
   }
 
   .public-flex + .public-flex {
     margin-top: -92px;
-  }
-
-  .public-final-cta h2 {
-    font-size: 44px;
   }
 }
 
