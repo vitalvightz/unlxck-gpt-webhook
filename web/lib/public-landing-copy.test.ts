@@ -52,11 +52,19 @@ test("the benefits section groups every capability into three benefits", () => {
   }
 });
 
-test("each benefit stays a short, scannable line", () => {
-  for (const index of [1, 2, 3]) {
-    const body = copy[`benefit${index}Body` as keyof typeof copy];
-    assert.ok(body.length <= 80, `benefit${index}Body should fit about two lines on a phone: ${body}`);
+test("each benefit and tool stays a short, scannable line", () => {
+  for (const prefix of ["benefit", "tool"]) {
+    for (const index of [1, 2, 3]) {
+      const body = copy[`${prefix}${index}Body` as keyof typeof copy];
+      assert.ok(body.length <= 80, `${prefix}${index}Body should fit about two lines on a phone: ${body}`);
+    }
   }
+});
+
+test("the tools panel names the round timer, injuries and weight", () => {
+  const titles = [1, 2, 3].map((index) => copy[`tool${index}Title` as keyof typeof copy]);
+  assert.deepEqual(titles, ["Run the rounds", "Train around injury", "Make weight"]);
+  assert.ok(copy.tool1Body.includes("halfway") && copy.tool1Body.includes("10-second"), "timer names its warnings");
 });
 
 test("the closing CTA fits athletes who only want to track", () => {

@@ -87,6 +87,14 @@
     "benefit2Body": "Check-in, ajustements selon ta récupération et séances sur mesure.",
     "benefit3Title": "Fais compter chaque séance",
     "benefit3Body": "Enregistre entraînements et sparrings, explore la bibliothèque.",
+    "toolsKicker": "Outils de combat",
+    "toolsTitle": "Dans ton coin",
+    "tool1Title": "Maîtrise les rounds",
+    "tool1Body": "Minuteur avec presets de combat, alertes à mi-round et à 10 s.",
+    "tool2Title": "Gère tes blessures",
+    "tool2Body": "Note une blessure et suis une rééducation par étapes.",
+    "tool3Title": "Fais le poids",
+    "tool3Body": "Suis ton poids jusqu’au combat, avec alerte sur les coupes sévères.",
     "finalTitle": "Ton entraînement commence ici."
   },
   "Auth": {

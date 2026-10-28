@@ -87,6 +87,14 @@
     "benefit2Body": "Check in for recovery-based tweaks and customise your workouts.",
     "benefit3Title": "Bank the work",
     "benefit3Body": "Log training and sparring, and explore drills in the library.",
+    "toolsKicker": "Fight-ready tools",
+    "toolsTitle": "In Your Corner",
+    "tool1Title": "Run the rounds",
+    "tool1Body": "A round timer with fight presets, halfway and 10-second warnings.",
+    "tool2Title": "Train around injury",
+    "tool2Body": "Log an injury and follow staged rehab alongside your training.",
+    "tool3Title": "Make weight",
+    "tool3Body": "Track bodyweight towards fight night, with a flag on steep cuts.",
     "finalTitle": "Your training starts here."
   },
   "Auth": {

@@ -87,6 +87,14 @@
     "benefit2Body": "Haz check-in, ajusta según tu recuperación y personaliza.",
     "benefit3Title": "Que cada sesión cuente",
     "benefit3Body": "Registra entrenamientos y sparring, y explora ejercicios en la biblioteca.",
+    "toolsKicker": "Herramientas de pelea",
+    "toolsTitle": "En tu esquina",
+    "tool1Title": "Controla los asaltos",
+    "tool1Body": "Temporizador con presets de pelea y avisos a mitad y a 10 s.",
+    "tool2Title": "Gestiona lesiones",
+    "tool2Body": "Registra una lesión y sigue una rehabilitación por fases.",
+    "tool3Title": "Da el peso",
+    "tool3Body": "Controla tu peso hacia la pelea, con aviso en cortes bruscos.",
     "finalTitle": "Tu entrenamiento empieza aquí."
   },
   "Auth": {

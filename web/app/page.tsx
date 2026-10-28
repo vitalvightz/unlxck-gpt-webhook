@@ -12,6 +12,7 @@ import { getAuthenticatedLandingHref, needsStartingPath } from "@/lib/auth-routi
 import { EmptyState } from "@/components/empty-state";
 import { FightCountdown } from "@/components/fight-countdown";
 import { InstallUnlxck } from "@/components/install-unlxck";
+import { LandingFeaturePanel } from "@/components/landing-feature-panel";
 import { LandingPreviewCard } from "@/components/landing-preview-card";
 import { UnlockGlitchText } from "@/components/unlock-glitch-text";
 import { PlansFeaturedSkeleton, Skeleton } from "@/components/skeleton";
@@ -21,7 +22,6 @@ import { useXp } from "@/components/xp-provider";
 import { getPlan, getToday, getTrainingHistory } from "@/lib/api";
 import { describeLoadFailure } from "@/lib/connectivity";
 import { SHARED_READ_MAX_AGE_MS } from "@/lib/shared-reads";
-import { useInView } from "@/lib/use-in-view";
 import { hasHealthDataConsent } from "@/lib/compliance";
 import { getTrackingHome } from "@/lib/tracking-home";
 import type { TrainingHistorySession } from "@/lib/training-history";
@@ -268,14 +268,35 @@ const LANDING_BENEFIT_ICONS: ReactNode[] = [
   </svg>,
 ];
 
+// Line icons for the in-your-corner tools: round timer (stopwatch), injury
+// (bandage), weight (scale). Same draw-in parts as the benefit icons.
+const LANDING_TOOL_ICONS: ReactNode[] = [
+  <svg key="timer" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle className="icon-draw" pathLength={1} cx="12" cy="13.5" r="7.5" />
+    <path className="icon-fade" d="M10 2.5h4M12 2.5V6M12 13.5l3-3M18.5 6.5 20 5" />
+  </svg>,
+  <svg key="injury" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect className="icon-draw" pathLength={1} x="2.5" y="8" width="19" height="8" rx="4" transform="rotate(-45 12 12)" />
+    <path className="icon-fade" d="M10.5 10.5h.01M13.5 10.5h.01M10.5 13.5h.01M13.5 13.5h.01" strokeWidth="2.2" />
+  </svg>,
+  <svg key="weight" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect className="icon-draw" pathLength={1} x="3.5" y="3.5" width="17" height="17" rx="4" />
+    <path className="icon-fade" d="M8 9.5a5 5 0 0 1 8 0M12 9.5l1.5-2" />
+  </svg>,
+];
+
 export default function HomePage() {
   const publicT = useTranslations("PublicHome");
   const landingBenefits = [1, 2, 3].map((index) => ({
     title: publicT(`benefit${index}Title`),
     body: publicT(`benefit${index}Body`),
+    icon: LANDING_BENEFIT_ICONS[index - 1],
   }));
-  // The benefit icons animate once, when the list is first seen.
-  const [benefitsRef, benefitsSeen] = useInView<HTMLUListElement>({ threshold: 0.4, once: true });
+  const landingTools = [1, 2, 3].map((index) => ({
+    title: publicT(`tool${index}Title`),
+    body: publicT(`tool${index}Body`),
+    icon: LANDING_TOOL_ICONS[index - 1],
+  }));
   const heroLine2 = publicT("heroLine2");
   // English "Lxcked in." glitches its X once, echoing the motto; other
   // locales' lines have no X and render plainly.
@@ -819,25 +840,19 @@ export default function HomePage() {
         <LandingPreviewCard className="public-rise" style={riseDelay(330)} />
       </section>
 
-      <section className="public-flex public-reveal" aria-labelledby="public-flex-heading">
-        <div className="public-section-head">
-          <p className="kicker">{publicT("flexKicker")}</p>
-          <h2 id="public-flex-heading">{publicT("flexTitle")}</h2>
-        </div>
-        <ul ref={benefitsRef} className="public-flex-list" data-seen={benefitsSeen === true}>
-          {landingBenefits.map((item, index) => (
-            <li key={item.title} className="public-flex-item">
-              <span className="public-flex-icon" aria-hidden="true">
-                {LANDING_BENEFIT_ICONS[index]}
-              </span>
-              <div className="public-flex-copy">
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <LandingFeaturePanel
+        id="public-flex"
+        kicker={publicT("flexKicker")}
+        title={publicT("flexTitle")}
+        items={landingBenefits}
+      />
+
+      <LandingFeaturePanel
+        id="public-tools"
+        kicker={publicT("toolsKicker")}
+        title={publicT("toolsTitle")}
+        items={landingTools}
+      />
 
       <section className="public-final-cta public-reveal" aria-labelledby="public-final-cta-heading">
         <h2 id="public-final-cta-heading">{publicT("finalTitle")}</h2>
