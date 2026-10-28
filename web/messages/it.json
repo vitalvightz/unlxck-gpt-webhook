@@ -255,6 +255,7 @@
     "hint": "Inserisci il codice di {length} caratteri dell’invito. Si invia quando è completo.",
     "granted": "Accesso consentito",
     "grantedTitle": "Sei dentro.",
-    "grantedLead": "Benvenuto nella beta privata. Stiamo preparando il tuo account…"
+    "grantedLead": "Benvenuto nella beta privata. Stiamo preparando il tuo account…",
+    "inviteRequired": "Serve un codice di invito per creare un account. Inserisci il codice, poi continua di nuovo con Google o con l’email."
   }
 }

@@ -142,6 +142,18 @@ p.lead.lead { margin: 14px 0 0; }
   background: #7de2a8;
 }
 
+/* "That account needs an invite" after being turned away at sign-in. */
+.notice {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(224, 53, 79, 0.35);
+  border-radius: 10px;
+  background: rgba(224, 53, 79, 0.08);
+  color: var(--text-primary);
+  font-size: var(--type-body-sm);
+  line-height: 1.5;
+}
+
 .error { margin: 0; color: #ff8a9b; font-size: var(--type-body-sm); }
 
 .submit { width: 100%; min-height: 54px; border-radius: 10px; }

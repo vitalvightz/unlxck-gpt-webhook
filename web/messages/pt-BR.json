@@ -255,6 +255,7 @@
     "hint": "Digite o código de {length} caracteres do seu convite. Ele é enviado ao completar.",
     "granted": "Acesso liberado",
     "grantedTitle": "Você está dentro.",
-    "grantedLead": "Bem-vindo ao beta privado. Preparando sua conta…"
+    "grantedLead": "Bem-vindo ao beta privado. Preparando sua conta…",
+    "inviteRequired": "Você precisa de um código de convite para criar uma conta. Digite seu código e continue de novo com o Google ou com seu e-mail."
   }
 }

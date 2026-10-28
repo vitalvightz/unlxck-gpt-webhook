@@ -26,8 +26,9 @@ const GRANTED_HOLD_MS = 1600;
 export function SignupAccess({
   unlocked,
   codeShape,
+  inviteRequired = false,
   children,
-}: Readonly<{ unlocked: boolean; codeShape: CodeShape; children: ReactNode }>) {
+}: Readonly<{ unlocked: boolean; codeShape: CodeShape; inviteRequired?: boolean; children: ReactNode }>) {
   const reduceMotion = usePrefersReducedMotion();
   // Adjust state while rendering when access flips on (React's pattern for
   // reacting to a prop change), so the gate never flashes the form early.
@@ -45,10 +46,14 @@ export function SignupAccess({
   }, [celebrating, reduceMotion]);
 
   if (unlocked && !celebrating) return <>{children}</>;
-  return <AccessCodeGate codeShape={codeShape} granted={unlocked} />;
+  return <AccessCodeGate codeShape={codeShape} granted={unlocked} inviteRequired={inviteRequired} />;
 }
 
-function AccessCodeGate({ codeShape, granted }: Readonly<{ codeShape: CodeShape; granted: boolean }>) {
+function AccessCodeGate({
+  codeShape,
+  granted,
+  inviteRequired,
+}: Readonly<{ codeShape: CodeShape; granted: boolean; inviteRequired: boolean }>) {
   const t = useTranslations("AccessGate");
   const authT = useTranslations("Auth");
   const [state, formAction, isPending] = useActionState<AccessCodeState, FormData>(submitAccessCode, {
@@ -120,6 +125,13 @@ function AccessCodeGate({ codeShape, granted }: Readonly<{ codeShape: CodeShape;
             {granted ? t("grantedLead") : t("lead")}
           </p>
         </div>
+
+        {/* Sent here after signing in with an account that has no invite yet. */}
+        {inviteRequired && !granted ? (
+          <p className={styles.notice} role="status">
+            {t("inviteRequired")}
+          </p>
+        ) : null}
 
         <form ref={formRef} action={formAction} className={styles.form}>
           <label htmlFor="access-code" className={styles.label}>

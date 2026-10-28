@@ -255,6 +255,7 @@
     "hint": "Enter the {length}-character code from your invite. It submits when complete.",
     "granted": "Access granted",
     "grantedTitle": "You're in.",
-    "grantedLead": "Welcome to the private beta. Setting up your account…"
+    "grantedLead": "Welcome to the private beta. Setting up your account…",
+    "inviteRequired": "You need an invite code to create an account. Enter your code, then continue with Google or email again."
   }
 }
