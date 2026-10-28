@@ -9,7 +9,7 @@ import { useInView } from "@/lib/use-in-view";
 type Phase = "planned" | "adjusted";
 
 // How long the planned session sits on screen before the check-in adjusts it.
-const ADJUST_AFTER_MS = 900;
+const ADJUST_AFTER_MS = 1500;
 
 /**
  * The landing's example Today card. It first shows the session as planned,
@@ -47,7 +47,7 @@ export function LandingPreviewCard({ className, style }: Readonly<{ className?: 
       minutes: 3,
       change: "down",
       tag: t("tagReduced"),
-      delay: 350,
+      delay: 900,
     },
     {
       name: t("exReaction"),
@@ -55,7 +55,7 @@ export function LandingPreviewCard({ className, style }: Readonly<{ className?: 
       minutes: 2,
       change: "up",
       tag: t("tagAdded"),
-      delay: 650,
+      delay: 1700,
       added: true,
     },
     {
@@ -64,7 +64,7 @@ export function LandingPreviewCard({ className, style }: Readonly<{ className?: 
       minutes: 3,
       change: null,
       tag: t("tagUnchanged"),
-      delay: 950,
+      delay: 2500,
     },
   ] as const;
 
