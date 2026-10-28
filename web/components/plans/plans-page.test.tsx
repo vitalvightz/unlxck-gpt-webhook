@@ -128,7 +128,7 @@ test("the current camp shows once: one status, the fight date once, a countdown 
     assert.equal(card?.textContent?.match(/Active/g)?.length, 1);
     // One primary action; the rest are quiet.
     assert.equal(view.host.querySelectorAll("article .cta").length, 1);
-    assert.match(text, /Plan history/);
+    assert.match(text, /Your plans/);
     assert.match(text, /2 saved/);
     assert.equal(view.host.querySelectorAll('ul button[aria-haspopup="dialog"]').length, 2);
   } finally {
@@ -244,7 +244,7 @@ test("published custom plans share normal management and do not duplicate their 
 test("an active custom plan has an editor action instead of starting AI generation", async () => {
   const view = await mountPlans([plan("custom-1", { custom_plan_id: "draft-1", fight_date: "" })], "custom-1");
   try {
-    assert.match(view.host.textContent ?? "", /Custom open plan/);
+    assert.match(view.host.textContent ?? "", /Active plan/);
     assert.equal(view.host.querySelector('a[href="/plans/custom?plan=draft-1"]')?.textContent, "Edit Plan");
     assert.equal(view.host.querySelector('a[href="/generate"]'), null);
   } finally { await view.cleanup(); }

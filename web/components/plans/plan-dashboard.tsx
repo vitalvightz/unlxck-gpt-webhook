@@ -512,7 +512,7 @@ export function CurrentCampCard({
   return (
     <article className={styles.campCard}>
       <div className={styles.campHead}>
-        <p className={styles.eyebrow}>{plan.custom_plan_id ? "Custom open plan" : plan.fight_date ? t("currentCamp") : t("currentBlock")}</p>
+        <p className={styles.eyebrow}>{plan.custom_plan_id ? t("activePlan") : plan.fight_date ? t("currentCamp") : t("currentBlock")}</p>
         <span className={styles.activePill}>Active</span>
       </div>
       <h2 className={styles.campTitle}>{title}</h2>

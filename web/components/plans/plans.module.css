@@ -108,7 +108,7 @@
 .campSummary dd { margin: 0; font-size: var(--type-body-sm); overflow-wrap: anywhere; }
 .campSummary > div + div::before { content: "·"; }
 .facts dd { margin: 4px 0 0; font-size: var(--type-body); font-weight: 600; overflow-wrap: anywhere; }
-.tools { display: grid; gap: 12px; padding-top: 16px; border-top: 1px solid var(--border-subtle); }
+.tools { display: grid; gap: 12px; padding-top: 8px; border-top: 1px solid var(--border-subtle); }
 .shortcuts > div { min-width: 0; }
 .shortcuts button[aria-label="Log session"],
 .shortcuts > a { min-height: 64px; padding: 12px; align-items: center; background: var(--bg-panel); border-color: var(--border-default); }
