@@ -21,3 +21,9 @@ test("established accounts are not checked", () => {
 test("an account turned away before stays checked, however old", () => {
   assert.equal(needsInviteCheck({ created_at: "2025-01-01T00:00:00Z", invite_pending: true }, now), true);
 });
+
+test("a creation time slightly ahead of this device still counts as new; far ahead does not", () => {
+  const ahead = (ms: number) => new Date(now + ms).toISOString();
+  assert.equal(needsInviteCheck({ created_at: ahead(60_000) }, now), true, "device clock a minute behind");
+  assert.equal(needsInviteCheck({ created_at: ahead(24 * 60 * 60 * 1000) }, now), false);
+});

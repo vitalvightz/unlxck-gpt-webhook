@@ -111,6 +111,8 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     let shouldHoldHydration = false;
 
     if (!nextSession?.access_token) {
+      // Signed out: the next sign-in is checked afresh.
+      inviteCheckedRef.current.clear();
       if (loadGenerationRef.current === currentLoadId) {
         clearRetryTimer();
         setHasTransientMeError(false);
@@ -126,11 +128,16 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     // Invite-only signup: a brand-new account (Google sign-in on /login can
     // create one) or one turned away before must come from a browser that
     // entered the access code, before /api/me creates its profile. Checked
-    // once per account; a failed check lets the visitor through rather than
-    // locking out a real member.
+    // once per account and session; a check that cannot run lets the visitor
+    // through this time (rather than locking out a real member) but is not
+    // remembered, so the next load checks again.
     const inviteUserId = nextSession.user_id ?? null;
     if (inviteUserId && !inviteCheckedRef.current.has(inviteUserId) && needsInviteCheck(nextSession)) {
-      const allowed = await checkSignupAccess().catch(() => true);
+      let checkFailed = false;
+      const allowed = await checkSignupAccess().catch(() => {
+        checkFailed = true;
+        return true;
+      });
       if (loadGenerationRef.current !== currentLoadId) {
         return;
       }
@@ -155,7 +162,9 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         window.location.assign(INVITE_REQUIRED_HREF);
         return;
       }
-      inviteCheckedRef.current.add(inviteUserId);
+      if (!checkFailed) {
+        inviteCheckedRef.current.add(inviteUserId);
+      }
       if (nextSession.invite_pending) {
         void getSupabaseBrowserClient()
           .auth.updateUser({ data: { [INVITE_PENDING_FLAG]: null } })

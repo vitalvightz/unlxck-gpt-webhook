@@ -186,24 +186,19 @@ test("a brand-new Google account without an invite is turned away before a profi
 });
 
 test("a brand-new Google account from a browser that entered the code goes straight through", async ({ page, baseURL }) => {
-  await isolateFromNetwork(page, baseURL!);
+  await oauth(page, baseURL!);
   await grantSignupAccess(page, baseURL!);
-  const newUser = { ...user, created_at: new Date().toISOString(), user_metadata: { full_name: "Invitee" } };
-  let meCalls = 0;
+  // Same flow as a new Google identity, but the account was created just now,
+  // so the invite guard runs (routes added later take precedence).
+  const newUser = { ...user, created_at: new Date().toISOString() };
   let signedOut = false;
-  await page.route("**/api/me", route => { meCalls += 1; return route.fulfill({ status: 503, body: "" }); });
   await page.route(`${SUPABASE}/auth/v1/user`, route => json(route, newUser));
   await page.route(`${SUPABASE}/auth/v1/logout**`, route => { signedOut = true; return json(route, {}); });
-  await page.route(`${SUPABASE}/auth/v1/authorize**`, route => route.fulfill({
-    status: 302,
-    headers: { location: `${baseURL}/login#access_token=invitee-token&refresh_token=r&expires_in=3600&token_type=bearer&type=signup` },
-    body: "",
-  }));
 
   await page.goto("/signup");
   await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
 
-  await expect.poll(() => meCalls, { message: "the profile request goes ahead" }).toBeGreaterThan(0);
-  expect(page.url()).not.toContain("invite=required");
+  // Into the app: the new account lands on the compliance step, not the gate.
+  await expect(page).toHaveURL(/\/consent$/);
   expect(signedOut).toBe(false);
 });
