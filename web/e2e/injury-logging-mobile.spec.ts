@@ -91,7 +91,7 @@ test("sheet backdrop does not fade its text and injury rows have no tap flash", 
   await sheet.getByRole("button", { name: "Close", exact: true }).click();
   await expect(sheet).toHaveCount(0);
   const summary = page.locator(".today-injury-summary-row").first();
-  expect(await summary.evaluate(el => getComputedStyle(el).webkitTapHighlightColor)).toBe("rgba(0, 0, 0, 0)");
+  expect(await summary.evaluate(el => getComputedStyle(el).getPropertyValue("-webkit-tap-highlight-color"))).toBe("rgba(0, 0, 0, 0)");
   expect(await summary.evaluate(el => Boolean(el.closest(".today-injury-list")?.parentElement?.classList.contains("today-auto-height-inner")))).toBe(false);
   await summary.tap();
   await expect(summary).toHaveAttribute("aria-expanded", "true");
