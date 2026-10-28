@@ -368,6 +368,11 @@ html .today-page .today-decision-banner[data-tone] {
   box-shadow: none;
 }
 
+/* Let the evidence background meet the card's clipped, rounded bottom edge. */
+html .today-page .today-decision-banner:has(.today-decision-disclosure[open]) {
+  padding-bottom: 0;
+}
+
 /* The instruction: a short title, then the specifics as plain sentence. */
 .today-page .today-decision-banner .today-decision-action {
   margin-top: 12px;
@@ -782,3 +787,6 @@ html .today-page .today-decision-banner[data-tone] {
 
 /* The light theme's gold is too pale for small text on its own tint. */
 html[data-theme="light"] .today-pending-pill { color: #6f5120; }
+
+/* Keep preview status and its timer shortcut together. */
+.today-next-planned-note + .today-session-actions.today-action-tray { margin-top: 0; padding-block: 0; }

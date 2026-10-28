@@ -1,5 +1,5 @@
 .command {
-  gap: 12px;
+  gap: 8px;
   border-color: var(--border-subtle, rgba(255, 255, 255, 0.1)) !important;
   background: var(--surface-panel, #111216) !important;
 }
@@ -384,3 +384,9 @@
 @media (max-width: 720px) {
   :global(html[data-mobile-tab-bar]) .quickActions { display: none; }
 }
+
+.tileModifier { color: var(--text-secondary); font-size: 11px; line-height: 1.2; }
+@media (max-width: 720px) { .command { padding-block: 12px; } }
+
+.heroDate { flex: none; margin-top: 8px; letter-spacing: 0.04em; }
+.heroPhase { font-family: var(--font-sans); font-size: 13px; letter-spacing: 0; text-transform: none; overflow-wrap: anywhere; }
