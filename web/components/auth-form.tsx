@@ -42,6 +42,7 @@ import type { Session } from "@supabase/supabase-js";
 
 import type { UserRole } from "@/lib/types";
 import styles from "./auth-form.module.css";
+import { useFadeNavigate } from "@/components/fade-through";
 
 /** How long Turnstile gets to pass on its own before the hint explains the disabled button. */
 const CAPTCHA_HINT_DELAY_MS = 2500;
@@ -64,6 +65,7 @@ export function AuthForm({
 }) {
   const t = useTranslations("Auth");
   const router = useRouter();
+  const fadeNavigate = useFadeNavigate();
   const { isReady, session, me, replaceMe } = useAppSession();
   const emailInputRef = useRef<HTMLInputElement | null>(null);
   const [showEmail, setShowEmail] = useState(false);
@@ -180,7 +182,7 @@ export function AuthForm({
         ...(healthDataConsent ? { health_data_consent: true } : {}),
       });
       replaceMe(nextMe);
-      router.replace(getAuthenticatedLandingHref(nextMe));
+      fadeNavigate(() => router.replace(getAuthenticatedLandingHref(nextMe)));
     } catch (complianceError) {
       setError(
         complianceError instanceof Error
@@ -315,12 +317,12 @@ export function AuthForm({
 
       const accessToken = data.session?.access_token ?? null;
       if (!accessToken) {
-        router.replace("/plans");
+        fadeNavigate(() => router.replace("/plans"));
         return;
       }
 
       const nextMe = await getMe(accessToken).catch(() => null);
-      router.replace(nextMe ? getAuthenticatedLandingHref(nextMe) : "/plans");
+      fadeNavigate(() => router.replace(nextMe ? getAuthenticatedLandingHref(nextMe) : "/plans"));
     });
   }
 

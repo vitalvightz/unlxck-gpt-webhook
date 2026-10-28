@@ -4,7 +4,7 @@ import "./test-dom";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 
-import { FadeThroughProvider, useFadeThrough, type FadeThrough } from "./fade-through";
+import { FadeThroughProvider, useFadeFromBlack, useFadeNavigate, useFadeThrough, type FadeThrough } from "./fade-through";
 
 const wait = (ms: number) => act(async () => { await new Promise((resolve) => setTimeout(resolve, ms)); });
 
@@ -69,4 +69,49 @@ test("without the provider a change happens at once", async () => {
   fade!(() => { changed = true; });
   assert.equal(changed, true);
   act(() => root.unmount());
+});
+
+test("arriving straight into a screen starts black, so the page under it never shows", async () => {
+  let fadeFromBlack: FadeThrough | null = null;
+  function Probe() { fadeFromBlack = useFadeFromBlack(); return null; }
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  await act(async () => root.render(<FadeThroughProvider><Probe /></FadeThroughProvider>));
+  try {
+    let changed = false;
+    act(() => fadeFromBlack!(() => { changed = true; }));
+    // Already fully black, with the change applied, in the same render.
+    assert.equal(changed, true);
+    assert.equal(container.querySelector<HTMLElement>(".fade-through")?.dataset.phase, "covered");
+    await wait(600);
+    assert.equal(container.querySelector(".fade-through"), null);
+  } finally {
+    act(() => root.unmount());
+    container.remove();
+  }
+});
+
+test("a navigation goes dark first, and the black still lifts if the route never changes", async () => {
+  let fadeNavigate: FadeThrough | null = null;
+  function Probe() { fadeNavigate = useFadeNavigate(); return null; }
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  await act(async () => root.render(<FadeThroughProvider><Probe /></FadeThroughProvider>));
+  const phase = () => container.querySelector<HTMLElement>(".fade-through")?.dataset.phase ?? "idle";
+  try {
+    let navigated = false;
+    act(() => fadeNavigate!(() => { navigated = true; }));
+    assert.equal(phase(), "covering");
+    assert.equal(navigated, false, "the page is still showing; nothing moves yet");
+    await wait(140);
+    assert.equal(navigated, true);
+    assert.equal(phase(), "covered", "held black while the new page loads");
+    await wait(1_300);
+    assert.equal(phase(), "idle");
+  } finally {
+    act(() => root.unmount());
+    container.remove();
+  }
 });

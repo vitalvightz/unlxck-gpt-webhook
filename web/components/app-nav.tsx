@@ -14,6 +14,7 @@ import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
 import { showsMobileTabBar, SIDE_NAV_ITEMS } from "@/lib/beta-navigation";
 import { isNavToggleCondensed } from "@/lib/nav-toggle-scroll";
 import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
+import { useFadeNavigate } from "@/components/fade-through";
 
 type MobileNavState = "closed" | "opening" | "open" | "closing";
 
@@ -113,6 +114,7 @@ export function AppNav() {
   const t = useTranslations("Navigation");
   const pathname = usePathname();
   const router = useRouter();
+  const fadeNavigate = useFadeNavigate();
   const { isReady, isMeHydrated, session, me, signOut } = useAppSession();
   const [mobileNavState, setMobileNavState] = useState<MobileNavState>("closed");
   const [navToggleCondensed, setNavToggleCondensed] = useState(false);
@@ -352,7 +354,7 @@ export function AppNav() {
   async function handleSignOut() {
     closeMobileDrawer();
     await signOut();
-    router.push("/");
+    fadeNavigate(() => router.push("/"));
   }
 
   function handleSidebarTransitionEnd(event: TransitionEvent<HTMLElement>) {

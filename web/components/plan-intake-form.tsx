@@ -87,6 +87,7 @@ import {
   RECORD_MAX,
   TRAINING_PREFERENCE_MAX,
 } from "@/lib/input-limits";
+import { useFadeNavigate } from "@/components/fade-through";
 
 const steps = ["Profile", "Fight Context", "Training", "Restrictions", "Performance", "Review"] as const;
 const PERFORMANCE_STEP_INDEX = 4;
@@ -909,6 +910,7 @@ type TrainingGateDecision =
 export function PlanIntakeForm() {
   const t = useTranslations("Onboarding");
   const router = useRouter();
+  const fadeNavigate = useFadeNavigate();
   const searchParams = useSearchParams();
   const refiningFromQuickBuild = searchParams.get("from") === "quick_build";
   const { me, session, replaceMe } = useAppSession();
@@ -2037,7 +2039,7 @@ export function PlanIntakeForm() {
           return;
         }
         markGenerationIntent();
-        router.push("/generate");
+        fadeNavigate(() => router.push("/generate"));
       } catch (draftError) {
         setError(draftError instanceof Error ? draftError.message : "Unable to prepare plan generation.");
       }

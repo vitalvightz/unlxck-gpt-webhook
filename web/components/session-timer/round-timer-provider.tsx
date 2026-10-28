@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 
-import { useFadeThrough } from "@/components/fade-through";
+import { useFadeFromBlack, useFadeThrough } from "@/components/fade-through";
 import { SessionTimer } from "@/components/session-timer/session-timer";
 import { clearSavedRun, hasSavedRun } from "@/components/session-timer/use-session-timer";
 import { resolveTrainingDay, toISODate } from "@/lib/camp-map";
@@ -111,6 +111,7 @@ function subscribeToNothing() {
 export function RoundTimerProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<"open" | "minimized" | null>(null);
   const fadeThrough = useFadeThrough();
+  const fadeFromBlack = useFadeFromBlack();
   // Read from storage on the client only, so server and first client render agree.
   const hasSaved = useSyncExternalStore(
     subscribeToNothing,
@@ -130,14 +131,16 @@ export function RoundTimerProvider({ children }: { children: ReactNode }) {
       }
       // Audio only unlocks inside the tap itself, so before the fade.
       if (unlockAudio) timerAudio().unlock();
-      fadeThrough(() => setMode("open"));
+      // A tap fades the page out to the timer. Arriving on the timer page
+      // (no tap) starts black instead, so that page never flashes first.
+      (unlockAudio ? fadeThrough : fadeFromBlack)(() => setMode("open"));
     };
     return {
       shown: shownMode !== null,
       open: () => show(true),
       show: () => show(false),
     };
-  }, [fadeThrough, shownMode]);
+  }, [fadeFromBlack, fadeThrough, shownMode]);
 
   const close = () => fadeThrough(() => {
     clearSavedRun(ROUND_TIMER_STORAGE_KEY);

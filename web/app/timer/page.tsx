@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 import { useRoundTimer, useSavedTodayRun } from "@/components/session-timer/round-timer-provider";
 
@@ -13,9 +13,10 @@ export default function TimerPage() {
 
   // Open straight into the timer on its last setup: no screen to tap through
   // first. Once only, so closing it leaves the athlete here, not in a loop.
+  // Before the first paint, so this page is never seen ahead of the timer.
   const { show } = roundTimer;
   const opened = useRef(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (opened.current) return;
     opened.current = true;
     show();
