@@ -21525,6 +21525,22 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   background: var(--bg-support);
 }
 
+/* Holds its space, invisible, until today's saved answer is known; then
+   appears once, already in its final state. */
+.feedback-card[data-ready="false"] > * {
+  visibility: hidden;
+}
+
+.feedback-card[data-ready="true"] > * {
+  animation: today-fade-in 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feedback-card[data-ready="true"] > * {
+    animation: none;
+  }
+}
+
 /* Today feedback trails the full session at the end of the page flow — spacing
    comes from normal document flow, not absolute/sticky positioning. */
 .today-feedback-card {

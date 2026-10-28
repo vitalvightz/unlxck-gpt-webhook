@@ -243,3 +243,26 @@ test("rapid Yes clicks create only one submission request", async () => {
     cleanup(container, root);
   }
 });
+
+test("the card stays hidden until today's saved answer is known, so it never swaps after loading", async () => {
+  const originalFetch = globalThis.fetch;
+  let answer!: (response: Response) => void;
+  globalThis.fetch = (() => new Promise<Response>((resolve) => { answer = resolve; })) as typeof fetch;
+  const { container, root } = mount();
+  try {
+    await act(async () => {
+      root.render(<ContextualFeedback token="test-token" surface="daily_recommendation" />);
+    });
+    const card = container.querySelector<HTMLElement>(".feedback-card")!;
+    // Space held, nothing shown yet: the question is not flashed first.
+    assert.equal(card.dataset.ready, "false");
+
+    await act(async () => { answer(jsonResponse({ ...savedYesFeedback(), surface: "daily_recommendation" })); });
+    await settle();
+    assert.equal(card.dataset.ready, "true");
+    assert.match(container.textContent ?? "", /Feedback sent/);
+  } finally {
+    cleanup(container, root);
+    globalThis.fetch = originalFetch;
+  }
+});

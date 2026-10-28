@@ -13,6 +13,7 @@ import type {
   FeedbackRecord,
   FeedbackResponseValue,
 } from "@/lib/types";
+import { AutoHeight } from "@/components/today/auto-height";
 import { requestXpRefresh } from "@/lib/xp-events";
 
 const PLAN_REASONS = [
@@ -86,6 +87,10 @@ export function ContextualFeedback({
   const [comment, setComment] = useState("");
   const [editing, setEditing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Hidden (but holding its space) until we know whether today's answer is
+  // already in: showing the question, then swapping to "Feedback sent", made
+  // the card jump just after the page loaded.
+  const [ready, setReady] = useState(false);
   const submissionInFlightRef = useRef(false);
   const userInteractedRef = useRef(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
@@ -95,6 +100,8 @@ export function ContextualFeedback({
 
   useEffect(() => {
     let active = true;
+    // A slow check never keeps the question hidden for long.
+    const fallback = window.setTimeout(() => { if (active) setReady(true); }, 1_500);
     const request = isPlan && planId ? getPlanFeedback(token, planId) : getTodayFeedback(token);
     void request
       .then((saved) => {
@@ -107,9 +114,13 @@ export function ContextualFeedback({
       })
       .catch(() => {
         // Existing-response hydration is optional. Controls stay usable.
+      })
+      .finally(() => {
+        if (active) setReady(true);
       });
     return () => {
       active = false;
+      window.clearTimeout(fallback);
     };
   }, [isPlan, planId, token]);
 
@@ -149,106 +160,112 @@ export function ContextualFeedback({
   }
 
   const showUnsafe = shouldShowUnsafeGuidance(choice, record?.response);
+  const sent = Boolean(record && !editing);
 
   return (
     <section
       className={`feedback-card feedback-inline${className ? ` ${className}` : ""}`}
       aria-label={isPlan ? "Plan feedback" : "Daily recommendation feedback"}
+      data-ready={ready ? "true" : "false"}
     >
-      {record && !editing ? (
-        <div className="feedback-sent-row" role="status">
-          <span>Feedback sent</span>
-          <button
-            type="button"
-            className="feedback-link"
-            onClick={() => {
-              userInteractedRef.current = true;
-              setEditing(true);
-            }}
-          >
-            Change response
-          </button>
-        </div>
-      ) : (
-        <>
-          <div className="feedback-prompt-row">
-            <p className="feedback-question">
-              {isPlan ? "Is this plan useful?" : "Did this recommendation fit how you feel today?"}
-            </p>
-            <div className="feedback-actions" role="group" aria-label="Choose a response">
-              <button
-                type="button"
-                className={choice === "yes" ? "feedback-choice is-selected" : "feedback-choice"}
-                onClick={() => choose("yes")}
-                disabled={submitting}
-                aria-pressed={choice === "yes"}
-              >
-                <ThumbIcon direction="up" /> Yes
-              </button>
-              <button
-                type="button"
-                className={choice === "no" ? "feedback-choice is-selected" : "feedback-choice"}
-                onClick={() => choose("no")}
-                disabled={submitting}
-                aria-pressed={choice === "no"}
-              >
-                <ThumbIcon direction="down" /> {isPlan ? "Needs improvement" : "No"}
-              </button>
-              {!isPlan ? (
+      {/* Question and "Feedback sent" cross-fade, and the card glides between
+          their heights, instead of swapping in one frame. */}
+      <AutoHeight swapKey={sent ? "sent" : "question"}>
+        {sent ? (
+          <div className="feedback-sent-row" role="status">
+            <span>Feedback sent</span>
+            <button
+              type="button"
+              className="feedback-link"
+              onClick={() => {
+                userInteractedRef.current = true;
+                setEditing(true);
+              }}
+            >
+              Change response
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="feedback-prompt-row">
+              <p className="feedback-question">
+                {isPlan ? "Is this plan useful?" : "Did this recommendation fit how you feel today?"}
+              </p>
+              <div className="feedback-actions" role="group" aria-label="Choose a response">
                 <button
                   type="button"
-                  className={choice === "unsafe" ? "feedback-choice feedback-unsafe is-selected" : "feedback-choice feedback-unsafe"}
-                  onClick={() => choose("unsafe")}
+                  className={choice === "yes" ? "feedback-choice is-selected" : "feedback-choice"}
+                  onClick={() => choose("yes")}
                   disabled={submitting}
-                  aria-pressed={choice === "unsafe"}
+                  aria-pressed={choice === "yes"}
                 >
-                  Something feels off? Tell us
+                  <ThumbIcon direction="up" /> Yes
                 </button>
-              ) : null}
-            </div>
-          </div>
-
-          {choice === "no" ? (
-            <div className="feedback-details">
-              <div className="feedback-chips" role="group" aria-label="Optional reason">
-                {reasons.map(([label, code]) => (
+                <button
+                  type="button"
+                  className={choice === "no" ? "feedback-choice is-selected" : "feedback-choice"}
+                  onClick={() => choose("no")}
+                  disabled={submitting}
+                  aria-pressed={choice === "no"}
+                >
+                  <ThumbIcon direction="down" /> {isPlan ? "Needs improvement" : "No"}
+                </button>
+                {!isPlan ? (
                   <button
-                    key={code}
                     type="button"
-                    className={reason === code ? "feedback-chip is-selected" : "feedback-chip"}
-                    aria-pressed={reason === code}
-                    onClick={() => setReason(reason === code ? null : code)}
+                    className={choice === "unsafe" ? "feedback-choice feedback-unsafe is-selected" : "feedback-choice feedback-unsafe"}
+                    onClick={() => choose("unsafe")}
+                    disabled={submitting}
+                    aria-pressed={choice === "unsafe"}
                   >
-                    {label}
+                    Something feels off? Tell us
                   </button>
-                ))}
+                ) : null}
               </div>
             </div>
-          ) : null}
 
-          {choice === "no" || choice === "unsafe" ? (
-            <div className="feedback-comment">
-              <label htmlFor={`feedback-comment-${surface}`}>Optional comment</label>
-              <textarea
-                id={`feedback-comment-${surface}`}
-                value={comment}
-                maxLength={500}
-                rows={3}
-                onChange={(event) => setComment(event.target.value)}
-              />
-              <div className="feedback-submit-row">
-                <span className="muted">{comment.length}/500</span>
-                <button type="button" className="cta" onClick={() => void save(choice)} disabled={submitting}>
-                  {submitting ? "Sending…" : choice === "unsafe" ? "Send safety report" : "Send feedback"}
-                </button>
+            {choice === "no" ? (
+              <div className="feedback-details">
+                <div className="feedback-chips" role="group" aria-label="Optional reason">
+                  {reasons.map(([label, code]) => (
+                    <button
+                      key={code}
+                      type="button"
+                      className={reason === code ? "feedback-chip is-selected" : "feedback-chip"}
+                      aria-pressed={reason === code}
+                      onClick={() => setReason(reason === code ? null : code)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : null}
-        </>
-      )}
+            ) : null}
 
-      {showUnsafe ? <p className="feedback-unsafe-guidance" role="alert">{UNSAFE_GUIDANCE}</p> : null}
-      {submissionError ? <p className="feedback-error" role="alert">{submissionError}</p> : null}
+            {choice === "no" || choice === "unsafe" ? (
+              <div className="feedback-comment">
+                <label htmlFor={`feedback-comment-${surface}`}>Optional comment</label>
+                <textarea
+                  id={`feedback-comment-${surface}`}
+                  value={comment}
+                  maxLength={500}
+                  rows={3}
+                  onChange={(event) => setComment(event.target.value)}
+                />
+                <div className="feedback-submit-row">
+                  <span className="muted">{comment.length}/500</span>
+                  <button type="button" className="cta" onClick={() => void save(choice)} disabled={submitting}>
+                    {submitting ? "Sending…" : choice === "unsafe" ? "Send safety report" : "Send feedback"}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </>
+        )}
+
+        {showUnsafe ? <p className="feedback-unsafe-guidance" role="alert">{UNSAFE_GUIDANCE}</p> : null}
+        {submissionError ? <p className="feedback-error" role="alert">{submissionError}</p> : null}
+      </AutoHeight>
     </section>
   );
 }
