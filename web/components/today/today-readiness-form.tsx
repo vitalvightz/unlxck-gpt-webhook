@@ -1,11 +1,11 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 
 import { SafetyNote } from "@/components/safety-note";
 import { SegmentGroup } from "@/components/today/segment-group";
 import { useToast } from "@/components/toast-provider";
-import { submitTodayCheckin } from "@/lib/api";
+import { submitTodayCheckin, trackProductEvent } from "@/lib/api";
 import { TODAY_RED_FLAG_SAFETY } from "@/lib/safety-copy";
 import { buildTodayCheckinPayload, getAthleteWarnings, getRecommendationCopy } from "@/lib/today";
 import type {
@@ -85,12 +85,21 @@ export function TodayReadinessForm({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inlineWarning] = getAthleteWarnings(warnings);
+  // Optional, consent-gated: the first answer marks a started check-in so an
+  // unsaved one is measurable. No answer values are sent.
+  const started = useRef(false);
+  const markStarted = () => {
+    if (started.current) return;
+    started.current = true;
+    void trackProductEvent(token, "checkin_started", "recovery");
+  };
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if ((plan && !plan.id) || isSubmitting) {
       return;
     }
+    markStarted();
     setIsSubmitting(true);
     try {
       const response = await submitTodayCheckin(
@@ -129,9 +138,9 @@ export function TodayReadinessForm({
         </div>
       </div>
       <form className="today-checkin-form" onSubmit={handleSubmit}>
-        <SegmentGroup label="Sleep" value={sleep} options={SLEEP_OPTIONS} onChange={setSleep} />
-        <SegmentGroup label="Body" value={body} options={BODY_OPTIONS} onChange={setBody} />
-        <SegmentGroup label="Pain" value={pain} options={PAIN_OPTIONS} onChange={setPain} />
+        <SegmentGroup label="Sleep" value={sleep} options={SLEEP_OPTIONS} onChange={(value) => { markStarted(); setSleep(value); }} />
+        <SegmentGroup label="Body" value={body} options={BODY_OPTIONS} onChange={(value) => { markStarted(); setBody(value); }} />
+        <SegmentGroup label="Pain" value={pain} options={PAIN_OPTIONS} onChange={(value) => { markStarted(); setPain(value); }} />
         {/* Injury and last-session answers come from Today's injuries and logged sessions (server-derived). */}
         {inlineWarning ? (
           <p className="today-inline-warning" role="status">{inlineWarning}</p>
@@ -146,12 +155,13 @@ export function TodayReadinessForm({
                 <input
                   type="checkbox"
                   checked={safetyFlags[flag.key]}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    markStarted();
                     setSafetyFlags((current) => ({
                       ...current,
                       [flag.key]: event.target.checked,
-                    }))
-                  }
+                    }));
+                  }}
                 />
                 <span>{flag.label}</span>
               </label>
