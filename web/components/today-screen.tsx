@@ -318,7 +318,7 @@ export function TodayScreen() {
   // Once checked in, the form eases shut instead of dropping out from under
   // the sections below it.
   const readinessForm = (
-    <Collapse show={showCheckin} gap="var(--today-page-gap)">
+    <Collapse show={showCheckin}>
       {showCheckin ? (
         <TodayReadinessForm
           plan={hasPlan ? activePlan : undefined}
@@ -384,7 +384,7 @@ export function TodayScreen() {
           injuriesHref={token ? "#today-injury" : undefined}
           sessionHref={resolvedDecision.displayTier === "preview" ? undefined : "#today-session"}
         />
-        <Collapse show={rehabBlocks.length > 0} gap="16px">
+        <Collapse show={rehabBlocks.length > 0}>
           {rehabBlocks.length ? <nav className={styles.rehabAccess} aria-label="Your rehab">
             <p className={styles.rehabAccessTitle}>Your rehab</p>
             {rehabBlocks.map(block => <a key={block.block_id}

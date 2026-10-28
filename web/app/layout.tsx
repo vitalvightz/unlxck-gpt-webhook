@@ -15,6 +15,7 @@ import { PwaRegister } from "@/components/pwa-register";
 import { PushNotificationPrompt } from "@/components/push-notification-prompt";
 import { InstallPrompt } from "@/components/install-unlxck";
 import { RoundTimerProvider } from "@/components/session-timer/round-timer-provider";
+import { FadeThroughProvider } from "@/components/fade-through";
 import { ToastProvider } from "@/components/toast-provider";
 import { XpAwardFeedback } from "@/components/xp-award-feedback";
 import { XpProvider } from "@/components/xp-provider";
@@ -123,6 +124,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                   <InstallPrompt />
                   <PushNotificationPrompt />
                   <GenerationStatusShell>
+                    <FadeThroughProvider>
                     <RoundTimerProvider>
                     <div className="app-shell">
                       <AppNav />
@@ -138,6 +140,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                       </div>
                     </div>
                     </RoundTimerProvider>
+                    </FadeThroughProvider>
                   </GenerationStatusShell>
                 </PwaRegister>
               </ToastProvider>

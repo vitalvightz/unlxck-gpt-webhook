@@ -88,7 +88,7 @@ for (const width of [320, 390, 1280]) {
     await expect(results).not.toContainText("Rope Climb");
     const drill = results.getByRole("button").first();
     await drill.focus(); await page.keyboard.press("Enter");
-    await expect(page.getByRole("dialog")).toContainText("Discovery only");
+    await expect(page.getByRole("dialog")).toContainText("For discovery.");
     await expect(page.getByRole("dialog").getByText("Loading drill…", { exact: true })).toBeHidden();
     await page.keyboard.press("Escape");
     await expect(drill).toBeFocused();
@@ -192,7 +192,7 @@ for (const width of [320, 390, 1280]) {
     const preview = page.getByRole("dialog", { name: reviewed.name, exact: true });
     await expect(preview.getByRole("heading", { name: "Equipment setup" })).toBeVisible();
     await expect(preview).toContainText("Requires: sledgehammer + tire");
-    await expect(preview).toContainText("Discovery only");
+    await expect(preview).toContainText("For discovery.");
     expect((await new AxeBuilder({ page }).include('[role="dialog"]').analyze()).violations).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: test.info().outputPath(`equipment-requirements-${width}.png`), animations: "disabled" });
@@ -234,7 +234,7 @@ for (const width of [390, 1280]) {
     await expect(featured.getByRole("button", { name: "Play Medicine Ball Hook Throw demo" })).toBeVisible();
     await expect(featured.getByRole("link", { name: "Watch on YouTube" })).toHaveAttribute("href", "https://www.youtube.com/watch?v=9dWwmyZ1Wng&t=18s");
     await featured.getByRole("button", { name: /^Medicine Ball Hook Throw/ }).click();
-    await expect(page.getByRole("dialog", { name: "Medicine Ball Hook Throw", exact: true })).toContainText("Discovery only");
+    await expect(page.getByRole("dialog", { name: "Medicine Ball Hook Throw", exact: true })).toContainText("For discovery.");
     await page.keyboard.press("Escape");
     expect((await new AxeBuilder({ page }).include('main').analyze()).violations).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -337,7 +337,7 @@ test("Categories, collapsed coaching, empty reset and unavailable retry", async 
   await search.fill("Pressure Reset");
   await page.getByRole("list", { name: "Drill results" }).getByRole("button").first().click();
   const preview = page.getByRole("dialog");
-  await expect(preview).toContainText("These entries are not workout exercises.");
+  await expect(preview).toContainText("For learning and care, not workouts.");
   await expect(preview.getByRole("heading", { name: "Why", exact: true })).toBeHidden();
   await preview.getByText("Coaching details", { exact: true }).click();
   await expect(preview.getByRole("heading", { name: "Why", exact: true })).toBeVisible();

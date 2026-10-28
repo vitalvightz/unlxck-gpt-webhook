@@ -7148,9 +7148,45 @@ button.mobile-step-rail-item {
    so its label overflows the pill on both sides. Let a lone CTA span the row. */
 
 .today-page {
-  --today-page-gap: 16px;
   display: grid;
-  gap: var(--today-page-gap);
+  gap: 16px;
+}
+
+/* ---- Fade through black: full-screen changes dip to black and back ---- */
+
+.fade-through {
+  position: fixed;
+  z-index: 2147483000;
+  inset: 0;
+  background: #000;
+  /* Swallow taps for the moment the screen is changing underneath. */
+  pointer-events: auto;
+}
+
+.fade-through[data-phase="covering"] {
+  animation: fade-through-cover 120ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.fade-through[data-phase="revealing"] {
+  animation: fade-through-reveal 220ms cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+@keyframes fade-through-cover {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-through-reveal {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 /* ---- Today motion: sections ease in and out instead of snapping ---- */
@@ -7166,13 +7202,16 @@ button.mobile-step-rail-item {
   min-height: 0;
 }
 
+/* Height eases on a sine curve: its top speed is only about 1.6x its average,
+   so no single phone frame carries a big step. A front-loaded curve covered
+   most of the distance in one frame and read as a jolt. */
 .today-collapse[data-phase="entering"] {
-  animation: today-collapse-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: today-collapse-in 340ms cubic-bezier(0.37, 0, 0.63, 1);
 }
 
 .today-collapse[data-phase="leaving"] {
   pointer-events: none;
-  animation: today-collapse-out 240ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: today-collapse-out 280ms cubic-bezier(0.37, 0, 0.63, 1) forwards;
 }
 
 .today-collapse[data-phase="entering"] > .today-collapse-inner,
@@ -7180,29 +7219,54 @@ button.mobile-step-rail-item {
   overflow: hidden;
 }
 
+/* The content fades and drifts a few pixels, rather than being wiped open
+   by the edge of its box. Ends on no transform, so fixed sheets inside are
+   never pinned to it. */
+.today-collapse[data-phase="entering"] > .today-collapse-inner > * {
+  animation: today-collapse-content-in 340ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.today-collapse[data-phase="leaving"] > .today-collapse-inner > * {
+  animation: today-collapse-content-out 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
 @keyframes today-collapse-in {
   from {
     grid-template-rows: 0fr;
-    margin-top: calc(-1 * var(--today-collapse-gap, 0px));
-    opacity: 0;
   }
   to {
     grid-template-rows: 1fr;
-    margin-top: 0;
-    opacity: 1;
   }
 }
 
 @keyframes today-collapse-out {
   from {
     grid-template-rows: 1fr;
-    margin-top: 0;
-    opacity: 1;
   }
   to {
     grid-template-rows: 0fr;
-    margin-top: calc(-1 * var(--today-collapse-gap, 0px));
+  }
+}
+
+@keyframes today-collapse-content-in {
+  from {
     opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes today-collapse-content-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
   }
 }
 
@@ -7212,6 +7276,12 @@ button.mobile-step-rail-item {
   display: grid;
   gap: inherit;
   min-width: 0;
+}
+
+/* Sized by its content, never stretched to the pinned height mid-glide:
+   a stretched inner reported the wrong height and the glide chased it. */
+.today-auto-height-inner {
+  align-self: start;
 }
 
 .today-fade-in {
@@ -7230,6 +7300,7 @@ button.mobile-step-rail-item {
 @media (prefers-reduced-motion: reduce) {
   .today-collapse[data-phase="entering"],
   .today-collapse[data-phase="leaving"],
+  .today-collapse[data-phase] > .today-collapse-inner > *,
   .today-fade-in {
     animation: none;
   }
@@ -9639,7 +9710,7 @@ html[data-theme="light"] .today-injury-other-warning {
 
 @media (max-width: 720px) {
   .today-page {
-    --today-page-gap: 14px;
+    gap: 14px;
   }
 
   .today-shell,
@@ -21452,6 +21523,22 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   border-left: 3px solid var(--brand-red);
   border-radius: var(--radius-support);
   background: var(--bg-support);
+}
+
+/* Holds its space, invisible, until today's saved answer is known; then
+   appears once, already in its final state. */
+.feedback-card[data-ready="false"] > * {
+  visibility: hidden;
+}
+
+.feedback-card[data-ready="true"] > * {
+  animation: today-fade-in 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feedback-card[data-ready="true"] > * {
+    animation: none;
+  }
 }
 
 /* Today feedback trails the full session at the end of the page flow — spacing
