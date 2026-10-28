@@ -53,7 +53,6 @@ export default function CreatePage() {
                 href={option.href}
                 className={styles.option}
                 onClick={(event) => {
-                  // /plans links already fade at the document; the rest fade here.
                   if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
                   event.preventDefault();
                   fadeNavigate(() => router.push(option.href));

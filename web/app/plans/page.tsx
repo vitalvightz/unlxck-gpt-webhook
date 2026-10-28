@@ -315,9 +315,7 @@ export default function PlansPage() {
 
   return (
     <RequireAuth>
-      {/* While loading, data-route-pending keeps the fade into this page dark, so
-          a quick load reveals the finished page rather than a stand-in. */}
-      <section className={styles.page} data-plan-workspace data-route-pending={isLoading || undefined}>
+      <section className={styles.page} data-plan-workspace>
         <header className={styles.pageHeader}>
           <h1 className={`athlete-motion-slot athlete-motion-header ${styles.pageTitle}`}>
             {/* The heading depends on the active plan: hold its space, never guess. */}
