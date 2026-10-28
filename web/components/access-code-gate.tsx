@@ -14,6 +14,11 @@ import styles from "./access-code-gate.module.css";
 
 type CodeShape = { length: number; numeric: boolean };
 
+// Invites are requested by Instagram DM; ig.me/m opens a DM thread directly
+// (in the app on phones, the inbox on desktop).
+const INSTAGRAM_HANDLE = "unlxckperformance";
+const INSTAGRAM_DM_HREF = `https://ig.me/m/${INSTAGRAM_HANDLE}`;
+
 // How long "Access granted" holds before the account form takes over.
 const GRANTED_HOLD_MS = 1600;
 
@@ -179,10 +184,18 @@ function AccessCodeGate({ codeShape, granted }: Readonly<{ codeShape: CodeShape;
 
         {granted ? null : (
           <>
-            {/* No public application: invites go out by direct message. */}
+            {/* No public application: invites go out by Instagram DM. */}
             <div className={styles.apply}>
               <span className={styles.divider}>{t("noCode")}</span>
               <p className={styles.applyNote}>{t("dmUs")}</p>
+              <a href={INSTAGRAM_DM_HREF} target="_blank" rel="noopener noreferrer" className={styles.instagram}>
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <rect x="3" y="3" width="18" height="18" rx="5" />
+                  <circle cx="12" cy="12" r="4.2" />
+                  <circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none" />
+                </svg>
+                <span>{t("dmButton", { handle: INSTAGRAM_HANDLE })}</span>
+              </a>
             </div>
 
             <Link href="/login" className={`auth-text-link ${authStyles.accountLink}`}>

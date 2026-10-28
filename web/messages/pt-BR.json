@@ -252,6 +252,7 @@
     "granted": "Acesso liberado",
     "grantedTitle": "Você está dentro.",
     "grantedLead": "Bem-vindo ao beta privado. Preparando sua conta…",
-    "dmUs": "Mande uma DM pra gente no Instagram e a gente te envia um convite."
+    "dmUs": "Mande uma DM pra gente no Instagram e a gente te envia um convite.",
+    "dmButton": "Mandar DM para @{handle}"
   }
 }

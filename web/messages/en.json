@@ -252,6 +252,7 @@
     "granted": "Access granted",
     "grantedTitle": "You're in.",
     "grantedLead": "Welcome to the private beta. Setting up your account…",
-    "dmUs": "DM us on Instagram and we'll get you an invite."
+    "dmUs": "DM us on Instagram and we'll get you an invite.",
+    "dmButton": "DM @{handle}"
   }
 }

@@ -165,6 +165,41 @@ p.lead.lead { margin: 14px 0 0; }
   background: var(--border-default);
 }
 
+/* "DM @unlxckperformance": Instagram's gradient ring around the glyph,
+   otherwise matching the page's secondary button. */
+.instagram {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.instagram svg {
+  flex-shrink: 0;
+  padding: 3px;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(45deg, #f58529, #dd2a7b 50%, #8134af 80%, #515bd4);
+  color: #ffffff;
+}
+
+.instagram:hover { border-color: var(--text-secondary); background: rgba(255, 255, 255, 0.06); }
+.instagram:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .instagram { transition: none; }
+}
+
 /* Beats the global `.auth-card p` reset. */
 p.applyNote.applyNote { margin: 0; color: var(--text-secondary); font-size: var(--type-body-sm); line-height: 1.5; text-align: center; }
 
