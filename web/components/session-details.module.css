@@ -88,12 +88,20 @@
 .response p { margin: 8px 0; }
 /* Loading placeholder sized like the record it stands in for. */
 .recordSkeleton { display: grid; gap: 12px; }
-.recordSkeletonFacts { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 8px; margin-bottom: 8px; }
-.sessionFacts { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 8px; margin: 0; }
-.sessionFacts > div { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 1px 10px; padding: 10px 12px; border-radius: 12px; background: var(--bg-stat); border: 1px solid var(--border-subtle); }
-.sessionFacts svg { grid-row: span 2; color: var(--brand-red); }
-.sessionFacts dt { color: var(--text-muted); font-size: 11px; }
-.sessionFacts dd { margin: 0; font-size: 14px; font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.recordSkeletonFacts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin-bottom: 8px; overflow: hidden; border-radius: 14px; }
+.recordSkeletonFacts > * { border-radius: 0; }
+/* The session's facts as one strip: up to three side by side in a single
+   panel, split by hairlines (the 1px gap shows the panel's border colour).
+   Four sit two by two; five sit three then two, each row filling the width. */
+.sessionFacts { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 1px; margin: 0; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 14px; background: var(--border-subtle); }
+.sessionFacts:has(> div:nth-child(4)) { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sessionFacts:has(> div:nth-child(5)) { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.sessionFacts:has(> div:nth-child(5)) > div { grid-column: span 2; }
+.sessionFacts:has(> div:nth-child(5)) > div:nth-child(n + 4) { grid-column: span 3; }
+.sessionFacts > div { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 6px; min-width: 0; padding: 12px 12px 13px; background: var(--bg-stat); }
+.sessionFacts svg { width: 14px; height: 14px; color: var(--brand-red); }
+.sessionFacts dt { min-width: 0; overflow: hidden; color: var(--text-muted); font-size: 11px; letter-spacing: .01em; text-overflow: ellipsis; white-space: nowrap; }
+.sessionFacts dd { grid-column: 1 / -1; margin: 0; font-size: 15px; font-weight: 650; line-height: 1.2; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .recordContent, .analysisColumn, .performanceColumn { min-width: 0; }
 .analysisColumn > p + p { margin-top: 8px; }
 .block:focus { outline: 2px solid var(--brand-red); outline-offset: 2px; }
@@ -103,7 +111,10 @@
   .workspace .body { flex: 1; padding: 24px 32px 32px; }
   .sessionLayout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; align-items: start; }
   .sessionSummary { padding-right: 24px; border-right: 1px solid var(--border-subtle); }
-  .sessionFacts { grid-template-columns: 1fr; }
+  /* Beside the record, the strip stands as a narrow column instead. */
+  .sessionFacts, .sessionFacts:has(> div:nth-child(4)), .sessionFacts:has(> div:nth-child(5)) { grid-auto-flow: row; grid-template-columns: 1fr; }
+  .sessionFacts > div, .sessionFacts:has(> div:nth-child(5)) > div:nth-child(n + 4) { grid-column: auto; }
+  .recordSkeletonFacts { grid-template-columns: 1fr; }
   .sessionFacts dd { font-size: 16px; }
   .recordContent > .section:first-child { margin-top: 0; }
   .workspace .section h3 { font-size: 20px; letter-spacing: -.02em; }
