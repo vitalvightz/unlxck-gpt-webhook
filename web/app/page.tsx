@@ -13,7 +13,6 @@ import { EmptyState } from "@/components/empty-state";
 import { FightCountdown } from "@/components/fight-countdown";
 import { InstallUnlxck } from "@/components/install-unlxck";
 import { LandingPreviewCard } from "@/components/landing-preview-card";
-import { LandingStickyCta } from "@/components/landing-sticky-cta";
 import { UnlockGlitchText } from "@/components/unlock-glitch-text";
 import { PlansFeaturedSkeleton, Skeleton } from "@/components/skeleton";
 import { XpProgressCard, XpProgressCardSkeleton } from "@/components/xp-progress-card";
@@ -275,10 +274,7 @@ export default function HomePage() {
     title: publicT(`benefit${index}Title`),
     body: publicT(`benefit${index}Body`),
   }));
-  // Landing motion: the sticky phone CTA shows only while neither Get started
-  // is on screen, and the benefit icons animate once when the list is seen.
-  const [heroCtaRef, heroCtaInView] = useInView<HTMLDivElement>();
-  const [finalCtaRef, finalCtaInView] = useInView<HTMLElement>();
+  // The benefit icons animate once, when the list is first seen.
   const [benefitsRef, benefitsSeen] = useInView<HTMLUListElement>({ threshold: 0.4, once: true });
   const heroLine2 = publicT("heroLine2");
   // English "Lxcked in." glitches its X once, echoing the motto; other
@@ -810,7 +806,7 @@ export default function HomePage() {
         <p className="public-hero-lead public-rise" style={riseDelay(140)}>
           {publicT("lead")}
         </p>
-        <div ref={heroCtaRef} className="public-hero-actions public-rise" style={riseDelay(210)}>
+        <div className="public-hero-actions public-rise" style={riseDelay(210)}>
           {getStartedLink}
         </div>
       </section>
@@ -843,12 +839,10 @@ export default function HomePage() {
         </ul>
       </section>
 
-      <section ref={finalCtaRef} className="public-final-cta public-reveal" aria-labelledby="public-final-cta-heading">
+      <section className="public-final-cta public-reveal" aria-labelledby="public-final-cta-heading">
         <h2 id="public-final-cta-heading">{publicT("finalTitle")}</h2>
         {getStartedLink}
       </section>
-
-      <LandingStickyCta label={publicT("getStarted")} visible={heroCtaInView === false && finalCtaInView === false} />
     </div>
   );
 }

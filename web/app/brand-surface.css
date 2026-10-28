@@ -300,29 +300,6 @@
   -webkit-text-fill-color: #3fd8ff;
 }
 
-/* Phone-only Get started bar; slides up while no other CTA is on screen. */
-.public-sticky-cta {
-  position: fixed;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 60;
-  padding: 20px calc(16px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
-  background: linear-gradient(to top, rgba(10, 11, 13, 0.96) 55%, rgba(10, 11, 13, 0));
-  transform: translateY(110%);
-  transition: transform 380ms var(--public-ease);
-  pointer-events: none;
-}
-
-.public-sticky-cta[data-visible="true"] {
-  transform: none;
-  pointer-events: auto;
-}
-
-.public-sticky-cta .public-hero-cta {
-  margin: 0;
-}
-
 /* Section headings shared by preview and benefits */
 
 .public-section-head {
@@ -838,18 +815,13 @@
 
 @media (prefers-reduced-motion: reduce) {
   .public-hero-cta::after { animation: none; display: none; }
-  .public-cta-arrow,
-  .public-sticky-cta { transition: none; }
+  .public-cta-arrow { transition: none; }
 }
 
 /* Tablet: CTA sizes to its label; benefits stay stacked for readable lines */
 @media (min-width: 640px) {
   .public-landing {
     gap: 72px;
-  }
-
-  .public-sticky-cta {
-    display: none;
   }
 
   .public-hero-actions {
