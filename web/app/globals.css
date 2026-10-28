@@ -7712,7 +7712,7 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
   position: relative;
   overflow: hidden;
   margin: 0 0 12px;
-  padding: 20px 22px 0;
+  padding: 14px 16px 0;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 16px;
   background:
@@ -7746,7 +7746,8 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
 }
 
 .today-decision-banner[data-current-guidance="true"] {
-  padding-bottom: 14px;
+  padding-bottom: 6px;
+  margin-bottom: 0;
 }
 
 .today-decision-banner[data-current-guidance="true"] .today-decision-heading {
@@ -7762,7 +7763,7 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
 }
 
 .today-decision-banner[data-current-guidance="true"] .today-decision-action {
-  margin-top: 12px;
+  margin-top: 8px;
   font-size: clamp(16px, 1.5vw, 18px);
 }
 
@@ -7779,7 +7780,7 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
 }
 
 .today-decision-banner[data-current-guidance="true"] .today-decision-disclosure {
-  margin-top: 10px;
+  margin-top: 4px;
 }
 
 .today-decision-banner[data-current-guidance="true"] .today-decision-disclosure summary {
@@ -9077,6 +9078,14 @@ html[data-theme="light"] .today-injury-other-warning {
 .today-injury-add-sheet .today-injury-add {
   margin: 0;
   padding: 16px 20px 20px;
+}
+
+.today-injury-add-sheet .injury-sheet-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding-bottom: 8px;
+  background: var(--bg-panel);
 }
 
 @media (max-width: 600px) {
@@ -21660,7 +21669,20 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
    card — spacing comes from normal document flow, not absolute/sticky
    positioning. */
 .today-feedback-card {
-  margin-top: 12px;
+  margin-top: 0;
+}
+
+.today-feedback-disclosure > summary {
+  min-height: 44px;
+  align-content: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.today-feedback-disclosure > summary:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 2px;
 }
 
 .feedback-question {

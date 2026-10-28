@@ -421,51 +421,46 @@ test("a trigger never shows internal injury markers", () => {
   assert.doesNotMatch(html, /training_impact|not_limiting|\[/);
 });
 
-test("a clear check-in names what it cleared, not only where the data came from", () => {
-  const html = render({
-    banner: { ...BANNER, displayState: "go", chip: "GO", tone: "green" },
-    tier: "modify",
-    triggers: ["Active injury"],
-    sources: ["today's check-in", "your tracked injuries"],
+for (const triggers of [undefined, [], ["Active injury"], ["Poor sleep"],
+  ["Active injury", "Recent hard session", "Injury getting worse"], ["Low readiness lately"]]) {
+  test(`contributors never prove sleep or body clearance: ${JSON.stringify(triggers)}`, () => {
+    const html = render({ banner: BANNER, triggers, sources: ["today's check-in"] });
+    assert.doesNotMatch(html, /Sleep:|Body and pain:|No concerns reported|No new concerns reported|data-result="clear"/);
   });
+}
 
-  assert.match(html, /<li data-result="clear">Sleep: No concerns reported<\/li>/);
-  assert.match(html, /<li data-result="clear">Body and pain: No new concerns reported<\/li>/);
-  assert.match(html, /Active injury/);
-  assert.match(html, /Decision based on/);
-});
-
-test("a check-in answer that raised a contributor is never called clear", () => {
-  const html = render({
-    banner: BANNER,
-    triggers: ["Poor sleep"],
-    sources: ["today's check-in"],
-  });
-
-  assert.doesNotMatch(html, /Sleep: No concerns reported/);
-  assert.match(html, /Body and pain: No new concerns reported/);
-});
-
-test("nothing is claimed clear when the contributor list may be incomplete or ambiguous", () => {
-  const capped = render({
-    banner: BANNER,
-    triggers: ["Active injury", "Recent hard session", "Injury getting worse"],
-    sources: ["today's check-in"],
-  });
-  const ambiguous = render({
-    banner: BANNER,
-    triggers: ["Low readiness lately"],
-    sources: ["today's check-in"],
-  });
-  const injuryHold = render({
-    banner: BANNER,
-    triggers: ["Active injury"],
-    sources: ["your tracked injuries"],
-  });
-
-  for (const html of [capped, ambiguous, injuryHold]) {
-    assert.doesNotMatch(html, /No concerns reported|No new concerns reported/);
+test("missing and incomplete structured checks cannot claim clearance", () => {
+  for (const safetyChecks of [undefined, [], [
+    { code: "surface_injury", label: "Skin injury", result_label: "No session change" },
+    { code: "", label: "Skin injury", result: "no_session_change", result_label: "No session change" },
+    { code: "surface_injury", label: "Skin injury", result: "no_session_change", result_label: "" },
+    { code: "surface_injury", label: "Skin injury", result: "unknown", result_label: "No session change" },
+  ]]) {
+    const html = render({ banner: BANNER, sources: ["today's check-in"],
+      safetyChecks: safetyChecks as Parameters<typeof TodayDecisionPanel>[0]["safetyChecks"] });
+    assert.doesNotMatch(html, /data-result="clear"|Skin injury:/);
   }
+});
+
+test("conflicting safety evidence keeps the restriction and omits the clearance in either order", () => {
+  const clear = { code: "surface_injury", label: "Skin injury", result: "no_session_change" as const, result_label: "No session change" };
+  const restricted = { ...clear, result: "no_contact" as const, result_label: "No contact today" };
+  for (const safetyChecks of [[clear, restricted], [restricted, clear], [clear, clear, restricted, restricted]]) {
+    const html = render({ banner: BANNER, safetyChecks, triggers: ["Poor sleep"], sources: ["today's check-in"] });
+    assert.doesNotMatch(html, /data-result="clear"|No session change|Sleep:|Body and pain:/);
+    assert.equal(html.match(/Skin injury: No contact today/g)?.length, 1);
+  }
+});
+
+test("explicit structured clearance is independent of capped unrelated contributors", () => {
+  const html = render({ banner: BANNER,
+    triggers: ["Poor sleep", "High pain", "Recent hard session"],
+    safetyChecks: [{ code: "surface_injury", label: "Skin injury", result: "no_session_change", result_label: "No session change" }],
+  });
+  assert.match(html, /data-result="clear">Skin injury: No session change/);
+  assert.match(html, /Poor sleep/);
+  assert.match(html, /High pain/);
+  assert.doesNotMatch(html, /Sleep:|Body and pain:/);
 });
 
 test("safety checks carry their outcome marker", () => {

@@ -736,16 +736,6 @@ export function TodayInjuryManager({
                       </button> : null}
                     </p>
                   ) : null}
-                  <div id={bodyId} className="today-injury-controls" hidden={!isOpen}>
-                  <div className="today-injury-meta">
-                    <span className="today-injury-name">
-                      <strong>{injuryLabel}</strong>
-                      {showInjuryType ? <small>{injuryType}</small> : null}
-                      <small className="today-injury-summary">
-                        {injury.status === "monitoring" ? "Monitoring" : "Tracking"} · {impactLabel}
-                      </small>
-                    </span>
-                  </div>
                   {surfaceGuidance && showSurfaceGuidance ? (
                     <div
                       className="today-injury-guidance"
@@ -756,6 +746,16 @@ export function TodayInjuryManager({
                       <p>{surfaceGuidance.message}</p>
                     </div>
                   ) : null}
+                  <div id={bodyId} className="today-injury-controls" hidden={!isOpen}>
+                  <div className="today-injury-meta">
+                    <span className="today-injury-name">
+                      <strong>{injuryLabel}</strong>
+                      {showInjuryType ? <small>{injuryType}</small> : null}
+                      <small className="today-injury-summary">
+                        {injury.status === "monitoring" ? "Monitoring" : "Tracking"} · {impactLabel}
+                      </small>
+                    </span>
+                  </div>
                   {!isSurface && (injury.rehab_decision || injury.episode_id) ? <InjuryCareStatus rehabHref={rehabTargets[injury.id]} injury={injury} token={token} onRefresh={onRefresh} showClearance={false} summaryVisible /> : null}
                   <div className="today-injury-update-head">
                     <p className="today-field-label today-injury-status-label">{delayedPrompts.some(prompt =>

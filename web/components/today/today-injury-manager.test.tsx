@@ -1624,6 +1624,9 @@ test("a skin injury card shows only skin care, and not twice when Today already 
   await render("another-injury");
   const text = container.textContent ?? "";
   assert.match(text, /Keep contact off it/);
+  assert.equal(container.querySelector(".today-injury-summary-row")?.getAttribute("aria-expanded"), "false");
+  assert.equal(container.querySelector(".today-injury-guidance")?.closest("[hidden]"), null,
+    "contact restriction must remain visible when the injury controls are collapsed");
   assert.doesNotMatch(text, /Stage:|Stage 1 of 5|Recovery monitoring|skin-care guidance for this injury/);
   // Today's main advice already shows it: the card does not repeat it.
   await render(skin.id);
