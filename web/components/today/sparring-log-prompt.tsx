@@ -17,6 +17,7 @@ import type {
   SparringLogSource,
   SparringPlannedIntensity,
 } from "@/lib/types";
+import { XP_TOAST_KEYS } from "@/lib/xp-events";
 
 import styles from "./sparring-log-prompt.module.css";
 
@@ -224,7 +225,7 @@ export function SparringLogPrompt({
       if (result.safety_notice && !existing?.rocked) {
         setSavedNotice(result.safety_notice);
       } else {
-        showToast(existing ? "Sparring report updated." : "Sparring logged.", { tone: "success" });
+        showToast(existing ? "Sparring report updated." : "Sparring logged.", { tone: "success", mergeKeys: XP_TOAST_KEYS.session });
         onDismiss();
       }
     } catch (caught) {

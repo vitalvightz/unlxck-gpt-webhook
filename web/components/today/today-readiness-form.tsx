@@ -14,6 +14,7 @@ import type {
   TodayCheckinPain,
   TodayCheckinSleep,
 } from "@/lib/types";
+import { XP_TOAST_KEYS } from "@/lib/xp-events";
 
 const SLEEP_OPTIONS: Array<{ value: TodayCheckinSleep; label: string }> = [
   { value: "poor", label: "Poor" },
@@ -107,6 +108,7 @@ export function TodayReadinessForm({
       // "Train as planned" names a programme, so a plan-free check-in just confirms.
       showToast(plan ? `Recommendation: ${getRecommendationCopy(response.recommendation_state).label}.` : "Check-in saved.", {
         tone: response.recommendation_state === "pull_back" ? "info" : "success",
+        mergeKeys: XP_TOAST_KEYS.checkin,
       });
       const [responseWarning] = getAthleteWarnings(response.warnings);
       if (responseWarning) {

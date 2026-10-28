@@ -9,11 +9,16 @@ export interface ToastOptions {
   durationMs?: number;
   /** Hold the toast back this long before it may appear. */
   delayMs?: number;
+  /** Keys a follow-up toast may name in `merge` to fold into this one. */
+  mergeKeys?: readonly string[];
   /**
-   * Fold into a success toast shown moments ago (e.g. "Sparring logged · +25 XP")
-   * instead of stacking a second one. Falls back to `message` when nothing recent.
+   * Fold into a recent toast that shares one of `keys` (e.g. "Sparring logged · +25 XP")
+   * instead of stacking a second one. Falls back to `message` when nothing matches.
    */
-  mergeSuffix?: string;
+  merge?: {
+    suffix: string;
+    keys: readonly string[];
+  };
   action?: {
     label: string;
     onClick: () => void;
@@ -117,11 +122,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [clearDismissTimer, dismissToast],
   );
 
-  /** Fold `suffix` into a recent success toast, on screen or still queued. */
+  /** Fold `suffix` into a recent toast that opted in to one of `keys`, on screen or still queued. */
   const mergeIntoRecent = useCallback(
-    (suffix: string, now: number): boolean => {
+    ({ suffix, keys }: NonNullable<ToastOptions["merge"]>, now: number): boolean => {
       const canMerge = (toast: Toast) =>
-        toast.tone === "success" && !toast.suffix && !toast.mergeSuffix && !toast.leaving;
+        toast.tone !== "error" &&
+        !toast.suffix &&
+        !toast.leaving &&
+        (toast.mergeKeys ?? []).some((key) => keys.includes(key));
       const visible = [...toastsRef.current]
         .reverse()
         .find((toast) => canMerge(toast) && now - (shownAtRef.current.get(toast.id) ?? 0) <= MERGE_WINDOW_MS);
@@ -155,16 +163,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     // Merges never take a slot, so settle every ready one first.
     const stillPending: PendingToast[] = [];
     for (const item of pending) {
-      if (item.readyAt <= now && item.toast.mergeSuffix && mergeIntoRecent(item.toast.mergeSuffix, now)) continue;
+      if (item.readyAt <= now && item.toast.merge && mergeIntoRecent(item.toast.merge, now)) continue;
       stillPending.push(item);
     }
     pending = stillPending;
 
-    const active = toastsRef.current.filter((toast) => !toast.leaving).length;
+    // Exiting toasts are still on screen, so they hold their slot until removed.
+    const onScreen = toastsRef.current.length;
     const next = pending.find((item) => item.readyAt <= now);
     const staggerReadyAt = lastShownAtRef.current + STAGGER_MS;
 
-    if (next && active < MAX_VISIBLE && now >= staggerReadyAt) {
+    if (next && onScreen < MAX_VISIBLE && now >= staggerReadyAt) {
       pending = pending.filter((item) => item !== next);
       lastShownAtRef.current = now;
       shownAtRef.current.set(next.toast.id, now);
@@ -174,8 +183,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     syncPending(pending);
 
     if (pending.length === 0) return;
-    // A full screen frees up through dismissToast, which pumps again.
-    const slotFree = toastsRef.current.filter((toast) => !toast.leaving).length < MAX_VISIBLE;
+    // A full screen frees up when dismissToast removes a toast, which pumps again.
+    const slotFree = toastsRef.current.length < MAX_VISIBLE;
     const earliestReady = Math.min(...pending.map((item) => item.readyAt));
     const wakeAt = slotFree ? Math.max(earliestReady, lastShownAtRef.current + STAGGER_MS) : earliestReady;
     if (!slotFree && earliestReady <= now) return;

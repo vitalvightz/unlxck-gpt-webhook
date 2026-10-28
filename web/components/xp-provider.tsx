@@ -11,7 +11,7 @@ import {
 } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
-import { XP_ACTIONS, resolveXpLevel, type XpAwardRecord } from "@/lib/xp";
+import { XP_ACTIONS, resolveXpLevel, type XpAction, type XpAwardRecord } from "@/lib/xp";
 import { getXpProgress, recordAppActivity } from "@/lib/xp-api";
 import { XP_REFRESH_EVENT } from "@/lib/xp-events";
 import { createFreshXpProgress, type XpProgress } from "@/lib/xp-progress";
@@ -29,6 +29,7 @@ export type XpFeedbackEvent =
       amount: number;
       label: string;
       awardIds: string[];
+      actions: XpAction[];
     }
   | {
       kind: "level_up";
@@ -171,6 +172,7 @@ export function XpProvider({ children }: Readonly<{ children: ReactNode }>) {
             amount: newAwards.reduce((total, award) => total + award.amount, 0),
             label: feedbackLabel(newAwards),
             awardIds,
+            actions: newAwards.map((award) => award.action),
           };
         }
       }

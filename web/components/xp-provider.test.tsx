@@ -222,6 +222,7 @@ test("two session awards are aggregated into one +75 routine event", async () =>
       amount: 75,
       label: "Session complete",
       awardIds: ["planned-1", "logged-1"],
+      actions: ["planned_session_completed", "training_logged"],
     });
   } finally {
     await harness.unmount();
@@ -260,6 +261,7 @@ test("milestone feedback outranks the session label in a reconciled batch", asyn
       amount: 375,
       label: "Training phase complete",
       awardIds: ["phase-1", "week-1", "planned-1", "logged-1"],
+      actions: ["phase_completed", "full_training_week_completed", "planned_session_completed", "training_logged"],
     });
   } finally {
     await harness.unmount();
@@ -355,6 +357,7 @@ test("a refresh event during an active read queues a trailing GET", async () => 
       amount: 10,
       label: "Check-in complete",
       awardIds: ["checkin-queued"],
+      actions: ["readiness_checkin_completed"],
     });
   } finally {
     await harness.unmount();

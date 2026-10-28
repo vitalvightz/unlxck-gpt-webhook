@@ -28,7 +28,7 @@ export function XpAwardFeedback() {
       tone: "success",
       durationMs: 4_500,
       delayMs: ROUTINE_DELAY_MS,
-      mergeSuffix: `+${feedback.amount} XP`,
+      merge: { suffix: `+${feedback.amount} XP`, keys: feedback.actions },
     });
     dismissFeedback();
   }, [dismissFeedback, feedback, showToast]);

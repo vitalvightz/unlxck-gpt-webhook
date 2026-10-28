@@ -86,6 +86,7 @@ import type {
   TodayCompletionStatus,
   TodaySession,
 } from "@/lib/types";
+import { XP_TOAST_KEYS } from "@/lib/xp-events";
 
 function formatSessionDate(session: TodaySession): string {
   const dayText = session.weekday_with_label || session.weekday;
@@ -893,7 +894,7 @@ export function TodaySessionPanel({
         setReviewOpen(false);
       }
       setRehabPerformance(undefined);
-      showToast(getCompletionLabel(nextStatus), { tone: "success" });
+      showToast(getCompletionLabel(nextStatus), { tone: "success", mergeKeys: XP_TOAST_KEYS.session });
       // Order matters: the confirmation toast is already up and the refresh
       // below is what surfaces the XP award, so the review prompt is queued
       // here and only renders once both have landed.

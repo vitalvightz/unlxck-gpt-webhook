@@ -87,13 +87,41 @@ test("dismissing plays the exit before the toast leaves the DOM", async (t) => {
   }
 });
 
+test("an exiting toast keeps its slot until it leaves the DOM", async (t) => {
+  const tick = useMockClock(t);
+  const ui = await mount();
+  try {
+    let first = 0;
+    act(() => {
+      first = ui.api().showToast("One");
+      ui.api().showToast("Two");
+    });
+    tick(400);
+    tick(1_000); // well past the stagger, so only the slot limit holds "Three" back
+    act(() => ui.api().dismissToast(first));
+    tick(100);
+    act(() => { ui.api().showToast("Three"); }); // arrives mid-exit
+    tick(119);
+    assert.equal(ui.toasts().length, 2, "never three on screen while one exits");
+    assert.deepEqual(ui.texts(), ["One", "Two"]);
+    tick(1);
+    assert.deepEqual(ui.texts(), ["Two", "Three"]);
+  } finally {
+    ui.cleanup();
+  }
+});
+
 test("a delayed reward folds into the confirmation it follows", async (t) => {
   const tick = useMockClock(t);
   const ui = await mount();
   try {
-    act(() => { ui.api().showToast("Sparring logged.", { tone: "success" }); });
+    act(() => { ui.api().showToast("Sparring logged.", { tone: "success", mergeKeys: ["training_logged"] }); });
     act(() => {
-      ui.api().showToast("+25 XP: Session complete", { tone: "success", delayMs: 500, mergeSuffix: "+25 XP" });
+      ui.api().showToast("+25 XP: Session complete", {
+        tone: "success",
+        delayMs: 500,
+        merge: { suffix: "+25 XP", keys: ["training_logged"] },
+      });
     });
     tick(499);
     assert.deepEqual(ui.texts(), ["Sparring logged."]);
@@ -114,10 +142,57 @@ test("a reward with nothing recent to join shows on its own", async (t) => {
   try {
     act(() => { ui.api().showToast("Could not save.", { tone: "error" }); });
     act(() => {
-      ui.api().showToast("+10 XP: Check-in", { tone: "success", delayMs: 500, mergeSuffix: "+10 XP" });
+      ui.api().showToast("+10 XP: Check-in", {
+        tone: "success",
+        delayMs: 500,
+        merge: { suffix: "+10 XP", keys: ["readiness_checkin_completed"] },
+      });
     });
     tick(500);
     assert.deepEqual(ui.texts(), ["Could not save.", "+10 XP: Check-in"]);
+  } finally {
+    ui.cleanup();
+  }
+});
+
+test("a reward only joins the confirmation of the action that earned it", async (t) => {
+  const tick = useMockClock(t);
+  const ui = await mount();
+  try {
+    act(() => {
+      ui.api().showToast("Check-in saved.", { tone: "success", mergeKeys: ["readiness_checkin_completed"] });
+      ui.api().showToast("Weigh-in saved.", { tone: "success" });
+    });
+    tick(400);
+    // The most recent success toast is the weigh-in, but the reward is the check-in's.
+    act(() => {
+      ui.api().showToast("+10 XP: Check-in complete", {
+        tone: "success",
+        delayMs: 500,
+        merge: { suffix: "+10 XP", keys: ["readiness_checkin_completed"] },
+      });
+    });
+    tick(500);
+    assert.deepEqual(ui.texts(), ["Check-in saved · +10 XP", "Weigh-in saved."]);
+  } finally {
+    ui.cleanup();
+  }
+});
+
+test("a reward never joins a confirmation that did not opt in", async (t) => {
+  const tick = useMockClock(t);
+  const ui = await mount();
+  try {
+    act(() => { ui.api().showToast("Weigh-in saved.", { tone: "success" }); });
+    act(() => {
+      ui.api().showToast("+25 XP: Session complete", {
+        tone: "success",
+        delayMs: 500,
+        merge: { suffix: "+25 XP", keys: ["training_logged"] },
+      });
+    });
+    tick(500);
+    assert.deepEqual(ui.texts(), ["Weigh-in saved.", "+25 XP: Session complete"]);
   } finally {
     ui.cleanup();
   }
