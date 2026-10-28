@@ -851,7 +851,7 @@ export function TodaySessionPanel({
           ? "No more contact today: you reported being rocked or dropped."
           : "This contact session is locked by your effective clinician clearance."
         : guidanceCanCheckOff
-          ? status === "done" ? "Guidance followed today." : "No rehab exercises at this stage. Follow the guidance, then check it off."
+          ? status === "done" ? "Guidance followed today." : "Follow the guidance, then check it off."
         : resolvedDecision.authoritativeTier === "not_checked_in"
           ? "Submit today's check-in to unlock session actions."
           : "This entry has nothing to log. Follow it as written.";
@@ -1217,7 +1217,7 @@ export function TodaySessionPanel({
         data-tone={cardTone}
         aria-labelledby="today-session-heading"
       >
-        {customOffDayCopy ? <p className="muted">{customOffDayCopy}</p> : null}
+        {customOffDayCopy && !guidanceOnlyRehabDay ? <p className="muted">{customOffDayCopy}</p> : null}
         <div className="today-card-head">
           <div>
             <p className="kicker">Today&apos;s session</p>
@@ -1341,7 +1341,7 @@ export function TodaySessionPanel({
       aria-labelledby="today-session-heading"
     >
       <AutoHeight swapKey={cardKey}>
-        {customOffDayCopy ? <p className="muted">{customOffDayCopy}</p> : null}
+        {customOffDayCopy && !guidanceOnlyRehabDay ? <p className="muted">{customOffDayCopy}</p> : null}
         <div className="today-card-head today-session-head">
           <div>
             <div className="today-session-eyebrow">

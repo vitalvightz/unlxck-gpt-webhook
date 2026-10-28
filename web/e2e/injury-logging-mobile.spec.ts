@@ -12,7 +12,10 @@ async function setup(page: Page, baseURL: string, longNames = false) {
   if (longNames) {
     view.open_injuries[0].label = "Left shoulder instability";
     view.open_injuries.push({ ...view.open_injuries[0], id: "second-injury", label: "Left ankle sprain" });
-    view.live_prescription.session.blocks[0].display_name = "Shoulder instability protective guidance";
+    Object.assign(view.live_prescription.session.blocks[0], {
+      display_name: "Shoulder instability protective guidance", is_loading: false,
+      drill_snapshot: { rehab_stage: "calm", function: "recovery_downregulation", dose: {} },
+    });
   }
   Object.assign(profile.profile, { private_trial_ack_at: "2026-10-05T12:00:00Z" });
   const now = new Date(`${view.today.training_day}T12:05:00Z`);
@@ -57,6 +60,8 @@ for (const width of [320, 390]) {
     await expect(sheet).toHaveCount(0);
     const card = page.locator(".today-session-card");
     await card.scrollIntoViewIfNeeded();
+    await expect(card).not.toContainText("Today's rehab");
+    await expect(card).not.toContainText("No rehab exercises");
     const cardBox = (await card.boundingBox())!;
     for (const selector of [".today-injury-strip", ".ex-row", ".today-injury-guidance", ".today-injury-guidance button"]) {
       const items = card.locator(selector);
