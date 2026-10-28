@@ -10330,14 +10330,26 @@ html[data-theme="light"] .today-injury-other-warning {
   padding-top: calc(var(--safe-area-top) + 64px + var(--space-5));
 }
 
+/* Phones: a slimmer bar (48px plus the safe area) so in-app browsers such as
+   Instagram's, which already stack their own controls on top, leave more of
+   the hero visible. Tap targets stay 40px. */
 @media (max-width: 960px) {
   .brand-topbar {
     gap: var(--space-2);
     padding:
-      calc(var(--safe-area-top) + 8px)
-      calc(18px + var(--safe-area-right))
-      8px
-      calc(18px + var(--safe-area-left));
+      calc(var(--safe-area-top) + 4px)
+      calc(16px + var(--safe-area-right))
+      4px
+      calc(16px + var(--safe-area-left));
+  }
+
+  .brand-topbar-logo {
+    width: 26px;
+    height: 26px;
+  }
+
+  .brand-topbar-wordmark {
+    font-size: 14px;
   }
 
   .brand-topbar-actions {
@@ -10345,7 +10357,7 @@ html[data-theme="light"] .today-injury-other-warning {
   }
 
   .app-shell:has(> .brand-topbar) .app-main {
-    padding-top: calc(var(--safe-area-top) + 56px + var(--space-3));
+    padding-top: calc(var(--safe-area-top) + 48px + var(--space-2));
   }
 }
 

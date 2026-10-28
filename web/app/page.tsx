@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ActionLink } from "@/components/action-link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { useConnectivity, useOnReconnect } from "@/components/connection-status-banner";
@@ -240,6 +240,26 @@ function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watc
   );
 }
 
+// Staggers the landing entrance: each element fades up after its own delay.
+const riseDelay = (ms: number) => ({ "--rise-delay": `${ms}ms` }) as CSSProperties;
+
+// Line icons for the three landing benefits: build (calendar), adapt
+// (sliders), track (bar chart). Decorative; the headings carry the meaning.
+const LANDING_BENEFIT_ICONS: ReactNode[] = [
+  <svg key="build" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
+    <path d="M3.5 10h17M8 3v4M16 3v4" />
+    <path d="M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01" strokeWidth="2.2" />
+  </svg>,
+  <svg key="adapt" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+    <path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1" />
+    <path d="M15 4v4M9 10v4M17 16v4" />
+  </svg>,
+  <svg key="track" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <path d="M7 19v-5M12 19V9M17 19V5" />
+  </svg>,
+];
+
 export default function HomePage() {
   const publicT = useTranslations("PublicHome");
   const locale = useLocale();
@@ -250,11 +270,11 @@ export default function HomePage() {
   const landingPreviewBlocks = [
     { name: publicT("exHeavyBag"), sets: 4, minutes: 3, change: "down" as const, tag: publicT("tagReduced") },
     { name: publicT("exReaction"), sets: 3, minutes: 2, change: "up" as const, tag: publicT("tagAdded") },
-    { name: publicT("exShadow"), sets: 3, minutes: 3, change: null, tag: null },
+    { name: publicT("exShadow"), sets: 3, minutes: 3, change: null, tag: publicT("tagUnchanged") },
   ];
-  const landingFlexibilityItems = [1, 2, 3, 4, 5, 6].map((index) => ({
-    title: publicT(`flex${index}Title`),
-    body: publicT(`flex${index}Body`),
+  const landingBenefits = [1, 2, 3].map((index) => ({
+    title: publicT(`benefit${index}Title`),
+    body: publicT(`benefit${index}Body`),
   }));
   const { isReady, isMeHydrated, hasTransientMeError, session, me, signOut, refreshMe } = useAppSession();
   const router = useRouter();
@@ -742,30 +762,49 @@ export default function HomePage() {
     );
   }
 
+  const getStartedLink = (
+    <Link href="/signup" className="cta public-hero-cta">
+      <span>{publicT("getStarted")}</span>
+      <svg className="public-cta-arrow" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+        <path d="M4 10h11m-4.5-4.5L15 10l-4.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </Link>
+  );
+
   return (
     <div className="public-landing">
       <section className="public-hero" aria-labelledby="public-hero-heading">
-        <p className="public-hero-motto">
+        <p className="public-hero-motto public-rise" style={riseDelay(0)}>
           <span>UNLXCK</span>
           <span>{publicT("mottoTagline")}</span>
         </p>
-        <h1 id="public-hero-heading" className="hero-title public-hero-title" aria-label={publicT("heroTitle")}>
+        <h1
+          id="public-hero-heading"
+          className="hero-title public-hero-title public-rise"
+          style={riseDelay(70)}
+          aria-label={publicT("heroTitle")}
+        >
           <span>{publicT("heroLine1")}</span>
           <span>{publicT("heroLine2")}</span>
         </h1>
-        <p className="public-hero-lead">{publicT("lead")}</p>
-        <p className="public-hero-summary">{publicT("summary")}</p>
-        <Link href="/signup" className="cta public-hero-cta">
-          {publicT("getStarted")}
-        </Link>
+        <p className="public-hero-lead public-rise" style={riseDelay(140)}>
+          {publicT("lead")}
+        </p>
+        <div className="public-hero-actions public-rise" style={riseDelay(210)}>
+          {getStartedLink}
+        </div>
       </section>
 
       <section className="public-preview" aria-labelledby="public-preview-heading">
-        <div className="public-section-head">
+        <div className="public-section-head public-rise" style={riseDelay(260)}>
           <p className="kicker">{publicT("previewKicker")}</p>
           <h2 id="public-preview-heading">{publicT("previewTitle")}</h2>
         </div>
-        <article className="public-today-card" aria-label={publicT("previewCardLabel")}>
+        <article
+          className="public-today-card public-rise"
+          style={riseDelay(330)}
+          aria-label={publicT("previewCardLabel")}
+        >
           <header className="public-today-head">
             <p className="public-today-eyebrow">{publicT("todaySession")}</p>
             <span className="public-today-example">{publicT("example")}</span>
@@ -779,15 +818,18 @@ export default function HomePage() {
             <span className="public-today-reason">{publicT("reasonText")}</span>
           </p>
           <ol className="public-today-blocks">
-            {landingPreviewBlocks.map((block) => (
-              <li key={block.name} className="public-today-block-row" data-change={block.change ?? undefined}>
+            {landingPreviewBlocks.map((block, index) => (
+              <li
+                key={block.name}
+                className="public-today-block-row"
+                data-change={block.change ?? undefined}
+                style={{ "--tag-delay": `${900 + index * 140}ms` } as CSSProperties}
+              >
                 <span className="public-today-block-glyph" aria-hidden="true">
                   {block.change === "up" ? "↑" : block.change === "down" ? "↓" : "·"}
                 </span>
-                <span className="public-today-block-name">
-                  {block.name}
-                  {block.tag ? <span className="sr-only"> ({block.tag})</span> : null}
-                </span>
+                <span className="public-today-block-name">{block.name}</span>
+                <span className="public-today-block-tag">{block.tag}</span>
                 <span className="public-today-block-dose">
                   {block.sets} × {formatMinutes(block.minutes)}
                 </span>
@@ -797,26 +839,29 @@ export default function HomePage() {
         </article>
       </section>
 
-      <section className="public-flex" aria-labelledby="public-flex-heading">
+      <section className="public-flex public-reveal" aria-labelledby="public-flex-heading">
         <div className="public-section-head">
           <p className="kicker">{publicT("flexKicker")}</p>
           <h2 id="public-flex-heading">{publicT("flexTitle")}</h2>
         </div>
         <ul className="public-flex-list">
-          {landingFlexibilityItems.map((item) => (
+          {landingBenefits.map((item, index) => (
             <li key={item.title} className="public-flex-item">
-              <h3>{item.title}</h3>
-              <p>{item.body}</p>
+              <span className="public-flex-icon" aria-hidden="true">
+                {LANDING_BENEFIT_ICONS[index]}
+              </span>
+              <div className="public-flex-copy">
+                <h3>{item.title}</h3>
+                <p>{item.body}</p>
+              </div>
             </li>
           ))}
         </ul>
       </section>
 
-      <section className="public-final-cta" aria-labelledby="public-final-cta-heading">
+      <section className="public-final-cta public-reveal" aria-labelledby="public-final-cta-heading">
         <h2 id="public-final-cta-heading">{publicT("finalTitle")}</h2>
-        <Link href="/signup" className="cta public-hero-cta">
-          {publicT("getStarted")}
-        </Link>
+        {getStartedLink}
       </section>
     </div>
   );
