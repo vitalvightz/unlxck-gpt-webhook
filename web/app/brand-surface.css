@@ -233,6 +233,12 @@
   transform: translateX(3px);
 }
 
+/* Native-feeling press: a quick squeeze instead of the global nudge. */
+.cta.public-hero-cta:active:not(:disabled) {
+  transform: scale(0.97);
+  transition-duration: 80ms;
+}
+
 .public-hero-cta:focus-visible {
   outline: 2px solid #ffffff;
   outline-offset: 3px;
@@ -263,6 +269,58 @@
   0% { transform: translateX(-120%) skewX(-18deg); }
   45%,
   100% { transform: translateX(340%) skewX(-18deg); }
+}
+
+/* The X in "Lxcked in." in brand red, echoing the motto's UNLXCK, with red
+   and cyan copies for its one-off tear. It sits outside the line's text
+   gradient, so its colour is set outright. */
+.public-hero-x {
+  position: relative;
+  display: inline-block;
+  color: #e0354f;
+  -webkit-text-fill-color: #e0354f;
+}
+
+.public-hero-x::before,
+.public-hero-x::after {
+  content: attr(data-char);
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.public-hero-x::before {
+  color: #ff2e4d;
+  -webkit-text-fill-color: #ff2e4d;
+}
+
+.public-hero-x::after {
+  color: #3fd8ff;
+  -webkit-text-fill-color: #3fd8ff;
+}
+
+/* Phone-only Get started bar; slides up while no other CTA is on screen. */
+.public-sticky-cta {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 60;
+  padding: 20px calc(16px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+  background: linear-gradient(to top, rgba(10, 11, 13, 0.96) 55%, rgba(10, 11, 13, 0));
+  transform: translateY(110%);
+  transition: transform 380ms var(--public-ease);
+  pointer-events: none;
+}
+
+.public-sticky-cta[data-visible="true"] {
+  transform: none;
+  pointer-events: auto;
+}
+
+.public-sticky-cta .public-hero-cta {
+  margin: 0;
 }
 
 /* Section headings shared by preview and benefits */
@@ -401,16 +459,47 @@
   list-style: none;
 }
 
+.public-today-block-slot + .public-today-block-slot {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 .public-today-block-row {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 11px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.public-today-block-row:first-child {
-  border-top: 0;
+/* Parts that only exist in the adjusted session (the readiness call and the
+   added drill) collapse to nothing while the card shows the planned one. The
+   direct child is an unpadded wrapper: padding can't shrink below itself. */
+.public-today-collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.public-today-collapse > * {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.public-today-card[data-phase="planned"] .public-today-collapse {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+/* The card's grid gap would leave a hole where the readiness call sits. */
+.public-today-card[data-phase="planned"] .public-today-decision-slot {
+  margin-top: calc(-1 * var(--space-2));
+}
+
+.public-today-card[data-phase="planned"] .public-today-block-slot.public-today-collapse {
+  border-top-color: transparent;
+}
+
+.public-today-card[data-phase="planned"] .public-today-block-tag {
+  opacity: 0;
+  transform: scale(0.85);
 }
 
 .public-today-block-glyph {
@@ -531,6 +620,23 @@
   color: #ff7d90;
 }
 
+.public-flex-icon .icon-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+
+.public-flex-icon .icon-knob,
+.public-flex-icon .icon-bar {
+  transform-box: fill-box;
+}
+
+.public-flex-icon .icon-bar {
+  transform-origin: 50% 100%;
+}
+
+.public-flex-item:nth-child(2) { --icon-delay: 140ms; }
+.public-flex-item:nth-child(3) { --icon-delay: 280ms; }
+
 .public-flex-copy {
   display: grid;
   gap: 4px;
@@ -592,9 +698,65 @@
     animation: public-rise 700ms var(--public-ease) var(--rise-delay, 0ms) both;
   }
 
-  .public-today-block-row[data-change] .public-today-block-tag,
-  .public-today-block-row[data-change] .public-today-block-glyph {
-    animation: public-pop 520ms var(--public-ease) var(--tag-delay, 900ms) both;
+  /* Planned → adjusted: the readiness call opens first, then each row
+     changes in turn (--step-delay is set per row). */
+  .public-today-collapse {
+    transition:
+      grid-template-rows 480ms var(--public-ease) var(--step-delay, 0ms),
+      margin-top 480ms var(--public-ease) var(--step-delay, 0ms),
+      opacity 360ms ease var(--step-delay, 0ms),
+      border-color 360ms ease var(--step-delay, 0ms);
+  }
+
+  .public-today-card[data-phase="adjusted"] .public-today-block-tag {
+    transition:
+      opacity 360ms ease var(--step-delay, 0ms),
+      transform 420ms var(--public-ease) var(--step-delay, 0ms);
+  }
+
+  .public-today-card[data-phase="adjusted"] .public-today-block-row[data-change] .public-today-block-glyph,
+  .public-today-card[data-phase="adjusted"] .public-today-block-row[data-change] .public-today-block-dose {
+    animation: public-tick 420ms var(--public-ease) var(--step-delay, 0ms) both;
+  }
+
+  /* Benefit icons draw in once, when the list is first seen. */
+  .public-flex-list[data-seen="false"] .icon-draw { stroke-dashoffset: 1; }
+  .public-flex-list[data-seen="false"] .icon-fade,
+  .public-flex-list[data-seen="false"] .icon-bar,
+  .public-flex-list[data-seen="false"] .icon-knob { opacity: 0; }
+
+  .public-flex-list[data-seen="true"] .icon-draw {
+    animation: icon-draw 700ms var(--public-ease) var(--icon-delay, 0ms) both;
+  }
+
+  .public-flex-list[data-seen="true"] .icon-fade {
+    animation: public-fade 300ms ease calc(var(--icon-delay, 0ms) + 500ms) both;
+  }
+
+  .public-flex-list[data-seen="true"] .icon-knob {
+    animation: icon-knob 700ms var(--public-ease) var(--icon-delay, 0ms) both;
+  }
+
+  .public-flex-list[data-seen="true"] .icon-knob-2 { --knob-from: 7px; }
+
+  .public-flex-list[data-seen="true"] .icon-bar {
+    animation: icon-bar 520ms var(--public-ease) var(--icon-delay, 0ms) both;
+  }
+
+  .public-flex-list[data-seen="true"] .icon-bar-2 { animation-delay: calc(var(--icon-delay, 0ms) + 90ms); }
+  .public-flex-list[data-seen="true"] .icon-bar-3 { animation-delay: calc(var(--icon-delay, 0ms) + 180ms); }
+
+  /* "Lxcked in.": the X tears once, after the motto has unlocked. */
+  .public-hero-x {
+    animation: unlock-jitter 140ms steps(2) 1.9s 4 both;
+  }
+
+  .public-hero-x::before {
+    animation: hero-x-tear-a 560ms steps(1) 1.9s both;
+  }
+
+  .public-hero-x::after {
+    animation: hero-x-tear-b 560ms steps(1) 1.9s both;
   }
 
   @supports (animation-timeline: view()) {
@@ -617,10 +779,10 @@
   }
 }
 
-@keyframes public-pop {
+@keyframes public-tick {
   from {
     opacity: 0;
-    transform: scale(0.8);
+    transform: translateY(-5px);
   }
   to {
     opacity: 1;
@@ -628,15 +790,66 @@
   }
 }
 
+@keyframes public-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes icon-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes icon-knob {
+  from {
+    opacity: 0;
+    transform: translateX(var(--knob-from, -7px));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes icon-bar {
+  from {
+    opacity: 0;
+    transform: scaleY(0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hero-x-tear-a {
+  0% { opacity: 0.9; clip-path: inset(0 0 55% 0); transform: translate(-4px, 0); }
+  25% { opacity: 0.9; clip-path: inset(45% 0 10% 0); transform: translate(3px, 0); }
+  50% { opacity: 0.7; clip-path: inset(70% 0 0 0); transform: translate(-2px, 0); }
+  75%, 100% { opacity: 0; clip-path: none; transform: none; }
+}
+
+@keyframes hero-x-tear-b {
+  0% { opacity: 0.9; clip-path: inset(50% 0 15% 0); transform: translate(4px, 0); }
+  25% { opacity: 0.9; clip-path: inset(0 0 60% 0); transform: translate(-3px, 0); }
+  50% { opacity: 0.7; clip-path: inset(20% 0 45% 0); transform: translate(2px, 0); }
+  75%, 100% { opacity: 0; clip-path: none; transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .public-hero-cta::after { animation: none; display: none; }
-  .public-cta-arrow { transition: none; }
+  .public-cta-arrow,
+  .public-sticky-cta { transition: none; }
 }
 
 /* Tablet: CTA sizes to its label; benefits stay stacked for readable lines */
 @media (min-width: 640px) {
   .public-landing {
     gap: 72px;
+  }
+
+  .public-sticky-cta {
+    display: none;
   }
 
   .public-hero-actions {

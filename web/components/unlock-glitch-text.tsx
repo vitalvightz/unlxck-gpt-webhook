@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
+
+import { usePrefersReducedMotion } from "@/lib/reduced-motion";
 
 // Glyphs a character cycles through before it "unlocks" into place. ASCII
 // only, so the mono font never falls back and the line keeps its width.
@@ -17,24 +19,6 @@ export function scrambleText(text: string, progress: number, random: () => numbe
     if (index < resolved || char === " ") return char;
     return SCRAMBLE_GLYPHS[Math.floor(random() * SCRAMBLE_GLYPHS.length)];
   }).join("");
-}
-
-const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
-
-function subscribeReducedMotion(onChange: () => void) {
-  const query = window.matchMedia(REDUCED_MOTION_QUERY);
-  query.addEventListener("change", onChange);
-  return () => query.removeEventListener("change", onChange);
-}
-
-/** False on the server and during hydration, so both render the same markup;
- *  the real preference applies right after. */
-function usePrefersReducedMotion(): boolean {
-  return useSyncExternalStore(
-    subscribeReducedMotion,
-    () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
-    () => false,
-  );
 }
 
 type UnlockState = "locked" | "unlocking" | "unlocked";
