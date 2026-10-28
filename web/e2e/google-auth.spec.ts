@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
-import { isolateFromNetwork } from "./support";
+import { grantSignupAccess, isolateFromNetwork } from "./support";
 
 const SUPABASE = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://stub.supabase.co";
 const ID = "00000000-0000-4000-8000-0000000000bb";
@@ -39,6 +39,7 @@ async function oauth(page: Page, baseURL: string, returning = false, dateOfBirth
 for (const route of ["/login", "/signup"]) {
   test(`${route} starts with two actions and reveals email in place`, async ({ page, baseURL }) => {
     await isolateFromNetwork(page, baseURL!);
+    if (route === "/signup") await grantSignupAccess(page, baseURL!);
     await page.goto(route);
     await expect(page.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
     await expect(page.locator("input")).toHaveCount(0);
@@ -54,6 +55,7 @@ for (const route of ["/login", "/signup"]) {
 
 test("new Google identity supplies only missing compliance and can decline health consent", async ({ page, baseURL }) => {
   const { requests } = await oauth(page, baseURL!);
+  await grantSignupAccess(page, baseURL!);
   await page.goto("/signup");
   await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
   await expect(page).toHaveURL(/\/consent$/);

@@ -1,0 +1,214 @@
+/* Invite-only gate. The brand mark sits in a red disc; the code is a row of
+   boxes; a wrong code shakes, a right one lights the boxes and the mark
+   before the account form takes over. All motion is off under reduced
+   motion. */
+
+.header { display: grid; justify-items: start; gap: 0; }
+
+/* Brand mark: a dark disc with the logo and a soft red glow. Its rings only
+   appear in the one-off burst when access is granted. */
+.mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 22px;
+  border: 1px solid rgba(224, 53, 79, 0.55);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, rgba(224, 53, 79, 0.28), rgba(14, 12, 14, 0.95) 70%);
+  box-shadow: 0 0 18px rgba(224, 53, 79, 0.3), 0 10px 30px rgba(181, 18, 43, 0.25);
+  transition: background 400ms ease, border-color 400ms ease;
+}
+
+.mark img { width: 38px; height: 38px; object-fit: contain; }
+
+.mark::before,
+.mark::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border: 1px solid rgba(224, 53, 79, 0.55);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mark[data-state="granted"] {
+  border-color: rgba(255, 255, 255, 0.8);
+  background: radial-gradient(circle at 50% 35%, #e0354f, #9b0f24 75%);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-sm);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+[data-granted] .badge { color: #ffffff; }
+
+/* Beats the global `.auth-card p` reset. */
+p.lead.lead { margin: 14px 0 0; }
+
+.form { display: grid; gap: 12px; }
+
+.label {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-sm);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* One box per character. The real input sits invisibly on top, so tapping
+   anywhere on the row focuses it and the keyboard, paste and autofill all
+   work as normal. */
+.slots {
+  position: relative;
+  display: grid;
+  gap: 10px;
+}
+
+.slotInput {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font-size: 16px; /* no iOS zoom on focus */
+  letter-spacing: 2em;
+  opacity: 0;
+  cursor: text;
+}
+
+.slot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: clamp(60px, 17vw, 68px);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: clamp(24px, 7vw, 30px);
+  font-weight: 600;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.slot[data-filled] {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.slot[data-active] {
+  border-color: #e0354f;
+  box-shadow: 0 0 0 3px rgba(224, 53, 79, 0.22);
+}
+
+/* Blinking caret in the active, empty box. */
+.slot[data-active]:empty::after {
+  content: "";
+  width: 2px;
+  height: 40%;
+  border-radius: 1px;
+  background: #e0354f;
+}
+
+.slots[data-wrong] .slot { border-color: rgba(224, 53, 79, 0.7); }
+
+.slots[data-granted] .slot {
+  border-color: rgba(125, 226, 168, 0.65);
+  background: rgba(125, 226, 168, 0.1);
+}
+
+.slots[data-granted] .slot::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #7de2a8;
+}
+
+.error { margin: 0; color: #ff8a9b; font-size: var(--type-body-sm); }
+
+.submit { width: 100%; min-height: 54px; border-radius: 10px; }
+
+.apply { display: grid; gap: 12px; }
+
+/* "No code yet?" between two hairlines. */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: var(--type-body-sm);
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-default);
+}
+
+.apply a { text-decoration: none; }
+
+.applyNote { margin: 0; color: var(--text-muted); font-size: var(--type-meta); text-align: center; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Granted: one bright burst. */
+  .mark[data-state="granted"] { animation: mark-granted 700ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .mark[data-state="granted"]::before { animation: mark-burst 900ms ease-out both; }
+  .mark[data-state="granted"]::after { animation: mark-burst 900ms ease-out 180ms both; }
+
+  .slot[data-active]:empty::after { animation: caret-blink 1s steps(2) infinite; }
+  .slots[data-wrong] { animation: slots-shake 420ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+  .slots[data-granted] .slot { animation: slot-lock 420ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--slot) * 70ms) both; }
+}
+
+@keyframes mark-granted {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+@keyframes mark-burst {
+  0% { opacity: 0.9; transform: scale(1); border-color: rgba(255, 255, 255, 0.8); }
+  100% { opacity: 0; transform: scale(1.9); border-color: rgba(224, 53, 79, 0.4); }
+}
+
+@keyframes caret-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes slots-shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-7px); }
+  40%, 60% { transform: translateX(7px); }
+}
+
+@keyframes slot-lock {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mark, .slot { transition: none; }
+}

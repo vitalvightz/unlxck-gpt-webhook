@@ -238,5 +238,23 @@
   "Safety": {
     "footerWide": "Unlxck non è un consiglio medico e non diagnostica infortuni né fornisce l'autorizzazione medica. Riduci o ferma se i sintomi peggiorano, cerca aiuto medico per i segnali d'allarme e segui il tuo coach o clinico.",
     "footerTight": "Unlxck non è un consiglio medico. Fermati se i sintomi peggiorano, cerca aiuto per i segnali d'allarme e segui il tuo coach o clinico."
+  },
+  "AccessGate": {
+    "title": "Solo su invito.",
+    "lead": "UNLXCK è in beta privata. Inserisci il tuo codice di accesso per creare l’account.",
+    "label": "Codice di accesso",
+    "submit": "Sblocca",
+    "checking": "Verifica…",
+    "error": "Il codice non è corretto. Controlla l’invito e riprova.",
+    "noCode": "Non hai ancora un codice?",
+    "apply": "Candidati alla beta",
+    "applyNote": "Apre un’email al team UNLXCK. Ti risponderemo con un codice se c’è posto.",
+    "applySubject": "Candidatura beta UNLXCK",
+    "applyBody": "Ciao team UNLXCK,\n\nVorrei entrare nella beta.\n\nNome:\nSport / disciplina:\nLivello (amatore / pro):\nInstagram (facoltativo):\nPerché voglio entrare:\n",
+    "badge": "Beta privata",
+    "hint": "Inserisci il codice di {length} caratteri dell’invito. Si invia quando è completo.",
+    "granted": "Accesso consentito",
+    "grantedTitle": "Sei dentro.",
+    "grantedLead": "Benvenuto nella beta privata. Stiamo preparando il tuo account…"
   }
 }
