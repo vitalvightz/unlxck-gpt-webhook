@@ -3,7 +3,6 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { prefersReducedMotion } from "@/lib/reduced-motion";
 
 /** Match fade-through-cover / fade-through-reveal in globals.css. */
@@ -103,7 +102,6 @@ export function FadeThroughProvider({ children }: { children: ReactNode }) {
   // navigate, and hold the black until the route has actually changed.
   const path = usePathname();
   const query = useSearchParams();
-  const router = useContext(AppRouterContext);
   const pathname = `${path}?${query?.toString() ?? ""}`;
   const pathnameNow = useRef(pathname);
   const leavingPath = useRef<string | null>(null);
@@ -151,23 +149,6 @@ export function FadeThroughProvider({ children }: { children: ReactNode }) {
       }
     }, COVER_MS));
   }, [liftAfterNavigation]);
-
-  // Capture at the document boundary so page, sidebar and bottom-tab links
-  // share one handler. Next Link still receives the event for local UI updates.
-  useEffect(() => {
-    const navigate = (event: MouseEvent) => {
-      if (!router || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
-      if (!link || link.hasAttribute("download") || (link.target && link.target !== "_self")) return;
-      const url = new URL(link.href, window.location.href);
-      if (url.origin !== window.location.origin || !/^\/plans(?:\/|$)/.test(url.pathname)) return;
-      if (url.pathname === window.location.pathname && url.search === window.location.search) return;
-      event.preventDefault();
-      fadeNavigate(() => router.push(`${url.pathname}${url.search}${url.hash}`));
-    };
-    document.addEventListener("click", navigate, true);
-    return () => document.removeEventListener("click", navigate, true);
-  }, [fadeNavigate, router]);
 
   // Arriving straight into a full screen (a page that opens its timer): start
   // already black, so the page underneath is never seen, then fade in. Call it
