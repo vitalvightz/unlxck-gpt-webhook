@@ -870,8 +870,9 @@ function unmountMain(container: HTMLElement, root: Root) {
   container.remove();
 }
 
+// The add / edit form opens in a sheet portaled to the body, so look there.
 function button(container: HTMLElement, label: string): HTMLButtonElement {
-  const found = Array.from(container.querySelectorAll("button")).find(
+  const found = Array.from((container.ownerDocument?.body ?? container).querySelectorAll("button")).find(
     (item) => item.textContent?.trim() === label,
   );
   assert.ok(found, `Expected button labelled ${label}`);
@@ -887,22 +888,21 @@ async function setInput(input: HTMLInputElement, value: string) {
   });
 }
 
-test("add injury form is collapsed by default and opens from the empty-state trigger", async () => {
+test("add injury form stays off the page and opens in its own sheet from the empty-state trigger", async () => {
   const { container, root } = mountMain();
   try {
     const trigger = button(container, "+ Add injury");
-    const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
-    assert.ok(form);
-    assert.equal(trigger.getAttribute("aria-expanded"), "false");
-    assert.equal(form.hidden, true);
+    assert.equal(document.querySelector("form.today-injury-add"), null);
+    assert.equal(trigger.getAttribute("aria-haspopup"), "dialog");
     assert.match(container.textContent ?? "", /No injuries tracked\./);
 
     await click(trigger);
 
-    assert.equal(trigger.getAttribute("aria-expanded"), "true");
-    assert.equal(trigger.textContent?.trim(), "Add injury");
-    assert.equal(form.hidden, false);
-    assert.equal(trigger.getAttribute("aria-controls"), form.id);
+    const sheet = document.querySelector('[role="dialog"][aria-modal="true"]');
+    assert.ok(sheet, "the form opens in a modal sheet");
+    assert.ok(!container.contains(sheet), "the sheet is not part of the Today page flow");
+    assert.match(sheet.querySelector("h2")?.textContent ?? "", /^Add injury$/);
+    assert.ok(sheet.querySelector("form.today-injury-add"));
   } finally {
     unmountMain(container, root);
   }
@@ -911,7 +911,7 @@ test("add injury form is collapsed by default and opens from the empty-state tri
 test("active injuries stay first with name, type, severity, actions, and the add-another label", async () => {
   const { container, root } = mountMain([mainInjury()]);
   try {
-    const list = container.querySelector(".today-injury-list");
+    const list = document.querySelector(".today-injury-list");
     const trigger = button(container, "+ Add another injury");
     assert.ok(list);
     assert.ok(
@@ -945,13 +945,13 @@ test("successful injury submission refreshes, resets, and collapses the form", a
   try {
     await click(button(container, "+ Add injury"));
     await click(button(container, "Can’t find the area? Enter it manually"));
-    const area = container.querySelector<HTMLInputElement>("#today-injury-area");
+    const area = document.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "Left ankle");
     await click(button(container, "Limiting me"));
     await click(button(container, "Soreness"));
 
-    const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
+    const form = document.querySelector<HTMLFormElement>("form.today-injury-add");
     assert.ok(form);
     await act(async () => {
       form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
@@ -971,11 +971,10 @@ test("successful injury submission refreshes, resets, and collapses the form", a
         },
       ],
     });
-    assert.equal(container.querySelector<HTMLFormElement>("form.today-injury-add")?.hidden, true);
-    assert.equal(button(container, "+ Add injury").getAttribute("aria-expanded"), "false");
+    assert.equal(document.querySelector("form.today-injury-add"), null);
 
     await click(button(container, "+ Add injury"));
-    assert.equal(container.querySelector<HTMLInputElement>("#today-injury-area"), null);
+    assert.equal(document.querySelector<HTMLInputElement>("#today-injury-area"), null);
     assert.equal(button(container, "Limiting me").getAttribute("aria-pressed"), "false");
     assert.equal(button(container, "Soreness").getAttribute("aria-pressed"), "false");
   } finally {
@@ -1026,17 +1025,17 @@ test("adding a skin injury asks the five surface questions immediately", async (
 
     await click(button(container, "+ Add injury"));
     await click(button(container, "Can’t find the area? Enter it manually"));
-    const area = container.querySelector<HTMLInputElement>("#today-injury-area");
+    const area = document.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "left hand");
     await click(button(container, "Limiting me"));
     await click(button(container, "+ Add note (optional)"));
-    const detail = container.querySelector<HTMLInputElement>("#today-injury-detail");
+    const detail = document.querySelector<HTMLInputElement>("#today-injury-detail");
     assert.ok(detail);
     await setInput(detail, "blister");
     await click(button(container, "Other"));
 
-    const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
+    const form = document.querySelector<HTMLFormElement>("form.today-injury-add");
     assert.ok(form);
     await act(async () => {
       form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
@@ -1046,7 +1045,7 @@ test("adding a skin injury asks the five surface questions immediately", async (
     // One post so far (the create), and the skin questions are already on screen
     // without the athlete having marked it easing or worse.
     assert.equal(calls.length, 1);
-    const followup = container.querySelector(".today-injury-surface-followup");
+    const followup = document.querySelector(".today-injury-surface-followup");
     assert.ok(followup, "expected the surface follow-up to open on add");
     assert.equal(followup?.getAttribute("data-mode"), "initial");
     assert.match(container.textContent ?? "", /Is it open or burst\?/);
@@ -1117,13 +1116,13 @@ test("adding a non-surface injury does not open the skin follow-up", async () =>
 
     await click(button(container, "+ Add injury"));
     await click(button(container, "Can’t find the area? Enter it manually"));
-    const area = container.querySelector<HTMLInputElement>("#today-injury-area");
+    const area = document.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "left shoulder");
     await click(button(container, "Limiting me"));
     await click(button(container, "Soreness"));
 
-    const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
+    const form = document.querySelector<HTMLFormElement>("form.today-injury-add");
     assert.ok(form);
     await act(async () => {
       form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
@@ -1131,7 +1130,7 @@ test("adding a non-surface injury does not open the skin follow-up", async () =>
     await settle();
 
     assert.equal(calls.length, 1);
-    assert.equal(container.querySelector(".today-injury-surface-followup"), null);
+    assert.equal(document.querySelector(".today-injury-surface-followup"), null);
     assert.doesNotMatch(liveText(container), /Is it open or burst\?/);
 
     act(() => root.unmount());
@@ -1181,13 +1180,13 @@ test("adding a medical-review skin injury skips the questions for its banner", a
 
     await click(button(container, "+ Add injury"));
     await click(button(container, "Can’t find the area? Enter it manually"));
-    const area = container.querySelector<HTMLInputElement>("#today-injury-area");
+    const area = document.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "right eye");
     await click(button(container, "Limiting me"));
     await click(button(container, "Other"));
 
-    const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
+    const form = document.querySelector<HTMLFormElement>("form.today-injury-add");
     assert.ok(form);
     await act(async () => {
       form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
@@ -1195,7 +1194,7 @@ test("adding a medical-review skin injury skips the questions for its banner", a
     await settle();
 
     assert.equal(calls.length, 1);
-    assert.equal(container.querySelector(".today-injury-surface-followup"), null);
+    assert.equal(document.querySelector(".today-injury-surface-followup"), null);
     assert.doesNotMatch(liveText(container), /Is it open or burst\?/);
     // Its persistent guidance stands in for the questions.
     assert.match(container.textContent ?? "", /needs checking before training/i);
@@ -1221,12 +1220,12 @@ test("failed injury submission leaves the populated form open", async () => {
   try {
     await click(button(container, "+ Add injury"));
     await click(button(container, "Can’t find the area? Enter it manually"));
-    const area = container.querySelector<HTMLInputElement>("#today-injury-area");
+    const area = document.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "Right knee");
     await click(button(container, "Limiting me"));
     await click(button(container, "Tightness"));
-    const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
+    const form = document.querySelector<HTMLFormElement>("form.today-injury-add");
     assert.ok(form);
     await act(async () => {
       form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
@@ -1234,8 +1233,8 @@ test("failed injury submission leaves the populated form open", async () => {
     await settle();
 
     assert.equal(refreshes, 0);
-    assert.equal(button(container, "Add injury").getAttribute("aria-expanded"), "true");
-    assert.equal(container.querySelector<HTMLInputElement>("#today-injury-area")?.value, "Right knee");
+    assert.ok(document.querySelector("form.today-injury-add"), "the sheet stays open after a failed save");
+    assert.equal(document.querySelector<HTMLInputElement>("#today-injury-area")?.value, "Right knee");
     assert.match(document.body.textContent ?? "", /Could not save injury/);
   } finally {
     globalThis.fetch = originalFetch;
@@ -1292,7 +1291,7 @@ test("submitting without a type says so instead of refusing silently", async () 
   try {
     await click(button(container, "+ Add injury"));
     await click(button(container, "Can’t find the area? Enter it manually"));
-    const area = container.querySelector<HTMLInputElement>("#today-injury-area");
+    const area = document.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "Left ankle");
     await click(button(container, "Limiting me"));
@@ -1300,7 +1299,7 @@ test("submitting without a type says so instead of refusing silently", async () 
     const submit = button(container, "Save injury");
     assert.equal(submit.disabled, false, "an incomplete form must still accept the tap");
 
-    const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
+    const form = document.querySelector<HTMLFormElement>("form.today-injury-add");
     assert.ok(form);
     await act(async () => {
       form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
@@ -1308,16 +1307,16 @@ test("submitting without a type says so instead of refusing silently", async () 
     await settle();
 
     assert.equal(requests, 0, "nothing may be sent without a type");
-    const alert = container.querySelector('[role="alert"]');
+    const alert = document.querySelector('[role="alert"]');
     assert.ok(alert, "expected the missing answer to be named");
     assert.match(alert?.textContent ?? "", /Pick a type/);
     // And it points at the control that stopped the submit.
-    assert.ok(container.querySelector(".today-segment-row[data-invalid]"));
+    assert.ok(document.querySelector(".today-segment-row[data-invalid]"));
 
     // Answering it clears the error without a second submit attempt.
     await click(button(container, "Other"));
-    assert.equal(container.querySelector('[role="alert"]'), null);
-    assert.equal(container.querySelector(".today-segment-row[data-invalid]"), null);
+    assert.equal(document.querySelector('[role="alert"]'), null);
+    assert.equal(document.querySelector(".today-segment-row[data-invalid]"), null);
   } finally {
     globalThis.fetch = originalFetch;
     unmountMain(container, root);
@@ -1339,7 +1338,7 @@ test("submitting without an area names the area, not the type", async () => {
     await click(button(container, "+ Add injury"));
     await click(button(container, "Soreness"));
 
-    const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
+    const form = document.querySelector<HTMLFormElement>("form.today-injury-add");
     assert.ok(form);
     await act(async () => {
       form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
@@ -1347,15 +1346,15 @@ test("submitting without an area names the area, not the type", async () => {
     await settle();
 
     assert.equal(requests, 0);
-    const alert = container.querySelector('[role="alert"]');
+    const alert = document.querySelector('[role="alert"]');
     assert.match(alert?.textContent ?? "", /Say where it is/);
 
     await click(button(container, "Can’t find the area? Enter it manually"));
-    const area = container.querySelector<HTMLInputElement>("#today-injury-area");
+    const area = document.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "Left ankle");
     await click(button(container, "Limiting me"));
-    assert.equal(container.querySelector('[role="alert"]'), null);
+    assert.equal(document.querySelector('[role="alert"]'), null);
   } finally {
     globalThis.fetch = originalFetch;
     unmountMain(container, root);
@@ -1367,26 +1366,26 @@ test("tap-first selection never opens text fields or changes impact on repeated 
   const { calls, restore } = stubCheckin();
   try {
     await click(button(container, "+ Add injury"));
-    assert.equal(container.querySelector("#today-injury-area"), null);
-    assert.equal(container.querySelector("#today-injury-detail"), null);
+    assert.equal(document.querySelector("#today-injury-area"), null);
+    assert.equal(document.querySelector("#today-injury-detail"), null);
     const selectShoulder = async () => {
-      const shoulder = container.querySelector('[aria-label="Left shoulder"]');
+      const shoulder = document.querySelector('[aria-label="Left shoulder"]');
       assert.ok(shoulder);
       await act(async () => shoulder.dispatchEvent(new window.MouseEvent("click", { bubbles: true })));
     };
     await selectShoulder();
     await click(button(container, "Tightness"));
-    const form = container.querySelector("form")!;
+    const form = document.querySelector("form")!;
     await act(async () => form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })));
     assert.equal(calls.length, 0, "impact must be an explicit choice");
-    assert.match(container.querySelector('[role="alert"]')?.textContent ?? "", /affecting your training/);
+    assert.match(document.querySelector('[role="alert"]')?.textContent ?? "", /affecting your training/);
     await click(button(container, "Not limiting me"));
     await click(button(container, "Change"));
     await selectShoulder();
     assert.equal(button(container, "Not limiting me").getAttribute("aria-pressed"), "true");
     await act(async () => form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })));
     assert.deepEqual(calls[0], { injuries: [{ body_area: "Left shoulder", description: "tightness [training_impact:not_limiting]", severity: "mild", status: "ongoing" }] });
-    assert.equal((form as HTMLFormElement).hidden, true);
+    assert.equal(document.querySelector("form.today-injury-add"), null);
   } finally { restore(); unmountMain(container, root); }
 });
 
@@ -1395,16 +1394,16 @@ test("editing a saved injury updates its flag and retains the functional answer 
   const { container, root } = mountMain([injury]);
   const { calls, restore } = stubCheckin({ openInjuries: [injury] });
   try {
-    assert.doesNotMatch(container.textContent ?? "", /training_impact/);
+    assert.doesNotMatch(document.body.textContent ?? "", /training_impact/);
     // Edit (a pencil) shows once the injury is open.
-    const summaryRow = container.querySelector<HTMLButtonElement>(".today-injury-summary-row");
+    const summaryRow = document.querySelector<HTMLButtonElement>(".today-injury-summary-row");
     if (summaryRow?.getAttribute("aria-expanded") === "false") await click(summaryRow);
     await click(button(container, "Edit"));
     assert.equal(button(container, "Limiting me").getAttribute("aria-pressed"), "true");
     assert.equal(button(container, "Tightness").getAttribute("aria-pressed"), "true");
-    assert.equal(container.querySelector("#today-injury-detail"), null);
+    assert.equal(document.querySelector("#today-injury-detail"), null);
     await click(button(container, "Can’t train normally"));
-    const form = container.querySelector("form")!;
+    const form = document.querySelector("form")!;
     await act(async () => form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })));
     assert.deepEqual(calls[0], { injuries: [{ flag_id: injury.id, body_area: "left shoulder", description: "tightness. worse when punching [training_impact:cant_train]", severity: "severe", status: "ongoing" }] });
   } finally { restore(); unmountMain(container, root); }
@@ -1415,14 +1414,14 @@ test("elbow tendon location is one simple answer in existing injury edit, retain
   const { container, root } = mountMain([injury]);
   const { calls, restore } = stubCheckin({ openInjuries: [injury] });
   try {
-    assert.doesNotMatch(container.textContent ?? "", /elbow_site/);
-    const summaryRow = container.querySelector<HTMLButtonElement>(".today-injury-summary-row");
+    assert.doesNotMatch(document.body.textContent ?? "", /elbow_site/);
+    const summaryRow = document.querySelector<HTMLButtonElement>(".today-injury-summary-row");
     if (summaryRow?.getAttribute("aria-expanded") === "false") await click(summaryRow);
     await click(button(container, "Edit"));
-    assert.match(container.textContent ?? "", /Where is the elbow problem\?/);
-    assert.equal(container.querySelector('input[type="datetime-local"]'), null);
+    assert.match(document.body.textContent ?? "", /Where is the elbow problem\?/);
+    assert.equal(document.querySelector('input[type="datetime-local"]'), null);
     await click(button(container, "Outside of elbow"));
-    const form = container.querySelector("form")!;
+    const form = document.querySelector("form")!;
     await act(async () => form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })));
     const saved = (calls[0].injuries as Array<{ description: string }>)[0].description;
     assert.equal(saved, "tendonitis [training_impact:limiting] [elbow_site:lateral]");
@@ -1445,12 +1444,12 @@ test("Other opens area-specific types that tap in the condition word", async () 
     });
     await click(button(container, "+ Add injury"));
     await click(button(container, "Can’t find the area? Enter it manually"));
-    const area = container.querySelector<HTMLInputElement>("#today-injury-area");
+    const area = document.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "left knee");
-    assert.equal(container.querySelector(".today-injury-other"), null);
+    assert.equal(document.querySelector(".today-injury-other"), null);
     await click(button(container, "Other"));
-    const picker = container.querySelector(".today-injury-other");
+    const picker = document.querySelector(".today-injury-other");
     assert.ok(picker);
     assert.match(picker.textContent ?? "", /Common for left knee/);
     for (const label of ["Sprain / rolled", "Giving way", "Hyperextended", "Cut", "Graze / mat burn"]) button(container, label);
@@ -1458,13 +1457,13 @@ test("Other opens area-specific types that tap in the condition word", async () 
     assert.ok(!Array.from(picker.querySelectorAll("button")).some((b) => b.textContent === "Blister"));
 
     await click(button(container, "Possible break"));
-    assert.match(container.textContent ?? "", /Get this checked by a clinician before training\./);
+    assert.match(document.body.textContent ?? "", /Get this checked by a clinician before training\./);
     await click(button(container, "Sprain / rolled"));
-    assert.doesNotMatch(container.textContent ?? "", /Get this checked by a clinician/);
+    assert.doesNotMatch(document.body.textContent ?? "", /Get this checked by a clinician/);
     assert.equal(button(container, "Sprain / rolled").getAttribute("aria-pressed"), "true");
     await click(button(container, "Limiting me"));
 
-    const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
+    const form = document.querySelector<HTMLFormElement>("form.today-injury-add");
     assert.ok(form);
     await act(async () => {
       form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
@@ -1494,15 +1493,15 @@ test("switching away from Other drops its specific type", async () => {
     });
     await click(button(container, "+ Add injury"));
     await click(button(container, "Can’t find the area? Enter it manually"));
-    const area = container.querySelector<HTMLInputElement>("#today-injury-area");
+    const area = document.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "right hamstring");
     await click(button(container, "Other"));
     await click(button(container, "Strain / pulled"));
     await click(button(container, "Soreness"));
-    assert.equal(container.querySelector(".today-injury-other"), null);
+    assert.equal(document.querySelector(".today-injury-other"), null);
     await click(button(container, "Limiting me"));
-    const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
+    const form = document.querySelector<HTMLFormElement>("form.today-injury-add");
     assert.ok(form);
     await act(async () => {
       form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
@@ -1522,16 +1521,16 @@ test("ankle editor adds one occasional subtype answer, defaults unknown, and hid
   const { calls, restore } = stubCheckin();
   const { container, root } = mountMain([mainInjury({ body_area: "Left ankle", description: "sprain [training_impact:limiting] [ankle_scope:unknown]" })]);
   try {
-    assert.doesNotMatch(container.textContent ?? "", /ankle_scope/);
-    const summaryRow = container.querySelector<HTMLButtonElement>(".today-injury-summary-row");
+    assert.doesNotMatch(document.body.textContent ?? "", /ankle_scope/);
+    const summaryRow = document.querySelector<HTMLButtonElement>(".today-injury-summary-row");
     if (summaryRow?.getAttribute("aria-expanded") === "false") await click(summaryRow);
     await click(button(container, "Edit"));
-    assert.match(container.textContent ?? "", /What type of sprain did your clinician describe\?/);
-    assert.equal(container.querySelector('input[type="datetime-local"]'), null);
-    assert.equal(container.querySelector('select'), null);
-    assert.doesNotMatch(container.textContent ?? "", /Balance score|ROM measurement|Assessment date/);
+    assert.match(document.body.textContent ?? "", /What type of sprain did your clinician describe\?/);
+    assert.equal(document.querySelector('input[type="datetime-local"]'), null);
+    assert.equal(document.querySelector('select'), null);
+    assert.doesNotMatch(document.body.textContent ?? "", /Balance score|ROM measurement|Assessment date/);
     await click(button(container, "Uncomplicated outer ankle sprain"));
-    const form = container.querySelector("form")!;
+    const form = document.querySelector("form")!;
     await act(async () => form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })));
     const saved = (calls[0].injuries as Array<{ description: string }>)[0].description;
     assert.equal(saved, "sprain [training_impact:limiting] [ankle_scope:uncomplicated_lateral]");
@@ -1542,16 +1541,16 @@ test("shoulder editor adds one occasional subtype answer, defaults unknown, and 
   const { calls, restore } = stubCheckin();
   const { container, root } = mountMain([mainInjury({ body_area: "Left shoulder", description: "tendonitis [training_impact:limiting] [shoulder_scope:unknown]" })]);
   try {
-    assert.doesNotMatch(container.textContent ?? "", /shoulder_scope/);
-    const summaryRow = container.querySelector<HTMLButtonElement>(".today-injury-summary-row");
+    assert.doesNotMatch(document.body.textContent ?? "", /shoulder_scope/);
+    const summaryRow = document.querySelector<HTMLButtonElement>(".today-injury-summary-row");
     if (summaryRow?.getAttribute("aria-expanded") === "false") await click(summaryRow);
     await click(button(container, "Edit"));
-    assert.match(container.textContent ?? "", /What shoulder problem did your clinician describe\?/);
-    assert.equal(container.querySelector('input[type="datetime-local"]'), null);
-    assert.equal(container.querySelector('select'), null);
-    assert.doesNotMatch(container.textContent ?? "", /Balance score|ROM measurement|Assessment date/);
+    assert.match(document.body.textContent ?? "", /What shoulder problem did your clinician describe\?/);
+    assert.equal(document.querySelector('input[type="datetime-local"]'), null);
+    assert.equal(document.querySelector('select'), null);
+    assert.doesNotMatch(document.body.textContent ?? "", /Balance score|ROM measurement|Assessment date/);
     await click(button(container, "Rotator cuff tendinopathy, no injury accident or tear"));
-    const form = container.querySelector("form")!;
+    const form = document.querySelector("form")!;
     await act(async () => form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })));
     const saved = (calls[0].injuries as Array<{ description: string }>)[0].description;
     assert.equal(saved, "tendonitis [training_impact:limiting] [shoulder_scope:nontraumatic_cuff]");
@@ -1576,8 +1575,8 @@ test(`${area} Today has no worksheet and one ${label} tap records the injury and
   try {
     await act(async () => root.render(<TodayInjuryManager openInjuries={[injury]} token="token" onRefresh={async () => { refreshAfterWriteCounts.push(calls.length); }}
       delayedPrompts={[{ injury_id: "injury", injury_episode_id: "episode", exposure_id: "exposure", region: area.toLowerCase(), question: "After rehab?", options: ["better", "same", "worse", "not_sure"] }]} />));
-    assert.doesNotMatch(container.textContent ?? "", /Heel-rise|assessor|Achilles assessment|Range of motion|Loading task/);
-    assert.equal(container.querySelector('input[type="datetime-local"]'), null);
+    assert.doesNotMatch(document.body.textContent ?? "", /Heel-rise|assessor|Achilles assessment|Range of motion|Loading task/);
+    assert.equal(document.querySelector('input[type="datetime-local"]'), null);
     await click(statusButton(container, label));
     assert.equal(calls.length, 2); // Two owned records, one athlete tap.
     assert.deepEqual(refreshAfterWriteCounts, [2], "refresh once after both writes");
@@ -1628,7 +1627,7 @@ test("a skin injury card shows only skin care, and not twice when Today already 
   assert.doesNotMatch(text, /Stage:|Stage 1 of 5|Recovery monitoring|skin-care guidance for this injury/);
   // Today's main advice already shows it: the card does not repeat it.
   await render(skin.id);
-  assert.equal(container.querySelector(".today-injury-guidance"), null);
+  assert.equal(document.querySelector(".today-injury-guidance"), null);
   cleanup();
 });
 
@@ -1643,7 +1642,7 @@ test("an injury without published exercises keeps its actual stage and content m
   const text = container.textContent ?? "";
   assert.match(text, /Stage: Calm/);
   assert.match(text, /CALM → RESTORE → LOAD → DYNAMIC → RETURN/);
-  await act(async () => (container.querySelector(".today-injury-summary-row") as HTMLButtonElement).click());
+  await act(async () => (document.querySelector(".today-injury-summary-row") as HTMLButtonElement).click());
   assert.match(container.textContent ?? "", /No rehab exercises available for this stage yet\./);
   cleanup();
 });

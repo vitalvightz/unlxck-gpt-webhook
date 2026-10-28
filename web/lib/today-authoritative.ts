@@ -631,6 +631,30 @@ export function getDistinctTodayRiskWatch(
 }
 
 /**
+ * The standing "Tracking 1 open injury: …" reminder repeats what the Injuries
+ * tile and the injury card below already say, so Today drops it whenever those
+ * are on screen. Only that soft reminder goes: a worsening or severe injury
+ * (`active_injury_worse`), the skin-care reminder ("keep it clean and
+ * covered") and every other reminder stay.
+ */
+export function withoutInjuryTrackingReminder(
+  risks: TodayCommandView["risk_watch"] | null | undefined,
+  openInjuryCount: number,
+): TodayCommandView["risk_watch"] {
+  if (openInjuryCount <= 0) {
+    return risks ?? [];
+  }
+  return (risks ?? []).filter(
+    (risk) =>
+      !(
+        risk.category === "reminder" &&
+        risk.timeframe === "active" &&
+        /^tracking \d+ open injur/i.test(risk.text?.trim() ?? "")
+      ),
+  );
+}
+
+/**
  * Preserve the legacy presentation helper for consumers outside the shared
  * resolver. Its result is display data only and must never determine session
  * safety; resolveTodayDecision keeps that authority with decision_tier.

@@ -9,7 +9,7 @@ import { ToastProvider } from "@/components/toast-provider";
 import { FadeThroughProvider } from "@/components/fade-through";
 import { timerAudio } from "@/lib/session-timer/audio";
 import { AuthProvider, AppSessionContext } from "@/components/auth-provider";
-import { TodaySessionBlocks, TodaySessionPanel } from "./today-session-panel";
+import { previewUnlockCopy, TodaySessionBlocks, TodaySessionPanel } from "./today-session-panel";
 import { resolveCurrentDay, resolveTrainingDay, toISODate } from "@/lib/camp-map";
 import type { StructuredPlan, TodayCommandView } from "@/lib/types";
 import { buildTimerItems } from "@/lib/session-timer/plan";
@@ -271,7 +271,7 @@ test("a session the backend scopes to next stays a locked preview", () => {
 
   assert.match(html, /Next session/);
   assert.match(html, /Sat 08 Aug 2026/);
-  assert.match(html, /Check in on the day to unlock this session/);
+  assert.match(html, /Available on the day after check-in\./);
   assert.doesNotMatch(html, />Start session<|>Skip session<|>Mark skipped</);
 });
 
@@ -531,7 +531,7 @@ test("a session the backend scopes to today unlocks on that scope alone", () => 
   assert.match(html, /Today&#x27;s session/);
   assert.match(html, />Start session</);
   assert.match(html, />Skip session</);
-  assert.doesNotMatch(html, /Preview only|Check in on the day/);
+  assert.doesNotMatch(html, /Preview only|after check-in\./);
   assert.match(html, /class="today-session-summary"/);
   assert.ok(html.indexOf(">Start session</") < html.indexOf('class="today-session-summary"'));
 });
@@ -1532,4 +1532,15 @@ test("local log controls reuse the calendar projection; a new plan refreshes the
     await act(async () => { root.unmount(); });
     container.remove(); globalThis.fetch = originalFetch;
   }
+});
+
+test("a previewed session says when it opens and that an injury may still change it", () => {
+  assert.equal(previewUnlockCopy("2026-10-29", "2026-10-28", false), "Available tomorrow after check-in.");
+  assert.equal(previewUnlockCopy("2026-10-31", "2026-10-28", false), "Available Saturday after check-in.");
+  assert.equal(previewUnlockCopy("2026-11-08", "2026-10-28", false), "Available on the day after check-in.");
+  assert.equal(previewUnlockCopy(undefined, "2026-10-28", false), "Available on the day after check-in.");
+  assert.equal(
+    previewUnlockCopy("2026-10-29", "2026-10-28", true),
+    "Available tomorrow after check-in. It may be adjusted for your injury.",
+  );
 });

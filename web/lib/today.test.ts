@@ -561,10 +561,7 @@ test("Today session card uses short preview wording and Next session label", () 
 
   assert.equal(source.includes('kicker: "Next session"'), true);
   assert.equal(source.includes('kicker: "Next scheduled session"'), false);
-  assert.equal(
-    source.includes("Check in on the day to unlock this session."),
-    true,
-  );
+  assert.equal(source.includes("Available ${when} after check-in."), true);
   assert.equal(source.includes("resolvedDecision.blocksCurrentSession"), true);
   assert.equal(source.includes("resolvedDecision.severeInjuryBlocksCurrentSession"), true);
   assert.equal(
@@ -690,12 +687,12 @@ test("Today renders one recommendation and feedback prompt in the required DOM o
     // Compact risks belong to the command surface, immediately after the
     // decision, rather than beneath the injury manager.
     "<TodayRiskWatch",
+    // Feedback sits with the guidance it asks about, inside the command card.
+    'surface="daily_recommendation"',
     // Session renders via the {sessionPanel} slot so its safe-replacement
     // ordering with the readiness form stays intact.
     "{sessionPanel}",
     "<TodayInjuryManager",
-    // Feedback trails the full session — last in the DOM flow.
-    'surface="daily_recommendation"',
   ];
   const positions = orderedMarkers.map((marker) => screen.indexOf(marker));
 

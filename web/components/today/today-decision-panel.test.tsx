@@ -420,3 +420,63 @@ test("a trigger never shows internal injury markers", () => {
   assert.match(html, /Bruise — getting worse/);
   assert.doesNotMatch(html, /training_impact|not_limiting|\[/);
 });
+
+test("a clear check-in names what it cleared, not only where the data came from", () => {
+  const html = render({
+    banner: { ...BANNER, displayState: "go", chip: "GO", tone: "green" },
+    tier: "modify",
+    triggers: ["Active injury"],
+    sources: ["today's check-in", "your tracked injuries"],
+  });
+
+  assert.match(html, /<li data-result="clear">Sleep: No concerns reported<\/li>/);
+  assert.match(html, /<li data-result="clear">Body and pain: No new concerns reported<\/li>/);
+  assert.match(html, /Active injury/);
+  assert.match(html, /Decision based on/);
+});
+
+test("a check-in answer that raised a contributor is never called clear", () => {
+  const html = render({
+    banner: BANNER,
+    triggers: ["Poor sleep"],
+    sources: ["today's check-in"],
+  });
+
+  assert.doesNotMatch(html, /Sleep: No concerns reported/);
+  assert.match(html, /Body and pain: No new concerns reported/);
+});
+
+test("nothing is claimed clear when the contributor list may be incomplete or ambiguous", () => {
+  const capped = render({
+    banner: BANNER,
+    triggers: ["Active injury", "Recent hard session", "Injury getting worse"],
+    sources: ["today's check-in"],
+  });
+  const ambiguous = render({
+    banner: BANNER,
+    triggers: ["Low readiness lately"],
+    sources: ["today's check-in"],
+  });
+  const injuryHold = render({
+    banner: BANNER,
+    triggers: ["Active injury"],
+    sources: ["your tracked injuries"],
+  });
+
+  for (const html of [capped, ambiguous, injuryHold]) {
+    assert.doesNotMatch(html, /No concerns reported|No new concerns reported/);
+  }
+});
+
+test("safety checks carry their outcome marker", () => {
+  const html = render({
+    banner: BANNER,
+    safetyChecks: [
+      { code: "surface_injury", label: "Skin injury", result: "no_session_change", result_label: "No change to session" },
+      { code: "surface_contact", label: "Open wound", result: "no_contact", result_label: "Contact removed" },
+    ],
+  });
+
+  assert.match(html, /<li data-result="clear">Skin injury: No change to session<\/li>/);
+  assert.match(html, /<li data-result="flag">Open wound: Contact removed<\/li>/);
+});

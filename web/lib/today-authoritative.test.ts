@@ -8,6 +8,7 @@ import {
   getTierMeta,
   getTodayDecisionBanner,
   resolveTodayDecision,
+  withoutInjuryTrackingReminder,
 } from "./today-authoritative.ts";
 import type { TodayCommandView } from "./types.ts";
 
@@ -881,4 +882,33 @@ test("the backend session_hold is the one answer: a check-in hold is 'check in f
     session_hold: { held: false, reason: null, source: null },
   });
   assert.equal(clear.blocksCurrentSession, false);
+});
+
+test("the open-injury tracking reminder is dropped only while the injury is shown elsewhere", () => {
+  const tracking: TodayCommandView["risk_watch"][number] = {
+    category: "reminder",
+    priority: 7,
+    icon: "info",
+    label: "Reminder",
+    text: "Tracking 1 open injury: Left ankle sprain. Train around it.",
+    tone: "info",
+    timeframe: "active",
+  };
+  const skin = { ...tracking, text: "Tracking 1 skin injury: Left foot blister. Keep it clean and covered." };
+  const worsening: TodayCommandView["risk_watch"][number] = {
+    ...tracking,
+    category: "active_injury_worse",
+    label: "Injury worsening",
+    text: "Left knee is severe. Keep load off it until cleared.",
+    tone: "stop",
+  };
+  const contextHold = { ...tracking, text: "Safety context is unavailable, so hard training is not cleared." };
+
+  assert.deepEqual(withoutInjuryTrackingReminder([tracking, skin, worsening, contextHold], 1), [
+    skin,
+    worsening,
+    contextHold,
+  ]);
+  assert.deepEqual(withoutInjuryTrackingReminder([tracking], 0), [tracking]);
+  assert.deepEqual(withoutInjuryTrackingReminder(undefined, 2), []);
 });

@@ -82,7 +82,7 @@ export function TodayDecisionPanel({
     return !(name.length > 3 && detailText.includes(name));
   });
   const contextLabels = clean(isPreview || isSafetyNotice ? undefined : context);
-  const checks = (isPreview ? [] : (safetyChecks ?? [])).filter(
+  const safetyRows = (isPreview ? [] : (safetyChecks ?? [])).filter(
     (check) => check.label?.trim() && check.result_label?.trim(),
   ).filter((check) => !isSafetyNotice || check.code === "surface_injury");
   const usedSources = clean(
@@ -94,6 +94,17 @@ export function TodayDecisionPanel({
         ? ["your tracked injuries"]
         : sources,
   );
+  // What the check-in cleared reads first, so a clear day explains itself
+  // instead of naming only where its data came from.
+  const checks: CheckedRow[] = [
+    ...(isPreview || isSafetyNotice ? [] : clearedCheckinFactors(triggers, usedSources)),
+    ...safetyRows.map((check) => ({
+      code: check.code,
+      label: check.label,
+      result_label: check.result_label,
+      clear: check.result === "no_session_change",
+    })),
+  ];
   const note = isPreview || isSafetyNotice ? "" : (confidenceNote ?? "").trim();
   const hasEvidence =
     triggerLabels.length > 0 ||
@@ -160,7 +171,9 @@ export function TodayDecisionPanel({
               <dd>
                 <ul className="today-decision-values">
                   {checks.map((check) => (
-                    <li key={check.code}>{`${check.label}: ${check.result_label}`}</li>
+                    <li key={check.code} data-result={check.clear ? "clear" : "flag"}>
+                      {`${check.label}: ${check.result_label}`}
+                    </li>
                   ))}
                 </ul>
               </dd>
@@ -198,6 +211,67 @@ export function TodayDecisionPanel({
       ) : null}
     </div>
   );
+}
+
+type CheckedRow = { code: string; label: string; result_label: string; clear: boolean };
+
+// Contributor labels as the backend words them (readiness_message._TRIGGER_LABELS),
+// grouped by the check-in answer that raises them.
+const SLEEP_SIGNALS = new Set(["poor sleep", "poor sleep for 3 days"]);
+const BODY_SIGNALS = new Set([
+  "high pain",
+  "manageable pain",
+  "pain for 3 days",
+  "pain getting worse",
+  "pain worse next day",
+  "feeling flat",
+  "feeling flat for 3 days",
+  "sharp pain",
+  "joint feels unstable",
+  "swelling",
+  "head or nerve symptoms",
+  "feeling unwell",
+  "can't warm up",
+]);
+// Contributors that say nothing about today's sleep or body answers.
+const OTHER_SIGNALS = new Set([
+  "injury getting worse",
+  "active injury",
+  "open skin injury",
+  "skin injury needs review",
+  "recent hard session",
+  "head impact reported",
+  "recent history incomplete",
+  "safety history unavailable",
+]);
+// The backend lists at most this many contributors (MAX_CONTRIBUTORS).
+const LISTED_CONTRIBUTOR_CAP = 3;
+
+/**
+ * The check-in answers that raised nothing, said as such ("Sleep: No concerns
+ * reported"). A poor answer always adds its own contributor, so a missing one
+ * means the answer was fine — but only while the list is provably complete.
+ * A capped list, or a contributor this map does not recognise ("Low readiness
+ * lately" could be either answer), proves nothing, and then nothing is
+ * claimed.
+ */
+function clearedCheckinFactors(triggers: string[] | undefined, sources: string[]): CheckedRow[] {
+  if (!sources.includes("today's check-in")) return [];
+  const listed = clean(triggers).map((trigger) => trigger.trim().toLowerCase());
+  if (listed.length >= LISTED_CONTRIBUTOR_CAP) return [];
+  const known = (label: string) =>
+    SLEEP_SIGNALS.has(label) || BODY_SIGNALS.has(label) || OTHER_SIGNALS.has(label) ||
+    // A named injury ("Right achilles tendonitis — restricts today's training").
+    label.includes(" — ") || label.startsWith("active ");
+  if (!listed.every(known)) return [];
+  const rows: CheckedRow[] = [];
+  if (!listed.some((label) => SLEEP_SIGNALS.has(label))) {
+    rows.push({ code: "checkin_sleep", label: "Sleep", result_label: "No concerns reported", clear: true });
+  }
+  if (!listed.some((label) => BODY_SIGNALS.has(label))) {
+    rows.push({ code: "checkin_body", label: "Body and pain", result_label: "No new concerns reported", clear: true });
+  }
+  return rows;
 }
 
 /** "Keep it controlled: skip sparring, …" reads as a short title over the

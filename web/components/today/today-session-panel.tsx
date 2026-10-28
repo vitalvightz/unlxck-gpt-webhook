@@ -1289,6 +1289,11 @@ export function TodaySessionPanel({
         "",
       )
     : textValue(session.weekday_with_label || session.weekday);
+  const unlockCopy = previewUnlockCopy(
+    session.calendar_date,
+    state.today.training_day,
+    (state.open_injuries?.length ?? 0) > 0,
+  );
   // A day of several parts is named by them, primary first ("Strength +
   // Skill"), with their own names underneath in the order they are trained.
   // Optional extras never name the day, and contact days keep their contact
@@ -1442,7 +1447,7 @@ export function TodaySessionPanel({
                   />
                   <p className="today-pending-line">
                     <span className="today-pending-pill">Pending</span>
-                    Check in on the day to unlock this session.
+                    {unlockCopy}
                   </p>
                 </div>
               </InjuryDetailSheet>
@@ -1498,7 +1503,7 @@ export function TodaySessionPanel({
           <div className="today-next-planned-note">
             <p className="today-pending-line">
               <span className="today-pending-pill">Pending</span>
-              Check in on the day to unlock this session.
+              {unlockCopy}
             </p>
             {nextIsHardCombat ? (
               <div className="today-caution-row">
@@ -1720,4 +1725,23 @@ export function TodaySessionPanel({
       </Collapse>
     </section>
   );
+}
+
+/** When a previewed session opens, in the athlete's terms ("tomorrow", not
+ * "on the day"), and that an open injury may still change it at check-in. */
+export function previewUnlockCopy(
+  sessionDate: string | null | undefined,
+  trainingDay: string | null | undefined,
+  hasOpenInjury: boolean,
+): string {
+  const days = sessionDate && trainingDay
+    ? Math.round((Date.parse(`${sessionDate.slice(0, 10)}T00:00:00Z`) - Date.parse(`${trainingDay.slice(0, 10)}T00:00:00Z`)) / 86_400_000)
+    : NaN;
+  const when = days === 1
+    ? "tomorrow"
+    : days > 1 && days < 7
+      ? new Date(`${sessionDate!.slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" })
+      : "on the day";
+  const unlock = `Available ${when} after check-in.`;
+  return hasOpenInjury ? `${unlock} It may be adjusted for your injury.` : unlock;
 }

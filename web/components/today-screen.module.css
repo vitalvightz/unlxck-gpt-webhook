@@ -116,7 +116,7 @@
 
 .hero h1 {
   margin: 2px 0;
-  font-size: clamp(44px, 12vw, 64px);
+  font-size: clamp(36px, 10vw, 56px);
   line-height: 0.95;
   letter-spacing: -0.03em;
 }
@@ -198,8 +198,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 64px;
-  padding: 10px 12px;
+  min-height: 56px;
+  padding: 8px 12px;
   text-decoration: none;
 }
 
@@ -240,25 +240,27 @@
   line-height: 1.2;
 }
 
-/* Three tiles on a phone: icon above the text so the words keep their room. */
+/* Three tiles on a phone: icon above the text so the words keep their room.
+   Kept short so the guidance and next session reach the first screen. */
 @media (max-width: 480px) {
   .tileLink,
   .tile:not(:has(.tileLink)) {
     position: relative;
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
+    gap: 6px;
+    min-height: 0;
     padding: 10px;
   }
 
   .tileIcon .icon {
-    width: 26px;
-    height: 26px;
+    width: 20px;
+    height: 20px;
   }
 
   .tile .chevron {
     position: absolute;
-    top: 18px;
+    top: 16px;
     right: 12px;
   }
 
