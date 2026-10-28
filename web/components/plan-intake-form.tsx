@@ -91,11 +91,13 @@ import { useFadeNavigate } from "@/components/fade-through";
 
 const steps = ["Profile", "Fight Context", "Training", "Restrictions", "Performance", "Review"] as const;
 const PERFORMANCE_STEP_INDEX = 4;
+const GUIDED_INJURY_MISSING_AREA_MESSAGE = "Add where it hurts before choosing how bad it is or how it's changing.";
 
 // Each validation field lives on one step. Used as a safety net so any
 // reportInvalidField caller still routes the user to the right step even
 // if the call site forgets to pass `step`.
 const FIELD_STEP_MAP: Record<string, number> = {
+  fullName: 0,
   record: 0,
   technicalStyle: 0,
   fightDate: 1,
@@ -699,7 +701,7 @@ function MobileOnboardingHeader({
       <div className="onboarding-mobile-header-copy">
         <p className="kicker">Camp Setup</p>
         <p className="onboarding-mobile-title">Build your camp profile.</p>
-        <p className="muted">Saved, resumable athlete intake.</p>
+        <p className="muted">Your answers save as you go.</p>
         <PlanSetupAlternatives />
       </div>
       <OnboardingProgressStrip
@@ -768,7 +770,7 @@ function CheckboxGroup({
           const capDisabled = disableAdditionalSelections && !checked;
           const comingSoon = Boolean(option.disabled) && !checked;
           const disabled = disableAll || comingSoon || Boolean(daysOutDisabledReason) || capDisabled;
-          const labelTitle = comingSoon ? undefined : daysOutDisabledReason ?? (capDisabled ? capDisabledReason ?? "Focus cap reached." : undefined);
+          const labelTitle = comingSoon ? undefined : daysOutDisabledReason ?? (capDisabled ? capDisabledReason ?? "Limit reached." : undefined);
           return (
             <label
               key={option.value}
@@ -856,7 +858,7 @@ function getReviewStepBlockingIssue(
   if (!parsedRounds.roundCount) return { message: "Choose round count and duration to continue.", step: 1, fieldId: "roundCount" };
   if (!parsedRounds.roundDuration) return { message: "Choose round count and duration to continue.", step: 1, fieldId: "roundDuration" };
   if (options.hardSparringWarningLocked) {
-    return { message: "Acknowledge the hard sparring warning in Training to continue.", step: 2, fieldId: "hardSparringAck" };
+    return { message: "Confirm the hard sparring warning on the Training step to continue.", step: 2, fieldId: "hardSparringAck" };
   }
   const focusValidation = validatePerformanceFocusSelections(
     nextForm.fight_date,
@@ -1061,6 +1063,8 @@ export function PlanIntakeForm() {
     const parsed = parseRoundsFormat(form.rounds_format);
     const isFieldNowValid = (() => {
       switch (invalidFieldId) {
+        case "fullName":
+          return form.athlete.full_name.trim().length > 0;
         case "record":
           return isValidRecordFormat(form.athlete.record ?? "");
         case "technicalStyle":
@@ -1663,8 +1667,8 @@ export function PlanIntakeForm() {
         kind: "warning_ack_required",
         message:
           action === "generate"
-            ? "Acknowledge the hard sparring warning in the Training step before generating."
-            : "Acknowledge the hard sparring warning in the Training step before continuing.",
+            ? "Confirm the hard sparring warning on the Training step before building your plan."
+            : "Confirm the hard sparring warning before continuing.",
         shouldRedirectToTraining: action === "generate" || currentStep > 2 || (targetStep !== undefined && targetStep > 2),
       };
     }
@@ -1715,6 +1719,14 @@ export function PlanIntakeForm() {
     return false;
   }
 
+  // Sends the athlete to the field a checklist item is about and shows the
+  // problem there, so nothing has to be fixed from the checklist itself.
+  function handleFixCheck(check: StepValidationCheck) {
+    if (!check.fix) return;
+    setMessage(null);
+    reportInvalidField({ message: check.label, fieldId: check.fix.fieldId, step: check.fix.step });
+  }
+
   function validateCurrentStep(
     nextForm: PlanRequest,
     action: TrainingGateAction = "next",
@@ -1763,14 +1775,14 @@ export function PlanIntakeForm() {
     }
     if (currentStep === 2 && !nextForm.training_availability.length) {
       return reportInvalidField({
-        message: "Pick at least one training availability day before continuing.",
+        message: "Pick at least one day you can train.",
         fieldId: "trainingAvailabilityGroup",
       });
     }
     if (currentStep === 3 && (nextForm.guided_injuries ?? []).some((injury) => hasGuidedInjuryDescriptorWithoutArea(injury))) {
       const invalidIndex = (nextForm.guided_injuries ?? []).findIndex((injury) => hasGuidedInjuryDescriptorWithoutArea(injury));
       return reportInvalidField({
-        message: "Add a pain area or body part before choosing severity or trend.",
+        message: GUIDED_INJURY_MISSING_AREA_MESSAGE,
         fieldId: invalidIndex >= 0 ? `guidedInjuryCard-${invalidIndex}` : "guidedInjuriesSection",
       });
     }
@@ -1783,7 +1795,7 @@ export function PlanIntakeForm() {
           (injury) => !injury.injury_type && !injury.notes.trim(),
         );
         return reportInvalidField({
-          message: "Add an injury type or describe the injury, or tick \"No current injuries or restrictions\" to continue.",
+          message: "Add the type of injury or describe it, or tap \"No current injuries or restrictions\" to continue.",
           fieldId: targetIndex >= 0 ? `guidedInjuryCard-${targetIndex}` : "guidedInjuryCard-0",
         });
       }
@@ -1831,7 +1843,7 @@ export function PlanIntakeForm() {
     }
     if (!nextForm.training_availability.length) {
       return reportInvalidField({
-        message: "Pick at least one training availability option before generating your plan.",
+        message: "Pick at least one day you can train.",
         fieldId: "trainingAvailabilityGroup",
         step: 2,
       });
@@ -2102,35 +2114,35 @@ export function PlanIntakeForm() {
   const selectedWeakAreas = formatJoinedLabels(selectedWeakAreaLabels, "No weak areas selected");
   const performanceFocusCapTitle = performanceFocusCapValue === null
     ? noScheduledFight
-      ? "No focus cap without a scheduled fight"
-      : "Set a fight date to calculate your focus cap"
-    : `${selectedPerformanceFocusCount} of ${performanceFocusCapValue} focus picks used`;
+      ? "No limit on picks without a fight date"
+      : "Add your fight date to see how many you can pick"
+    : `${selectedPerformanceFocusCount} of ${performanceFocusCapValue} picks used`;
   const performanceFocusCapBadge = performanceFocusCapValue === null
-    ? "No cap"
+    ? "No limit"
     : `${selectedPerformanceFocusCount}/${performanceFocusCapValue}`;
   const performanceFocusCapDetail = performanceFocusCapValue === null
     ? noScheduledFight
-      ? "Goals and weak areas share a cap once you add a fight date, so the plan can match the camp window."
-      : "Goals and weak areas share a cap once the fight date is set so the plan can match the camp window."
+      ? "Once you add a fight date, goals and weak areas share a limit so the plan fits the time you have."
+      : "Once your fight date is set, goals and weak areas share a limit so the plan fits the time you have."
     : performanceFocusCapExceeded
-      ? `Up to ${performanceFocusCapValue} goals and weak areas combined for ${performanceFocusWindowLabel}. ${performanceFocusReason} You're ${selectedPerformanceFocusCount - performanceFocusCapValue} over. Unselect to continue.`
+      ? `Up to ${performanceFocusCapValue} goals and weak areas in total for ${performanceFocusWindowLabel}. ${performanceFocusReason} Remove ${selectedPerformanceFocusCount - performanceFocusCapValue} to continue.`
       : performanceFocusCapReached
-        ? `Up to ${performanceFocusCapValue} goals and weak areas combined for ${performanceFocusWindowLabel}. ${performanceFocusReason} Limit reached. Unselect one to swap.`
-        : `Up to ${performanceFocusCapValue} goals and weak areas combined for ${performanceFocusWindowLabel}. ${performanceFocusReason} ${remainingPerformanceFocusSelections} left.`;
+        ? `Up to ${performanceFocusCapValue} goals and weak areas in total for ${performanceFocusWindowLabel}. ${performanceFocusReason} Limit reached. Remove one to swap.`
+        : `Up to ${performanceFocusCapValue} goals and weak areas in total for ${performanceFocusWindowLabel}. ${performanceFocusReason} ${remainingPerformanceFocusSelections} left.`;
   const performanceFocusCapHint = performanceFocusCapValue === null
     ? noScheduledFight
-      ? "No fight date yet. The cap opens once a fight is scheduled."
-      : "Set the fight date to lock in your focus cap."
+      ? "No fight date yet, so pick whatever matters most."
+      : "Your fight date sets how many you can pick."
     : performanceFocusCapExceeded
-      ? `${selectedPerformanceFocusCount - performanceFocusCapValue} over cap. Unselect to fit.`
+      ? `Remove ${selectedPerformanceFocusCount - performanceFocusCapValue} to continue.`
       : performanceFocusCapReached
-        ? "Cap reached. Unselect one to swap."
+        ? "Limit reached. Remove one to swap."
         : remainingPerformanceFocusSelections === 1
           ? "1 pick remaining."
           : `${remainingPerformanceFocusSelections} picks remaining.`;
   const keyGoalCapDisabledReason = performanceFocusCapReached ? FOCUS_CAP_DISABLED_REASON : undefined;
   const weakAreaCapDisabledReason = form.weak_areas.length >= 2
-    ? "Maximum of 2 weak areas reached. Unselect one to add another."
+    ? "You can pick up to 2 weak areas. Remove one to add another."
     : performanceFocusCapReached
       ? FOCUS_CAP_DISABLED_REASON
       : undefined;
@@ -2244,52 +2256,58 @@ export function PlanIntakeForm() {
   ];
   const reviewChecklistItems: StepValidationCheck[] = [
     {
-      label: form.athlete.technical_style.length ? "Combat sport is selected." : "Combat sport must be selected before generation.",
+      label: form.athlete.technical_style.length ? "Combat sport picked." : "Pick your combat sport.",
       status: form.athlete.technical_style.length ? "done" : "pending",
+      fix: { fieldId: "technicalStyle", step: 0 },
     },
     {
       label: form.fight_date
-        ? "Fight date is set."
+        ? "Fight date set."
         : noScheduledFight
-          ? "No scheduled fight (open camp)."
-          : "Fight date must be set before generation.",
+          ? "No fight scheduled yet."
+          : "Add your fight date, or tick No scheduled fight yet.",
       status: form.fight_date || noScheduledFight ? "done" : "pending",
+      fix: { fieldId: "fightDate", step: 1 },
     },
     {
       label: form.training_availability.length
-        ? "Training availability is saved."
-        : "Training availability needs at least one selected option.",
+        ? "Training days picked."
+        : "Pick at least one day you can train.",
       status: form.training_availability.length ? "done" : "pending",
+      fix: { fieldId: "trainingAvailabilityGroup", step: 2 },
     },
     {
       label:
         form.weekly_training_frequency && form.weekly_training_frequency >= 1 && form.weekly_training_frequency <= 14
-          ? "Planned sessions per week are in range."
-          : "Planned sessions per week must stay between 1 and 14.",
+          ? "Sessions per week set."
+          : "Set sessions per week (1 to 14).",
       status:
         form.weekly_training_frequency && form.weekly_training_frequency >= 1 && form.weekly_training_frequency <= 14
           ? "done"
           : "pending",
+      fix: { fieldId: "sessionsPerWeek", step: 1 },
     },
     {
       label:
         parsedRounds.roundCount && parsedRounds.roundDuration
-          ? "Round count and duration are complete."
-          : "Choose both round count and round duration before generation.",
+          ? "Rounds and round length set."
+          : "Pick how many rounds and how long each one is.",
       status: parsedRounds.roundCount && parsedRounds.roundDuration ? "done" : "pending",
+      fix: { fieldId: parsedRounds.roundCount ? "roundDuration" : "roundCount", step: 1 },
     },
     ...(availabilityConsistency.hardError
-      ? [{ label: availabilityConsistency.hardError, status: "warning" as const }]
-      : [{ label: "Training availability can support the selected session count.", status: "done" as const }]),
+      ? [{ label: availabilityConsistency.hardError, status: "warning" as const, fix: { fieldId: "availabilityConsistencyAlert", step: 2 } }]
+      : [{ label: "You have enough training days for your sessions.", status: "done" as const }]),
     ...(sparringConsistency.hardError
-      ? [{ label: sparringConsistency.hardError, status: "warning" as const }]
-      : [{ label: "Hard sparring and support days fit the current availability.", status: "done" as const }]),
+      ? [{ label: sparringConsistency.hardError, status: "warning" as const, fix: { fieldId: "sparringConsistencyAlert", step: 2 } }]
+      : [{ label: "Sparring and light days fit your training days.", status: "done" as const }]),
     ...(hardSparringWarning.message
       ? [{
           label: hardSparringWarningAcknowledged
-            ? `${hardSparringWarning.message} Acknowledged in Training.`
-            : `${hardSparringWarning.message} Return to Training to acknowledge it.`,
+            ? `${hardSparringWarning.message} Confirmed.`
+            : `${hardSparringWarning.message} Confirm it on the Training step.`,
           status: hardSparringWarningAcknowledged ? "done" : "warning",
+          fix: { fieldId: "hardSparringAck", step: 2 },
         } as const]
       : []),
   ];
@@ -2297,124 +2315,129 @@ export function PlanIntakeForm() {
     switch (currentStep) {
       case 0:
         return {
-          title: "Profile essentials",
-          description: "Save the athlete identity fields that power the rest of the intake.",
+          title: "About you",
+          description: "Only your name and combat sport are needed.",
           checks: [
             {
-              label: form.athlete.full_name.trim() ? "Full name is saved." : "Add the athlete's full name.",
+              label: form.athlete.full_name.trim() ? "Name added." : "Add your name.",
               status: form.athlete.full_name.trim() ? "done" : "pending",
+              fix: { fieldId: "fullName", step: 0 },
             },
             {
-              label: recordHasError ? "Record must use x-x or x-x-x format." : "Record format is valid.",
+              label: recordHasError ? "Write your record like 5-1 or 12-2-1." : "Record looks good.",
               status: recordHasError ? "pending" : "done",
+              fix: { fieldId: "record", step: 0 },
             },
             {
-              label: form.athlete.technical_style.length ? "Combat sport is selected." : "Select a combat sport.",
+              label: form.athlete.technical_style.length ? "Combat sport picked." : "Pick your combat sport.",
               status: form.athlete.technical_style.length ? "done" : "pending",
+              fix: { fieldId: "technicalStyle", step: 0 },
             },
           ] satisfies StepValidationCheck[],
         };
       case 1:
         return {
-          title: "Camp setup",
-          description: "Lock in the timing and round structure so the plan can scale to the fight window.",
+          title: "Your fight",
+          description: "When you fight and how long the rounds are, so the plan fits the time you have.",
           checks: [
             {
               label: form.fight_date
-                ? "Fight date is set."
+                ? "Fight date set."
                 : noScheduledFight
-                  ? "No scheduled fight selected. Open camp."
-                  : "Choose the fight date or select No scheduled fight.",
+                  ? "No fight scheduled yet. You'll get an open plan."
+                  : "Add your fight date, or tick No scheduled fight yet.",
               status: form.fight_date || noScheduledFight ? "done" : "pending",
+              fix: { fieldId: "fightDate", step: 1 },
             },
             {
               label:
                 parsedRounds.roundCount && parsedRounds.roundDuration
-                  ? "Round count and duration are complete."
-                  : "Choose both round count and round duration.",
+                  ? "Rounds and round length set."
+                  : "Pick how many rounds and how long each one is.",
               status: parsedRounds.roundCount && parsedRounds.roundDuration ? "done" : "pending",
+              fix: { fieldId: parsedRounds.roundCount ? "roundDuration" : "roundCount", step: 1 },
             },
             {
               label:
                 form.weekly_training_frequency && form.weekly_training_frequency >= 1 && form.weekly_training_frequency <= 14
-                  ? "Planned sessions per week are in range."
-                  : "Keep planned sessions per week between 1 and 14.",
+                  ? "Sessions per week set."
+                  : "Set sessions per week (1 to 14).",
               status:
                 form.weekly_training_frequency && form.weekly_training_frequency >= 1 && form.weekly_training_frequency <= 14
                   ? "done"
                   : "pending",
+              fix: { fieldId: "sessionsPerWeek", step: 1 },
             },
           ] satisfies StepValidationCheck[],
         };
       case 2:
         return {
-          title: "Training schedule",
-          description: "Make sure availability and sparring rules fit together before moving on.",
+          title: "Your training week",
+          description: "The days you can train and which ones are sparring.",
           checks: [
             {
               label: form.training_availability.length
-                ? "Training availability has at least one selected day."
-                : "Pick at least one training availability option.",
+                ? "Training days picked."
+                : "Pick at least one day you can train.",
               status: form.training_availability.length ? "done" : "pending",
+              fix: { fieldId: "trainingAvailabilityGroup", step: 2 },
             },
             {
               label: availabilityConsistency.hardError
                 ? availabilityConsistency.hardError
-                : "Availability supports the planned sessions per week.",
+                : "You have enough training days for your sessions.",
               status: availabilityConsistency.hardError ? "warning" : "done",
+              fix: { fieldId: "availabilityConsistencyAlert", step: 2 },
             },
             {
               label: sparringConsistency.hardError
                 ? sparringConsistency.hardError
-                : "Hard sparring and support work sit on valid days.",
+                : "Sparring and light days fit your training days.",
               status: sparringConsistency.hardError ? "warning" : "done",
+              fix: { fieldId: "sparringConsistencyAlert", step: 2 },
             },
             ...(hardSparringWarning.message
               ? [{
                   label: hardSparringWarningAcknowledged
-                    ? "Hard sparring recovery warning acknowledged."
-                    : "Hard sparring recovery warning needs acknowledgement.",
+                    ? "Hard sparring warning confirmed."
+                    : "Confirm the hard sparring warning.",
                   status: hardSparringWarningAcknowledged ? "done" : "warning",
+                  fix: { fieldId: "hardSparringAck", step: 2 },
                 } as const]
               : []),
           ] satisfies StepValidationCheck[],
         };
       case 3: {
         const guidedAreaMismatch = (form.guided_injuries ?? []).some((injury) => hasGuidedInjuryDescriptorWithoutArea(injury));
+        const mismatchIndex = (form.guided_injuries ?? []).findIndex((injury) => hasGuidedInjuryDescriptorWithoutArea(injury));
         return {
-          title: "Restrictions and recovery",
-          description: "Confirm injury detail is specific enough for safe loading decisions.",
+          title: "Injuries",
+          description: "Tell us what hurts so the plan can train around it.",
           checks: [
             {
               label: noRestrictions || !guidedAreaMismatch
-                ? "Restriction entries are specific enough to save."
-                : "Add a pain area or body part before choosing severity or trend.",
+                ? "Injury details are complete."
+                : GUIDED_INJURY_MISSING_AREA_MESSAGE,
               status: noRestrictions || !guidedAreaMismatch ? "done" : "pending",
+              fix: { fieldId: `guidedInjuryCard-${Math.max(mismatchIndex, 0)}`, step: 3 },
             },
           ] satisfies StepValidationCheck[],
         };
       }
       case PERFORMANCE_STEP_INDEX:
+        // The fight date is answered on the Fight step, so it is not a check
+        // here: this step only lists what can be fixed on it. A missing date is
+        // flagged on the goal-limit card instead, with a link back to the field.
         return {
-          title: "Performance focus",
-          description: "Keep goals and weak areas inside the camp-specific focus cap.",
+          title: "Goals",
+          description: "Pick what to improve. Closer to the fight, you can pick fewer.",
           checks: [
             {
-              // "No scheduled fight" is a valid answer from step 2, so it must
-              // satisfy this check too; otherwise step 5 reports "1 check left"
-              // with nothing on this step the athlete can fix.
-              label: form.fight_date
-                ? `Fight date is set, so the focus cap for ${performanceFocusWindowLabel} is active.`
-                : noScheduledFight
-                  ? "No scheduled fight, so there's no focus cap. Pick what matters most."
-                  : "Set the fight date in Fight Context to activate the focus cap guidance.",
-              status: form.fight_date || noScheduledFight ? "done" : "pending",
-            },
-            {
               label: performanceFocusCapExceeded
-                ? performanceFocusValidation.errorMessage ?? "Reduce your goals and weak areas to get back under the cap."
+                ? performanceFocusValidation.errorMessage ?? "Too many goals and weak areas. Remove some to continue."
                 : performanceFocusCapTitle,
               status: performanceFocusCapExceeded ? "warning" : "done",
+              fix: { fieldId: "keyGoalsGroup", step: PERFORMANCE_STEP_INDEX },
             },
             {
               label: performanceFocusCapDetail,
@@ -2424,8 +2447,8 @@ export function PlanIntakeForm() {
         };
       default:
         return {
-          title: "Final pre-check",
-          description: "Review the saved inputs, fix anything still open, then generate the plan.",
+          title: "Ready to build",
+          description: "Check your answers, fix anything still open, then build your plan.",
           checks: reviewChecklistItems,
         };
     }
@@ -2434,11 +2457,11 @@ export function PlanIntakeForm() {
   const actionBarTitle = currentStep === steps.length - 1 ? "Generate plan" : `Step ${currentStep + 1}: ${steps[currentStep]}`;
   const actionBarSummary = unresolvedCurrentChecks.length
     ? currentStep === steps.length - 1
-      ? `${unresolvedCurrentChecks.length} check${unresolvedCurrentChecks.length === 1 ? "" : "s"} still need attention before generation.`
-      : `${unresolvedCurrentChecks.length} check${unresolvedCurrentChecks.length === 1 ? "" : "s"} left before you continue.`
+      ? `${unresolvedCurrentChecks.length} thing${unresolvedCurrentChecks.length === 1 ? "" : "s"} to fix before you build.`
+      : `${unresolvedCurrentChecks.length} thing${unresolvedCurrentChecks.length === 1 ? "" : "s"} to fix before you continue.`
     : currentStep === steps.length - 1
-      ? "All required inputs are ready to generate."
-      : "This step is ready to continue.";
+      ? "Everything's ready. Build your plan."
+      : "Ready to continue.";
   const formActionPending = isPending;
 
   return (
@@ -2448,7 +2471,7 @@ export function PlanIntakeForm() {
           <div className="athlete-motion-slot athlete-motion-header">
             <p className="kicker">{t("eyebrow")}</p>
             <h1>{t("title")}</h1>
-            <p className="muted">Saved, resumable athlete intake.</p>
+            <p className="muted">Your answers save as you go.</p>
             <PlanSetupAlternatives />
           </div>
         </div>
@@ -2486,6 +2509,8 @@ export function PlanIntakeForm() {
           title={currentStepValidation.title}
           description={currentStepValidation.description}
           checks={currentStepValidation.checks}
+          onFix={handleFixCheck}
+          defaultOpen={currentStep === steps.length - 1}
         />
 
         {currentStep === 0 ? (
@@ -2504,7 +2529,7 @@ export function PlanIntakeForm() {
                 </div>
                 <p className="muted">Only name and combat sport are required.</p>
                 <div className="form-grid onboarding-profile-core-grid">
-                  <div className="field">
+                  <div className={`field${invalidFieldId === "fullName" ? " field-invalid" : ""}`}>
                     <label htmlFor="fullName">Full name</label>
                     <input
                       id="fullName"
@@ -2514,7 +2539,12 @@ export function PlanIntakeForm() {
                       onChange={(event) => updateAthlete("full_name", event.target.value)}
                       maxLength={ATHLETE_FULL_NAME_MAX}
                       required
+                      aria-invalid={invalidFieldId === "fullName" ? true : undefined}
+                      aria-describedby={invalidFieldId === "fullName" ? "fullName-error" : undefined}
                     />
+                    {invalidFieldId === "fullName" && error ? (
+                      <p id="fullName-error" className="error-text" role="alert">{error}</p>
+                    ) : null}
                   </div>
                   <div className={`field${invalidFieldId === "technicalStyle" ? " field-invalid" : ""}`}>
                     <label htmlFor="technicalStyle">Combat sport</label>
@@ -2817,7 +2847,7 @@ export function PlanIntakeForm() {
                     tabIndex={invalidFieldId === "availabilityConsistencyAlert" ? -1 : undefined}
                     aria-invalid={invalidFieldId === "availabilityConsistencyAlert" ? true : undefined}
                   >
-                    <p className="kicker">Consistency check</p>
+                    <p className="kicker">Schedule check</p>
                     <p className={availabilityConsistency.hardError ? "error-text" : "muted"}>
                       {availabilityConsistency.hardError ?? availabilityConsistency.softWarning}
                     </p>
@@ -3101,6 +3131,8 @@ export function PlanIntakeForm() {
                                 />
                                 {isInvalidCard && error ? (
                                   <p id={`${cardId}-error`} className="error-text" role="alert">{error}</p>
+                                ) : hasGuidedInjuryDescriptorWithoutArea(injury) ? (
+                                  <p className="error-text">{GUIDED_INJURY_MISSING_AREA_MESSAGE}</p>
                                 ) : null}
                               </div>
                             );
@@ -3135,8 +3167,21 @@ export function PlanIntakeForm() {
                   {performanceFocusCapBadge}
                 </span>
                 <div className="focus-cap-copy">
-                  <p className="focus-cap-label">Focus cap</p>
+                  <p className="focus-cap-label">Goals and weak areas</p>
                   <p className="focus-cap-hint">{performanceFocusCapHint}</p>
+                  {!form.fight_date && !noScheduledFight ? (
+                    <button
+                      type="button"
+                      className="action-link"
+                      onClick={() => reportInvalidField({
+                        message: "Add your fight date, or tick No scheduled fight yet.",
+                        fieldId: "fightDate",
+                        step: 1,
+                      })}
+                    >
+                      Add fight date
+                    </button>
+                  ) : null}
                 </div>
               </article>
               {shouldHideField(daysOutCtx, "key_goals") ? (
