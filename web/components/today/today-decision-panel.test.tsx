@@ -475,3 +475,16 @@ test("safety checks carry their outcome marker", () => {
   assert.match(html, /<li data-result="clear">Skin injury: No change to session<\/li>/);
   assert.match(html, /<li data-result="flag">Open wound: Contact removed<\/li>/);
 });
+
+
+for (const displayState of ["adjust", "pull_back"] as const) {
+  test(`${displayState} keeps named restrictions and distinct warnings without generic duplication`, () => {
+    const html = render({ banner: { ...BANNER, displayState }, triggers: [
+      "Left shoulder instability — restricts today's training", "Current injury restrictions", "High pain",
+    ] });
+    assert.match(html, /Left shoulder instability/);
+    assert.match(html, /High pain/);
+    assert.doesNotMatch(html, /Current injury restrictions/);
+    assert.match(render({ banner: { ...BANNER, displayState }, triggers: ["Current injury restrictions"] }), /Current injury restrictions/);
+  });
+}

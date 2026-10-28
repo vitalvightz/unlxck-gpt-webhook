@@ -75,7 +75,10 @@ export function TodayDecisionPanel({
   // achilles tendonitis — restricts today's training" under "Your right
   // achilles tendonitis limits ...") is said once, up there.
   const detailText = (banner.detail ?? "").toLowerCase();
-  const triggerLabels = clean(isPreview || isSafetyNotice ? undefined : triggers).filter((trigger) => {
+  const listedTriggers = clean(isPreview || isSafetyNotice ? undefined : triggers);
+  const namedRestriction = listedTriggers.some(trigger => / — restricts today's training$/i.test(trigger));
+  const triggerLabels = listedTriggers.filter((trigger) => {
+    if (namedRestriction && trigger.trim().toLowerCase() === "current injury restrictions") return false;
     const [subject, effect] = trigger.split(" — ");
     if (!effect) return true;
     const name = subject.trim().toLowerCase();
