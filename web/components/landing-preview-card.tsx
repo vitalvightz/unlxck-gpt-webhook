@@ -9,7 +9,7 @@ import { useInView } from "@/lib/use-in-view";
 type Phase = "planned" | "adjusted";
 
 // How long the planned session sits on screen before the check-in adjusts it.
-const ADJUST_AFTER_MS = 1500;
+const ADJUST_AFTER_MS = 3000;
 
 /**
  * The landing's example Today card. It first shows the session as planned,
