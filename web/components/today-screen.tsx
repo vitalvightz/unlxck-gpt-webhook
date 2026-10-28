@@ -36,7 +36,7 @@ import type { TodayCompletionStatus } from "@/lib/types";
 
 function TodayLoadingState() {
   return (
-    <section className="panel today-shell" aria-busy="true">
+    <section className="panel today-shell loading-reveal" aria-busy="true">
       <Skeleton variant="text" width={120} />
       <Skeleton variant="text" width="70%" height={42} />
       <Skeleton variant="block" height={180} />

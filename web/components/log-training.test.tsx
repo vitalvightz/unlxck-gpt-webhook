@@ -258,6 +258,13 @@ test("switching sport clears a session type that no longer fits, but keeps Stren
   } finally { ui.cleanup(); }
 });
 
+/** Text a person can still read or reach: a closing section fades out inert. */
+function liveText(container: HTMLElement): string {
+  const copy = container.cloneNode(true) as HTMLElement;
+  copy.querySelectorAll("[inert]").forEach((node) => node.remove());
+  return copy.textContent ?? "";
+}
+
 test("saving needs only activity, duration and effort; exercises are a dismissible offer afterwards", async () => {
   const ui = await mount([]);
   try {
@@ -270,9 +277,10 @@ test("saving needs only activity, duration and effort; exercises are a dismissib
     assert.match(ui.container.textContent!, /Session saved/);
     const offer = [...ui.container.querySelectorAll("button")].find(item => item.textContent?.startsWith("Add exercises"));
     assert.ok(offer, "Add exercises is offered beside the takeaway");
-    assert.equal(ui.container.querySelectorAll("dialog[open]").length, 0, "nothing opens until the athlete asks");
+    // The log sheet itself may still be sliding away.
+    assert.equal(ui.container.querySelectorAll("dialog[open]:not([data-closing])").length, 0, "nothing opens until the athlete asks");
     await ui.click("Optional — skip anytime");
-    assert.doesNotMatch(ui.container.textContent!, /Add exercises/);
+    assert.doesNotMatch(liveText(ui.container), /Add exercises/);
     assert.equal(ui.calls.length, 1);
   } finally { ui.cleanup(); }
 });

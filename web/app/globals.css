@@ -17366,9 +17366,28 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
     rgba(255, 255, 255, 0.04) 75%
   );
   background-size: 200% 100%;
-  animation: skeleton-shimmer 1.4s linear infinite;
+  /* Hidden for the first 250ms: most loads finish sooner, and a skeleton that
+     shows for a frame or two reads as a flicker, not as loading. */
+  animation:
+    skeleton-appear 180ms ease-out 250ms both,
+    skeleton-shimmer 1.4s linear infinite;
   border-radius: 8px;
   vertical-align: middle;
+}
+
+/* A whole loading layout (its panels as well as its skeletons) waits the same
+   250ms before it appears. */
+.loading-reveal {
+  animation: skeleton-appear 180ms ease-out 250ms both;
+}
+
+@keyframes skeleton-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .skeleton-text {
@@ -17394,8 +17413,10 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .skeleton {
-    animation: none;
+  /* Still waits before appearing, but with no fade or shimmer. */
+  .skeleton,
+  .loading-reveal {
+    animation: skeleton-appear 1ms linear 250ms both;
   }
 }
 

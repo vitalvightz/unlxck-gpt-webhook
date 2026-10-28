@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { useGenerationStatus } from "@/components/generation-status-provider";
@@ -91,6 +91,14 @@ export function MobileTabBar() {
   const { isReady, session } = useAppSession();
   const { isActive: generationActive } = useGenerationStatus();
   const barRef = useRef<HTMLElement>(null);
+  // The tapped tab lights at once. The route commits a moment later, and
+  // waiting for it left the old tab lit over the new page for a frame or two.
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [seenPath, setSeenPath] = useState(pathname);
+  if (pathname !== seenPath) {
+    setSeenPath(pathname);
+    setPendingHref(null);
+  }
 
   const isHidden = !isReady || !showsMobileTabBar(pathname, Boolean(session));
 
@@ -187,13 +195,17 @@ export function MobileTabBar() {
   return (
     <nav ref={barRef} className="mobile-tab-bar" aria-label={t("primary")}>
       {BOTTOM_NAV_ITEMS.map((tab) => {
-        const active = isTabActive(pathname, tab.href);
+        const active = pendingHref ? pendingHref === tab.href : isTabActive(pathname, tab.href);
         return (
           <Link
             key={tab.href}
             href={tab.href}
             className={`mobile-tab-bar-item${active ? " mobile-tab-bar-item-active" : ""}`}
             aria-current={active ? "page" : undefined}
+            onClick={(event) => {
+              const plainTap = !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && event.button === 0;
+              if (plainTap && !isTabActive(pathname, tab.href)) setPendingHref(tab.href);
+            }}
           >
             <span className="mobile-tab-bar-icon" aria-hidden="true">
               {TAB_ICONS[tab.href]}
