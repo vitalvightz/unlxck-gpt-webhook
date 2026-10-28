@@ -1682,7 +1682,7 @@ export function TodaySessionPanel({
         />
       ) : null}
 
-      <Collapse show={Boolean(reviewableSession)} gap="14px">
+      <Collapse show={Boolean(reviewableSession)}>
         {reviewableSession ? (
           <SessionFeedbackPrompt
             key={reviewableSession.sessionId}

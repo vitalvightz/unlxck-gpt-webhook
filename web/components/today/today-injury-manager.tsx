@@ -810,14 +810,14 @@ export function TodayInjuryManager({
                   <InjuryClearance key={`${injury.id}:${injury.episode_id}`} injury={injury} token={token} onRefresh={onRefresh} />
                   <button type="button" className={`today-tool-link injury-resolve-link${confirmingClearId === injury.id ? " today-segment-pending" : ""}${selectedStatus === "resolved" ? " today-segment-active" : ""}`} aria-pressed={selectedStatus === "resolved"} aria-describedby={confirmingClearId === injury.id ? `${injury.id}-pending-hint` : undefined}
                     disabled={isAdding || pendingFlagId !== null} onClick={() => handleInjuryAction(injury, "resolved")}>Mark resolved</button>
-                  <Collapse show={confirmingClearId === injury.id || surfaceFollowUpId === injury.id} gap="12px">
+                  <Collapse show={confirmingClearId === injury.id || surfaceFollowUpId === injury.id}>
                     {confirmingClearId === injury.id || surfaceFollowUpId === injury.id ? (
                       <p id={`${injury.id}-pending-hint`} className="today-injury-pending-hint">
                         Not saved yet. Confirm below.
                       </p>
                     ) : null}
                   </Collapse>
-                  <Collapse show={surfaceFollowUpId === injury.id} gap="12px">
+                  <Collapse show={surfaceFollowUpId === injury.id}>
                     {surfaceFollowUpId === injury.id ? (
                       <div
                         className="today-injury-surface-followup"
@@ -935,7 +935,7 @@ export function TodayInjuryManager({
                       </div>
                     ) : null}
                   </Collapse>
-                  <Collapse show={confirmingClearId === injury.id} gap="12px">
+                  <Collapse show={confirmingClearId === injury.id}>
                     {confirmingClearId === injury.id ? (
                       <div
                         className="today-injury-confirm"

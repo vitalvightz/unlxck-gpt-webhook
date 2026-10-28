@@ -49,7 +49,20 @@ test("opening eases in; closing keeps the last content, inert, until the exit en
     assert.equal(ui.wrapper()?.getAttribute("aria-hidden"), "true");
     assert.match(ui.container.textContent ?? "", /Follow-up/);
 
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, COLLAPSE_EXIT_MS + 20)); });
+    // Its own exit animation ending is what removes it.
+    await act(async () => { ui.wrapper()!.dispatchEvent(new window.Event("animationend", { bubbles: true })); });
+    assert.equal(ui.wrapper(), null);
+  } finally {
+    ui.cleanup();
+  }
+});
+
+test("a closing section still goes if its exit animation never reports ending", async () => {
+  const ui = await mount(true);
+  try {
+    await ui.show(false);
+    assert.equal(ui.wrapper()?.dataset.phase, "leaving");
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, COLLAPSE_EXIT_MS + 200)); });
     assert.equal(ui.wrapper(), null);
   } finally {
     ui.cleanup();
@@ -63,7 +76,7 @@ test("reopening mid-exit brings the section straight back", async () => {
     await ui.show(true);
     assert.equal(ui.wrapper()?.dataset.phase, "entering");
     assert.equal(ui.wrapper()?.hasAttribute("inert"), false);
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, COLLAPSE_EXIT_MS + 20)); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, COLLAPSE_EXIT_MS + 200)); });
     assert.notEqual(ui.wrapper(), null);
   } finally {
     ui.cleanup();
