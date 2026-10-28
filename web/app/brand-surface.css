@@ -679,21 +679,21 @@
      changes in turn (--step-delay is set per row). */
   .public-today-collapse {
     transition:
-      grid-template-rows 480ms var(--public-ease) var(--step-delay, 0ms),
-      margin-top 480ms var(--public-ease) var(--step-delay, 0ms),
-      opacity 360ms ease var(--step-delay, 0ms),
-      border-color 360ms ease var(--step-delay, 0ms);
+      grid-template-rows 800ms var(--public-ease) var(--step-delay, 0ms),
+      margin-top 800ms var(--public-ease) var(--step-delay, 0ms),
+      opacity 600ms ease var(--step-delay, 0ms),
+      border-color 600ms ease var(--step-delay, 0ms);
   }
 
   .public-today-card[data-phase="adjusted"] .public-today-block-tag {
     transition:
-      opacity 360ms ease var(--step-delay, 0ms),
-      transform 420ms var(--public-ease) var(--step-delay, 0ms);
+      opacity 600ms ease var(--step-delay, 0ms),
+      transform 700ms var(--public-ease) var(--step-delay, 0ms);
   }
 
   .public-today-card[data-phase="adjusted"] .public-today-block-row[data-change] .public-today-block-glyph,
   .public-today-card[data-phase="adjusted"] .public-today-block-row[data-change] .public-today-block-dose {
-    animation: public-tick 420ms var(--public-ease) var(--step-delay, 0ms) both;
+    animation: public-tick 700ms var(--public-ease) var(--step-delay, 0ms) both;
   }
 
   /* Benefit icons draw in once, when the list is first seen. */
