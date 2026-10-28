@@ -12,6 +12,7 @@ import { getAuthenticatedLandingHref, needsStartingPath } from "@/lib/auth-routi
 import { EmptyState } from "@/components/empty-state";
 import { FightCountdown } from "@/components/fight-countdown";
 import { InstallUnlxck } from "@/components/install-unlxck";
+import { UnlockGlitchText } from "@/components/unlock-glitch-text";
 import { PlansFeaturedSkeleton, Skeleton } from "@/components/skeleton";
 import { XpProgressCard, XpProgressCardSkeleton } from "@/components/xp-progress-card";
 import { TrainingSummaryCard } from "@/components/training-summary-card";
@@ -775,8 +776,9 @@ export default function HomePage() {
     <div className="public-landing">
       <section className="public-hero" aria-labelledby="public-hero-heading">
         <p className="public-hero-motto public-rise" style={riseDelay(0)}>
-          <span>UNLXCK</span>
-          <span>{publicT("mottoTagline")}</span>
+          <span className="sr-only">UNLXCK {publicT("mottoTagline")}</span>
+          <UnlockGlitchText text="UNLXCK" className="public-hero-motto-brand" delayMs={150} />
+          <UnlockGlitchText text={publicT("mottoTagline")} className="public-hero-motto-tagline" delayMs={450} />
         </p>
         <h1
           id="public-hero-heading"

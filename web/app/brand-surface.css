@@ -55,35 +55,125 @@
   display: inline-flex;
   align-items: center;
   justify-self: start;
-  gap: 10px;
+  gap: 12px;
   margin: 0;
-  padding: 6px 12px 6px 10px;
-  border: 1px solid rgba(181, 18, 43, 0.35);
-  border-radius: 999px;
-  background: rgba(181, 18, 43, 0.08);
   font-family: var(--font-mono);
   font-size: var(--type-label-sm);
   font-weight: 700;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
-.public-hero-motto::before {
+.public-hero-motto::after {
   content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--brand-red);
-  box-shadow: 0 0 0 3px rgba(181, 18, 43, 0.25);
+  width: 28px;
+  height: 1px;
+  background: rgba(181, 18, 43, 0.68);
 }
 
-.public-hero-motto span:first-child {
-  color: #f2f3f5;
+.public-hero-motto-brand {
+  color: #e0354f;
   letter-spacing: 0.22em;
 }
 
-.public-hero-motto span:last-child {
+.public-hero-motto-tagline {
   color: var(--text-muted);
   letter-spacing: 0.04em;
+}
+
+/* Unlock glitch: red and cyan copies of the text (from data-text) split
+   apart and tear while the characters decode, flash once as they lock in,
+   then the brand word glitches briefly every few seconds. */
+.unlock-glitch {
+  position: relative;
+  display: inline-block;
+}
+
+.unlock-glitch::before,
+.unlock-glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.unlock-glitch::before {
+  color: #ff2e4d;
+}
+
+.unlock-glitch::after {
+  color: #3fd8ff;
+}
+
+.unlock-glitch[data-state="locked"] {
+  opacity: 0.35;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .unlock-glitch[data-state="unlocking"] {
+    animation: unlock-jitter 140ms steps(2) infinite;
+  }
+
+  .unlock-glitch[data-state="unlocking"]::before {
+    opacity: 0.85;
+    animation: unlock-tear-a 220ms steps(2) infinite;
+  }
+
+  .unlock-glitch[data-state="unlocking"]::after {
+    opacity: 0.85;
+    animation: unlock-tear-b 260ms steps(2) infinite;
+  }
+
+  .unlock-glitch[data-state="unlocked"] {
+    animation: unlock-flash 700ms ease-out both;
+  }
+
+  .public-hero-motto-brand[data-state="unlocked"]::before {
+    animation: unlock-burst-a 5s steps(1) 2s infinite;
+  }
+
+  .public-hero-motto-brand[data-state="unlocked"]::after {
+    animation: unlock-burst-b 5s steps(1) 2s infinite;
+  }
+}
+
+@keyframes unlock-jitter {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(-1px, 1px); }
+  100% { transform: translate(1px, 0); }
+}
+
+@keyframes unlock-tear-a {
+  0% { clip-path: inset(0 0 60% 0); transform: translate(-3px, 0); }
+  50% { clip-path: inset(40% 0 10% 0); transform: translate(2px, 0); }
+  100% { clip-path: inset(70% 0 0 0); transform: translate(-1px, 0); }
+}
+
+@keyframes unlock-tear-b {
+  0% { clip-path: inset(50% 0 20% 0); transform: translate(3px, 0); }
+  50% { clip-path: inset(0 0 70% 0); transform: translate(-2px, 0); }
+  100% { clip-path: inset(20% 0 40% 0); transform: translate(2px, 0); }
+}
+
+@keyframes unlock-flash {
+  0% { text-shadow: 0 0 14px rgba(255, 46, 77, 0.9); filter: brightness(1.6); }
+  100% { text-shadow: none; filter: none; }
+}
+
+/* Idle for most of the cycle; a ~250ms tear near the end. */
+@keyframes unlock-burst-a {
+  0%, 92%, 97%, 100% { opacity: 0; clip-path: none; transform: none; }
+  93% { opacity: 0.8; clip-path: inset(0 0 55% 0); transform: translate(-3px, 0); }
+  94.5% { opacity: 0.8; clip-path: inset(45% 0 15% 0); transform: translate(2px, 0); }
+  96% { opacity: 0.6; clip-path: inset(75% 0 0 0); transform: translate(-1px, 0); }
+}
+
+@keyframes unlock-burst-b {
+  0%, 92%, 97%, 100% { opacity: 0; clip-path: none; transform: none; }
+  93% { opacity: 0.8; clip-path: inset(50% 0 10% 0); transform: translate(3px, 0); }
+  94.5% { opacity: 0.8; clip-path: inset(0 0 65% 0); transform: translate(-2px, 0); }
+  96% { opacity: 0.6; clip-path: inset(25% 0 45% 0); transform: translate(1px, 0); }
 }
 
 .public-hero .public-hero-title {
