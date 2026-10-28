@@ -423,13 +423,13 @@ export function TodayScreen() {
             the athlete something to judge, rather than at the foot of the page. */}
         {hasPlan && !error && decisionBanner && resolvedDecision.recommendationState !== "not_checked_in" ? (
           <details className="today-feedback-disclosure">
-            <summary>Does today's guidance fit how you feel?</summary>
-          <ContextualFeedback
-            key={`daily-feedback-${state.active_plan?.id ?? "none"}-${state.today.training_day}`}
-            token={token ?? ""}
-            surface="daily_recommendation"
-            className="today-feedback-card"
-          />
+            <summary>Does today&apos;s guidance fit how you feel?</summary>
+            <ContextualFeedback
+              key={`daily-feedback-${state.active_plan?.id ?? "none"}-${state.today.training_day}`}
+              token={token ?? ""}
+              surface="daily_recommendation"
+              className="today-feedback-card"
+            />
           </details>
         ) : null}
       </section>
