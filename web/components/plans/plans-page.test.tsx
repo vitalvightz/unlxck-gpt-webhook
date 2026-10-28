@@ -194,35 +194,24 @@ test("management lives in a sheet: make active only for an eligible saved plan, 
   }
 });
 
-test("the athlete profile is one line that opens its details", async () => {
-  const view = await mountPlans([plan("active-1")], "active-1");
+test("plan management precedes compact tools and discovery stays in the library", async () => {
+  const view = await mountPlans([plan("active-1"), plan("saved-1"), plan("archived-1", { status: "archived" })], "active-1");
   try {
-    const row = view.host.querySelector<HTMLButtonElement>('button[aria-label="Athlete profile: King · Boxing · Pressure Fighter"]');
-    assert.ok(row, view.host.textContent ?? "");
-    await view.click(row);
-    const sheet = openDialog();
-    assert.match(sheet?.textContent ?? "", /Tactical style/);
-    assert.match(sheet?.textContent ?? "", /Complete Camp Setup/);
-  } finally {
-    await view.cleanup();
-  }
-});
-
-test("the profile uses the saved photo, falls back on image failure, and opens profile editing", async () => {
-  const avatar = "https://example.com/saved-athlete-photo.jpg";
-  const view = await mountPlans([], null, { avatar_url: avatar });
-  try {
-    const row = view.host.querySelector<HTMLButtonElement>('button[aria-label^="Athlete profile:"]');
-    const image = row?.querySelector("img");
-    assert.equal(image?.getAttribute("src"), avatar);
-    await act(async () => image?.dispatchEvent(new window.Event("error")));
-    assert.equal(row?.querySelector("img"), null);
-    assert.equal(row?.querySelector('[aria-hidden="true"]')?.textContent, "K");
-    await view.click(row);
-    assert.equal(openDialog()?.querySelector('a[href="/settings#account"]')?.textContent, "Edit profile & photo");
+    assert.equal(view.host.querySelector('button[aria-label^="Athlete profile:"]'), null);
+    assert.doesNotMatch(view.host.textContent ?? "", /Featured drill|My submissions/);
+    const card = view.host.querySelector("article")!;
+    const saved = view.host.querySelector('section[aria-label="Saved plans"]')!;
+    const tools = view.host.querySelector('section[aria-label="Training tools"]')!;
+    assert.ok(card.compareDocumentPosition(saved) & window.Node.DOCUMENT_POSITION_FOLLOWING);
+    assert.ok(saved.compareDocumentPosition(tools) & window.Node.DOCUMENT_POSITION_FOLLOWING);
+    assert.equal(tools.querySelector('a')?.getAttribute('href'), '/plans/library');
+    const toggle = view.host.querySelector('button[aria-controls="plans-archive"]');
+    assert.equal(toggle?.getAttribute('aria-expanded'), 'false');
+    assert.equal(view.host.querySelector('#plans-archive'), null);
+    await view.click(toggle);
+    assert.match(view.host.querySelector('#plans-archive')?.textContent ?? '', /Archived/);
   } finally { await view.cleanup(); }
 });
-
 
 test("custom drafts share the saved plan list with a clear badge and open the builder", async () => {
   const draft: CustomPlan = { id: "draft-1", name: "My strength week", kind: "self_directed",

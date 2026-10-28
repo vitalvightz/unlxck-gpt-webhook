@@ -201,7 +201,7 @@ for (const width of [320, 390, 1280]) {
   });
 }
 
-for (const width of [390, 1280]) {
+for (const width of [320, 390, 1280]) {
   test(`Plan actions and featured curated demo (${width}px)`, async ({ page, baseURL }) => {
     await page.setViewportSize({ width, height: 844 });
     await setup(page, baseURL!);
@@ -210,10 +210,38 @@ for (const width of [390, 1280]) {
     // External services are isolated in CI. Thumbnail identity and the actual
     // native player are checked here; live thumbnail/playback get separate QA.
     await page.route("https://i.ytimg.com/**", route => route.fulfill({ status: 204, body: "" }));
-    await page.goto("/plan");
+    const active = { plan_id: "active-custom", athlete_id: athlete, full_name: "Carlos", plan_name: "Gang",
+      custom_plan_id: "custom-1", fight_date: "", technical_style: ["boxing"],
+      created_at: "2026-10-28T10:00:00Z", status: "ready", activation_state: "eligible" };
+    await page.route("**/api/plans", route => route.fulfill({ json: [active,
+      { ...active, plan_id: "saved-custom", plan_name: "Beast Mode", custom_plan_id: "custom-2" },
+      { ...active, plan_id: "archived-custom", plan_name: "Old programme", status: "archived" }] }));
+    await page.route("**/api/plans/active", route => route.fulfill({ json: active }));
+    await page.route("**/api/custom-plans", route => route.fulfill({ json: [] }));
+    const errors: string[] = [];
+    page.on("pageerror", error => errors.push(error.message));
+    const consoleErrors: string[] = [];
+    page.on("console", message => { if (message.type() === "error") consoleErrors.push(message.text()); });
+    await page.goto("/plans");
+    await expect(page.getByRole("heading", { name: "Gang", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Open training plan" })).toHaveAttribute("href", "/plans/active-custom");
+    await expect(page.getByRole("link", { name: "Edit Plan", exact: true })).toHaveAttribute("href", "/plans/custom?plan=custom-1");
+    await page.getByRole("button", { name: "Manage", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "Gang", exact: true })).toContainText("Rename");
+    await page.keyboard.press("Escape");
+    const archive = page.getByRole("button", { name: /^Archived/ });
+    await expect(archive).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByText("Old programme", { exact: true })).toHaveCount(0);
+    await archive.click();
+    await expect(page.getByText("Old programme", { exact: true })).toBeVisible();
+    await archive.click();
+    await expect(page.locator(".app-safety-footer")).toBeHidden();
     const log = page.getByRole("button", { name: "Log session", exact: true });
     const find = page.getByRole("link", { name: "Find a Drill", exact: true });
     const logBox = (await log.boundingBox())!;
+    const savedBox = (await page.getByRole("region", { name: "Saved plans", exact: true }).boundingBox())!;
+    expect(logBox.y).toBeGreaterThan(savedBox.y + savedBox.height);
+    expect(logBox.height).toBeLessThan(90);
     const findBox = (await find.boundingBox())!;
     expect(Math.abs(logBox.y - findBox.y)).toBeLessThan(2);
     expect(Math.abs(logBox.width - findBox.width)).toBeLessThan(2);
@@ -222,12 +250,20 @@ for (const width of [390, 1280]) {
     await expect(page.getByRole("dialog", { name: "Log session", exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(log).toBeFocused();
-    const profile = page.getByRole("button", { name: /^Athlete profile:/ });
-    await profile.click();
-    await expect(page.getByRole("link", { name: "Edit profile & photo" })).toHaveAttribute("href", "/settings#account");
-    await page.keyboard.press("Escape");
+    await expect(page.getByRole("button", { name: /^Athlete profile:/ })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "Featured drill", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "My submissions", exact: true })).toHaveCount(0);
+    await page.screenshot({ path: test.info().outputPath(`plan-compact-${width}.png`), fullPage: true, animations: "disabled" });
+    await find.click();
+    await expect(page).toHaveURL(/\/plans\/library$/);
+    await expect(page.getByRole("button", { name: "My submissions", exact: true })).toBeVisible();
+    await expect(page.locator(".app-safety-footer")).toBeVisible();
     const featured = page.getByRole("region", { name: "Featured drill", exact: true });
     await expect(featured).toContainText("Editor’s pick");
+    await featured.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: test.info().outputPath(`library-featured-${width}.png`), animations: "disabled" });
+    expect(errors).toEqual([]);
+    expect(consoleErrors).toEqual([]);
     const featuredBox = (await featured.boundingBox())!;
     const mainBox = (await page.getByRole("main").boundingBox())!;
     expect(Math.abs(featuredBox.x + featuredBox.width / 2 - mainBox.x - mainBox.width / 2)).toBeLessThan(2);
