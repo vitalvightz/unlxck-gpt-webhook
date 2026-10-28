@@ -50,6 +50,21 @@ async function shot(page: Page, name: string) {
   await page.screenshot({ path: `${process.env.INJURY_SCREENSHOTS}/${name}.png`, animations: "disabled" });
 }
 
+test("expanded decision evidence reaches the rounded card edge", async ({ page, baseURL }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const { sheet } = await setup(page, baseURL!);
+  await sheet.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(sheet).toHaveCount(0);
+  const card = page.locator(".today-decision-banner[data-current-guidance]").first();
+  const disclosure = card.locator(".today-decision-disclosure");
+  if (await disclosure.getAttribute("open") === null) await disclosure.locator("summary").click();
+  const evidence = card.locator(".today-decision-evidence");
+  const cardBox = (await card.boundingBox())!;
+  const evidenceBox = (await evidence.boundingBox())!;
+  expect(Math.abs(cardBox.y + cardBox.height - evidenceBox.y - evidenceBox.height)).toBeLessThanOrEqual(2);
+  await shot(page, "decision-evidence-390");
+});
+
 for (const [width, height] of [[320, 568], [375, 667], [390, 844], [430, 932], [1280, 800]]) {
   test(`injury location, impact, retry and dismissal at ${width}px`, async ({ page, baseURL }) => {
     await page.setViewportSize({ width, height });
