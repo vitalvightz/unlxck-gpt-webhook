@@ -165,9 +165,31 @@ p.lead.lead { margin: 14px 0 0; }
   background: var(--border-default);
 }
 
-.apply a { text-decoration: none; }
+/* Instagram DM: just the glyph on Instagram's gradient, centred under the
+   line; the handle is its accessible name. */
+.instagram {
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(45deg, #f58529, #dd2a7b 50%, #8134af 80%, #515bd4);
+  color: #ffffff;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
 
-.applyNote { margin: 0; color: var(--text-muted); font-size: var(--type-meta); text-align: center; }
+.instagram svg { width: 26px; height: 26px; }
+
+.instagram:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(221, 42, 123, 0.3); }
+.instagram:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .instagram { transition: none; }
+}
+
+/* Beats the global `.auth-card p` reset. */
+p.applyNote.applyNote { margin: 0; color: var(--text-secondary); font-size: var(--type-body-sm); line-height: 1.5; text-align: center; }
 
 @media (prefers-reduced-motion: no-preference) {
   /* Granted: one bright burst. */

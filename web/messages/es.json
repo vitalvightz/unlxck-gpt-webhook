@@ -247,14 +247,12 @@
     "checking": "Comprobando…",
     "error": "Ese código no es correcto. Revisa tu invitación e inténtalo de nuevo.",
     "noCode": "¿Aún no tienes código?",
-    "apply": "Solicitar acceso a la beta",
-    "applyNote": "Abre un correo al equipo de UNLXCK. Te responderemos con un código si hay plaza.",
-    "applySubject": "Solicitud beta de UNLXCK",
-    "applyBody": "Hola, equipo de UNLXCK:\n\nMe gustaría unirme a la beta.\n\nNombre:\nDeporte / disciplina:\nNivel (amateur / pro):\nInstagram (opcional):\nPor qué quiero entrar:\n",
     "badge": "Beta privada",
     "hint": "Introduce el código de {length} caracteres de tu invitación. Se envía al completarlo.",
     "granted": "Acceso concedido",
     "grantedTitle": "Estás dentro.",
-    "grantedLead": "Bienvenido a la beta privada. Preparando tu cuenta…"
+    "grantedLead": "Bienvenido a la beta privada. Preparando tu cuenta…",
+    "dmUs": "Escríbenos por mensaje directo en Instagram para solicitar una invitación.",
+    "dmButton": "Escribe a @{handle}"
   }
 }

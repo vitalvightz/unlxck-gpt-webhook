@@ -13,8 +13,13 @@ test("signup asks for an access code before the account form", async ({ page, ba
   await expect(code).toBeFocused();
   await expect(page.getByRole("button", { name: "Continue with Google" })).toHaveCount(0);
 
-  const apply = page.getByRole("link", { name: "Apply for beta" });
-  await expect(apply).toHaveAttribute("href", /^mailto:support@unlxck\.com\?subject=UNLXCK%20beta%20application/);
+  // No public application form: visitors without a code are pointed to DMs.
+  await expect(page.getByText("DM us on Instagram to request an invite.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Apply for beta" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "DM @unlxckperformance" })).toHaveAttribute(
+    "href",
+    "https://ig.me/m/unlxckperformance",
+  );
 
   // A full code submits itself; a wrong one is rejected and cleared.
   await code.fill("12345");
