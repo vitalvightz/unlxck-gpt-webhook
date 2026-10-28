@@ -116,3 +116,14 @@ test("a mobility-only summary keeps the standing Rehab wording", () => {
   assert.equal(resolveRehabSummaryLabel([mobility], quadOpen), "Rehab");
   assert.equal(resolveRehabSummaryLabel([], quadOpen), "Rehab");
 });
+
+
+test("Calm-stage blocks and all-Calm summaries are Guidance without changing later-stage labels", () => {
+  const calm = { ...HAMSTRING_BLOCK, drill_snapshot: { rehab_stage: "calm" } };
+  for (const policy of [null, hamstringOpen, quadOpen]) {
+    assert.equal(resolveBlockRehabLabel(calm, policy), "Guidance");
+    assert.equal(resolveRehabSummaryLabel([calm], policy), "Guidance");
+  }
+  assert.equal(resolveRehabSummaryLabel([calm, HAMSTRING_BLOCK], hamstringOpen), "Rehab");
+  assert.equal(resolveBlockRehabLabel({ ...calm, drill_snapshot: { rehab_stage: "restore" } }, hamstringOpen), "Rehab");
+});

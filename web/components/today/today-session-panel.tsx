@@ -65,7 +65,7 @@ import type { TodayPlanSchedule } from "@/components/today/use-today-command";
 import { openBlockWeekIntent, type OpenBlockWeekIntent } from "@/lib/open-block";
 import { isOpenOngoingPlan } from "@/lib/plan-format";
 import { athleteFacingSessionTitle, formatPlanLabel, humanizeIfRawEnum } from "@/lib/plan-labels";
-import { resolveSessionTypeLabel } from "@/lib/rehab-label";
+import { isCalmRehabBlock, resolveSessionTypeLabel } from "@/lib/rehab-label";
 import { shouldPromptSessionFeedback } from "@/lib/session-feedback";
 import { useTrainingDay } from "@/lib/use-training-day";
 import {
@@ -1316,7 +1316,9 @@ export function TodaySessionPanel({
     : "";
   // A preview's parts live on their own screen, so their names show under
   // the headline as the sign of what else the day holds.
-  const shownTitle = partsTitle || headline;
+  const calmBlocks = livePrescription?.session.blocks ?? session.blocks ?? [];
+  const calmOnly = calmBlocks.length > 0 && calmBlocks.every(isCalmRehabBlock);
+  const shownTitle = calmOnly ? (partsTitle || headline).replace(/rehab/gi, "guidance") : partsTitle || headline;
   const partsSubtitle = multiPart || isSessionPreview
     ? namedParts
         .map((item) => athleteFacingSessionTitle(textValue(item.title)))
@@ -1600,8 +1602,8 @@ export function TodaySessionPanel({
           <div className="today-session-actions today-action-tray">{timerTools()}</div>
         ) : null}
 
-        {rehabOnlyPrescription && (canCompleteSession || guidanceCanCheckOff) && !["done", "modified", "skipped"].includes(status) ? <div className="today-injury-guidance" role="group" aria-label="Did you complete your rehab?">
-          <p>Did you complete your rehab?</p>
+        {rehabOnlyPrescription && (canCompleteSession || guidanceCanCheckOff) && !["done", "modified", "skipped"].includes(status) ? <div className="today-injury-guidance" role="group" aria-label={calmOnly ? "Did you follow the guidance?" : "Did you complete your rehab?"}>
+          <p>{calmOnly ? "Did you follow the guidance?" : "Did you complete your rehab?"}</p>
           <div className="today-segment-row">
             {([["done", "Completed"], ["modified", "Modified"], ["skipped", "Skipped"]] as const).map(([value, label]) =>
               <button key={value} type="button" className="today-segment" disabled={isSubmitting}
