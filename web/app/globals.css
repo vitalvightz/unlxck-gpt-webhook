@@ -3208,7 +3208,7 @@ html[data-theme="light"] .today-caution-row {
 .today-next-planned-note {
   display: grid;
   gap: 4px;
-  margin: 0 0 14px;
+  margin: 0;
 }
 
 html[data-theme="light"] .today-safe-session {
@@ -9145,6 +9145,7 @@ html[data-theme="light"] .today-injury-other-warning {
 .today-injury-add-sheet input:not([type="range"]) { font-size: 16px; }
 .today-injury-add-sheet .today-injury-selection { grid-template-columns: auto minmax(0, 1fr) auto; }
 .today-injury-add-sheet .today-injury-selection button { min-height: 44px; }
+.injury-impact-input { display: grid; gap: 12px; }
 .injury-impact-input .level-slider-segment {
   display: grid;
   align-items: center;

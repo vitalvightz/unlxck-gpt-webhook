@@ -782,3 +782,6 @@ html .today-page .today-decision-banner[data-tone] {
 
 /* The light theme's gold is too pale for small text on its own tint. */
 html[data-theme="light"] .today-pending-pill { color: #6f5120; }
+
+/* Keep preview status and its timer shortcut together. */
+.today-next-planned-note + .today-session-actions.today-action-tray { margin-top: 0; padding-block: 0; }

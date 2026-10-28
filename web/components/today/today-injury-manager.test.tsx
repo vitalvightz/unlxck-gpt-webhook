@@ -886,7 +886,7 @@ async function setInput(input: HTMLInputElement, value: string) {
     setter.call(input, value);
     input.dispatchEvent(new window.Event("input", { bubbles: true }));
   });
-  if (input.id === "today-injury-area" && value.trim()) await click(button(document.body, "Use location"));
+  if (input.id === "today-injury-area" && value.trim()) await act(async () => input.dispatchEvent(new window.FocusEvent("focusout", { bubbles: true })));
 }
 
 async function setImpact(label: string) {

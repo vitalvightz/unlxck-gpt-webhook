@@ -13,7 +13,7 @@ import { AutoHeight } from "@/components/today/auto-height";
 import { Collapse } from "@/components/today/collapse";
 import { InjuryDetailSheet } from "@/components/today/injury-detail-sheet";
 import { EffectiveClinicianClearanceStatus, InjuryCareStatus, InjuryClearance } from "@/components/today/injury-care-status";
-import { RehabStageMeter, rehabStageLabel } from "@/components/today/rehab-progress-status";
+import { RehabStageMeter, rehabStageLabel, rehabNextStep } from "@/components/today/rehab-progress-status";
 import { SegmentGroup } from "@/components/today/segment-group";
 import { useToast } from "@/components/toast-provider";
 import { submitTodayInjuryCheckin, submitInjuryEpisodeObservation } from "@/lib/api";
@@ -718,7 +718,7 @@ export function TodayInjuryManager({
                     <span className="today-injury-summary-text">
                       <strong>{injuryLabel}</strong>
                       {stageLabel ? <span>Stage: <em>{stageLabel}</em></span> : <span>{impactLabel}</span>}
-                      {hasPathway ? <RehabStageMeter decision={injury.rehab_decision} /> : null}
+                      {hasPathway && injury.rehab_decision && rehabNextStep(injury.rehab_decision) ? <span>{rehabNextStep(injury.rehab_decision)}</span> : null}
                     </span>
                     <span className="today-injury-summary-chevron" aria-hidden="true" />
                   </button>
@@ -726,7 +726,7 @@ export function TodayInjuryManager({
                     <p className="today-injury-chips">
                       <span className="today-injury-chip-list">
                         {restriction ? <span data-kind="clearance">{restriction}</span> : null}
-                        {stageLabel ? <span data-kind="impact">{impactLabel.charAt(0).toUpperCase() + impactLabel.slice(1)}</span> : null}
+                        {stageLabel && isOpen ? <span data-kind="impact">{impactLabel.charAt(0).toUpperCase() + impactLabel.slice(1)}</span> : null}
                       </span>
                       {/* Open, a pencil (Edit) rides this line instead of taking a row of its own. */}
                       {isOpen ? <button type="button" className="today-injury-edit" title="Edit injury" disabled={isAdding || pendingFlagId !== null}
@@ -764,6 +764,7 @@ export function TodayInjuryManager({
                     </div>
                   ) : null}
                   <div id={bodyId} className="today-injury-controls" hidden={!isOpen}>
+                  {hasPathway ? <RehabStageMeter decision={injury.rehab_decision} /> : null}
                   <div className="today-injury-meta">
                     <span className="today-injury-name">
                       <strong>{injuryLabel}</strong>
@@ -1049,6 +1050,11 @@ export function TodayInjuryManager({
               placeholder="e.g. left shoulder"
               aria-invalid={addMissing === "area" || undefined}
               aria-describedby={addMissing === "area" ? addErrorId : undefined}
+              onBlur={(event) => {
+                if (event.currentTarget.value.trim() && !(event.relatedTarget as HTMLElement | null)?.closest(".injury-manual-entry")) {
+                  setManualArea(false); setBodyMapVisible(false); setAddMissing(null);
+                }
+              }}
               onChange={(event) => {
                 const raw = event.target.value;
                 const value = limitInjuryEntryText(raw);
@@ -1071,10 +1077,6 @@ export function TodayInjuryManager({
                 ? `${TODAY_INJURY_MAX_WORDS}-word limit. Extra removed`
                 : `Up to ${TODAY_INJURY_MAX_WORDS} words`}
             </small>
-            <button type="button" className="secondary-button" disabled={!newArea.trim()}
-              onClick={() => { setManualArea(false); setBodyMapVisible(false); setAddMissing(null); }}>
-              Use location
-            </button>
           </div> : null}
           {newArea.trim() && !manualArea ? <button type="button" className="today-tool-link"
             onClick={() => { setManualArea(false); setBodyMapVisible(false); }}>Keep {newArea.trim()}</button> : null}

@@ -20,7 +20,7 @@ import { TodayRiskWatch } from "@/components/today/today-risk-watch";
 import { StandaloneRehab } from "@/components/today/standalone-rehab";
 import { TodaySessionPanel } from "@/components/today/today-session-panel";
 import { useTodayCommand } from "@/components/today/use-today-command";
-import { humanizeIfRawEnum } from "@/lib/plan-labels";
+import { resolvePlanProgress } from "@/lib/camp-map";
 import { isOpenOngoingPlan } from "@/lib/plan-format";
 import { rehabExerciseTarget } from "@/lib/rehab-exercise-guide";
 import {
@@ -74,7 +74,7 @@ const SESSION_TILE_VALUE: Record<TodayCompletionStatus, string> = {
   started: "In progress",
   done: "Complete",
   // "modified" is a logged completion (done with changes), not an adjusted plan.
-  modified: "Done, modified",
+  modified: "Completed",
   skipped: "Skipped",
 };
 
@@ -87,6 +87,7 @@ function StatusTile({
   icon,
   href,
   actionLabel,
+  modified = false,
 }: {
   label: string;
   value: string;
@@ -94,6 +95,7 @@ function StatusTile({
   icon: TileIconName;
   href?: string;
   actionLabel: string;
+  modified?: boolean;
 }) {
   const body = (
     <>
@@ -103,6 +105,7 @@ function StatusTile({
       <span className={styles.tileText}>
         <span className={styles.tileLabel}>{label}</span>
         <span className={styles.tileValue}>{value}</span>
+        {modified ? <span className={styles.tileModifier}>Modified</span> : null}
       </span>
       {href ? <span className={styles.chevron} aria-hidden="true" /> : null}
     </>
@@ -171,6 +174,7 @@ function TodayReadinessStrip({
         <StatusTile
           label="Today’s session"
           value={SESSION_TILE_VALUE[completionStatus] ?? getCompletionLabel(completionStatus)}
+          modified={completionStatus === "modified"}
           tone={sessionTone}
           icon={sessionLogged ? "check" : completionStatus === "started" ? "pulse" : "clock"}
           href={sessionHref}
@@ -221,6 +225,11 @@ export function TodayScreen() {
   const openOngoing = isOpenOngoingPlan(activePlan.fight_date);
   const planTitle = activePlan.name?.trim() || (openOngoing ? "Open training plan" : "Active fight camp");
   const hasPlan = hasActivePlan(activePlan);
+  const trainingDate = state?.today.training_day;
+  const day = trainingDate && /^\d{4}-\d{2}-\d{2}$/.test(trainingDate) ? new Date(`${trainingDate}T12:00:00`) : null;
+  const progress = !openOngoing && day && !Number.isNaN(day.getTime()) ? resolvePlanProgress(structuredPlan, day) : null;
+  const weekLabel = progress?.matchType === "calendar" && progress.currentWeekPos !== null
+    ? ` · Week ${progress.currentWeekPos + 1} of ${progress.weekCount}` : "";
   // Readiness answers are health data. Without a plan the check-in is only
   // offered with consent; the planned check-in keeps its existing behaviour
   // (the server enforces consent for both).
@@ -361,20 +370,14 @@ export function TodayScreen() {
       <section className={`panel today-shell ${styles.command}`}>
         <div className={styles.hero}>
           <div className="today-hero-copy">
-            <p className={styles.heroDate}>{trainingDayLabel}</p>
             <h1>Today</h1>
             {hasPlan ? (
-              <p className={styles.heroPhase}>{openOngoing
-                ? "Ongoing 4-week block"
-                : activePlan.phase
-                  ? humanizeIfRawEnum(activePlan.phase)
-                  : null}</p>
+              <p className={styles.heroPhase}>{planTitle}{weekLabel}</p>
             ) : (
               <p className={styles.heroIntro}>Your training, your record. Log coach-led or solo sessions.</p>
             )}
           </div>
-          {/* Without a programme the logger itself leads directly below. */}
-          {hasPlan ? <a className={styles.logTrainingLink} href="#today-training-log">Log session</a> : null}
+          {trainingDayLabel !== "Today" ? <p className={styles.heroDate}>{trainingDayLabel.replace(/\s\d{4}$/, "")}</p> : null}
         </div>
         <TodayReadinessStrip
           hasPlan={hasPlan}

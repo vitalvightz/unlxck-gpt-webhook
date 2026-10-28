@@ -121,7 +121,7 @@ test("iPhone safe areas, scrolling and visual keyboard viewport keep header reac
   await shot(page, "iphone-scrolled-map");
   await sheet.getByRole("button", { name: "Can’t find the area? Enter it manually", exact: true }).click();
   await sheet.getByRole("textbox", { name: "Affected area" }).fill("Left shin");
-  await sheet.getByRole("button", { name: "Use location", exact: true }).click();
+  await sheet.getByRole("textbox", { name: "Affected area" }).blur();
   await sheet.getByRole("button", { name: "+ Add note (optional)", exact: true }).click();
   await sheet.getByRole("textbox", { name: "Note (optional)" }).fill("Only after running");
   // A keyboard-sized visual viewport plus browser panning, independent of the
