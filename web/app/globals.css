@@ -9106,18 +9106,57 @@ html[data-theme="light"] .today-injury-other-warning {
 
 /* The add / edit form lives in its own sheet, so the body map gets the full
    width of the panel rather than the inset of the injury card. */
+.injury-sheet-backdrop:has(> .today-injury-add-sheet) {
+  top: var(--sheet-top, 0px);
+  bottom: auto;
+  height: var(--sheet-height, 100dvh);
+  box-sizing: border-box;
+  padding: max(12px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+}
+
+.injury-sheet.today-injury-add-sheet {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+}
+
 .today-injury-add-sheet .today-injury-add {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: 12px;
   margin: 0;
   padding: 16px 20px 20px;
+  gap: 12px;
 }
 
 .today-injury-add-sheet .injury-sheet-header {
-  position: sticky;
-  top: 0;
-  z-index: 2;
+  flex: none;
   padding-bottom: 8px;
   background: var(--bg-panel);
 }
+
+.today-injury-step { margin: 0; color: var(--text-secondary); font-size: 13px; }
+.today-injury-add-sheet .body-map-panel.body-map-tap-first { padding: 0; }
+.today-injury-add-sheet .body-map-anatomy-switch { margin-bottom: 8px; }
+.today-injury-add-sheet .field { margin: 0; gap: 8px; }
+.today-injury-add-sheet input:not([type="range"]) { font-size: 16px; }
+.today-injury-add-sheet .today-injury-selection { grid-template-columns: auto minmax(0, 1fr) auto; }
+.today-injury-add-sheet .today-injury-selection button { min-height: 44px; }
+.injury-impact-input .level-slider-segment {
+  display: grid;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 0;
+  font: 500 clamp(10px, 2.6vw, 12px)/1.3 var(--font-sans);
+  white-space: nowrap;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.injury-impact-input .level-slider:has([aria-invalid="true"]) { border-color: var(--danger-ink); }
+.today-injury-save { width: 100%; min-height: 48px; }
 
 @media (max-width: 600px) {
   .today-injury-add-sheet .today-injury-add {
@@ -13508,15 +13547,6 @@ html[data-theme="light"] .injury-card-state {
 
 .injury-severity-chips:has(.injury-severity-chip) {
   flex-wrap: wrap;
-}
-
-.injury-impact-input .today-segment-row {
-  flex-direction: column;
-}
-
-.injury-impact-input .today-segment {
-  width: 100%;
-  flex: none;
 }
 
 .onboarding-validation-panel.onboarding-validation-compact {

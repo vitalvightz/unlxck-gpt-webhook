@@ -886,6 +886,17 @@ async function setInput(input: HTMLInputElement, value: string) {
     setter.call(input, value);
     input.dispatchEvent(new window.Event("input", { bubbles: true }));
   });
+  if (input.id === "today-injury-area" && value.trim()) await click(button(document.body, "Use location"));
+}
+
+async function setImpact(label: string) {
+  const slider = document.querySelector<HTMLInputElement>('.injury-impact-input input[type="range"]');
+  assert.ok(slider);
+  await setInput(slider, String(["Not limiting me", "Limiting me", "Can’t train normally"].indexOf(label)));
+  // Native range inputs do not emit a change for the unchanged middle stop.
+  if (slider.getAttribute("aria-valuetext") === "Not set") {
+    await act(async () => slider.dispatchEvent(new window.KeyboardEvent("keydown", { key: " ", bubbles: true })));
+  }
 }
 
 test("add injury form stays off the page and opens in its own sheet from the empty-state trigger", async () => {
@@ -948,7 +959,7 @@ test("successful injury submission refreshes, resets, and collapses the form", a
     const area = document.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "Left ankle");
-    await click(button(container, "Limiting me"));
+    await setImpact("Limiting me");
     await click(button(container, "Soreness"));
 
     const form = document.querySelector<HTMLFormElement>("form.today-injury-add");
@@ -975,8 +986,8 @@ test("successful injury submission refreshes, resets, and collapses the form", a
 
     await click(button(container, "+ Add injury"));
     assert.equal(document.querySelector<HTMLInputElement>("#today-injury-area"), null);
-    assert.equal(button(container, "Limiting me").getAttribute("aria-pressed"), "false");
-    assert.equal(button(container, "Soreness").getAttribute("aria-pressed"), "false");
+    assert.equal(document.querySelector('.injury-impact-input'), null);
+    assert.equal(document.querySelector('[aria-label="Type"]'), null);
   } finally {
     globalThis.fetch = originalFetch;
     unmountMain(container, root);
@@ -1028,7 +1039,7 @@ test("adding a skin injury asks the five surface questions immediately", async (
     const area = document.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "left hand");
-    await click(button(container, "Limiting me"));
+    await setImpact("Limiting me");
     await click(button(container, "+ Add note (optional)"));
     const detail = document.querySelector<HTMLInputElement>("#today-injury-detail");
     assert.ok(detail);
@@ -1119,7 +1130,7 @@ test("adding a non-surface injury does not open the skin follow-up", async () =>
     const area = document.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "left shoulder");
-    await click(button(container, "Limiting me"));
+    await setImpact("Limiting me");
     await click(button(container, "Soreness"));
 
     const form = document.querySelector<HTMLFormElement>("form.today-injury-add");
@@ -1183,7 +1194,7 @@ test("adding a medical-review skin injury skips the questions for its banner", a
     const area = document.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "right eye");
-    await click(button(container, "Limiting me"));
+    await setImpact("Limiting me");
     await click(button(container, "Other"));
 
     const form = document.querySelector<HTMLFormElement>("form.today-injury-add");
@@ -1223,7 +1234,7 @@ test("failed injury submission leaves the populated form open", async () => {
     const area = document.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "Right knee");
-    await click(button(container, "Limiting me"));
+    await setImpact("Limiting me");
     await click(button(container, "Tightness"));
     const form = document.querySelector<HTMLFormElement>("form.today-injury-add");
     assert.ok(form);
@@ -1234,7 +1245,8 @@ test("failed injury submission leaves the populated form open", async () => {
 
     assert.equal(refreshes, 0);
     assert.ok(document.querySelector("form.today-injury-add"), "the sheet stays open after a failed save");
-    assert.equal(document.querySelector<HTMLInputElement>("#today-injury-area")?.value, "Right knee");
+    assert.match(document.querySelector(".today-injury-selection")?.textContent ?? "", /Right knee/);
+    assert.equal(document.querySelector('.injury-impact-input input')?.getAttribute("aria-valuetext"), "Limiting me");
     assert.match(document.body.textContent ?? "", /Could not save injury/);
   } finally {
     globalThis.fetch = originalFetch;
@@ -1294,7 +1306,7 @@ test("submitting without a type says so instead of refusing silently", async () 
     const area = document.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "Left ankle");
-    await click(button(container, "Limiting me"));
+    await setImpact("Limiting me");
 
     const submit = button(container, "Save injury");
     assert.equal(submit.disabled, false, "an incomplete form must still accept the tap");
@@ -1336,7 +1348,7 @@ test("submitting without an area names the area, not the type", async () => {
   const { container, root } = mountMain();
   try {
     await click(button(container, "+ Add injury"));
-    await click(button(container, "Soreness"));
+    assert.equal(document.querySelector('[aria-label="Type"]'), null);
 
     const form = document.querySelector<HTMLFormElement>("form.today-injury-add");
     assert.ok(form);
@@ -1353,7 +1365,7 @@ test("submitting without an area names the area, not the type", async () => {
     const area = document.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "Left ankle");
-    await click(button(container, "Limiting me"));
+    await setImpact("Limiting me");
     assert.equal(document.querySelector('[role="alert"]'), null);
   } finally {
     globalThis.fetch = originalFetch;
@@ -1379,10 +1391,10 @@ test("tap-first selection never opens text fields or changes impact on repeated 
     await act(async () => form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })));
     assert.equal(calls.length, 0, "impact must be an explicit choice");
     assert.match(document.querySelector('[role="alert"]')?.textContent ?? "", /affecting your training/);
-    await click(button(container, "Not limiting me"));
+    await setImpact("Not limiting me");
     await click(button(container, "Change"));
     await selectShoulder();
-    assert.equal(button(container, "Not limiting me").getAttribute("aria-pressed"), "true");
+    assert.equal(document.querySelector('.injury-impact-input input')?.getAttribute("aria-valuetext"), "Not limiting me");
     await act(async () => form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })));
     assert.deepEqual(calls[0], { injuries: [{ body_area: "Left shoulder", description: "tightness [training_impact:not_limiting]", severity: "mild", status: "ongoing" }] });
     assert.equal(document.querySelector("form.today-injury-add"), null);
@@ -1399,10 +1411,10 @@ test("editing a saved injury updates its flag and retains the functional answer 
     const summaryRow = document.querySelector<HTMLButtonElement>(".today-injury-summary-row");
     if (summaryRow?.getAttribute("aria-expanded") === "false") await click(summaryRow);
     await click(button(container, "Edit"));
-    assert.equal(button(container, "Limiting me").getAttribute("aria-pressed"), "true");
+    assert.equal(document.querySelector('.injury-impact-input input')?.getAttribute("aria-valuetext"), "Limiting me");
     assert.equal(button(container, "Tightness").getAttribute("aria-pressed"), "true");
     assert.equal(document.querySelector("#today-injury-detail"), null);
-    await click(button(container, "Can’t train normally"));
+    await setImpact("Can’t train normally");
     const form = document.querySelector("form")!;
     await act(async () => form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })));
     assert.deepEqual(calls[0], { injuries: [{ flag_id: injury.id, body_area: "left shoulder", description: "tightness. worse when punching [training_impact:cant_train]", severity: "severe", status: "ongoing" }] });
@@ -1461,7 +1473,7 @@ test("Other opens area-specific types that tap in the condition word", async () 
     await click(button(container, "Sprain / rolled"));
     assert.doesNotMatch(document.body.textContent ?? "", /Get this checked by a clinician/);
     assert.equal(button(container, "Sprain / rolled").getAttribute("aria-pressed"), "true");
-    await click(button(container, "Limiting me"));
+    await setImpact("Limiting me");
 
     const form = document.querySelector<HTMLFormElement>("form.today-injury-add");
     assert.ok(form);
@@ -1500,7 +1512,7 @@ test("switching away from Other drops its specific type", async () => {
     await click(button(container, "Strain / pulled"));
     await click(button(container, "Soreness"));
     assert.equal(document.querySelector(".today-injury-other"), null);
-    await click(button(container, "Limiting me"));
+    await setImpact("Limiting me");
     const form = document.querySelector<HTMLFormElement>("form.today-injury-add");
     assert.ok(form);
     await act(async () => {
@@ -1648,4 +1660,58 @@ test("an injury without published exercises keeps its actual stage and content m
   await act(async () => (document.querySelector(".today-injury-summary-row") as HTMLButtonElement).click());
   assert.match(container.textContent ?? "", /No rehab exercises available for this stage yet\./);
   cleanup();
+});
+
+
+test("location steps keep the form short, focus description, and never preselect impact", async () => {
+  const { container, root } = mountMain();
+  try {
+    await click(button(container, "+ Add injury"));
+    assert.equal(document.querySelector('[aria-label="Type"]'), null);
+    assert.equal(document.querySelector('input[type="range"]'), null);
+    assert.equal(document.querySelector('button[type="submit"]'), null);
+    const shoulder = document.querySelector('[aria-label="Left shoulder"]')!;
+    await act(async () => shoulder.dispatchEvent(new window.MouseEvent("click", { bubbles: true })));
+    assert.ok(document.querySelector('.body-map-panel')?.closest('[hidden]'));
+    assert.equal(document.activeElement?.getAttribute("aria-label"), "Describe the injury");
+    const slider = document.querySelector<HTMLInputElement>('.injury-impact-input input')!;
+    assert.equal(slider.getAttribute("aria-valuetext"), "Not set");
+    assert.equal(document.querySelector('.level-slider-indicator'), null);
+    // Space deliberately chooses the middle position without a native change event.
+    await act(async () => slider.dispatchEvent(new window.KeyboardEvent("keydown", { key: " ", bubbles: true })));
+    assert.equal(slider.getAttribute("aria-valuetext"), "Limiting me");
+    await click(button(container, "Soreness"));
+    await click(button(container, "+ Add note (optional)"));
+    await setInput(document.querySelector<HTMLInputElement>('#today-injury-detail')!, "Only after running");
+    await click(button(container, "Change"));
+    assert.ok(document.querySelector('.body-map-panel'));
+    assert.equal(document.querySelector('input[type="range"]'), null);
+    await click(button(container, "Keep Left shoulder"));
+    assert.equal(document.querySelector('.injury-impact-input input')?.getAttribute("aria-valuetext"), "Limiting me");
+    assert.equal(document.querySelector<HTMLInputElement>('#today-injury-detail')?.value, "Only after running");
+    assert.equal(button(container, "Soreness").getAttribute("aria-pressed"), "true");
+  } finally { unmountMain(container, root); }
+});
+
+test("cancelling a draft resets location and answers before another injury", async () => {
+  const { container, root } = mountMain();
+  try {
+    const trigger = button(container, "+ Add injury");
+    trigger.focus();
+    await click(trigger);
+    await click(button(container, "Can’t find the area? Enter it manually"));
+    await setInput(document.querySelector<HTMLInputElement>('#today-injury-area')!, "Left shin");
+    await setImpact("Can’t train normally");
+    await click(button(container, "Bruise"));
+    await act(async () => {
+      document.querySelector<HTMLButtonElement>('.injury-sheet-close')!.click();
+      await new Promise(resolve => setTimeout(resolve, 230));
+    });
+    assert.equal(document.querySelector('[role="dialog"]'), null);
+    assert.equal(document.activeElement, trigger);
+    await click(trigger);
+    assert.ok(document.querySelector('.body-map-panel'));
+    assert.equal(document.querySelector('.today-injury-selection'), null);
+    assert.equal(document.querySelector('input[type="range"]'), null);
+  } finally { unmountMain(container, root); }
 });

@@ -260,15 +260,19 @@ export function LevelSlider({
   onChange,
   ariaLabel = "Fatigue level",
   id,
+  labels,
+  invalid = false,
 }: {
   value: LevelValue | null;
   onChange: (value: LevelValue) => void;
   ariaLabel?: string;
   id?: string;
+  labels?: readonly [string, string, string];
+  invalid?: boolean;
 }) {
   const selectedIndex = LEVEL_OPTIONS.findIndex((option) => option.value === value);
   const currentIndex = selectedIndex === -1 ? 1 : selectedIndex;
-  const activeLabel = selectedIndex === -1 ? "Not set" : LEVEL_OPTIONS[selectedIndex].label;
+  const activeLabel = selectedIndex === -1 ? "Not set" : labels?.[selectedIndex] ?? LEVEL_OPTIONS[selectedIndex].label;
 
   function selectLevelFromPointer(event: PointerEvent<HTMLInputElement>) {
     if (selectedIndex !== -1) {
@@ -302,6 +306,13 @@ export function LevelSlider({
         value={currentIndex}
         aria-label={ariaLabel}
         aria-valuetext={activeLabel}
+        aria-invalid={invalid || undefined}
+        onKeyDown={(event) => {
+          if (selectedIndex === -1 && (event.key === " " || event.key === "Enter")) {
+            event.preventDefault();
+            onChange(LEVEL_OPTIONS[currentIndex].value);
+          }
+        }}
         onChange={(event) => {
           const nextIndex = Number.parseInt(event.target.value, 10);
           onChange(LEVEL_OPTIONS[nextIndex].value);
@@ -327,7 +338,7 @@ export function LevelSlider({
             data-selected={selected ? "true" : undefined}
             aria-hidden="true"
           >
-            {option.label}
+            {labels?.[index] ?? option.label}
           </span>
         );
       })}
