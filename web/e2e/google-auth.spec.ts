@@ -154,3 +154,51 @@ test("OAuth cancellation is scrubbed from URL and leaves both methods usable", a
   await page.getByRole("button", { name: "Continue with email", exact: true }).click();
   await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
 });
+
+test("a brand-new Google account without an invite is turned away before a profile exists", async ({ page, baseURL }) => {
+  await isolateFromNetwork(page, baseURL!);
+  const newUser = { ...user, created_at: new Date().toISOString(), user_metadata: { full_name: "Gatecrasher" } };
+  const meCalls: string[] = [];
+  const metadataUpdates: unknown[] = [];
+  let signedOut = false;
+  await page.route("**/api/me", route => { meCalls.push(route.request().url()); return json(route, {}); });
+  await page.route(`${SUPABASE}/auth/v1/user`, async route => {
+    if (route.request().method() === "PUT") metadataUpdates.push(route.request().postDataJSON());
+    await json(route, newUser);
+  });
+  await page.route(`${SUPABASE}/auth/v1/logout**`, route => { signedOut = true; return json(route, {}); });
+  await page.route(`${SUPABASE}/auth/v1/authorize**`, route => route.fulfill({
+    status: 302,
+    headers: { location: `${baseURL}/login#access_token=new-google-token&refresh_token=r&expires_in=3600&token_type=bearer&type=signup` },
+    body: "",
+  }));
+
+  // No access code entered on this device: Log in → Continue with Google.
+  await page.goto("/login");
+  await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
+
+  await expect(page).toHaveURL(`${baseURL}/signup?invite=required`);
+  await expect(page.getByText("You need an invite code to create an account.")).toBeVisible();
+  await expect(page.getByLabel("Access code", { exact: true })).toBeVisible();
+  expect(meCalls, "no profile is requested (and so none is created)").toHaveLength(0);
+  expect(metadataUpdates).toContainEqual(expect.objectContaining({ data: { invite_pending: true } }));
+  expect(signedOut).toBe(true);
+});
+
+test("a brand-new Google account from a browser that entered the code goes straight through", async ({ page, baseURL }) => {
+  await oauth(page, baseURL!);
+  await grantSignupAccess(page, baseURL!);
+  // Same flow as a new Google identity, but the account was created just now,
+  // so the invite guard runs (routes added later take precedence).
+  const newUser = { ...user, created_at: new Date().toISOString() };
+  let signedOut = false;
+  await page.route(`${SUPABASE}/auth/v1/user`, route => json(route, newUser));
+  await page.route(`${SUPABASE}/auth/v1/logout**`, route => { signedOut = true; return json(route, {}); });
+
+  await page.goto("/signup");
+  await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
+
+  // Into the app: the new account lands on the compliance step, not the gate.
+  await expect(page).toHaveURL(/\/consent$/);
+  expect(signedOut).toBe(false);
+});

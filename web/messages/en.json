@@ -253,6 +253,7 @@
     "grantedTitle": "You're in.",
     "grantedLead": "Welcome to the private beta. Setting up your account…",
     "dmUs": "DM us on Instagram to request an invite.",
-    "dmButton": "DM @{handle}"
+    "dmButton": "DM @{handle}",
+    "inviteRequired": "You need an invite code to create an account. Enter your code, then continue with Google or email again."
   }
 }

@@ -253,6 +253,7 @@
     "grantedTitle": "Você está dentro.",
     "grantedLead": "Bem-vindo ao beta privado. Preparando sua conta…",
     "dmUs": "Mande uma DM pra gente no Instagram para pedir um convite.",
-    "dmButton": "Mandar DM para @{handle}"
+    "dmButton": "Mandar DM para @{handle}",
+    "inviteRequired": "Você precisa de um código de convite para criar uma conta. Digite seu código e use novamente o Google ou seu e-mail para continuar."
   }
 }
