@@ -2108,6 +2108,15 @@ def build_planning_brief(
     from .camp_week_fillers_impl import govern_weekly_mental_training
     govern_weekly_mental_training(role_map, athlete_model)
     enforce_total_session_budget(role_map, athlete_model, candidate_pools)
+    if "late_fight_session_sequence" in brief:
+        # _effective_map wraps the authoritative sequence in a temporary week;
+        # removals rebind that week's list, so write the final roles back.
+        final = [role for week in role_map.get("weeks") or [] for role in week.get("session_roles") or []]
+        sequence = brief["late_fight_session_sequence"]
+        sequence[:] = final
+        spec = brief.get("late_fight_plan_spec")
+        if isinstance(spec, dict) and spec.get("visible_session_sequence") is not sequence:
+            spec["visible_session_sequence"] = list(final)
     return stamp_role_execution_order(brief)
 
 

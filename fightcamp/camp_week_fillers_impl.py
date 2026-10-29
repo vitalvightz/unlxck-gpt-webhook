@@ -1237,7 +1237,8 @@ def govern_weekly_mental_training(
     if not removed:
         return
     for week in weeks:
-        week["session_roles"] = [
+        # In place: a caller's wrapped list (a late-fight sequence) must see it.
+        week.setdefault("session_roles", [])[:] = [
             role
             for role in week.get("session_roles") or []
             if not (isinstance(role, dict) and id(role) in removed)

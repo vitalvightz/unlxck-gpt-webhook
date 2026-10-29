@@ -94,3 +94,18 @@ def test_calendar_week_cap_spans_phase_rows():
     govern_weekly_mental_training({'weeks': weeks}, model)
     assert sum(r['role_key'] == 'fight_visualization' for w in weeks for r in w['session_roles']) == 1
     assert sum(r['role_key'] == 'primary_strength_day' for w in weeks for r in w['session_roles']) == 2
+
+
+def test_removal_persists_in_a_wrapped_authoritative_sequence():
+    # Late-fight briefs govern a temporary week that wraps the brief's own
+    # late_fight_session_sequence; a removed card must leave that list too.
+    from fightcamp.camp_week_fillers_impl import govern_weekly_mental_training
+    sequence = [item for day in (12, 10) for item in (
+        dict(role_key='primary_strength_day', category='strength', countdown_offset=day),
+        role(day, 'fight_visualization', optional_fight_visualization=True))]
+    week = {'calendar_days': [{'d_day': 12, 'weekday': 'monday'}, {'d_day': 10, 'weekday': 'wednesday'}],
+            'session_roles': sequence}
+    govern_weekly_mental_training({'weeks': [week]}, {'fight_date': '2026-12-05'})
+    assert week['session_roles'] is sequence
+    assert sum(r['role_key'] == 'fight_visualization' for r in sequence) == 1
+    assert sum(r['role_key'] == 'primary_strength_day' for r in sequence) == 2
