@@ -2442,7 +2442,7 @@ def _build_planning_brief(
         "global_priorities": _derive_global_priorities(athlete_model, phase_briefs, candidate_pools),
         "phase_strategy": _build_phase_strategy(phase_briefs, candidate_pools, week_by_week_progression),
         "weekly_stress_map": weekly_stress_map,
-        "week_by_week_progression": week_by_week_progression,
+        "week_by_week_progression": _with_final_compression(week_by_week_progression, weekly_role_map),
         "fight_week_override": fight_week_override or {"active": False},
         "weekly_role_map": weekly_role_map,
         "restrictions": restrictions,
@@ -2531,6 +2531,24 @@ def _serialize_strength_option(exercise: dict, why: str, score_evidence: dict | 
         or set(required_equipment).issubset({"bodyweight", *_unrequired_space_tokens(exercise)}),
         "generic_fallback": bool(exercise.get("generic_fallback")),
     }, exercise, score_evidence)
+
+
+def _with_final_compression(progression: dict, role_map: dict) -> dict:
+    """Mirror the role map's final compression onto the progression copy.
+
+    Post-allocation passes (e.g. the pre-hard-contact strength cap) update only
+    the role map. The progression must not disagree with it, because the
+    Stage 2 packet drops this duplicate on the strength of their parity.
+    """
+    final = {week.get("week_index"): week for week in (role_map or {}).get("weeks") or []
+             if isinstance(week, dict)}
+    weeks = []
+    for week in (progression or {}).get("weeks") or []:
+        source = final.get(week.get("week_index")) if isinstance(week, dict) else None
+        if source is not None and "intentional_compression" in week and "intentional_compression" in source:
+            week = {**week, "intentional_compression": deepcopy(source["intentional_compression"])}
+        weeks.append(week)
+    return {**progression, "weeks": weeks} if isinstance(progression, dict) and "weeks" in progression else progression
 
 
 def _serialize_conditioning_option(
