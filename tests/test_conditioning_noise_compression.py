@@ -67,6 +67,10 @@ def test_realistic_app_shape_preserves_one_low_noise_without_extra_sessions():
         weight_cut_risk=True,
         weight_cut_pct=2.6,
         injuries=["right ankle sprain"],
+        # #3033/#3035: symptom text and a bare flag no longer compress; the
+        # app records this sprain's moderate severity.
+        parsed_injuries=[{"injury_type": "sprain", "canonical_location": "ankle",
+                          "side": "right", "severity": "moderate"}],
         readiness_flags=["active_weight_cut", "injury_management"],
     )
     kept, _ = _apply_high_fatigue_week_compression(week, roles, [], athlete)

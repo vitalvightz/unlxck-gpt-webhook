@@ -107,7 +107,12 @@ class TestFloorGate:
             assert f"injury_mode_{mode}" in _combat_pressure_floor_blockers(_far_week(), athlete)
 
     def test_active_injury_blocks(self):
-        athlete = _base_athlete(readiness_flags=["injury_management"])
+        # #3035: a bare injury_management flag is not moderate-plus evidence;
+        # sourced training-capacity evidence is.
+        athlete = _base_athlete(
+            readiness_flags=["injury_management", "moderate_injury"],
+            readiness_evidence=[{"flag": "moderate_injury", "scope": "training_capacity"}],
+        )
         assert "active_injury_blocks_hard_work" in _combat_pressure_floor_blockers(_far_week(), athlete)
 
     def test_taper_phase_blocks(self):

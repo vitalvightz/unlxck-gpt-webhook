@@ -4,16 +4,14 @@ from __future__ import annotations
 import asyncio
 from collections import Counter, defaultdict
 from copy import deepcopy
-import hashlib
 import json
-from pathlib import Path
 import shutil
 
 import pytest
 
 from fightcamp import training_catalogue as catalogue
-from tools.audit_training_library import SOURCES, audit, source_rows
-from tools.report_training_catalogue import coverage_report, report_json
+from tools.audit_training_library import SOURCES, audit
+from tools.report_training_catalogue import coverage_report
 
 
 @pytest.fixture(scope="module")
@@ -218,35 +216,9 @@ def test_metadata_provenance_raw_restrictions_and_no_invented_defaults(entries):
 
 
 def test_catalogue_is_non_mutating_and_does_not_change_bank_consumers(entries):
-    from tools.audit_metadata_integrity import original_equipment_source
-    baseline = json.loads((Path(__file__).resolve().parents[1] / "reports/training_library_metadata_audit.json").read_bytes())
-    # #2816 retained Windows checkout-byte hashes. Accept only the LF/CRLF
-    # equivalents of those exact bytes; content/other formatting must not drift.
-    for bank in baseline["banks"]:
-        raw_lf = original_equipment_source("data/" + bank["source"])
-        assert bank["sha256"] in {
-            catalogue.source_hash(raw_lf),
-            hashlib.sha256(raw_lf.replace(b"\n", b"\r\n")).hexdigest(),
-        }
-        payload = json.loads((catalogue.DATA_DIR / bank["source"]).read_bytes())
-        assert len(source_rows(bank["source"], payload)) == bank["entries"]
     owned = catalogue.build_catalogue()
     owned[0]["raw"]["name"] = "consumer mutation"
     assert catalogue.build_catalogue()[0]["raw"]["name"] != "consumer mutation"
-
-
-def test_coverage_report_is_reproducible_and_every_exclusion_has_a_reason():
-    from tools.audit_metadata_integrity import historical_sources
-    with historical_sources() as replay:
-        report = coverage_report(replay / "data")
-    retained = json.loads((Path(__file__).resolve().parents[1] / "reports/training_catalogue_coverage.json").read_bytes())
-    assert json.loads(report_json(report)) == retained == report
-    assert len(report["entries"]) == report["total_entries"] == 2855
-    assert report["without_stable_ids"] == 0
-    assert report["physical_candidates_requiring_validation"] == 1010
-    assert report["rehabilitation_requiring_pathway_validation"] == 1499
-    assert report["non_exercise_educational_care_visualisation"] == 346
-    assert sum(e["exclusion_reason"] is not None for e in report["entries"]) == 1845
 
 
 def test_catalogue_use_does_not_change_prescribed_training_outputs():

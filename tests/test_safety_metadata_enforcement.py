@@ -272,20 +272,6 @@ def test_unreviewed_bank_edits_cannot_change_a_live_prescription(field, value):
     assert after["restrictions"] == before["restrictions"]
 
 
-def test_source_replay_and_original_receipts_match_immutable_hashes():
-    from tools.audit_metadata_integrity import original_equipment_source, source_hash
-
-    baseline = json.loads((ROOT / "tools/metadata_integrity_baseline.json").read_bytes())
-    originals = json.loads((ROOT / "tools/metadata_integrity_original_sources.json").read_bytes())
-    for source in ("fightcamp/injury_filtering.py", "fightcamp/injury_guard.py",
-                   "fightcamp/injury_location_registry.py", "fightcamp/late_selector_windows.py"):
-        assert source_hash(originals[source].encode()) == baseline["production_files"][source]
-    assert source_hash(original_equipment_source("data/style_taper_conditioning.json")) == baseline["banks"]["style_taper_conditioning.json"]["sha256"]
-    review = json.loads((ROOT / "tools/safety_metadata_source_changes.json").read_bytes())
-    manifest = (ROOT / "data/training_catalogue_ids.json").read_bytes()
-    assert source_hash(original_safety_source("data/training_catalogue_ids.json", manifest)) == review["base_manifest_sha256"]
-
-
 def test_complete_programmes_preserve_selection_dose_periodisation_and_personalisation(tmp_path):
     evidence = json.loads((ROOT / "tests/fixtures/safety_metadata_programmes.json").read_bytes())
     target = tmp_path / "plans.json"

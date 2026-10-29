@@ -299,11 +299,13 @@ class TestD24GeneratedFightWeek:
         for tool in ("no bands", "no med ball", "no heavy bag", "no weights", "no core", "no neck", "no grip"):
             assert tool in banned, f"pre_fight_day contract stopped banning {tool!r}"
 
-        # No app-owned strength/conditioning role is scheduled on D-1.
+        # The D-1 neural primer is permitted (product decision); no other
+        # app-owned strength/conditioning role is scheduled on D-1.
         d1_sc = [
             role.get("role_key")
             for _d, role in _app_owned_roles_at(brief, {1})
             if str(role.get("category") or "").lower() in {"strength", "conditioning"}
+            and role.get("role_key") != "neural_primer_day"
         ]
         assert not d1_sc, f"D-1 carried app-owned S&C role(s): {d1_sc}"
 
@@ -390,8 +392,11 @@ class TestHardSparringConversionPreserved:
             assert "d14_hard_sparring_ban" in (entry.get("reason_codes") or [])
             technical_days.add(entry["d_day"])
 
-        # No extra app-owned strength/conditioning stacked on a technical-only day.
+        # No extra app-owned strength/conditioning stacked on a technical-only
+        # day, except the permitted D-1 neural primer (product decision).
         for d_day, role in _app_owned_roles_at(brief, technical_days):
+            if d_day == 1 and role.get("role_key") == "neural_primer_day":
+                continue
             assert str(role.get("category") or "").lower() not in {"strength", "conditioning"}, (
                 f"D-{d_day}: extra S&C ({role.get('role_key')!r}) stacked on a technical-only day"
             )

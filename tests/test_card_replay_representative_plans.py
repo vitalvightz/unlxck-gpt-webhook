@@ -230,10 +230,12 @@ def test_faithful_card_for_the_affected_boxer_validates(boxer_card_and_text):
     brief, card, text = boxer_card_and_text
     outcome = _validate(brief, card, text)
     assert outcome.status == "valid", outcome.errors
-    # Only the one rest the source states in words ("full rest") stays advisory.
-    assert [w for w in outcome.warnings if "dropped explicit source rest" in w] == [
-        "faithfulness: PRESCRIPTION: 'Single-Leg TRX Suspension Hold' dropped explicit source rest"
-    ]
+    # The one rest the source states in words ("full rest") is now carried on
+    # the card's instructions, so no explicit source rest is dropped.
+    assert [w for w in outcome.warnings if "dropped explicit source rest" in w] == []
+    holds = [b for week in card["weeks"] for day in week["days"] for s in day.get("sessions") or []
+             for b in s.get("blocks") or [] if b.get("display_name") == "Single-Leg TRX Suspension Hold"]
+    assert holds and all("full rest" in str(b.get("execution_instructions") or "") for b in holds)
 
 
 def test_converter_shortening_bag_rest_from_60_to_20_seconds_is_rejected(boxer_card_and_text):

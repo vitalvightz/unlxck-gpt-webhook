@@ -341,9 +341,11 @@ class TestProductionCalendarCollision:
     def test_no_app_owned_snc_stacked_on_declared_thursday_contact(self, monkeypatch):
         for days in (21, 20, 18, 16, 14):
             brief = _run(days, monkeypatch)
-            for _w, role, _d, wd in _placed_roles(brief):
+            for _w, role, d_day, wd in _placed_roles(brief):
                 if wd != "thursday":
                     continue
+                if d_day == 1 and role.get("role_key") == "neural_primer_day":
+                    continue  # The fight-eve neural primer is permitted on D-1.
                 if _is_app_owned_visible_role(role.get("role_key")) and role.get("stress_class") == "meaningful_stress":
                     raise AssertionError(
                         f"D-{days} stacked app S&C ({role.get('role_key')}) on the Thursday contact day"

@@ -116,11 +116,13 @@ def test_pre_fight_compressed_does_not_auto_collapse_to_two_visible_sessions_for
     assert "light_fight_pace_touch_day" in role_keys
 
     spec = _build_late_fight_plan_spec(9, athlete)
-    assert spec["visible_session_cap"] == 3
+    # The permitted fight-eve neural primer is the fourth visible session.
+    assert spec["visible_session_cap"] == 4
     assert set(spec["visible_session_roles"]) == {
         "strength_touch_day",
         "alactic_sharpness_day",
         "fight_week_freshness_day",
+        "neural_primer_day",
     }
 
 

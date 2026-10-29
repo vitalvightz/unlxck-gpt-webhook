@@ -252,5 +252,8 @@ def test_complete_programmes_change_only_where_sprints_become_reachable(tmp_path
     case = "boxing_gpp_power_conditioning"
     # Conditioning sessions are untouched; only the SPP strength selection moves.
     assert _session_drills(before[case]) == _session_drills(after[case])
-    assert "Sprint Acceleration (10-20m)" in after[case]["plan_text"]
+    # The gate makes the sprint reachable for Stage 2. Whether it also wins a
+    # rendered slot is #3102's category-promotion decision, not this gate's.
+    assert "Sprint Acceleration (10-20m)" in json.dumps(after[case]["stage2_payload"])
+    assert "Sprint Acceleration (10-20m)" not in json.dumps(before[case]["stage2_payload"])
     assert "Sprint Acceleration (10-20m)" not in before[case]["plan_text"]

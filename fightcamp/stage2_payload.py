@@ -2103,7 +2103,20 @@ def build_planning_brief(
     consolidate_compatible_physical_sessions(role_map, athlete_model=athlete_model)
     if role_map.get("session_consolidation_audit"):
         refresh_goal_evidence_after_composition(brief)
+    # Goal repair and consolidation can move the physical session a mental
+    # task was attached to; govern mental support again on the final calendar.
+    from .camp_week_fillers_impl import govern_weekly_mental_training
+    govern_weekly_mental_training(role_map, athlete_model)
     enforce_total_session_budget(role_map, athlete_model, candidate_pools)
+    if "late_fight_session_sequence" in brief:
+        # _effective_map wraps the authoritative sequence in a temporary week;
+        # removals rebind that week's list, so write the final roles back.
+        final = [role for week in role_map.get("weeks") or [] for role in week.get("session_roles") or []]
+        sequence = brief["late_fight_session_sequence"]
+        sequence[:] = final
+        spec = brief.get("late_fight_plan_spec")
+        if isinstance(spec, dict) and spec.get("visible_session_sequence") is not sequence:
+            spec["visible_session_sequence"] = list(final)
     return stamp_role_execution_order(brief)
 
 
@@ -2442,7 +2455,7 @@ def _build_planning_brief(
         "global_priorities": _derive_global_priorities(athlete_model, phase_briefs, candidate_pools),
         "phase_strategy": _build_phase_strategy(phase_briefs, candidate_pools, week_by_week_progression),
         "weekly_stress_map": weekly_stress_map,
-        "week_by_week_progression": week_by_week_progression,
+        "week_by_week_progression": _with_final_compression(week_by_week_progression, weekly_role_map),
         "fight_week_override": fight_week_override or {"active": False},
         "weekly_role_map": weekly_role_map,
         "restrictions": restrictions,
@@ -2531,6 +2544,24 @@ def _serialize_strength_option(exercise: dict, why: str, score_evidence: dict | 
         or set(required_equipment).issubset({"bodyweight", *_unrequired_space_tokens(exercise)}),
         "generic_fallback": bool(exercise.get("generic_fallback")),
     }, exercise, score_evidence)
+
+
+def _with_final_compression(progression: dict, role_map: dict) -> dict:
+    """Mirror the role map's final compression onto the progression copy.
+
+    Post-allocation passes (e.g. the pre-hard-contact strength cap) update only
+    the role map. The progression must not disagree with it, because the
+    Stage 2 packet drops this duplicate on the strength of their parity.
+    """
+    final = {week.get("week_index"): week for week in (role_map or {}).get("weeks") or []
+             if isinstance(week, dict)}
+    weeks = []
+    for week in (progression or {}).get("weeks") or []:
+        source = final.get(week.get("week_index")) if isinstance(week, dict) else None
+        if source is not None and "intentional_compression" in week and "intentional_compression" in source:
+            week = {**week, "intentional_compression": deepcopy(source["intentional_compression"])}
+        weeks.append(week)
+    return {**progression, "weeks": weeks} if isinstance(progression, dict) and "weeks" in progression else progression
 
 
 def _serialize_conditioning_option(
