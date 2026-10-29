@@ -225,6 +225,61 @@ def test_fight_day_protocol_is_not_training():
     assert count_physical_sessions(roles) == 0
 
 
+
+def _day_budget_map(days: list[int], *, double: bool = False) -> dict:
+    roles = [_role("light_combat_day", "technical", day) for day in days]
+    if double:
+        roles.append(_role("primary_strength_day", "strength", days[0]))
+        roles.append(_role("tactical_watch", "support_insert", days[0]))
+    return {
+        "weeks": [{
+            "phase": "SPP",
+            "session_roles": roles,
+            "calendar_days": [
+                {"d_day": d, "weekday": ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")[i]}
+                for i, d in enumerate(range(20, 13, -1))
+            ],
+        }]
+    }
+
+
+def test_double_session_day_counts_once_against_training_day_budget():
+    from fightcamp.stage2_validator import _total_session_budget_warnings
+    from fightcamp.stage2_role_map import enforce_total_session_budget
+
+    role_map = _day_budget_map([20, 19, 18, 17, 16], double=True)
+    assert count_physical_sessions(role_map["weeks"][0]["session_roles"]) == 5
+    assert not appointment_budget_exceeded(role_map, 5)
+    assert not would_add_excess_training_day(role_map, 5, 20)
+    brief = {"athlete_snapshot": {"training_frequency": 5}, "weekly_role_map": role_map}
+    assert _total_session_budget_warnings(brief) == []
+    enforce_total_session_budget(role_map, brief["athlete_snapshot"])
+    assert not role_map["weeks"][0].get("coach_note_flags")
+
+
+def test_sixth_distinct_day_warns_without_deleting_coach_work():
+    from fightcamp.stage2_validator import _total_session_budget_warnings
+    from fightcamp.stage2_role_map import enforce_total_session_budget
+
+    role_map = _day_budget_map([20, 19, 18, 17, 16], double=True)
+    assert would_add_excess_training_day(role_map, 5, 15)
+    role_map["weeks"][0]["session_roles"].append(
+        _role("footwork_walkthrough", "skill", 15)
+    )
+    assert appointment_budget_exceeded(role_map, 5)
+    warnings = _total_session_budget_warnings({
+        "athlete_snapshot": {"training_frequency": 5}, "weekly_role_map": role_map,
+    })
+    assert len(warnings) == 1
+    assert warnings[0]["scheduled_training_days"] == 6
+    assert warnings[0]["requested_training_days"] == 5
+    before = list(role_map["weeks"][0]["session_roles"])
+    enforce_total_session_budget(role_map, {"training_frequency": 5})
+    assert role_map["weeks"][0]["session_roles"] == before
+    assert any("requested day count exceeded" in note
+               for note in role_map["weeks"][0].get("coach_note_flags", []))
+
+
 # ── target arithmetic ───────────────────────────────────────────────────────
 
 
