@@ -576,10 +576,12 @@ class TestPlanningBriefBranching:
             for entry in _without_protocol(brief["late_fight_session_sequence"])
             if _is_app_owned_visible_role(entry.get("role_key"))
         ]
-        # D-3 carries its mandatory Tactical Watch and the alactic sharpness touch
-        # lands on D-2; the Fight Visualisation protocol is excluded above.
+        # D-3 carries its mandatory Tactical Watch; the fight-eve neural primer
+        # (permitted on D-1) owns the sharpness touch, so D-2 is the freshness
+        # day. The Fight Visualisation protocol is excluded above.
         assert [entry["role_key"] for entry in app_sequence] == [
-            "alactic_sharpness_day",
+            "fight_week_freshness_day",
+            "neural_primer_day",
         ]
         assert any(entry["role_key"] == "hard_sparring_day" for entry in brief["late_fight_session_sequence"])
 
@@ -599,7 +601,8 @@ class TestPlanningBriefBranching:
             for entry in _without_protocol(brief["late_fight_session_sequence"])
             if _is_app_owned_visible_role(entry.get("role_key"))
         ]
-        assert [entry["role_key"] for entry in app_sequence] == []
+        # The fight-eve neural primer is permitted on D-1.
+        assert [entry["role_key"] for entry in app_sequence] == ["neural_primer_day"]
         assert any(entry["role_key"] == "hard_sparring_day" for entry in brief["late_fight_session_sequence"])
 
     def test_d7_planning_brief_uses_sharpness_week_labels(self):
@@ -647,13 +650,14 @@ class TestPlanningBriefBranching:
             for entry in spec["visible_session_sequence"]
             if _is_app_owned_visible_role(entry.get("role_key"))
         ]
-        # The D-7 support day now carries a neural primer; the fight week's
-        # alactic sharpness touch moves to D-4 ahead of the freshness day.
+        # The neural primer lands on the fight eve (permitted on D-1), so the
+        # D-7 support day carries the alactic sharpness touch ahead of the
+        # D-4 freshness day.
         assert [entry.get("role_key") for entry in _without_protocol(app_visible_sequence)] == [
             "strength_touch_day",
-            "neural_primer_day",
             "alactic_sharpness_day",
             "fight_week_freshness_day",
+            "neural_primer_day",
         ]
         assert any(entry.get("role_key") == "hard_sparring_day" for entry in spec["visible_session_sequence"])
         # The session_sequence must cover every downstream stage where the
@@ -748,9 +752,9 @@ class TestStage2PayloadBranching:
     def test_plan_spec_exposes_allocator_metadata_and_source_of_truth_fields(self):
         spec = _build_late_fight_plan_spec(5, _athlete(5))
 
-        # D-1 is owned by the pre-fight-day primer/protocol stage, not by the
-        # allocator's legal session labels.
-        assert spec["allocator"]["legal_countdown_labels"] == ["D-4", "D-3", "D-2"]
+        # D-1 is a legal allocator label: the fight-eve neural primer is
+        # permitted there.
+        assert spec["allocator"]["legal_countdown_labels"] == ["D-4", "D-3", "D-2", "D-1"]
         # ``selected_active_roles`` tracks allocator-selected app-owned roles
         # and matches ``visible_session_sequence``. Coach-owned hard_sparring
         # context entries land in ``session_sequence`` (for tracking) but are
