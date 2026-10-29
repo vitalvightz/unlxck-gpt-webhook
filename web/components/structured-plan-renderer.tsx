@@ -1227,7 +1227,8 @@ export function SessionCard({
     return (
       <article className="sp-session sp-mental-task" data-layout={planLayout ? "plan" : undefined} data-mental-category={mentalCategory.toLowerCase()}>
         <header className="sp-mental-head">
-          <h3 className="sp-session-title">{title || mentalCategory}{mentalDuration ? ` · ${compactTimeUnits(mentalDuration)}` : ""}</h3>
+          {hideTitle ? (mentalDuration ? <p className="sp-mental-duration">{compactTimeUnits(mentalDuration)}</p> : null)
+            : <h3 className="sp-session-title">{title || mentalCategory}{mentalDuration ? ` · ${compactTimeUnits(mentalDuration)}` : ""}</h3>}
           {completionInfo?.display.label ? (
             <span className="sp-tag sp-status-tag" data-tone={completionInfo.display.tone}>
               {completionInfo.display.label}
@@ -1524,11 +1525,14 @@ export function TodayCard({ day }: { day: StructuredDay }) {
 export function SessionlessDayCard({
   day,
   showDayLabels = true,
+  hideTitle = false,
 }: {
   day: StructuredDay;
   /** False inside the plan accordion, where the day row already shows the
    * countdown/date; the Today tab keeps the default. */
   showDayLabels?: boolean;
+  /** A sheet already titled with this day's work does not repeat it. */
+  hideTitle?: boolean;
 }) {
   const date = cleanText(day.date);
   const countdown = formatCountdownLabel(day.countdown_label);
@@ -1559,13 +1563,14 @@ export function SessionlessDayCard({
               {date ? <span className="sp-day-date">{formatAppDate(date)}</span> : null}
             </div>
           ) : null}
-          <h3 className="sp-session-title">
+          {hideTitle ? null : <h3 className="sp-session-title">
             {displayTitle}
             {(kind === "light_combat" || kind === "technical") ? <TechnicalCombatWhyTooltip day={day} declared={!isConverted} /> : null}
-          </h3>
+          </h3>}
         </div>
         <div className="sp-session-meta">
           {displayTag ? <span className="sp-tag sp-accent">{displayTag}</span> : null}
+          {hideTitle && (kind === "light_combat" || kind === "technical") ? <TechnicalCombatWhyTooltip day={day} declared={!isConverted} /> : null}
         </div>
       </header>
       {countdown === "D-0" && day.day_type === "competition" ? (
@@ -2093,11 +2098,12 @@ function CalendarDayPanel({
                 openWeekIntent={weekIntent}
                 occurrenceDate={day.date}
                 layout="plan"
+                hideTitle
               />
             ) : coachOnly ? (
-              <SessionlessDayCard day={day} showDayLabels={false} />
+              <SessionlessDayCard day={day} showDayLabels={false} hideTitle />
             ) : (
-              <DaySessionContext day={day} />
+              <DaySessionContext day={day} headline={opened.title} />
             )}
           </div>
         </InjuryDetailSheet>

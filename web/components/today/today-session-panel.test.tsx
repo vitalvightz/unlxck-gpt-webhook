@@ -1065,6 +1065,29 @@ for (const [status, performance, label] of [
   });
 }
 
+test("a tapped rehab answer is marked at once while the save is still in flight", async () => {
+  const container = document.createElement("div"); document.body.appendChild(container);
+  const root = createRoot(container);
+  const state = reviewedSessionState(false);
+  state.today.completion_status = "started";
+  const original = globalThis.fetch;
+  let release: (() => void) | null = null;
+  globalThis.fetch = (async (_input, init) => {
+    if (init?.method === "POST") await new Promise<void>((resolve) => { release = resolve; });
+    return new Response(JSON.stringify({ completion: { id: "completion-1" }, rehab_response_prompts: [] }), { status: 200 });
+  }) as typeof fetch;
+  try {
+    await act(async () => { root.render(<AuthProvider><ToastProvider><TodaySessionPanel state={state} structuredPlan={null} token="token" onRefresh={async () => {}} /></ToastProvider></AuthProvider>); });
+    const button = () => Array.from(container.querySelectorAll<HTMLButtonElement>('[aria-label="Did you complete your rehab?"] button'))
+      .find(b => b.textContent?.trim() === "Modified")!;
+    await act(async () => { button().dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
+    assert.equal(button().getAttribute("aria-pressed"), "true");
+    assert.match(button().className, /today-segment-chosen/);
+    assert.match(container.textContent ?? "", /Saving…/);
+    await act(async () => { release?.(); await new Promise((resolve) => setTimeout(resolve, 0)); });
+  } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
+});
+
 test("one live rehab session renders every reviewed bundle drill", () => {
   const state = contactDayState("green");
   state.today.next_session = {

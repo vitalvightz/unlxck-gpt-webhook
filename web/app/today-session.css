@@ -788,3 +788,13 @@ html[data-theme="light"] .today-pending-pill { color: #6f5120; }
 
 /* Keep preview status and its timer shortcut together. */
 .today-next-planned-note + .today-session-actions.today-action-tray { margin-top: 0; padding-block: 0; }
+
+/* A tapped rehab answer is marked straight away, before the save lands. */
+.today-segment-chosen,
+.today-segment-chosen:hover:not(:disabled) {
+  border-color: var(--brand-red);
+  box-shadow: inset 0 0 0 1px var(--brand-red);
+  color: var(--text-primary);
+  transform: none;
+}
+.today-rehab-checkoff-note { margin: 8px 0 0; color: var(--text-secondary); font-size: 0.82rem; }

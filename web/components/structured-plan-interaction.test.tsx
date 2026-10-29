@@ -374,6 +374,8 @@ test("calendar taps stay in the calendar and list that day's sessions below it",
     const sheet = document.querySelector('[role="dialog"]');
     assert.ok(sheet, "tapping a session opens its details");
     assert.match(sheet.textContent ?? "", /Mobility D/);
+    // The sheet's own heading names the session; the card inside never repeats it.
+    assert.equal((sheet.textContent ?? "").split("Mobility D").length - 1, 1);
   } finally {
     window.localStorage.removeItem("unlxck.plan-view");
     cleanup(container, root);

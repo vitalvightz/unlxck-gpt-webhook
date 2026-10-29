@@ -486,6 +486,7 @@ export function TodaySessionPanel({
   const fadeThrough = useFadeThrough();
   const [intent, setIntent] = useState<CompletionIntent>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [rehabCheckOff, setRehabCheckOff] = useState<{ value: "done" | "modified" | "skipped"; label: string } | null>(null);
   const [rehabPerformance, setRehabPerformance] = useState<"done_as_shown" | "changed" | "stopped" | "skipped" | undefined>();
   // The session the athlete just logged as trained, captured at write time.
   // The refresh that follows can advance `next_session` to tomorrow's card, so
@@ -1006,6 +1007,20 @@ export function TodaySessionPanel({
     setReviewFromTimer(fromTimer);
     setReviewOpen(true);
   }
+
+  // Rehab-only check-off: the tapped answer is marked at once (red outline) and
+  // saved straight away, or — while the session timer is running or handing
+  // off its results — as soon as the timer is done, so a tap is never lost.
+  const timerBusy = timerHandoffPending || activeTimer?.source === "session";
+  const rehabCheckOffPending = rehabCheckOff !== null && !["done", "modified", "skipped"].includes(status);
+  useEffect(() => {
+    if (!rehabCheckOff || timerBusy || isSubmitting || ["done", "modified", "skipped"].includes(status)) return;
+    const { value, label } = rehabCheckOff;
+    void saveCompletion(value, { modificationReason: value === "done" ? "" : `Rehab ${label.toLowerCase()}` })
+      .then((saved) => { if (!saved) setRehabCheckOff(null); });
+    // saveCompletion reads the latest render; re-run only when the gate opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rehabCheckOff, timerBusy]);
 
   // Asked once a session with reviewed rehab is logged as done.
   const rehabChoice = (
@@ -1605,10 +1620,16 @@ export function TodaySessionPanel({
         {rehabOnlyPrescription && (canCompleteSession || guidanceCanCheckOff) && !["done", "modified", "skipped"].includes(status) ? <div className="today-injury-guidance" role="group" aria-label={calmOnly ? "Did you follow the guidance?" : "Did you complete your rehab?"}>
           <p>{calmOnly ? "Did you follow the guidance?" : "Did you complete your rehab?"}</p>
           <div className="today-segment-row">
-            {([["done", "Completed"], ["modified", "Modified"], ["skipped", "Skipped"]] as const).map(([value, label]) =>
-              <button key={value} type="button" className="today-segment" disabled={isSubmitting}
-                onClick={() => saveCompletion(value, { modificationReason: value === "done" ? "" : `Rehab ${label.toLowerCase()}` })}>{label}</button>)}
+            {([["done", "Completed"], ["modified", "Modified"], ["skipped", "Skipped"]] as const).map(([value, label]) => {
+              const chosen = rehabCheckOff?.value === value;
+              return <button key={value} type="button" className={chosen ? "today-segment today-segment-chosen" : "today-segment"}
+                aria-pressed={chosen} disabled={isSubmitting && !chosen}
+                onClick={() => setRehabCheckOff(chosen && timerBusy ? null : { value, label })}>{label}</button>;
+            })}
           </div>
+          {rehabCheckOffPending ? <p className="today-rehab-checkoff-note" role="status">
+            {timerBusy ? "Saved when you finish the timer." : "Saving…"}
+          </p> : null}
         </div> : null}
         {sparringPrompt}
 
