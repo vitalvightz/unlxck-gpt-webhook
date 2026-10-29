@@ -102,3 +102,50 @@ test("Today and the next actionable session retain separate markers", () => {
   assert.match(host.querySelector('.cm-day-next')?.textContent ?? "", /Next session/);
   assert.equal(host.querySelector('.cm-day-next')?.getAttribute('data-day-index'), "3");
 });
+
+const notesPlan = (notes: { category: string; text: string }[]) => ({ ...trainingPlan, red_flag_rules: [], plan_notes: notes });
+
+test("Plan notes: informational notes are collapsed by default", () => {
+  const host = document.createElement("div");
+  host.innerHTML = renderToStaticMarkup(<ActiveNotesCard plan={notesPlan([
+    { category: "weight_cut", text: "No weight-cut target is assumed." },
+    { category: "conditioning", text: "Aerobic base is built on easy bike work." },
+  ])} />);
+  const details = host.querySelector("details") as HTMLDetailsElement | null;
+  assert.ok(details); assert.equal(details.open, false);
+  for (const text of ["No weight-cut target is assumed.", "Aerobic base is built on easy bike work."]) {
+    const note = Array.from(host.querySelectorAll(".sp-note-text")).find(node => node.textContent === text);
+    assert.ok(note?.closest("details"), `${text} sits behind the disclosure`);
+  }
+});
+
+test("Plan notes: active restrictions stay visible beside collapsed context", () => {
+  const host = document.createElement("div");
+  host.innerHTML = renderToStaticMarkup(<ActiveNotesCard plan={notesPlan([
+    { category: "injury", text: "No contact training until cleared." },
+    { category: "conditioning", text: "Aerobic base is built on easy bike work." },
+  ])} />);
+  const restriction = Array.from(host.querySelectorAll(".sp-note-text")).find(node => node.textContent === "No contact training until cleared.");
+  assert.ok(restriction); assert.equal(restriction.closest("details"), null);
+  assert.ok(host.querySelector("details"));
+});
+
+test("Plan notes: restriction-only plans show a static heading, no empty disclosure", () => {
+  const host = document.createElement("div");
+  host.innerHTML = renderToStaticMarkup(<ActiveNotesCard plan={notesPlan([
+    { category: "injury", text: "No contact training until cleared." },
+    { category: "weight_cut", text: "Stay within 5% of fight weight." },
+  ])} />);
+  assert.equal(host.querySelector("details"), null);
+  assert.equal(host.querySelector(".sp-collapse-action"), null);
+  assert.match(host.querySelector("h3")?.textContent ?? "", /Plan notes/);
+  assert.equal(host.querySelectorAll(".sp-note").length, 2);
+});
+
+test("the Plan page opens on the calendar; other hosts keep the list", () => {
+  const calendar = renderToStaticMarkup(<StructuredPlanRenderer plan={trainingPlan} defaultView="calendar" today={new Date(2026, 9, 28, 12)} />);
+  assert.match(calendar, /class="sp-card cm-calendar"/);
+  assert.doesNotMatch(calendar, /class="sp-weeks cm-days"/);
+  const list = renderToStaticMarkup(<StructuredPlanRenderer plan={trainingPlan} today={new Date(2026, 9, 28, 12)} />);
+  assert.match(list, /class="sp-weeks cm-days"/);
+});

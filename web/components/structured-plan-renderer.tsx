@@ -2284,7 +2284,7 @@ export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
   }
   // Current injury, medical and weight-cut restrictions stay on the card face,
   // never folded; the rest of the context sits behind the tap.
-  const restrictions = notes.filter(note => URGENT_NOTE_CATEGORIES.has(cleanText(note.category) ?? ""));
+  const restrictions = notes.filter(isActiveRestrictionNote);
   const context = notes.filter(note => !restrictions.includes(note));
   const renderNotes = (items: typeof notes) => (
     <ul className="sp-note-list">
@@ -2296,6 +2296,28 @@ export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
       ))}
     </ul>
   );
+  const icon = (
+    <span className="sp-plan-notes-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="5" y="4" width="14" height="17" rx="2" />
+        <path d="M9 4h6v3H9zM9 11h6M9 15h4" />
+      </svg>
+    </span>
+  );
+  const urgent = restrictions.length > 0
+    ? <div className="sp-plan-notes-urgent">{renderNotes(restrictions)}</div> : null;
+  // Restriction-only plans have nothing to fold: a static heading, no arrow.
+  if (context.length === 0) {
+    return (
+      <section className="sp-collapse sp-active-notes" aria-label="Plan notes">
+        <header className="sp-collapse-summary sp-plan-notes-summary sp-plan-notes-static">
+          {icon}
+          <span className="sp-plan-notes-text"><h3 className="sp-collapse-title">Plan notes</h3></span>
+        </header>
+        {urgent}
+      </section>
+    );
+  }
   return (
     <section className="sp-collapse sp-active-notes" aria-label="Plan notes">
     <details
@@ -2304,12 +2326,7 @@ export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary className="sp-collapse-summary sp-plan-notes-summary">
-        <span className="sp-plan-notes-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="5" y="4" width="14" height="17" rx="2" />
-            <path d="M9 4h6v3H9zM9 11h6M9 15h4" />
-          </svg>
-        </span>
+        {icon}
         <span className="sp-plan-notes-text">
           <span className="sp-collapse-title">Plan notes</span>
           <span className="sp-plan-notes-meta">
@@ -2323,12 +2340,20 @@ export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
       </div>
     </details>
       {/* Outside the disclosure: a current restriction is always seen. */}
-      {restrictions.length > 0 ? <div className="sp-plan-notes-urgent">{renderNotes(restrictions)}</div> : null}
+      {urgent}
     </section>
   );
 }
 
 const URGENT_NOTE_CATEGORIES = new Set(["injury", "medical", "post_op", "weight_cut"]);
+// "No weight-cut target is assumed" shares the category but restricts nothing.
+const INFORMATIONAL_NOTE = /\bis assumed\b|\bnot (?:applicable|required)\b|\bnone (?:declared|reported)\b/i;
+
+/** A note the athlete must act on now: an injury, medical or weight-cut
+ * category whose text is a live restriction, not general information. */
+function isActiveRestrictionNote(note: { category?: string | null; text: string }): boolean {
+  return URGENT_NOTE_CATEGORIES.has(cleanText(note.category) ?? "") && !INFORMATIONAL_NOTE.test(note.text);
+}
 
 /** Map a severity label ("Red", "Amber", "High", "Low"…) to a tone class so the
  *  badge colour carries the meaning. Unknown severities stay neutral. */
@@ -2651,12 +2676,13 @@ const PLAN_VIEW_STORAGE_KEY = "unlxck.plan-view";
 
 const subscribeToNothing = () => () => {};
 
-function readStoredPlanView(): PlanViewMode {
+function readStoredPlanView(fallback: PlanViewMode): PlanViewMode {
   try {
-    return window.localStorage.getItem(PLAN_VIEW_STORAGE_KEY) === "calendar" ? "calendar" : "list";
+    const stored = window.localStorage.getItem(PLAN_VIEW_STORAGE_KEY);
+    return stored === "calendar" || stored === "list" ? stored : fallback;
   } catch {
-    // Storage blocked (private mode, previews): stay on the list.
-    return "list";
+    // Storage blocked (private mode, previews): keep the default.
+    return fallback;
   }
 }
 
@@ -2696,6 +2722,7 @@ export function StructuredPlanRenderer({
   currentTrainingDayIso,
   scheduleContext,
   onLogSession,
+  defaultView = "list",
   isAdmin = false,
   rehabLabelPolicy,
   exerciseMedia,
@@ -2730,6 +2757,8 @@ export function StructuredPlanRenderer({
   scheduleContext?: PlanScheduleContext | null;
   /** Opens the retro-log flow for a past, still-loggable session. */
   onLogSession?: (day: StructuredDay, session: StructuredSession, sessionId: string) => void;
+  /** View shown until the athlete picks one; the Plan page opens on the calendar. */
+  defaultView?: PlanViewMode;
   /** Whether the viewer is an admin. The raw "Original plan text" dump is an
    * internal artefact and is hidden from athletes; it still appears for admins,
    * and for anyone in the fail-closed "schedule unavailable" state where the
@@ -2839,9 +2868,9 @@ export function StructuredPlanRenderer({
     setCalendarSelection(null);
   }
 
-  // List is the default (and the server render); a remembered Calendar choice
-  // takes over on the client, and an explicit tap this visit wins over both.
-  const storedView = useSyncExternalStore(subscribeToNothing, readStoredPlanView, () => "list" as const);
+  // `defaultView` is the server render; a remembered choice takes over on the
+  // client, and an explicit tap this visit wins over both.
+  const storedView = useSyncExternalStore(subscribeToNothing, () => readStoredPlanView(defaultView), () => defaultView);
   const [chosenView, setChosenView] = useState<PlanViewMode | null>(null);
   const view = chosenView ?? storedView;
   const changeView = (next: PlanViewMode) => {

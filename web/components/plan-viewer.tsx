@@ -587,6 +587,7 @@ function TextStructuredPlanRenderer({
   return (
     <StructuredPlanRenderer
       plan={adaptedPlan}
+      defaultView="calendar"
       openOngoing={isOpenOngoingPlan(fightDate)}
       createdAt={createdAt}
       focusDay={focusDay}
@@ -2985,6 +2986,7 @@ export function PlanViewer({
                 <ExerciseCustomisationProvider value={exerciseCustomisation}>
                 <StructuredPlanRenderer
                   plan={plan.outputs.structured_plan}
+                  defaultView="calendar"
                   openOngoing={openOngoing}
                   focusDay={nextSessionFocusDate}
                   currentDayLabel={nextSessionFocusDate ? "Next session" : "Today"}

@@ -491,3 +491,4 @@
 }
 .sp-active-notes .sp-plan-notes-summary::-webkit-details-marker { display: none; }
 .sp-active-notes .sp-plan-notes-text .sp-collapse-title { font-size: 0.95rem; font-weight: 650; }
+.sp-plan-notes-static { cursor: default; }
