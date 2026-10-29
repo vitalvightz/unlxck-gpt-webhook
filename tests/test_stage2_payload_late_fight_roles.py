@@ -1,3 +1,4 @@
+import pytest
 from fightcamp.stage2_payload_late_fight import (
     CANONICAL_HARD_SPARRING_NOTE,
     CANONICAL_TECHNICAL_ONLY_NOTE,
@@ -842,7 +843,10 @@ def test_declared_coach_combat_spine_coexists_with_same_day_fillers():
     assert {"hard_sparring_day", "neural_visualization"} <= roles_by_label["D-6"]
 
 
-def test_declared_coach_combat_spine_removes_app_stressor_from_coach_day():
+def _coach_spine_d13(monkeypatch=None, resolved=None):
+    if monkeypatch is not None:
+        monkeypatch.setattr("fightcamp.stage2_payload_late_fight.resolve_late_fight_contacts",
+                            lambda days, athlete: [(13, resolved)])
     athlete = _athlete(
         13,
         plan_creation_weekday="friday",
@@ -864,7 +868,19 @@ def test_declared_coach_combat_spine_removes_app_stressor_from_coach_day():
         athlete,
         _countdown_weekday_map("friday", 13),
     )
+    return [role["role_key"] for role in sequence if role.get("countdown_label") == "D-13"]
 
-    d13_roles = [role["role_key"] for role in sequence if role.get("countdown_label") == "D-13"]
+
+@pytest.mark.parametrize("resolved", ["hard", "reduced"])
+def test_declared_coach_combat_spine_removes_app_stressor_from_coach_day(monkeypatch, resolved):
+    d13_roles = _coach_spine_d13(monkeypatch, resolved)
     assert "hard_sparring_day" in d13_roles
     assert "strength_touch_day" not in d13_roles
+
+
+def test_declared_coach_combat_spine_keeps_compatible_work_on_technical_conversion():
+    # #2884: inside the D-14 cutoff the declared day resolves to technical-only,
+    # which no longer deletes compatible app work on that day.
+    d13_roles = _coach_spine_d13()
+    assert "hard_sparring_day" in d13_roles
+    assert "strength_touch_day" in d13_roles
