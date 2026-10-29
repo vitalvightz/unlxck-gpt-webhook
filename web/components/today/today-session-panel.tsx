@@ -1011,7 +1011,8 @@ export function TodaySessionPanel({
   // Rehab-only check-off: the tapped answer is marked at once (red outline) and
   // saved straight away, or — while the session timer is running or handing
   // off its results — as soon as the timer is done, so a tap is never lost.
-  const timerBusy = timerHandoffPending || activeTimer?.source === "session";
+  // shownTimer also covers a session timer resumed from storage after a reload.
+  const timerBusy = timerHandoffPending || shownTimer?.source === "session";
   const rehabCheckOffPending = rehabCheckOff !== null && !["done", "modified", "skipped"].includes(status);
   // The answer belongs to this session: Today moving on to another drops it.
   const [rehabCheckOffSession, setRehabCheckOffSession] = useState(session.session_id);
