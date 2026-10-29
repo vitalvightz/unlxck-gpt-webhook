@@ -167,6 +167,8 @@ def test_rehab_injury_string_does_not_apply_first_card_instability_to_other_entr
         ),
         injuries_only_text="left knee; right ankle",
     )
+    # #2867: parsed injuries come from the runtime training context.
+    context.training_context = SimpleNamespace(parsed_injuries=context.plan_input.parsed_injuries)
 
     injury_string = _build_rehab_injury_string(context)
 
@@ -204,6 +206,8 @@ def test_rehab_injury_string_does_not_apply_guided_type_when_area_only_substring
         ),
         injuries_only_text="left hip",
     )
+    # #2867: parsed injuries come from the runtime training context.
+    context.training_context = SimpleNamespace(parsed_injuries=context.plan_input.parsed_injuries)
 
     injury_string = _build_rehab_injury_string(context)
 
@@ -230,6 +234,8 @@ def test_rehab_injury_string_applies_guided_type_when_area_genuinely_matches():
         ),
         injuries_only_text="left knee",
     )
+    # #2867: parsed injuries come from the runtime training context.
+    context.training_context = SimpleNamespace(parsed_injuries=context.plan_input.parsed_injuries)
 
     injury_string = _build_rehab_injury_string(context)
 
