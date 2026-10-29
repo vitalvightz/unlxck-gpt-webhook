@@ -54,6 +54,7 @@ export function getSparringConsistency(
   hardSparringDays: string[],
   supportWorkDays: string[],
   requireCombatSession = false,
+  weeklyTrainingFrequency?: number | null,
 ): SparringConsistency {
   if (requireCombatSession && !hardSparringDays.length && !supportWorkDays.length) {
     return {
@@ -91,6 +92,16 @@ export function getSparringConsistency(
   if (overlap.length) {
     return {
       hardError: `A day cannot be both hard sparring and Support Work (Light Combat): ${overlap.join(", ")}.`,
+      softWarning: null,
+    };
+  }
+
+  // Each combat day is one session, so the stated weekly total cannot be lower.
+  // Don't auto-raise the total: the athlete may have picked the wrong days instead.
+  const combatSessions = new Set([...hardSparringDays, ...supportWorkDays]).size;
+  if (weeklyTrainingFrequency && combatSessions > weeklyTrainingFrequency) {
+    return {
+      hardError: `Your schedule doesn't add up: you selected ${combatSessions} combat session${combatSessions === 1 ? "" : "s"} but entered ${weeklyTrainingFrequency} total weekly session${weeklyTrainingFrequency === 1 ? "" : "s"}. Update your total or adjust your combat days.`,
       softWarning: null,
     };
   }

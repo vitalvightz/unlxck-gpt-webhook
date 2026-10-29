@@ -1059,7 +1059,7 @@ function QuickBuildFormInner() {
             disabled={sessionsSelectDisabled}
             onChange={(value) => patch("weekly_training_frequency", Number(value) || 1)}
           />
-          <p className="muted">Total weekly sessions, including boxing and double days. Separate from available days.</p>
+          <p className="muted">Total training sessions per week: sparring, technical boxing, strength and conditioning. Count two sessions on the same day as two.</p>
           <FieldError message={visibleError("weekly_training_frequency")} />
           <FieldError message={visibleError("training_availability")} />
         </div>
