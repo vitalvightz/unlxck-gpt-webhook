@@ -63,6 +63,15 @@ test("structured mindset content renders its steps and stop rule in full on the 
   assert.equal(host.querySelector('[role="dialog"]'), null);
 });
 
+test("plan mental cards keep the objective and progression inline", () => {
+  const host = document.createElement("div");
+  host.innerHTML = renderToStaticMarkup(<SessionCard session={mental} layout="plan" />);
+  assert.match(host.querySelector(".sp-session-objective")?.textContent ?? "", /Practise recovering your composure/);
+  const progression = host.querySelector('[data-kind="progression"]');
+  assert.match(progression?.textContent ?? "", /Repeat the same scenario with a different opponent reaction/);
+  assert.equal(host.textContent?.split("Repeat the same scenario").length, 2, "printed once");
+});
+
 test("day toggles survive refreshed data and explicit navigation reopens a closed day", async () => {
   const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
   const day = trainingPlan.weeks![0].days![2];

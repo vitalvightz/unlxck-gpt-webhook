@@ -358,7 +358,20 @@ test("calendar taps stay in the calendar and list that day's sessions below it",
     assert.deepEqual(rows.map(row => row.querySelector(".cm-cal-day-name")?.textContent), ["Conditioning C", "Mobility D"]);
     assert.doesNotMatch(panel()?.textContent ?? "", /Strength A/);
 
-    await act(async () => rows[1].click());
+    // A replacement plan drops the picked day instead of reusing its position.
+    const replacement = structuredClone(plan);
+    replacement.weeks = replacement.weeks!.map((week, index) => ({ ...week, week_id: `new-${index}` }));
+    replacement.weeks[1].days![1].sessions = [{ session_id: "e", title: "Replacement E", blocks: [] }];
+    await act(async () => {
+      root.render(<StructuredPlanRenderer plan={replacement} today={new Date(2026, 5, 15)} />);
+    });
+    assert.match(panel()?.textContent ?? "", /Strength A/, "back on today, not the old week 2 / day 1 slot");
+    await act(async () => {
+      root.render(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 15)} />);
+    });
+    await act(async () => Array.from(container.querySelectorAll<HTMLButtonElement>("button.cm-cal-cell"))
+      .find((button) => (button.textContent ?? "").includes("Wed 24 Jun 2026"))!.click());
+    await act(async () => Array.from(panel()!.querySelectorAll<HTMLButtonElement>(".cm-cal-day-row"))[1].click());
     const sheet = document.querySelector('[role="dialog"]');
     assert.ok(sheet, "tapping a session opens its details");
     assert.match(sheet.textContent ?? "", /Mobility D/);

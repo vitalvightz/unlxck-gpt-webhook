@@ -1209,6 +1209,15 @@ export function SessionCard({
     ]);
     const steps = mentalTaskSteps(authored);
     const mentalStops = Array.from(new Set(blocks.flatMap(block => getBlockAdjustmentDisplay(block).stopRules)));
+    // The plan card carries the whole task: why it matters and how to progress
+    // it sit inline beside the steps rather than behind a sheet.
+    const mentalObjective = planLayout && objective && !objectiveRepeatsTitle
+      && !steps.some(step => sameCopy(step, objective))
+      && !(steps.length === 0 && sameCopy(summary, objective)) ? objective : null;
+    const mentalProgressions = planLayout
+      ? Array.from(new Set(blocks.map(block => getBlockAdjustmentDisplay(block).progression)
+        .filter((line): line is string => Boolean(line) && !steps.some(step => sameCopy(step, line!)))))
+      : [];
     const mentalDrill = blocks.map(block => cleanText(block.display_name))
       .find(name => name && !sameCopy(name, title));
     // Low-load tasks show the steps only: Cue / Reset / Coach cue restate the
@@ -1226,6 +1235,7 @@ export function SessionCard({
           ) : null}
         </header>
         {mentalDrill ? <p className="sp-session-instruction">{mentalDrill}</p> : null}
+        {mentalObjective ? <p className="sp-session-objective">{mentalObjective}</p> : null}
         {steps.length > 0 ? (
           <ol className="sp-cues sp-mental-steps">
             {steps.map((instruction, index) => <li key={`${index}-${instruction}`}>{instruction}</li>)}
@@ -1234,6 +1244,9 @@ export function SessionCard({
         <SessionCompletionDetails info={completionInfo} compact={planLayout} />
         {context.map(line => <p className="sp-block-aside" key={`${line.label}-${line.value}`}>
           <span className="sp-stat-label">{line.label}</span>{line.value}
+        </p>)}
+        {mentalProgressions.map(line => <p className="sp-block-aside" data-kind="progression" key={line}>
+          <span className="sp-stat-label">Progression</span>{line}
         </p>)}
         {mentalStops.length > 0 ? (
           <p className="sp-block-aside" data-kind="stop"><span className="sp-stat-label">Stop rule</span>{mentalStops.join("; ")}</p>
@@ -2787,10 +2800,14 @@ export function StructuredPlanRenderer({
         .join("|"),
     [weeks],
   );
+  // The calendar's picked day is a week/day position too: a replacement plan
+  // drops it with the week so it can't land on an unrelated date.
+  const [calendarSelection, setCalendarSelection] = useState<{ weekPos: number; dayIndex: number } | null>(null);
   const [prevWeekSignature, setPrevWeekSignature] = useState(weekSignature);
   if (weekSignature !== prevWeekSignature) {
     setPrevWeekSignature(weekSignature);
     setSelectedPos(null);
+    setCalendarSelection(null);
   }
 
   // List is the default (and the server render); a remembered Calendar choice
@@ -2832,8 +2849,25 @@ export function StructuredPlanRenderer({
     setRequestedDay({ weekPos, dayIndex });
   };
   // Calendar taps stay in the calendar and show that day below it; only the
-  // List button switches views.
-  const [calendarSelection, setCalendarSelection] = useState<{ weekPos: number; dayIndex: number } | null>(null);
+  // List button switches views. A tap also brings the day panel into view when
+  // it sits below the fold, so a phone shows the change it just made.
+  const selectCalendarDay = (weekPos: number, dayIndex: number) => {
+    setCalendarSelection({ weekPos, dayIndex });
+    setCalendarScrollRequest({});
+  };
+  const [calendarScrollRequest, setCalendarScrollRequest] = useState<object | null>(null);
+  useEffect(() => {
+    const panel = calendarScrollRequest ? rootRef.current?.querySelector<HTMLElement>(".cm-cal-day") : null;
+    if (!panel || typeof panel.scrollIntoView !== "function") return;
+    const rect = panel.getBoundingClientRect();
+    const clearance = parseFloat(getComputedStyle(panel).scrollMarginBottom) || 0;
+    const headVisible = rect.top >= 0 && rect.top + Math.min(rect.height, 160) <= window.innerHeight - clearance;
+    if (headVisible) return;
+    panel.scrollIntoView({
+      block: "nearest",
+      behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+    });
+  }, [calendarScrollRequest]);
 
   const effectivePos = selectedPos ?? calendarProgress.currentWeekPos ?? focusProgress.currentWeekPos ?? 0;
   const safePos = effectivePos >= 0 && effectivePos < weeks.length ? effectivePos : 0;
@@ -2983,7 +3017,7 @@ export function StructuredPlanRenderer({
                 selected={calendarDaySelection}
                 phaseFor={openOngoing ? undefined : (weekPos) =>
                   glossaryEntry(resolvedWeekPhase(weeks[weekPos]))?.term ?? weekPhaseLabel(weeks[weekPos])}
-                onSelectDay={(weekPos, dayIndex) => setCalendarSelection({ weekPos, dayIndex })}
+                onSelectDay={selectCalendarDay}
               />
               {calendarSelectedDay && calendarDaySelection ? (
                 <CalendarDayPanel

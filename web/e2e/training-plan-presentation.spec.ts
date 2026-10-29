@@ -110,6 +110,7 @@ for (const width of [320, 375, 390, 430, 1280]) {
     await expect(page.locator(".cm-calendar")).toBeVisible(); await expect(page.locator(".cm-days")).toHaveCount(0);
     await expect(thursday).toHaveAttribute("aria-pressed", "true");
     await expect(dayPanel.locator(".cm-cal-day-title")).toContainText("Thu 29 Oct");
+    await expect(dayPanel.locator(".cm-cal-day-title")).toBeInViewport();
     if (process.env.PLAN_SCREENSHOTS) await page.screenshot({ path: `${process.env.PLAN_SCREENSHOTS}/calendar-${width}.png`, fullPage: true });
     await dayPanel.locator(".cm-cal-day-row").first().click();
     const daySheet = page.getByRole("dialog");
