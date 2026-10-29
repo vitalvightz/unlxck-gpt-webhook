@@ -444,9 +444,9 @@ def generate_plan_sync(
         slowest_label = max(timings, key=timings.get)
         logger.info("[timing] slowest_stage=%s %.2fs", slowest_label, timings[slowest_label])
 
+    # The selection seed travels in the stored request payload, never in the
+    # athlete-facing text: every request is seeded, and the plan stays clean.
     plan_text = rendered.fight_plan_text
-    if data.get("random_seed") is not None:
-        plan_text = f"{plan_text}\n\n<!-- generation_seed:{data.get('random_seed')} -->"
 
     result = {
         "pdf_url": pdf_url,

@@ -154,3 +154,53 @@ def test_generate_strength_block_uses_derived_fatigue_cost_for_live_near_equal_o
     assert hinge_reservoir[0]["reasons"]["fatigue_cost"] < hinge_reservoir[1]["reasons"]["fatigue_cost"]
     assert score_map["Heavy Pull"] - score_map["Snap Down"] <= NEAR_EQUAL_SCORE_BAND
     assert score_map["Heavy Pull"] - score_map["Later Group"] > NEAR_EQUAL_SCORE_BAND
+
+
+def test_tie_rank_replaces_name_fallback_inside_a_group():
+    ordered = sort_weighted_candidates(
+        [
+            {"name": "Alpha", "score": 7.0, "fatigue_cost": 2, "tie_rank": 2},
+            {"name": "Mike", "score": 7.0, "fatigue_cost": 2, "tie_rank": 0},
+            {"name": "Zulu", "score": 7.0, "fatigue_cost": 2, "tie_rank": 1},
+        ]
+    )
+
+    assert _names(ordered) == ["Mike", "Zulu", "Alpha"]
+
+
+def test_tie_rank_never_overrides_fatigue_cost_or_score_groups():
+    ordered = sort_weighted_candidates(
+        [
+            {"name": "Leader", "score": 10.0, "fatigue_cost": 4, "tie_rank": 0},
+            {"name": "LowFatigue", "score": 9.9, "fatigue_cost": 1, "tie_rank": 3},
+            {"name": "NextGroup", "score": 9.5, "fatigue_cost": 0, "tie_rank": 1},
+        ]
+    )
+
+    assert _names(ordered) == ["LowFatigue", "Leader", "NextGroup"]
+
+
+def test_tie_rank_only_permutes_equal_fatigue_members_of_a_group():
+    import random
+
+    rng = random.Random(11)
+    for _ in range(200):
+        candidates = [
+            {
+                "name": f"ex{i}",
+                "score": round(rng.uniform(0, 3), 2),
+                "fatigue_cost": rng.choice([1.0, 2.0, 3.0]),
+                "tie_rank": rng.randrange(1000),
+            }
+            for i in range(rng.randint(2, 25))
+        ]
+        plain = sort_weighted_candidates([{k: v for k, v in c.items() if k != "tie_rank"} for c in candidates])
+        seeded = sort_weighted_candidates(candidates)
+
+        assert sorted(_names(plain)) == sorted(_names(seeded))
+        assert [c["fatigue_cost"] for c in plain] == [c["fatigue_cost"] for c in seeded]
+        rank = {c["name"]: i for i, c in enumerate(seeded)}
+        for a in candidates:
+            for b in candidates:
+                if a["score"] - b["score"] > 2 * NEAR_EQUAL_SCORE_BAND:
+                    assert rank[a["name"]] < rank[b["name"]]

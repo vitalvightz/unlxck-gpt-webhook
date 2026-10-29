@@ -2479,9 +2479,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
             "name": ex.get("name", ""),
             "score": score,
             "fatigue_cost": breakdown.get("fatigue_cost", ex.get("fatigue_cost", 0.0)),
+            # Seeded runs break ties by the shuffled bank order; unseeded runs
+            # keep the deterministic name fallback.
+            "tie_rank": order_idx if rng is not None else None,
             "payload": (ex, score, breakdown),
         }
-        for ex, score, breakdown in weighted_exercises
+        for order_idx, (ex, score, breakdown) in enumerate(weighted_exercises)
     ]
     # Keep score-driven ordering primary while only allowing local fatigue-cost
     # reordering inside leader-anchored near-equal groups.
