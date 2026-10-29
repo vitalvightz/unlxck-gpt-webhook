@@ -115,6 +115,10 @@ class TestFloorGate:
         )
         assert "active_injury_blocks_hard_work" in _combat_pressure_floor_blockers(_far_week(), athlete)
 
+    def test_bare_injury_management_flag_does_not_block(self):
+        athlete = _base_athlete(readiness_flags=["injury_management"])
+        assert "active_injury_blocks_hard_work" not in _combat_pressure_floor_blockers(_far_week(), athlete)
+
     def test_taper_phase_blocks(self):
         assert _combat_pressure_floor_blockers(_far_week("TAPER"), _base_athlete()) == ["floor_only_in_build_phase"]
 

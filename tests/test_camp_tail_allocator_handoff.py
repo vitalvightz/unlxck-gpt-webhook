@@ -585,9 +585,18 @@ def test_production_d16_plan_has_no_dayless_normal_ghost():
     assert "alactic_speed_day" in handoff_keys
     assert handoff_keys <= {"alactic_speed_day", "neural_plus_strength_day"}
     if "neural_plus_strength_day" not in handoff_keys:
-        # The strength session now finds a legal day before the handoff.
-        assert any(role.get("category") == "strength" and not role.get("late_fight_tail_owned")
-                   and (_role_d_day(week, role) or 0) >= 14 for week, role in active)
+        # Not in the handoff: it is either placed on a legal pre-handoff day or
+        # removed by recorded planner compression (here the active weight cut),
+        # never dropped silently.
+        placed = any(role.get("role_key") == "neural_plus_strength_day" and not role.get("late_fight_tail_owned")
+                     and (_role_d_day(week, role) or 0) >= 14 for week, role in active)
+        compressed = any(
+            constraint.get("role_key") == "neural_plus_strength_day"
+            and constraint.get("authority") == "planner_compression"
+            for entry in brief.get("goal_preservation") or []
+            for constraint in entry.get("constraints") or []
+        )
+        assert placed or compressed
 
     # 2. The finished tail still carries its own alactic/sharpness exposure, so
     #    the removed ghost was not the sole owner of that adaptation.
