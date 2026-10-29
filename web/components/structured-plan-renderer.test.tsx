@@ -1159,6 +1159,18 @@ test("a plain hard-sparring title stays inside the contact card", () => {
   assert.equal(html.includes("sp-sparring-caution"), false);
 });
 
+test("hidden hard-sparring title does not repeat in the contact card", () => {
+  const html = renderToStaticMarkup(<SessionlessDayCard day={{
+    date: "2026-06-21",
+    day_type: "high",
+    today_card: { headline: "Hard sparring — controlled hard contact" },
+    sessions: [],
+  }} showDayLabels={false} hideTitle />);
+
+  assert.equal(html.includes('class="sp-session-title"'), false);
+  assert.match(html, /sp-sparring-caution[\\s\\S]*?Controlled hard contact<\\/p>/);
+});
+
 test("open plans keep session categories inside chronological day cards", () => {
   const plan = {
     schema_version: "1.0",
