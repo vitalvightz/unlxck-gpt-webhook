@@ -1,7 +1,7 @@
 """A pre-taper week cut by the D-14 cutoff must not become its own obligation.
 
 Regression: Haris Aftab Ahmad's 28 November 2026 camp (D-30). Its programme
-weeks run D-30..D-22, D-21..D-15, D-14..D-8 (SPP) and a D-7..D-0 taper. Only
+weeks run D-30..D-23, D-22..D-15, D-14..D-8 (SPP) and a D-7..D-0 taper. Only
 D-14 of the third week sits at or above the development cutoff, and the weekly
 path turned that single day into an isolated D-14..D-14 build window. Power
 (D-24, D-17) and conditioning (D-30, D-16) were real, development-quality and
@@ -19,7 +19,7 @@ from fightcamp.goal_preservation import _coverage, _other_stimuli, _requirements
 from fightcamp.planner_context import planner_athlete_model_context
 from fightcamp.session_composition import conditioning_assignment_from_slot
 
-HARIS_WEEKS = [("GPP", 30, 22), ("SPP", 21, 15), ("SPP", 14, 8), ("TAPER", 7, 0)]
+HARIS_WEEKS = [("GPP", 30, 23), ("SPP", 22, 15), ("SPP", 14, 8), ("TAPER", 7, 0)]
 
 
 def _brief(weeks=HARIS_WEEKS, days=30):
@@ -49,8 +49,8 @@ def _missing(goal, intent, brief, evidence):
 
 @pytest.mark.parametrize("goal", ["power", "conditioning"])
 def test_haris_boundary_fragment_merges_into_adjacent_week(goal):
-    # Before: [(22, 30), (15, 21), (14, 14)].
-    assert _windows(goal, _brief()) == [(22, 30), (14, 21)]
+    # Before: [(23, 30), (15, 22), (14, 14)].
+    assert _windows(goal, _brief()) == [(23, 30), (14, 22)]
 
 
 def test_haris_power_and_conditioning_receive_credit_for_real_exposures():
@@ -63,20 +63,20 @@ def test_haris_power_and_conditioning_receive_credit_for_real_exposures():
 def test_haris_missing_second_week_still_fails():
     brief = _brief()
     # One opening-week exposure cannot discharge the next development week.
-    assert _missing("power", "ballistic_power", brief, _evidence("ballistic_power", 24)) == [(14, 21)]
+    assert _missing("power", "ballistic_power", brief, _evidence("ballistic_power", 24)) == [(14, 22)]
     assert _missing("conditioning", "energy_system_training", brief,
-                    _evidence("energy_system_training", 30)) == [(14, 21)]
+                    _evidence("energy_system_training", 30)) == [(14, 22)]
     # Two exposures inside one week do not pay for the other.
-    assert _missing("power", "ballistic_power", brief, _evidence("ballistic_power", 17, 15)) == [(22, 30)]
+    assert _missing("power", "ballistic_power", brief, _evidence("ballistic_power", 17, 15)) == [(23, 30)]
 
 
 def test_haris_taper_and_maintenance_exposures_earn_no_build_credit():
     brief = _brief()
     late = _evidence("ballistic_power", 24) + _evidence("ballistic_power", 13, 10)
-    assert _missing("power", "ballistic_power", brief, late) == [(14, 21)]
+    assert _missing("power", "ballistic_power", brief, late) == [(14, 22)]
     weak = _evidence("ballistic_power", 24) + [
         {"d_day": 17, "intents": ["ballistic_power"], "development_quality": False}]
-    assert _missing("power", "ballistic_power", brief, weak) == [(14, 21)]
+    assert _missing("power", "ballistic_power", brief, weak) == [(14, 22)]
 
 
 def test_majority_eligible_straddling_week_keeps_its_own_requirement():
@@ -169,3 +169,11 @@ def test_medicine_ball_and_ballistic_prescriptions_earn_development_power_credit
 
 def test_same_power_work_inside_the_fight_tail_is_not_development_credit():
     assert not any(e["development_quality"] for e in _power_evidence(10).values())
+
+
+def test_short_week_majority_is_judged_against_its_own_length():
+    # A five-day week with three eligible days is a majority of that week and
+    # keeps its own recurring requirement.
+    brief = _brief([("GPP", 23, 17), ("SPP", 16, 12), ("TAPER", 11, 0)], days=23)
+    assert _windows("power", brief) == [(17, 23), (14, 16)]
+    assert _missing("power", "ballistic_power", brief, _evidence("ballistic_power", 20)) == [(14, 16)]

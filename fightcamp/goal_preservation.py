@@ -919,7 +919,7 @@ def _requirements(entry: dict, brief: dict) -> list[dict]:
                 # earlier window, as the cadence path's earliest window absorbs
                 # its remainder. A majority-eligible week keeps its own promise.
                 if (weekly_windows and len(eligible) < len(trainable)
-                        and 2 * len(eligible) < 7
+                        and 2 * len(eligible) < len(trainable)
                         and weekly_windows[-1]["min_d_day"] == window["max_d_day"] + 1):
                     weekly_windows[-1]["min_d_day"] = window["min_d_day"]
                 else:
