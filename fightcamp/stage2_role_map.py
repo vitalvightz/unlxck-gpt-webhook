@@ -2717,7 +2717,7 @@ def reserve_dense_day_receiver(
             row for row in dated_appointments(role_map)
             if row["countdown_offset"] in days
         ]
-        if len(scheduled) >= frequency:
+        if len({r["countdown_offset"] for r in scheduled}) >= frequency:
             continue
         occupied = {
             role_d_day(week, role) for role in roles
@@ -2782,11 +2782,11 @@ def reserve_dense_day_receiver(
 
 
 def enforce_total_session_budget(role_map: dict, athlete_model: dict, candidate_pools: dict | None = None) -> dict:
-    """Report appointment discrepancies without deleting selected physical work.
+    """Report distinct training-day overruns without deleting selected work.
 
-    Selection, calendar compatibility and prescription owners have already
-    judged this work. A requested appointment count is not a medical dose cap.
-    The independent validator also keeps over-target totals visible.
+    Compatible double-session days count once. Calendar compatibility, dosage,
+    and safety owners remain authoritative; any genuine excess day is reported
+    rather than silently deleting selected or coach-owned work.
     """
     frequency = requested_training_frequency(athlete_model)
     if not frequency:
@@ -2797,11 +2797,12 @@ def enforce_total_session_budget(role_map: dict, athlete_model: dict, candidate_
     for days in cadence_windows(slots):
         offsets = {d for d, _ in days}
         scheduled = [r for r in appointments if r["countdown_offset"] in offsets]
-        if len(scheduled) > frequency:
+        training_days = {r["countdown_offset"] for r in scheduled}
+        if len(training_days) > frequency:
             _append_week_coach_note_flag(scheduled[0]["_source_week"],
-                f"Session count discrepancy D-{max(offsets)}..D-{min(offsets)}: "
-                f"{len(scheduled)} standalone physical appointments versus {frequency} requested; "
-                "compatible selected work retained, requested count exceeded.")
+                f"Training day count discrepancy D-{max(offsets)}..D-{min(offsets)}: "
+                f"{len(training_days)} physical training days versus {frequency} requested; "
+                "compatible selected work retained, requested day count exceeded.")
     return role_map
 
 
