@@ -22,7 +22,11 @@
   isolation: isolate;
   display: grid;
   gap: 56px;
-  padding-bottom: var(--space-3);
+  padding-bottom: 0;
+}
+
+.app-main:has(.public-landing) {
+  padding-bottom: 0;
 }
 
 /* Brand glow behind the hero; decorative, never intercepts taps. */
@@ -652,7 +656,7 @@
    width. */
 .public-final-cta {
   position: relative;
-  margin-top: -16px;
+  margin-top: 0;
   overflow: hidden;
   isolation: isolate;
   display: flex;
@@ -959,7 +963,7 @@
   }
 
   .public-final-cta {
-    margin-top: -40px;
+    margin-top: 0;
     padding: 28px 28px 28px 40px;
   }
 
