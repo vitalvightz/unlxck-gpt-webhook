@@ -190,7 +190,7 @@ html[data-app-surface="brand"] .app-safety-footer {
 .settings-section-picker { display: none; }
 .settings-page .settings-sync-card { display: none; }
 .settings-card .appearance-mode-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.settings-card .appearance-mode-preview { display: none; }
+.settings-card .appearance-mode-preview { height: 64px; }
 .settings-card .appearance-mode-card { min-width: 0; padding: 14px; }
 .settings-card .settings-toggle-row { min-height: 60px; padding: 12px 0; border: 0; border-bottom: 1px solid var(--border-subtle); border-radius: 0; background: transparent; }
 

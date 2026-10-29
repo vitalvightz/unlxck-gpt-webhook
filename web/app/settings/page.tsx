@@ -1192,12 +1192,9 @@ export default function SettingsPage() {
           </div>
         </details>
 
-        <details className="settings-disclosure">
-          <summary>Appearance and app <span>Theme, install</span></summary>
-          <div className="settings-disclosure-body">
         <div className="settings-subsection">
           <div className="settings-subsection-header">
-            <h3 className="settings-subsection-title">Workspace theme</h3>
+            <h3 className="settings-subsection-title">Appearance</h3>
           </div>
           <div className="appearance-mode-grid" role="radiogroup" aria-label="Workspace theme">
             {APPEARANCE_OPTIONS.map((option) => {
@@ -1238,8 +1235,6 @@ export default function SettingsPage() {
         </div>
 
         <InstallUnlxck />
-          </div>
-        </details>
 
         <div ref={accountActionsRef} className="settings-account-actions">
           <p className="settings-account-actions-status" aria-live="polite">
