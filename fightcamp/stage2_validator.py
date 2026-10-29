@@ -3319,6 +3319,13 @@ def _rendered_strength_entries(lines: list[str], prescriptions: list[dict]) -> l
             for offset, candidate in enumerate(lines[index + 1:], start=index + 1):
                 if any(_line_has_exercise(candidate, str(item["name"])) for item in prescriptions):
                     break
+                # A new bulleted exercise (not a "- 3 x 5" / "- RPE 7" wrap)
+                # starts its own entry; never read its dose as this one's.
+                item_text = candidate.strip()
+                if item_text[:2] in {"- ", "• ", "* "}:
+                    item_text = item_text[2:].lstrip()
+                    if item_text and not item_text[0].isdigit() and not _RENDERED_RPE.match(item_text):
+                        break
                 continuation.append(candidate)
                 dose_text = " ".join([line, *continuation])
                 if _parse_rendered_strength_dose(dose_text)[:2] != (None, None):

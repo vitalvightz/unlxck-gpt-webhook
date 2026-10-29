@@ -655,3 +655,23 @@ def test_effective_envelopes_are_isolated_by_scheduled_day():
     report = validate_stage2_output(planning_brief=brief,
         final_plan_text="D-16 (Thursday) - Strength\nBack Squat: 3 x 3 @ RPE 7\n")
     assert not any(e["code"] == "late_camp_effective_prescription_exceeded" for e in report["errors"])
+
+
+def test_wrapped_dose_never_reads_the_next_bulleted_exercise():
+    from fightcamp.stage2_validator import _parse_rendered_strength_dose, _rendered_strength_entries
+
+    prescriptions = [{"name": "Heavy RDL → Broad Jump"}, {"name": "Barbell Back Squat"}]
+    contrast = [
+        "- Heavy RDL → Broad Jump — 2 rounds: heavy movement 2 reps @ 85% 1RM → explosive movement 2 reps; rest 4 min.",
+        "Cue: Brace before each rep.",
+        "- Medicine-Ball Chest Toss — 3 x 2 at max speed; rest 120 s.",
+    ]
+    (_, dose, _), = _rendered_strength_entries(contrast, prescriptions)
+    assert "Chest Toss" not in dose
+    assert _parse_rendered_strength_dose(dose)[:2] == (None, None)
+
+    # Genuine wrapped layouts, including bulleted dose and RPE lines, still join.
+    for wrapped in (["Barbell Back Squat:", "3 sets x 5 reps", "RPE ~7"],
+                    ["- Barbell Back Squat:", "- 3 x 5", "- RPE 7"]):
+        (_, dose, _), = _rendered_strength_entries(wrapped, prescriptions)
+        assert _parse_rendered_strength_dose(dose) == (3, 5, 7.0)
