@@ -235,6 +235,26 @@ def appointment_budget_exceeded(role_map: dict, frequency: int) -> bool:
                for days in cadence_windows(slots))
 
 
+def would_add_excess_training_day(role_map: dict, frequency: int | None, offset: int) -> bool:
+    """Whether a prospective physical role opens an extra day beyond the quota.
+
+    Used only for discretionary filler placement: never silently remove coach,
+    strength, rehab or other previously selected work to meet a numerical cap.
+    """
+    if not frequency or offset <= 0:
+        return False
+    if any(r["countdown_offset"] == offset for r in dated_appointments(role_map)):
+        return False  # Additional compatible work on an occupied day is free.
+    slots = [(d["d_day"], d.get("weekday", ""))
+             for w in role_map.get("weeks") or [] for d in w.get("calendar_days") or []]
+    occupied = {r["countdown_offset"] for r in dated_appointments(role_map)}
+    for days in cadence_windows(slots):
+        offsets = {d for d, _ in days}
+        if offset in offsets and len(occupied & offsets) >= frequency:
+            return True
+    return False
+
+
 # --- Target resolution -------------------------------------------------------
 
 #: Deterministic reasons a viable declared day may be left without a session.
