@@ -10,7 +10,7 @@ import {
 const LEGEND: { state: CalendarCellState; label: string }[] = [
   { state: "done", label: "Done" },
   { state: "missed", label: "Missed" },
-  { state: "planned", label: "Planned (app session)" },
+  { state: "planned", label: "Planned" },
   { state: "coach", label: "Coach / gym" },
   { state: "outside", label: "Outside camp" },
 ];
