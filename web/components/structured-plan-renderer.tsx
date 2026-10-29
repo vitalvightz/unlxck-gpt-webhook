@@ -1362,7 +1362,9 @@ export function SessionCard({
               {date ? <span className="sp-day-date">{formatAppDate(date)}</span> : null}
             </div>
           ) : null}
-          {hideTitle && !isTechnicalSession ? null : <h3 className="sp-session-title">
+          {/* Today keeps the technical title (it carries the why); a plan sheet
+              already titles the session, so its rationale moves beside the tag. */}
+          {hideTitle && (!isTechnicalSession || planLayout) ? null : <h3 className="sp-session-title">
             {isDeclaredLightCombat
               ? DECLARED_LIGHT_COMBAT_TITLE
               : isTechnicalSession
@@ -1392,9 +1394,15 @@ export function SessionCard({
         </div>
         <div className="sp-session-meta">
           {isDeclaredLightCombat ? (
-            <span className="sp-tag sp-accent">Technical</span>
+            <>
+              <span className="sp-tag sp-accent">Technical</span>
+              {hideTitle ? <TechnicalCombatWhyTooltip day={day} declared /> : null}
+            </>
           ) : isTechnicalSession ? (
-            <span className="sp-tag sp-accent">{TECHNICAL_COMBAT_TAG}</span>
+            <>
+              <span className="sp-tag sp-accent">{TECHNICAL_COMBAT_TAG}</span>
+              {hideTitle && planLayout ? <TechnicalCombatWhyTooltip day={day} declared={false} /> : null}
+            </>
           ) : sessionType && (!planLayout || !sameCopy(sessionTypeLabel, title)) ? (
             <span className="sp-tag">{sessionTypeLabel}</span>
           ) : null}
@@ -2354,7 +2362,7 @@ export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
 const URGENT_NOTE_CATEGORIES = new Set(["injury", "medical", "post_op", "weight_cut"]);
 // "No weight-cut target is assumed" shares the category but restricts nothing.
 // Only a whole note that states the absence of a target/limit/injury counts.
-const INFORMATIONAL_NOTE = /^(?:no (?:weight[- ]cut )?(?:targets?|limits?|restrictions?|injur(?:y|ies)|medical (?:issue|condition)s?) (?:is |are )?(?:assumed|declared|reported|set|applied)|weight[- ]cut (?:is )?not (?:applicable|required|planned)|none (?:declared|reported))\.?$/i;
+const INFORMATIONAL_NOTE = /^(?:(?:the )?target weight (?:is )?not set|no (?:weight[- ]cut )?(?:targets?|limits?|restrictions?|injur(?:y|ies)|medical (?:issue|condition)s?) (?:is |are )?(?:assumed|declared|reported|set|applied)|weight[- ]cut (?:is )?not (?:applicable|required|planned)|none (?:declared|reported))\.?$/i;
 // Any of these words means the note asks the athlete to do or avoid something.
 const RESTRICTIVE_WORDING = /\b(?:avoid|do not|don't|never|stop|limit|restrict|until|only|must|cleared?|clearance|max(?:imum)?|cap|reduce|keep|stay|follow|within|under|no contact|no sparring|hold)\b/i;
 

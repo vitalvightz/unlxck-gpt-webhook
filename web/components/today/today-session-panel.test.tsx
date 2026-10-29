@@ -1081,10 +1081,13 @@ test("a tapped rehab answer is marked at once while the save is still in flight"
     const button = () => Array.from(container.querySelectorAll<HTMLButtonElement>('[aria-label="Did you complete your rehab?"] button'))
       .find(b => b.textContent?.trim() === "Modified")!;
     await act(async () => { button().dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
+    // The POST is genuinely in flight: the mock has not answered yet.
+    assert.ok(release, "the completion save was requested");
     assert.equal(button().getAttribute("aria-pressed"), "true");
     assert.match(button().className, /today-segment-chosen/);
     assert.match(container.textContent ?? "", /Saving…/);
-    await act(async () => { release?.(); await new Promise((resolve) => setTimeout(resolve, 0)); });
+    await act(async () => { release!(); await new Promise((resolve) => setTimeout(resolve, 0)); });
+    assert.match(container.textContent ?? "", /Saved\./);
   } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
 });
 
