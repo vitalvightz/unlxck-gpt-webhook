@@ -1670,7 +1670,7 @@ export function SessionlessDayCard({
       {boxed ? (
         <CoachDayBox
           tag={displayTag}
-          heading={sparring ? <h3 className="sp-session-title">{sparring.title}</h3> : null}
+          heading={!hideTitle && sparring ? <h3 className="sp-session-title">{sparring.title}</h3> : null}
           tooltip={hideTitle && (kind === "light_combat" || kind === "technical") ? <TechnicalCombatWhyTooltip day={day} declared={!isConverted} /> : null}
         >
           <SparringCaution text={sparring?.caution ?? null} />
