@@ -1265,7 +1265,7 @@ def _late_fight_permission_policy(days_until_fight: Any, athlete_model: dict[str
     elif mode == "late_fight_session_payload":
         allowed_role_keys = ["neural_primer_day", "alactic_sharpness_day", "technical_touch_day", "fight_week_freshness_day"]
     elif mode == "pre_fight_day_payload":
-        allowed_role_keys = ["neural_primer_day", "technical_touch_day"]
+        allowed_role_keys = ["fight_week_freshness_day", "technical_touch_day"]
 
     # A weekday can recur inside the countdown window (e.g. Friday at D-20,
     # D-13, and D-6). The hard lock belongs to the hard-allowed occurrence
@@ -1804,7 +1804,8 @@ def _late_fight_session_type_rules(days_until_fight: Any) -> tuple[list[str], li
             allowed.insert(0, "sharpness")
         return allowed, ["full_strength_block", "glycolytic_build", "broad_weekly_architecture", "hard_sparring", "strength_anchor"]
     if mode == "pre_fight_day_payload":
-        return ["primer", "technical", "recovery"], ["full_strength_block", "conditioning_block", "hard_sparring", "hinge_transfer", "jumps", "contrast_work"]
+        # No neural primer on D-1 (product decision); freshness/technical only.
+        return ["recovery", "technical"], ["full_strength_block", "conditioning_block", "hard_sparring", "hinge_transfer", "jumps", "contrast_work", "neural_primer"]
     if mode == "fight_day_protocol_payload":
         return ["activation", "warm_up", "tactical_cues", "fueling", "recovery_notes"], ["strength", "conditioning", "sparring", "weekly_architecture", "layered_rehab_stack"]
     return ["strength", "conditioning", "recovery", "technical", "sparring"], []
@@ -2082,14 +2083,14 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
     if mode == "pre_fight_day_payload":
         return {
             "mode": mode,
-            "framing": "primer_only",
+            "framing": "freshness_only",
             "rules": [
-                "Primer-only output. 4 blocks max. Under 300 words.",
-                "D-1 neural primer is micro-dose only: 1-2 sets or 2-3 minutes total, RPE 3-5; no RPE 6-7, no pump, no fatigue.",
+                "Freshness-only output. 4 blocks max. Under 300 words.",
+                "D-1 has no neural primer: short mobility, loosening and breathing only, RPE 3 max; no sets of speed or power work, no pump, no fatigue.",
                 "D-1 shadowboxing caps at 2 x 60-90 sec very light rounds; fill the rest with breathing or visualization only — never a full shadowboxing session.",
             ],
-            "preferred_terms": ["neural primer", "technical touch", "sharpness", "activation", "reset", "rhythm", "breathing", "visualization"],
-            "forbidden_terms": ["anchor", "strength", "conditioning", "fight-pace density", "block", "glycolytic", "contrast", "RPE 6-7", "RPE 8"],
+            "preferred_terms": ["freshness", "mobility", "technical touch", "reset", "rhythm", "breathing", "visualization"],
+            "forbidden_terms": ["neural primer", "anchor", "strength", "conditioning", "fight-pace density", "block", "glycolytic", "contrast", "RPE 6-7", "RPE 8"],
         }
     return {
         "mode": mode,
@@ -2790,14 +2791,16 @@ def _late_fight_candidate_roles(
         return candidates
 
     if mode == "pre_fight_day_payload":
+        # Product decision: no neural primer on D-1. Fight eve keeps one short,
+        # equipment-free freshness / mobility reset instead.
         candidates.append(
             _late_fight_role_entry(
-                category="strength",
-                role_key="neural_primer_day",
-                preferred_pool="strength_slots",
-                selection_rule="Render at most one tiny neural primer; do not build a normal training week.",
-                placement_rule="Keep it short, clean, and immediately supportive of tomorrow's performance.",
-                selection_priority=110,
+                category="recovery",
+                role_key="fight_week_freshness_day",
+                preferred_pool="rehab_slots_or_recovery_only",
+                selection_rule="Render one short freshness, mobility and breathing reset; no strength or conditioning.",
+                placement_rule="Keep it short, easy and immediately supportive of tomorrow's performance.",
+                selection_priority=104,
                 required=True,
                 legal_countdown_labels=legal_countdown_labels,
             )
@@ -4053,7 +4056,7 @@ def _late_fight_stage_label(days_until_fight: Any) -> str:
     if mode == "late_fight_session_payload":
         return "Sharpness Sessions"
     if mode == "pre_fight_day_payload":
-        return "Primer Day"
+        return "Fight-Eve Reset"
     if mode == "fight_day_protocol_payload":
         return "Fight-Day Protocol"
     return "Camp"
