@@ -15,6 +15,7 @@ from tests.support import _build_client
 
 ATHLETE = {"Authorization": "Bearer athlete-token"}
 PLAN_ID = "11111111-1111-1111-1111-111111111111"
+CHECKIN = {"plan_id": PLAN_ID, "sleep": "good", "body": "normal", "pain": "none", "phase": "GPP"}
 
 
 def _seed_plan(store) -> None:
@@ -67,6 +68,8 @@ def test_completing_todays_scheduled_session_advances_both_streaks(caplog):
         ]
     }
 
+    # Logging today's session needs today's check-in (session_hold).
+    assert client.post("/api/today/checkin", headers=ATHLETE, json=CHECKIN).status_code == 201
     with caplog.at_level(logging.ERROR):
         response = client.post(
             "/api/today/session-completion",
@@ -84,6 +87,8 @@ def test_completing_todays_scheduled_session_advances_both_streaks(caplog):
 def test_an_unscheduled_completion_leaves_both_streaks_at_zero():
     client, store, _ = _build_client()
     _seed_plan(store)
+    # Logging today's session needs today's check-in (session_hold).
+    assert client.post("/api/today/checkin", headers=ATHLETE, json=CHECKIN).status_code == 201
 
     response = client.post(
         "/api/today/session-completion",

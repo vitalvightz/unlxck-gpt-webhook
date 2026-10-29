@@ -45,14 +45,21 @@ def exercise_instructions(assignment):
     return _bank_instructions().get(_identity(assignment.get("exercise_key") or assignment.get("name")))
 
 
+def nested_rows(container, key):
+    """A saved card's nested rows, or ``[]`` when malformed (never iterate a scalar)."""
+    rows = container.get(key) if isinstance(container, dict) else None
+    return rows if isinstance(rows, list) else []
+
+
 def recover_execution_instructions(plan):
     """Recover descriptions for every saved card, including cards without a brief."""
     result = plan
-    for wi, week in enumerate(plan.get("weeks") or []):
-        for di, day in enumerate(week.get("days") or []):
-            for si, session in enumerate(day.get("sessions") or []):
-                for bi, block in enumerate(session.get("blocks") or []):
-                    if block.get("execution_instructions") or block.get("athlete_change") or block.get("prescription_source") == "athlete":
+    # Malformed saved cards are skipped; readers degrade rather than crash.
+    for wi, week in enumerate(nested_rows(plan, "weeks")):
+        for di, day in enumerate(nested_rows(week, "days")):
+            for si, session in enumerate(nested_rows(day, "sessions")):
+                for bi, block in enumerate(nested_rows(session, "blocks")):
+                    if not isinstance(block, dict) or block.get("execution_instructions") or block.get("athlete_change") or block.get("prescription_source") == "athlete":
                         continue
                     explanation = exercise_instructions({**block, "name": block.get("display_name")})
                     if explanation:

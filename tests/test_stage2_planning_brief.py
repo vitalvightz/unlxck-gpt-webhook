@@ -2322,8 +2322,9 @@ def test_high_fatigue_compression_uses_declared_spar_count_for_cap_and_priority(
     ] == ["Tuesday", "Thursday"]
     assert week["effective_hard_sparring_days"] == []
     # The compression under test is unchanged: both declared days stay locked as
-    # roles on their declared weekdays rather than being moved or dropped.
-    assert locked_spar_days == ["Tuesday", "Thursday"]
+    # roles on their declared weekdays rather than being moved or dropped
+    # (roles follow calendar order, which can start mid-week).
+    assert sorted(locked_spar_days) == ["Thursday", "Tuesday"]
     assert week["coach_note_flags"] == ["deload hard sparring"]
     assert week["intentional_compression"]["active"] is False
     # The legacy helper still evaluates effective count for its own reason codes
@@ -2554,14 +2555,15 @@ def test_boxing_crowded_week_does_not_overcompress_on_single_signal():
     assert len(suppressed_compression) == 0
 
 
-def test_compute_readiness_compression_still_counts_mild_injury_in_generic_path():
+def test_compute_readiness_compression_does_not_count_mild_injury_in_generic_path():
+    # #3033: a low-severity symptom alone adds no global compression.
     athlete = _base_athlete(
         fatigue="low",
         injuries=["mild shoulder irritation"],
         days_until_fight=35,
     )
 
-    assert _compute_readiness_compression(athlete) == 1
+    assert _compute_readiness_compression(athlete) == 0
 
 
 def test_boxing_crowded_week_does_not_treat_mild_injury_as_moderate_plus_signal():
@@ -2629,7 +2631,9 @@ def test_high_fatigue_compression_blocks_glycolytic_on_next_training_day_after_r
             "phase": "SPP",
             "week_index": 1,
             "declared_hard_sparring_days": ["Monday", "Wednesday"],
-            "resolved_rule_state": {"must_keep": ["glycolytic", "primary_strength"]},
+            # Glycolytic placement only: primary_strength must-keep (#3035)
+            # would also protect neural_plus_strength_day for the one slot.
+            "resolved_rule_state": {"must_keep": ["glycolytic"]},
         },
         session_roles,
         [],
@@ -2696,7 +2700,9 @@ def test_high_fatigue_compression_allows_glycolytic_when_not_on_next_training_da
             "phase": "SPP",
             "week_index": 1,
             "declared_hard_sparring_days": ["Monday", "Wednesday"],
-            "resolved_rule_state": {"must_keep": ["glycolytic", "primary_strength"]},
+            # Glycolytic placement only: primary_strength must-keep (#3035)
+            # would also protect neural_plus_strength_day for the one slot.
+            "resolved_rule_state": {"must_keep": ["glycolytic"]},
         },
         session_roles,
         [],
@@ -2716,6 +2722,58 @@ def test_high_fatigue_compression_allows_glycolytic_when_not_on_next_training_da
     assert "secondary_strength_day" not in [role["role_key"] for role in kept_roles]
     assert "secondary_strength_day" in [item["role_key"] for item in suppressed]
     assert [role["scheduled_day_hint"] for role in kept_roles if role["role_key"] == "hard_sparring_day"] == ["Monday", "Wednesday"]
+
+
+@pytest.mark.parametrize("key_goals,winner", [
+    (["conditioning"], "fight_pace_repeatability_day"),
+    (["strength"], "neural_plus_strength_day"),
+    (["power"], "neural_plus_strength_day"),
+    ([], None),
+])
+def test_high_fatigue_compression_resolves_competing_strength_and_glycolytic_must_keeps_by_goal(key_goals, winner):
+    # Both must-keeps are protected (#3035 maps primary_strength onto
+    # neural_plus_strength_day), but high fatigue leaves one non-spar slot.
+    # Protected work outranks every other role; athlete goals break the tie.
+    session_roles = [
+        {"category": "sparring", "role_key": "hard_sparring_day", "scheduled_day_hint": "Monday", "governance": {}},
+        {"category": "sparring", "role_key": "hard_sparring_day", "scheduled_day_hint": "Wednesday", "governance": {}},
+        {"category": "strength", "role_key": "secondary_strength_day", "governance": {}},
+        {"category": "strength", "role_key": "neural_plus_strength_day", "governance": {}},
+        {"category": "conditioning", "role_key": "fight_pace_repeatability_day",
+         "preferred_system": "glycolytic", "scheduled_day_hint": "Tuesday", "governance": {}},
+        {"category": "conditioning", "role_key": "aerobic_support_day",
+         "preferred_system": "aerobic", "scheduled_day_hint": "Monday", "governance": {}},
+    ]
+
+    kept_roles, suppressed = _apply_high_fatigue_week_compression(
+        {
+            "phase": "SPP",
+            "week_index": 1,
+            "declared_hard_sparring_days": ["Monday", "Wednesday"],
+            "resolved_rule_state": {"must_keep": ["glycolytic", "primary_strength"]},
+        },
+        session_roles,
+        [],
+        {
+            "fatigue": "high",
+            "readiness_flags": ["high_fatigue"],
+            "hard_sparring_days": ["Monday", "Wednesday"],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Friday"],
+            "key_goals": key_goals,
+        },
+        hard_sparring_plan=[
+            {"day": "Monday", "status": "hard_as_planned"},
+            {"day": "Wednesday", "status": "deload_suggested"},
+        ],
+    )
+
+    protected = {"neural_plus_strength_day", "fight_pace_repeatability_day"}
+    kept_non_spar = [role["role_key"] for role in kept_roles if role["role_key"] != "hard_sparring_day"]
+    # Exactly one protected role survives; unprotected roles are cut first.
+    assert len(kept_non_spar) == 1 and kept_non_spar[0] in protected
+    assert {"secondary_strength_day", "aerobic_support_day"} <= {item["role_key"] for item in suppressed}
+    if winner:
+        assert kept_non_spar == [winner]
 
 
 def test_strength_slots_share_session_metadata_and_injury_pressure_does_not_force_tissue_state():

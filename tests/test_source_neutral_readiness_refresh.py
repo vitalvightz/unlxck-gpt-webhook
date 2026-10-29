@@ -268,6 +268,11 @@ def test_successful_route_mutations_then_authoritative_read(monkeypatch, evidenc
         def now(cls, tz=None):
             return NOW if tz else NOW.replace(tzinfo=None)
     monkeypatch.setattr(today_service, "datetime", Clock)
+    # Session completion builds Today through the readiness boundary, which
+    # reads its own clock; it must see the same day as the seeded check-in.
+    from api.services import today_readiness_boundary, today_readiness_boundary_core
+    monkeypatch.setattr(today_readiness_boundary, "datetime", Clock)
+    monkeypatch.setattr(today_readiness_boundary_core, "datetime", Clock)
     client, store, _ = _build_client()
     seeded = checked_store()
     store.plans = seeded.plans

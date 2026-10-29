@@ -686,10 +686,9 @@ def test_review_stage2_output_still_blocks_d3_sandbag_shouldering_via_forbidden_
         """,
     )
 
-    blocking = _blocking_codes(review)
-    assert "late_fight_unapproved_exercise_rendered" not in blocking
-    assert "late_fight_window_forbidden_exercise" in blocking
-    assert review["validator_report"]["is_publishable"] is False
+    # Blocking findings force a retry and release flagged, like the D-1 case.
+    assert "late_fight_unapproved_exercise_rendered" not in _blocking_codes(review)
+    _assert_blocking_flag_released_with_flags(review, "late_fight_window_forbidden_exercise")
 
 
 def test_review_stage2_output_retries_when_d1_renders_med_ball_punch_throw():

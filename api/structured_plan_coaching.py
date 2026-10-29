@@ -4,7 +4,7 @@ from typing import Any
 import re
 
 from fightcamp.calendar_context import role_d_day
-from fightcamp.exercise_instructions import recover_execution_instructions
+from fightcamp.exercise_instructions import nested_rows, recover_execution_instructions
 from fightcamp.coaching_copy import concise_coaching, is_null_progression
 from fightcamp.exercise_coaching import (
     exercise_coaching, is_profile_progression, is_profile_cue, easier_rejection, clinical_coaching_rejection,
@@ -102,13 +102,16 @@ def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any],
     recovered = deepcopy(plan)
     from .structured_plan_faithfulness import project_source_adjustments
     recovered = project_source_adjustments(recovered, validated_text)
-    for week in recovered.get("weeks") or []:
-        for day in week.get("days") or []:
+    # Malformed saved weeks/days/sessions/blocks carry no coaching to recover.
+    for week in nested_rows(recovered, "weeks"):
+        for day in nested_rows(week, "days"):
+            if not isinstance(day, dict):
+                continue
             label = str(day.get("countdown_label") or "")
             offset = int(label[2:]) if label.startswith("D-") and label[2:].isdigit() else None
-            for session in day.get("sessions") or []:
-                for block in session.get("blocks") or []:
-                    if block.get("athlete_change") or block.get("prescription_source") == "athlete":
+            for session in nested_rows(day, "sessions"):
+                for block in nested_rows(session, "blocks"):
+                    if not isinstance(block, dict) or block.get("athlete_change") or block.get("prescription_source") == "athlete":
                         continue
                     # Old converters put labelled adjustments in the cue list.
                     # Route before validation so React cannot resurrect a rejected rule.

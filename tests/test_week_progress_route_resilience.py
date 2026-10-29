@@ -34,6 +34,10 @@ def test_week_plan_lookup_failure_does_not_break_saved_completion():
 
     store.get_plan_for_athlete = fail_week_evaluation_plan_lookup
 
+    # Starting today's session needs today's check-in (session_hold).
+    checkin = client.post("/api/today/checkin", headers=ATHLETE, json={
+        "plan_id": PLAN_ID, "sleep": "good", "body": "normal", "pain": "none", "phase": "GPP"})
+    assert checkin.status_code == 201, checkin.text
     response = client.post(
         "/api/today/session-completion",
         headers=ATHLETE,

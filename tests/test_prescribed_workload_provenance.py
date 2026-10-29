@@ -9,6 +9,7 @@ from api.contracts.external_training import ExternalTrainingCreate
 from api.contracts.readiness_message import ReadinessCheckin, ReadinessContext, build_readiness_adjustment
 from api.services.sparring_readiness_snapshot import annotate_payload_with_sparring_readiness
 from api.services.today_readiness_boundary import build_today_command_view, upsert_session_completion
+from api.services.today_service import submit_today_checkin
 from api.services.training_history import create_external_training, training_history
 from api.services.week_progress import evaluate_week_completion
 from fightcamp.completed_workload import completed_workload
@@ -36,6 +37,13 @@ def make_store(*, sibling="Breathing reset", optional=False):
             }]}]},
     }
     store.set_active_plan_id(ATHLETE, PLAN)
+    # Logging today's session needs today's check-in (session_hold). Tests that
+    # plant their own check-in for the day replace this one.
+    submit_today_checkin(store, athlete_id=ATHLETE, athlete_timezone="Europe/London", now=NOW, payload={
+        "plan_id": PLAN, "sleep": "good", "body": "normal", "pain": "none", "phase": "SPP",
+        "active_injury": "none", "previous_session": "none", "sharp_pain": False, "instability": False,
+        "swelling": False, "neurological_symptoms": False, "illness_symptoms": False,
+        "cannot_warm_into_movement": False, "worse_next_day_pain": False})
     return store
 
 
@@ -204,7 +212,7 @@ def test_day_credit_cannot_bypass_current_stop_or_injury(restriction):
 
 
 def test_route_preserves_daily_xp_streaks_week_progress_and_history(monkeypatch):
-    from api.services import today_service
+    from api.services import today_readiness_boundary, today_readiness_boundary_core, today_service
     from tests.support import _build_client
     # All imported resolver functions share this deterministic clock.
     class Clock(datetime):
@@ -212,19 +220,29 @@ def test_route_preserves_daily_xp_streaks_week_progress_and_history(monkeypatch)
         def now(cls, tz=None):
             return NOW if tz else NOW.replace(tzinfo=None)
     monkeypatch.setattr(today_service, "datetime", Clock)
+    monkeypatch.setattr(today_readiness_boundary, "datetime", Clock)
+    monkeypatch.setattr(today_readiness_boundary_core, "datetime", Clock)
     client, store, _ = _build_client()
     store.plans = make_store().plans
     store.set_active_plan_id(ATHLETE, PLAN)
     headers = {"Authorization": "Bearer athlete-token"}
     payload = {"plan_id": PLAN, "session_id": "main", "status": "done", "session_rpe": 8}
+    # Logging today's session needs today's check-in (session_hold).
+    checkin = client.post("/api/today/checkin", headers=headers, json={
+        "plan_id": PLAN, "sleep": "good", "body": "normal", "pain": "none", "phase": "SPP"})
+    assert checkin.status_code == 201, checkin.text
     for _ in range(2):
         response = client.post("/api/today/session-completion", headers=headers, json=payload)
         assert response.status_code == 201, response.text
     rows = client.get("/api/training/history", headers=headers).json()["sessions"]
     assert [row["completion_origin"] for row in rows] == ["reported"]
     assert len(store.session_completions[ATHLETE]) == 2
-    assert {row["action"] for row in store.xp_awards[ATHLETE]} == {
+    # The required check-in earns its own XP; logging the session twice must
+    # still award each session action once.
+    session_awards = [row for row in store.xp_awards[ATHLETE]
+                      if row["action"] not in {"readiness_checkin_completed", "first_checkin_completed"}]
+    assert {row["action"] for row in session_awards} == {
         "training_logged", "planned_session_completed", "full_training_week_completed"}
-    assert len(store.xp_awards[ATHLETE]) == 3
+    assert len(session_awards) == 3
     assert store.get_athlete_streaks(ATHLETE)["training_current"] == 1
     assert store.get_athlete_streaks(ATHLETE)["adherence_current"] == 1

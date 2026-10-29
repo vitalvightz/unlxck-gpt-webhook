@@ -18,6 +18,16 @@ def _plan(plan_id: str, *, created_at: str) -> dict:
     }
 
 
+CHECKIN_XP_ACTIONS = {"readiness_checkin_completed", "first_checkin_completed"}
+
+
+def _check_in(client, plan_id: str) -> None:
+    """Logging today's session needs today's check-in (session_hold)."""
+    response = client.post("/api/today/checkin", headers=ATHLETE, json={
+        "plan_id": plan_id, "sleep": "good", "body": "normal", "pain": "none", "phase": "GPP"})
+    assert response.status_code == 201, response.text
+
+
 def _complete(client, plan_id: str, session_id: str):
     return client.post(
         "/api/today/session-completion",
@@ -86,12 +96,15 @@ def test_xp_rejection_does_not_prevent_adherence_reconciliation(monkeypatch):
         lambda *args, **kwargs: calls.append(kwargs["athlete_id"]),
     )
 
+    _check_in(client, ACTIVE_PLAN)
     response = _complete(client, ACTIVE_PLAN, "scheduled-session")
 
     assert response.status_code == 201
     assert response.json()["completion"]["status"] == "done"
     assert calls == ["athlete-1"]
-    assert store.xp_awards.get("athlete-1", []) == []
+    # Only the check-in's own XP; the rejected completion awards nothing.
+    assert [row for row in store.xp_awards.get("athlete-1", [])
+            if row["action"] not in CHECKIN_XP_ACTIONS] == []
 
 
 def test_adherence_reconciliation_failure_does_not_rollback_completion(monkeypatch):
@@ -105,6 +118,7 @@ def test_adherence_reconciliation_failure_does_not_rollback_completion(monkeypat
 
     monkeypatch.setattr(today_routes, "reconcile_training_streak", fail)
 
+    _check_in(client, ACTIVE_PLAN)
     response = _complete(client, ACTIVE_PLAN, "scheduled-session")
 
     assert response.status_code == 201
