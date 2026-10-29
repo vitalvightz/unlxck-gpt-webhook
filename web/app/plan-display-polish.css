@@ -445,6 +445,12 @@
 .ex-detail-section .ex-row-why-line { gap: 4px; }
 .ex-detail-section .ex-row-why-line + .ex-row-why-line { margin-top: 4px; }
 
+/* Make the lead instruction as scannable as the older exercise cards. */
+.ex-detail-key-cue { background: var(--bg-stat); border-left: 4px solid var(--brand-red); border-radius: 0 8px 8px 0; }
+.ex-detail:not(.ex-detail-logging) > .ex-detail-key-cue { margin: 8px 0; padding: 12px 14px; }
+.ex-detail-key-cue .sp-stat-label { display: block; margin-bottom: 6px; color: var(--text-secondary); }
+.ex-detail-key-cue strong { display: block; color: var(--text-primary); font-size: 1rem; line-height: 1.5; }
+
 /* Calmer titles: session and coach-day headings a step smaller. */
 .cm-day .sp-session-title { font-size: 1.08rem; font-weight: 700; line-height: 1.35; }
 .cm-day .sp-today-headline { font-size: 1.05rem; line-height: 1.35; }
