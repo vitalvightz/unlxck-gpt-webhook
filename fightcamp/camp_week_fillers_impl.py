@@ -203,6 +203,13 @@ def _place_filler(
     if selected is None:
         return None
     insert, d_day = selected
+    from .physical_session_frequency import (
+        is_physical_session_role, requested_training_frequency, would_add_excess_training_day,
+    )
+    if is_physical_session_role({**insert, "countdown_offset": d_day}) and would_add_excess_training_day(
+        weekly_role_map, requested_training_frequency(athlete_model), d_day,
+    ):
+        return None
     _decorate_filler(insert, day, d_day)
     session_roles.append(insert)
     usage_ledger.setdefault("coverage_roles", []).append(insert)
