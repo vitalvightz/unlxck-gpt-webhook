@@ -67,13 +67,14 @@ export function PlanCalendar({
               </th>
               {row.cells.map((cell) => {
                 const isSelected = selected !== null && cell.weekPos === selected.weekPos && cell.dayIndex === selected.dayIndex;
-                const className = `cm-cal-cell${cell.isToday ? " cm-cal-today" : ""}${isSelected ? " cm-cal-selected" : ""}`;
+                const className = `cm-cal-cell${cell.isToday ? " cm-cal-today" : ""}${isSelected ? " cm-cal-selected" : ""}${cell.isFightDay ? " cm-cal-fight-day" : ""}`;
                 const content = (
                   <>
                     <span className="cm-cal-num" aria-hidden="true">
                       {cell.dayNumber ?? ""}
                     </span>
                     <span className="cm-cal-dot" data-state={cell.state} aria-hidden="true" />
+                    {cell.isFightDay ? <span className="cm-cal-fight-label">Fight day</span> : null}
                     <span className="sr-only">
                       {cell.label}
                       {cell.isToday ? " (today)" : ""}
@@ -104,6 +105,7 @@ export function PlanCalendar({
         </tbody>
       </table>
       <ul className="cm-cal-legend" aria-label="Calendar key">
+        <li><span className="cm-cal-fight-key" aria-hidden="true" />Fight day</li>
         {LEGEND.map((item) => (
           <li key={item.state}>
             <span className="cm-cal-dot" data-state={item.state} aria-hidden="true" />

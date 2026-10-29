@@ -150,6 +150,10 @@ function PriorityMicrodoseCard({ day }: { day: StructuredDay }) {
 const HARD_SPARRING_SESSIONLESS_NOTE =
   "No extra S&C. This is your declared hard-sparring/contact day. Stay fresh.";
 const TECHNICAL_COMBAT_TITLE = "Technical Combat";
+function contactDisplayTitle(title: string): string {
+  const plain = title.replace(/^D[-−]\d+\s*[—–:-]\s*/i, "");
+  return /^Technical[ -]only combat$/i.test(plain) ? TECHNICAL_COMBAT_TITLE : plain;
+}
 const TECHNICAL_COMBAT_HELP =
   "Hard sparring is reduced near fight day to cut fatigue and injury risk while keeping you sharp.";
 const TECHNICAL_COMBAT_TAG = "Low load";
@@ -1226,10 +1230,11 @@ export function SessionCard({
     titleize(cleanText(session.session_type) || "Session"),
   );
   const isDeclaredLightCombat = isDeclaredLightCombatTitle(title);
-  const isTechnicalSession = title === "Technical-only combat";
+  const isTechnicalSession = /^(?:D[-−]\d+\s*[—–:-]\s*)?Technical[ -]only combat$/i.test(title);
   const sessionType = cleanText(session.session_type);
-  const supportCard = planLayout && isCompactPlanSupportSession(session)
-    && !cleanText(card?.primary_warning) && !cleanText(card?.weight_cut_warning);
+  const isOptional = session.optional === true || /^Optional\b/i.test(cleanText(session.objective) ?? "");
+  const supportCard = planLayout && (isOptional || mentalSessionCategory(session) !== null || isCompactPlanSupportSession(session)
+    || (getBlocks(session).length > 0 && getBlocks(session).every(block => block.block_type === "mindset")));
   const rawObjective = formatSessionObjective(session.objective);
   const objective = supportCard ? rawObjective?.replace(/^Optional[.:]\s*/i, "") || null : rawObjective;
   // A rationale that is just the session title again ("Strength" / "Why
@@ -1332,7 +1337,7 @@ export function SessionCard({
       </>
     );
     return supportCard ? (
-      <PlanSupportCard title={title || mentalCategory} duration={mentalDuration} category={mentalCategory} optional={session.optional === true}>{content}</PlanSupportCard>
+      <PlanSupportCard title={title || mentalCategory} duration={mentalDuration} category={mentalCategory} optional={isOptional}>{content}</PlanSupportCard>
     ) : <article className="sp-session sp-mental-task" data-layout={planLayout ? "plan" : undefined} data-mental-category={mentalCategory.toLowerCase()}>{content}</article>;
   }
 
@@ -1437,7 +1442,7 @@ export function SessionCard({
           ) : null}
           {/* Today keeps the technical title (it carries the why); a plan sheet
               already titles the session, so its rationale moves beside the tag. */}
-          {(hideTitle || repeatsOnlyExercise) && (!isTechnicalSession || planLayout) ? null : <h3 className="sp-session-title">
+          {((hideTitle || repeatsOnlyExercise) && (!isTechnicalSession || planLayout)) || (planLayout && (isDeclaredLightCombat || isTechnicalSession)) ? null : <h3 className="sp-session-title">
             {isDeclaredLightCombat
               ? DECLARED_LIGHT_COMBAT_TITLE
               : isTechnicalSession
@@ -1480,6 +1485,7 @@ export function SessionCard({
       {isDeclaredLightCombat || isTechnicalSession ? (
         <CoachDayBox
           tag={isDeclaredLightCombat ? "Technical" : TECHNICAL_COMBAT_TAG}
+          heading={planLayout ? <h3 className="sp-session-title">{isDeclaredLightCombat ? DECLARED_LIGHT_COMBAT_TITLE : TECHNICAL_COMBAT_TITLE}<TechnicalCombatWhyTooltip day={day} declared={isDeclaredLightCombat} /></h3> : null}
           tooltip={
             isDeclaredLightCombat
               ? hideTitle ? <TechnicalCombatWhyTooltip day={day} declared /> : null
@@ -1567,7 +1573,7 @@ export function SessionCard({
     </>
   );
   return supportCard ? (
-    <PlanSupportCard title={title} duration={duration} category={/breath/i.test(title) ? "Breathe" : null} optional={session.optional === true}>{content}</PlanSupportCard>
+    <PlanSupportCard title={title} duration={duration} category={/breath/i.test(title) ? "Breathe" : null} optional={isOptional}>{content}</PlanSupportCard>
   ) : <article className="sp-session" data-layout={planLayout ? "plan" : undefined}>{content}</article>;
 }
 
@@ -1634,7 +1640,7 @@ export function SessionlessDayCard({
     kind === "light_combat"
       ? DECLARED_LIGHT_COMBAT_TITLE
       : isConverted
-        ? (title === "Technical-only combat" ? TECHNICAL_COMBAT_TITLE : title)
+        ? contactDisplayTitle(title)
         : title;
   const displayTag = isConverted ? TECHNICAL_COMBAT_TAG : tag;
   const sparring = kind === "sparring" ? sparringHeading(displayTitle) : null;
@@ -1653,9 +1659,8 @@ export function SessionlessDayCard({
               {date ? <span className="sp-day-date">{formatAppDate(date)}</span> : null}
             </div>
           ) : null}
-          {hideTitle || sparring ? null : <h3 className="sp-session-title">
+          {hideTitle || sparring || boxed ? null : <h3 className="sp-session-title">
             {displayTitle}
-            {(kind === "light_combat" || kind === "technical") ? <TechnicalCombatWhyTooltip day={day} declared={!isConverted} /> : null}
           </h3>}
         </div>
         {boxed ? null : (
@@ -1670,7 +1675,7 @@ export function SessionlessDayCard({
       {boxed ? (
         <CoachDayBox
           tag={displayTag}
-          heading={!hideTitle && sparring ? <h3 className="sp-session-title">{sparring.title}</h3> : null}
+          heading={!hideTitle ? <h3 className="sp-session-title">{sparring?.title ?? (isConverted ? TECHNICAL_COMBAT_TITLE : displayTitle)}{kind === "light_combat" || kind === "technical" ? <TechnicalCombatWhyTooltip day={day} declared={!isConverted} /> : null}</h3> : null}
           tooltip={hideTitle && (kind === "light_combat" || kind === "technical") ? <TechnicalCombatWhyTooltip day={day} declared={!isConverted} /> : null}
         >
           <SparringCaution text={sparring?.caution ?? null} />
@@ -1748,7 +1753,7 @@ function CoachLedDayContext({
   const displayTitle = isLightCombat
     ? DECLARED_LIGHT_COMBAT_TITLE
     : isTechnical
-      ? (title === "Technical-only combat" ? TECHNICAL_COMBAT_TITLE : title)
+      ? contactDisplayTitle(title)
       : title;
   const displayTag = isTechnical ? TECHNICAL_COMBAT_TAG : tag;
   const sparring = kind === "sparring" ? sparringHeading(displayTitle) : null;
@@ -1796,16 +1801,17 @@ export function DaySessionContext({ day, headline }: { day: StructuredDay; headl
   const contactView = getCoachLedContactView(day);
   // A declared light-combat slot the plan already lists as its own session card
   // needs no second contact block above it.
-  const sessionShowsLightCombat = getSessions(day).some((session) =>
-    isDeclaredLightCombatTitle(cleanText(session.title) ?? ""),
-  );
+  const sessionShowsLightCombat = getSessions(day).some((session) => {
+    const title = stripLeadingWeekday(cleanText(session.title) ?? "").replace(/^D[-−]\d+\s*[—–:-]\s*/i, "");
+    return isDeclaredLightCombatTitle(title) || /^Technical[ -]only combat$/i.test(title);
+  });
   const coachLedContact =
-    contactView && !(contactView.kind === "light_combat" && sessionShowsLightCombat)
+    contactView && !(["light_combat", "technical"].includes(contactView.kind) && sessionShowsLightCombat)
       ? contactView
       : null;
   // The contact block already names the day's combat work; a light-combat
   // headline on top of it would show the same session twice.
-  const showLightTechnicalContext = lightTechnicalContext && !coachLedContact;
+  const showLightTechnicalContext = lightTechnicalContext && !coachLedContact && !sessionShowsLightCombat;
   // Session-level anchors are the most specific coaching cue in this schema, so
   // keep them and suppress the broader day anchor whenever any session owns one.
   // The day anchor remains the fallback when none of the sessions has a usable
