@@ -2266,7 +2266,7 @@ function getSafetyPriorityTexts(plan: StructuredPlan): string[] {
     .filter((text): text is string => text !== null);
 }
 
-// Plan-level "active notes": the short, always-on reminders (weight cut,
+// Plan-level notes ("Plan notes"): the short, always-on reminders (weight cut,
 // injury, nutrition, general non-negotiables) that live outside any week. Kept
 // as a standalone card near the top so this context is not lost in the
 // structured view the way it would be if it only existed in the raw text.
@@ -2278,25 +2278,57 @@ export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
     const text = stripSafetyOwnedClause(cleanText(note.text) || "", safetyPriorityTexts);
     return text ? [{ ...note, text }] : [];
   });
+  const [open, setOpen] = useState(false);
   if (notes.length === 0) {
     return null;
   }
+  // Current injury, medical and weight-cut restrictions stay on the card face,
+  // never folded; the rest of the context sits behind the tap.
+  const restrictions = notes.filter(note => URGENT_NOTE_CATEGORIES.has(cleanText(note.category) ?? ""));
+  const context = notes.filter(note => !restrictions.includes(note));
+  const renderNotes = (items: typeof notes) => (
+    <ul className="sp-note-list">
+      {items.map((note, index) => (
+        <li key={`${note.category}-${index}`} className={`sp-note sp-note-${note.category}`}>
+          <span className="sp-note-label">{planNoteLabel(note)}</span>
+          <span className="sp-note-text">{note.text}</span>
+        </li>
+      ))}
+    </ul>
+  );
   return (
-    <section className="sp-collapse sp-active-notes" aria-label="Active notes">
-      <header className="sp-collapse-summary"><h3 className="sp-collapse-title">Active notes</h3></header>
+    <section className="sp-collapse sp-active-notes" aria-label="Plan notes">
+    <details
+      className="sp-plan-notes-details"
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary className="sp-collapse-summary sp-plan-notes-summary">
+        <span className="sp-plan-notes-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="5" y="4" width="14" height="17" rx="2" />
+            <path d="M9 4h6v3H9zM9 11h6M9 15h4" />
+          </svg>
+        </span>
+        <span className="sp-plan-notes-text">
+          <span className="sp-collapse-title">Plan notes</span>
+          <span className="sp-plan-notes-meta">
+            {`${notes.length} ${notes.length === 1 ? "note" : "notes"} · Training limits & goals`}
+          </span>
+        </span>
+        <span className="sp-collapse-action">{open ? "Hide" : "Show"}</span>
+      </summary>
       <div className="sp-collapse-body">
-        <ul className="sp-note-list">
-          {notes.map((note, index) => (
-            <li key={`${note.category}-${index}`} className={`sp-note sp-note-${note.category}`}>
-              <span className="sp-note-label">{planNoteLabel(note)}</span>
-              <span className="sp-note-text">{note.text}</span>
-            </li>
-          ))}
-        </ul>
+        {context.length > 0 ? renderNotes(context) : null}
       </div>
+    </details>
+      {/* Outside the disclosure: a current restriction is always seen. */}
+      {restrictions.length > 0 ? <div className="sp-plan-notes-urgent">{renderNotes(restrictions)}</div> : null}
     </section>
   );
 }
+
+const URGENT_NOTE_CATEGORIES = new Set(["injury", "medical", "post_op", "weight_cut"]);
 
 /** Map a severity label ("Red", "Amber", "High", "Low"…) to a tone class so the
  *  badge colour carries the meaning. Unknown severities stay neutral. */
@@ -2468,17 +2500,14 @@ function WeekStrip({
   return (
     <>
     <div className="cm-week-navigation">
-      <p className="cm-week-navigation-label" aria-live="polite" aria-atomic="true">
-        {label ?? `Week ${selectedPos + 1} of ${weeks.length}`}
-      </p>
-      <div className="cm-week-nav-actions">
-        {currentPos !== null && currentPos !== selectedPos ? (
-          <button type="button" className="cm-current-week" onClick={() => onSelect(currentPos)}>
-            Current week
-          </button>
-        ) : null}
-        {controls}
-      </div>
+      {/* The selected square already says which week this is, and Jump to
+          Today returns to now; only an open block names its block here. */}
+      {label ? (
+        <p className="cm-week-navigation-label" aria-live="polite" aria-atomic="true">{label}</p>
+      ) : (
+        <p className="sr-only" aria-live="polite" aria-atomic="true">{`Week ${selectedPos + 1} of ${weeks.length}`}</p>
+      )}
+      <div className="cm-week-nav-actions">{controls}</div>
     </div>
     <nav
       ref={stripRef}

@@ -432,3 +432,62 @@
 @media (max-width: 720px) {
   .cm-cal-day { scroll-margin: calc(var(--mobile-nav-clearance) + 8px) 0 calc(var(--mobile-tab-bar-clearance) + 12px); }
 }
+
+/* Exercise sheet: one even rhythm. Every row sits on its own divider with the
+   same 14px above and below, whether it is a disclosure or a cue line. */
+.ex-detail:not(.ex-detail-logging) { gap: 0; }
+.ex-detail:not(.ex-detail-logging) > * { margin: 0; padding-block: 14px; }
+.ex-detail:not(.ex-detail-logging) > :first-child { padding-top: 0; }
+.ex-detail:not(.ex-detail-logging) > .ex-detail-section { padding-block: 0; }
+.ex-detail:not(.ex-detail-logging) > .ex-detail-section[open] { gap: 12px; padding-bottom: 14px; }
+.ex-detail:not(.ex-detail-logging) > .sp-block-aside { border-top: 1px solid var(--border-subtle); }
+.ex-detail:not(.ex-detail-logging) > .sp-block-aside + .sp-block-aside { border-top: 0; padding-top: 0; }
+.ex-detail-section .ex-row-why-line { gap: 4px; }
+.ex-detail-section .ex-row-why-line + .ex-row-why-line { margin-top: 4px; }
+
+/* Calmer titles: session and coach-day headings a step smaller. */
+.cm-day .sp-session-title { font-size: 1.08rem; font-weight: 700; line-height: 1.35; }
+.cm-day .sp-today-headline { font-size: 1.05rem; line-height: 1.35; }
+.cm-week-nav-actions { margin-left: auto; }
+
+/* Plan notes: neutral, compact, collapsed like Safety priority but calm. */
+.cm-guardrails .sp-active-notes { padding: 0; background: var(--bg-surface); }
+.sp-plan-notes-summary { gap: 12px; padding: 14px 16px; }
+.sp-plan-notes-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--bg-support);
+  color: var(--text-secondary);
+}
+.sp-plan-notes-text { flex: 1; display: grid; gap: 2px; min-width: 0; }
+.sp-plan-notes-meta { color: var(--text-secondary); font-size: 0.82rem; }
+.sp-active-notes .sp-collapse-action { border: 0; padding: 0; font-size: 0; }
+.sp-active-notes .sp-collapse-action::after {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin: 0 4px 3px;
+  border-right: 1.5px solid var(--text-muted);
+  border-bottom: 1.5px solid var(--text-muted);
+  transform: rotate(45deg);
+  transition: transform var(--transition-fast);
+}
+.sp-plan-notes-details[open] .sp-collapse-action::after { margin-bottom: -2px; transform: rotate(225deg); }
+.sp-active-notes .sp-note { padding: 0; border-left: 0; }
+.sp-active-notes .sp-note-list { gap: 12px; }
+.sp-plan-notes-urgent { padding: 0 16px 14px; }
+.sp-active-notes .sp-plan-notes-summary {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
+  cursor: pointer;
+}
+.sp-active-notes .sp-plan-notes-summary::-webkit-details-marker { display: none; }
+.sp-active-notes .sp-plan-notes-text .sp-collapse-title { font-size: 0.95rem; font-weight: 650; }

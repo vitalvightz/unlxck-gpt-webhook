@@ -978,7 +978,7 @@ test("keeps calm lead notes out of Red Flags while retaining the safety disclaim
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
 
   assert.equal(countOccurrences(html, leadText), 1);
-  assert.equal(html.includes("Active notes"), true);
+  assert.equal(html.includes("Plan notes"), true);
   assert.equal(html.includes("Red flags - stop"), true);
   assert.equal(countOccurrences(html, 'class="safety-note '), 1);
 });
@@ -1679,7 +1679,7 @@ test("compresses the plan: dedupes safety, folds the disclaimer, trims the week 
   const count = (needle: string) => html.split(needle).length - 1;
 
   // Constraints and stop actions must be seen before the training prescription.
-  assert.ok(html.indexOf("Active notes") < html.indexOf(">Lower<"));
+  assert.ok(html.indexOf("Plan notes") < html.indexOf(">Lower<"));
   assert.ok(html.indexOf("Red flags - stop") < html.indexOf(">Lower<"));
 
   // The medical disclaimer is folded into the Red Flags card — exactly one
@@ -2100,7 +2100,7 @@ test("renders plan-level active notes as a standalone card", () => {
 
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
 
-  assert.equal(html.includes("Active notes"), true);
+  assert.equal(html.includes("Plan notes"), true);
   assert.equal(html.includes("~5.7% target — protect freshness."), true);
   assert.equal(html.includes("Small cut above the elbow — keep covered and dry."), true);
   // Weight-cut / injury notes get the accent class.
