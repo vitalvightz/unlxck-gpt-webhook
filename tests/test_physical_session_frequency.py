@@ -280,6 +280,47 @@ def test_sixth_distinct_day_warns_without_deleting_coach_work():
                for note in role_map["weeks"][0].get("coach_note_flags", []))
 
 
+def test_tail_occupancy_fill_cannot_open_sixth_day_across_phase_weeks(monkeypatch):
+    from fightcamp import camp_week_fillers_impl as fillers
+    first = {
+        "phase": "TAPER",
+        "calendar_days": [{"d_day": d, "weekday": "Thursday"} for d in [11, 10, 9]],
+        "session_roles": [_role("light_combat_day", "technical", d) for d in [11, 10, 9]],
+    }
+    last = {
+        "phase": "TAPER",
+        "calendar_days": [{"d_day": d, "weekday": "Wednesday"} for d in [7, 6, 5]],
+        "session_roles": [_role("light_combat_day", "technical", d) for d in [7, 6]],
+        "intentionally_unused_days": [],
+    }
+    role_map = {"weeks": [first, last]}
+    candidate = _role("technical_shadow_rhythm", "support_insert", 5)
+    monkeypatch.setattr(fillers, "fill_physical_occupancy",
+                        lambda **kwargs: ([candidate], []))
+    fillers._complete_week_physical_occupancy(
+        last, {"training_frequency": 5}, {}, weekly_role_map=role_map,
+    )
+    assert candidate not in last["session_roles"]
+    assert last["intentionally_unused_days"][0]["reason_code"] == "requested_frequency_already_met"
+    assert not appointment_budget_exceeded(role_map, 5)
+
+
+def test_camp_filler_does_not_open_sixth_day(monkeypatch):
+    from fightcamp import camp_week_fillers_impl as fillers
+    week = _day_budget_map([20, 19, 18, 17, 16])["weeks"][0]
+    role_map = {"weeks": [week]}
+    candidate = _role("footwork_walkthrough", "support_insert", 15)
+    monkeypatch.setattr(fillers, "_select_filler_for_day",
+                        lambda *args, **kwargs: (candidate, 15))
+    assert fillers._place_filler(
+        week, week["session_roles"], {"training_frequency": 5}, "Saturday",
+        weekly_role_map=role_map, week_ordinal=1, usage_ledger={},
+        allow_physical=True,
+    ) is None
+    assert not any(r.get("countdown_offset") == 15 for r in week["session_roles"])
+
+
+
 # ── target arithmetic ───────────────────────────────────────────────────────
 
 
