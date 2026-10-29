@@ -20,6 +20,7 @@ from .calendar_context import (
 from .combat_load_policy import (
     CalendarEvent,
     PlacementDirective,
+    contact_load_profile,
     evaluate_candidate_at_position,
     placement_rank,
     role_load_profile,
@@ -1489,6 +1490,27 @@ def _replaceable_role_priority(role: dict, *, day: str) -> tuple[int, int]:
     return (5, 5)
 
 
+def _stacks_with_resolved_contact(role: dict, day: str, plan_entry: dict | None, week_entry: dict) -> bool:
+    """Whether the shared policy lets ``role`` share this day's resolved contact."""
+    try:
+        contact = contact_load_profile(plan_entry) if plan_entry else None
+    except ValueError:  # unresolved contact keeps the strict displacement
+        return False
+    profile = classify_role(role)
+    if contact is None or profile is None:
+        return False
+    scope = week_scope(week_entry) if isinstance(week_entry, dict) else ("normal_week", None)
+    position = weekday_position(day.lower())
+    position = position if position is not None else 0
+    decision = evaluate_candidate_at_position(
+        profile,
+        candidate_position=position,
+        events=[CalendarEvent(position, contact, scope)],
+        candidate_scope=scope,
+    )
+    return decision.directive is not PlacementDirective.FORBID
+
+
 def _lock_declared_hard_sparring_roles(
     week_entry: dict,
     session_roles: list[dict],
@@ -1557,10 +1579,12 @@ def _lock_declared_hard_sparring_roles(
             continue
 
         # Prefer displacing a role already scheduled on this hard-sparring day
-        # — that role would clash with the spar regardless. Only fall back to
+        # that clashes with its resolved contact. Only fall back to
         # cross-day poaching when the spar-day slot is otherwise empty AND
         # there are no spare training days; otherwise add the hard-sparring
         # role on its declared day without evicting non-conflicting roles.
+        # Work the shared policy lets share a technical-only day stays, like
+        # the light-combat lock; downstream compression trims by priority.
         same_day_idx = next(
             (
                 idx
@@ -1568,6 +1592,7 @@ def _lock_declared_hard_sparring_roles(
                 if idx not in used_indices
                 and role.get("role_key") != "hard_sparring_day"
                 and str(role.get("scheduled_day_hint") or "").strip().lower() == day.lower()
+                and not _stacks_with_resolved_contact(role, day, plan_entry, week_entry)
             ),
             None,
         )
