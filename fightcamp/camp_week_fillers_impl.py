@@ -974,6 +974,8 @@ def _complete_week_physical_occupancy(
     week: dict[str, Any],
     athlete_model: dict[str, Any],
     usage_ledger: dict[str, Any],
+    *,
+    weekly_role_map: dict[str, Any] | None = None,
 ) -> None:
     """Give every declared training day a session, or a recorded reason for not.
 
@@ -993,7 +995,19 @@ def _complete_week_physical_occupancy(
         athlete_model=athlete_model,
         usage_ledger=usage_ledger,
     )
+    from .physical_session_frequency import (
+        REASON_FREQUENCY_TARGET_MET, requested_training_frequency,
+        unused_day_record, would_add_excess_training_day,
+    )
     for role in added:
+        offset = role.get("countdown_offset")
+        if (isinstance(offset, int) and weekly_role_map is not None
+                and would_add_excess_training_day(
+                    weekly_role_map, requested_training_frequency(athlete_model), offset,
+                )):
+            weekday = next((day for day_offset, day in day_slots if day_offset == offset), "")
+            unused.append(unused_day_record(weekday, offset, REASON_FREQUENCY_TARGET_MET))
+            continue
         role["camp_week_filler"] = True
         if week.get("late_fight_tail_days") and role.get("countdown_offset") in set(
             week.get("late_fight_tail_days") or []
@@ -1143,7 +1157,9 @@ def apply_camp_week_fillers(
     if fight_dated:
         for week in weekly_role_map.get("weeks", []) or []:
             if isinstance(week, dict):
-                _complete_week_physical_occupancy(week, athlete_model, usage_ledger)
+                _complete_week_physical_occupancy(
+                    week, athlete_model, usage_ledger, weekly_role_map=weekly_role_map,
+                )
         # Settle Tactical Focus / reflection first so the camp visualisations
         # land on days that keep no other mental task, then govern the finished
         # calendar: nothing placed above can outlive the shared policy.
