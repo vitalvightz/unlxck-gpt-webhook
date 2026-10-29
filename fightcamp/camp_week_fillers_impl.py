@@ -176,8 +176,12 @@ def _select_filler_for_day(
         force_conditioning=prefer_conditioning,
         allow_physical=allow_physical,
     )
-    if insert is None or (not allow_physical and insert.get("role_key") in PHYSICAL_INSERTS):
+    if insert is None:
         return None
+    if not allow_physical:
+        from .physical_session_frequency import is_physical_session_role
+        if is_physical_session_role({**insert, "countdown_offset": d_day}):
+            return None
     if legality.role_is_forbidden(insert, d_day):
         return None
     return insert, d_day
