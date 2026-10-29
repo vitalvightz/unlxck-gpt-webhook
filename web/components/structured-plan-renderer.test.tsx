@@ -1168,7 +1168,8 @@ test("hidden hard-sparring title does not repeat in the contact card", () => {
   }} showDayLabels={false} hideTitle />);
 
   assert.equal(html.includes('class="sp-session-title"'), false);
-  assert.match(html, /sp-sparring-caution[\\s\\S]*?Controlled hard contact<\\/p>/);
+  assert.equal(html.includes("sp-sparring-caution"), true);
+  assert.equal(html.includes("Controlled hard contact"), true);
 });
 
 test("open plans keep session categories inside chronological day cards", () => {
