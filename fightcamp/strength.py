@@ -1,5 +1,6 @@
 import logging
 import os
+import hashlib
 import json
 import random
 import re
@@ -272,6 +273,16 @@ def _exercise_fatigue_cost(exercise: dict, quality_profile: dict) -> float:
         fatigue_cost += 0.5
 
     return round(fatigue_cost, 2)
+
+
+def _seeded_tie_rank(seed, name: str) -> int:
+    """Tie order for one exercise under one seed.
+
+    Keyed on the exercise itself rather than its position in a shuffled bank,
+    so adding or removing an unrelated row never reorders other tied picks.
+    """
+    digest = hashlib.sha256(f"{seed}:{name}".encode("utf-8")).digest()
+    return int.from_bytes(digest[:8], "big")
 
 
 def _strength_late_window_severity(window: str | None) -> float:
@@ -2479,12 +2490,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
             "name": ex.get("name", ""),
             "score": score,
             "fatigue_cost": breakdown.get("fatigue_cost", ex.get("fatigue_cost", 0.0)),
-            # Seeded runs break ties by the shuffled bank order; unseeded runs
-            # keep the deterministic name fallback.
-            "tie_rank": order_idx if rng is not None else None,
+            # Seeded runs break ties by a per-exercise seeded rank; unseeded
+            # runs keep the deterministic name fallback.
+            "tie_rank": _seeded_tie_rank(seed, ex.get("name", "")) if rng is not None else None,
             "payload": (ex, score, breakdown),
         }
-        for order_idx, (ex, score, breakdown) in enumerate(weighted_exercises)
+        for ex, score, breakdown in weighted_exercises
     ]
     # Keep score-driven ordering primary while only allowing local fatigue-cost
     # reordering inside leader-anchored near-equal groups.

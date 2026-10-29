@@ -209,7 +209,13 @@ def test_complete_fixed_clock_plans_have_only_explained_changes(tmp_path):
             expected = [n for n in old_names if n != NAMES[3]]
             if before['case'] == 'boxing_shoulder_limited' and phase == 'GPP':
                 expected.remove('Sissy Squat')
-                expected.insert(expected.index('Glute Bridge Hold (Heavy Load)') + 1, 'Cossack Squat')
+                # The freed slot goes to one of the two equally rated Cossack
+                # variants; the probe's seed (7) breaks that tie, not the name.
+                expected.insert(expected.index('Glute Bridge Hold (Heavy Load)') + 1, 'Cossack Squat (Dynamic)')
+                # That anchor changes the support budget, so one zero-score
+                # support hold is refilled from the seeded fallback order.
+                expected.remove('Side Plank (Long Duration)')
+                expected.insert(expected.index('Plank (Extended Hold)'), 'Plate Russian Twists')
             tandem = 'Tandem Gait Walk (Heel-to-Toe)'
             if (before['case'] == 'mma_no_equipment' and NAMES[3] in old_names
                     and tandem in new_names and tandem not in old_names):
@@ -233,7 +239,11 @@ def test_complete_fixed_clock_plans_have_only_explained_changes(tmp_path):
         def dose_text(text):
             return '\n'.join(line for line in text.splitlines()
                              if not line.startswith(('**Top Exercises:**', '- Slow-Lowered Pull-Up:', '- Sissy Squat:', '- Cossack Squat:',
-                                                     '- Tandem Gait Walk (Heel-to-Toe):')))
+                                                     '- Tandem Gait Walk (Heel-to-Toe):',
+                                                     # The seeded swap above, and the core-control
+                                                     # dose line its refilled support hold brings.
+                                                     '- Cossack Squat (Dynamic):', '- Side Plank (Long Duration):',
+                                                     '- Plate Russian Twists:', '- **Core Control:**')))
         assert dose_text(before['plan_text']) == dose_text(after['plan_text'])
 
 
