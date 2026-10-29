@@ -89,6 +89,19 @@ def test_no_promotion_when_no_slot_can_preserve_the_existing_base_roles(monkeypa
     assert missing_base_categories(exercises) == ["unilateral"]
 
 
+@pytest.mark.parametrize("seed", [2837615948, None, 0, 1, 2, 3, 4, 5])
+def test_promotion_keeps_the_contrast_pattern_and_trades_the_other_squat(monkeypatch, seed):
+    rows = [
+        ("Back Squat → Box Jump", "squat", "contrast", "dumbbells", ["explosive"]),
+        ("Barbell Thruster", "squat", "strength", "dumbbells", ["explosive"]),
+        ("Bench Press", "push", "strength", "dumbbells", []),
+        ("Split Squat", "squat", "strength", "dumbbells", ["unilateral"]),
+    ]
+    exercises = _generate(monkeypatch, rows, dict(zip([r[0] for r in rows], [4, 6, 5, 3])), seed=seed)
+    assert {ex["name"] for ex in exercises} == {"Back Squat → Box Jump", "Bench Press", "Split Squat"}
+    assert not missing_base_categories(exercises)
+
+
 def test_promotion_tries_a_safe_alternative_to_the_highest_ranked_provider(monkeypatch):
     rows = [
         ("Back Squat", "squat", "strength", "dumbbells", []),

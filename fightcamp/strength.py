@@ -69,6 +69,20 @@ logger = logging.getLogger(__name__)
 
 _exercise_bank_cache = None
 
+# Equivalent catalogue rows should offer alternatives, not consume two slots.
+# Keep this deliberately narrow: a shared hinge/squat pattern is not redundancy
+# when the dose is unilateral, isometric, ballistic or a contrast pair.
+_SELECTION_ALIASES = {
+    "Romanian Deadlift (RDL)": "Romanian Deadlift (DB)",
+    "Lat Pulldown Machine": "Lat Pulldown",
+    "Clinch Knee Strike (Band-Resisted)": "Band-Resisted Clinch Knee Strike",
+}
+
+
+def _selection_identity(exercise: dict) -> tuple[str, str]:
+    name = str(exercise.get("name") or "")
+    return (_SELECTION_ALIASES.get(name, name), str(exercise.get("method") or "").lower())
+
 
 
 
@@ -2655,16 +2669,22 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     def _selected_names(exercises: list[dict]) -> set[str]:
         return {ex.get("name") for ex in exercises if ex.get("name")}
 
+    identities_by_name = {ex.get("name"): _selection_identity(ex) for ex in exercise_bank}
+
+    def _excluded_identities(names: set[str]) -> set[tuple[str, str]]:
+        return {identities_by_name[name] for name in names if name in identities_by_name}
+
     def _matching_candidates(
         predicate,
         *,
         exclude_names: set[str] | None = None,
     ) -> list[tuple[int, dict, float, dict, dict, dict]]:
         blocked_names = set(exclude_names or set())
+        blocked_identities = _excluded_identities(blocked_names)
         matches: list[tuple[int, dict, float, dict, dict, dict]] = []
         for order_idx, (cand, cand_score, cand_reasons) in enumerate(weighted_exercises):
             cand_name = cand.get("name")
-            if not cand_name or cand_name in blocked_names:
+            if not cand_name or cand_name in blocked_names or _selection_identity(cand) in blocked_identities:
                 continue
             profile = _cached_classify(cand)
             late_eval = _get_post_score_late_eval(cand, fallback_score=cand_score)
@@ -2768,11 +2788,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         base_reasons: dict[str, dict] | None = None,
     ) -> list[tuple[dict, dict, dict, dict]]:
         blocked_names = set(exclude_names or set())
+        blocked_identities = _excluded_identities(blocked_names)
         ordered_candidates: list[tuple[tuple, dict, dict, dict, dict]] = []
         reasons_by_name = base_reasons or {}
         for order_idx, cand in enumerate(candidates):
             cand_name = cand.get("name")
-            if not cand_name or cand_name in blocked_names:
+            if not cand_name or cand_name in blocked_names or _selection_identity(cand) in blocked_identities:
                 continue
             profile = _cached_classify(cand)
             late_eval = _get_post_score_late_eval(
@@ -2834,6 +2855,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
                 remaining = updated[:idx] + updated[idx + 1:]
                 remaining_adaptations = set().union(*(values for j, values in enumerate(adaptation_sets) if j != idx))
                 remaining_missing = set(_required_base_categories(remaining))
+                # A contrast pair supplies a specific heavy + explosive pattern.
+                # Other strength/power witnesses do not replace that pairing.
+                removed = updated[idx]
+                if _classify_prescription_type(removed) == "contrast" and not any(
+                        _classify_prescription_type(ex) == "contrast"
+                        and _cached_movement(ex) == _cached_movement(removed) for ex in remaining):
+                    remaining_missing.add("contrast:" + _cached_movement(removed))
                 if retain_rotation and not any(_cached_classify(ex)["anchor_capable"]
                         and "rotational_power" in _cached_classify(ex)["base_categories"] for ex in remaining):
                     remaining_missing.add("rotational_power")
@@ -2852,7 +2880,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
                     # A third movement would be discarded by the next cap pass.
                     if movement != "unknown" and sum(_cached_movement(ex) == movement for ex in remaining) >= 2:
                         continue
-                    if remaining_missing - set(profile["base_categories"]) - missing:
+                    supplied = set(profile["base_categories"])
+                    if _classify_prescription_type(cand) == "contrast":
+                        supplied.add("contrast:" + movement)
+                    if remaining_missing - supplied - missing:
                         continue
                     # Coverage must not displace a selected training stimulus.
                     if not adaptations <= remaining_adaptations | candidate_adaptations:
@@ -3253,12 +3284,17 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
 
     def _apply_movement_caps(exercises: list[dict]) -> list[dict]:
         movement_counts: dict[str, int] = {}
+        identities: set[tuple[str, str]] = set()
         capped: list[dict] = []
         for ex in exercises:
+            identity = _selection_identity(ex)
+            if identity in identities:
+                continue
             movement = _cached_movement(ex)
             if movement != "unknown" and movement_counts.get(movement, 0) >= 2:
                 continue
             movement_counts[movement] = movement_counts.get(movement, 0) + 1
+            identities.add(identity)
             capped.append(ex)
 
         if len(capped) < target_exercises:
@@ -3360,7 +3396,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
             safe_reasons: dict[str, dict] = {}
             for cand, cand_reasons, _profile, _late_safe_profile in _sorted_external_candidates(
                 [cand for cand, _, _ in guard_pairs],
-                exclude_names=used_names,
+                exclude_names=used_names - {ex.get("name")},
                 base_reasons={cand.get("name"): cand_reasons for cand, _, cand_reasons in guard_pairs if cand.get("name")},
             ):
                 cand_name = cand.get("name")
@@ -3425,7 +3461,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
             replacement_entry = _best_candidate(
                 lambda cand, _score, _reasons, _profile: not _cached_injury_match(cand, ("name", "movement", "method"), ("exclude",))
                 and _cached_guarded_decision(cand).action != "exclude",
-                exclude_names=used_names,
+                exclude_names=used_names - {ex.get("name")},
             )
             if replacement_entry:
                 cand, _cand_score, cand_reasons, _profile, _late_safe_profile = replacement_entry
