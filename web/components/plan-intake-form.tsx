@@ -1100,6 +1100,7 @@ export function PlanIntakeForm() {
             form.hard_sparring_days,
             form.support_work_days,
             !noScheduledFight,
+            form.weekly_training_frequency,
           ).hardError;
         default:
           if (invalidFieldId.startsWith("guidedInjuryCard-")) {
@@ -1646,6 +1647,7 @@ export function PlanIntakeForm() {
       nextForm.hard_sparring_days,
       nextForm.support_work_days,
       action !== "save_draft" && nextForm.no_scheduled_fight !== true,
+      nextForm.weekly_training_frequency,
     );
     if (sparringConsistency.hardError) {
       return {
@@ -2158,6 +2160,7 @@ export function PlanIntakeForm() {
     form.hard_sparring_days,
     form.support_work_days,
     !noScheduledFight,
+    form.weekly_training_frequency,
   );
   const hardSparringWarning = getHardSparringWarning(
     form.hard_sparring_days,
@@ -2780,7 +2783,7 @@ export function PlanIntakeForm() {
                       />
                       <p className="muted">
                         {getFieldHelperText(daysOutCtx, "weekly_training_frequency") ||
-                          "All sessions per week, including boxing and doubles."}
+                          "Total training sessions per week: sparring, technical boxing, strength and conditioning. Count two sessions on the same day as two."}
                       </p>
                       {invalidFieldId === "sessionsPerWeek" && error ? (
                         <p id="sessionsPerWeek-error" className="error-text" role="alert">{error}</p>

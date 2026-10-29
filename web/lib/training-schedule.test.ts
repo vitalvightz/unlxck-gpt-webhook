@@ -111,3 +111,18 @@ test("changes the acknowledgement reset key when hard days or session count chan
     getHardSparringWarning(["Monday", "Wednesday", "Friday"], 4).acknowledgementContextKey,
   );
 });
+
+test("flags more combat sessions than the stated weekly total", () => {
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+  assert.deepStrictEqual(
+    getSparringConsistency(days, ["Monday", "Wednesday", "Friday"], ["Tuesday", "Thursday"], true, 4),
+    {
+      hardError: "Your schedule doesn't add up: you selected 5 combat sessions but entered 4 total weekly sessions. Update your total or adjust your combat days.",
+      softWarning: null,
+    },
+  );
+  assert.equal(
+    getSparringConsistency(days, ["Monday", "Wednesday", "Friday"], ["Tuesday", "Thursday"], true, 5).hardError,
+    null,
+  );
+});
