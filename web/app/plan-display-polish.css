@@ -21,8 +21,8 @@
   padding: 16px 16px 12px;
 }
 /* The body padding opens the day; the first session needs no second gap. */
-.cm-day .sp-week-body > :first-child > .sp-session:first-child,
-.cm-day .sp-week-body > .sp-session:first-child {
+.cm-day .sp-week-body > :first-child > .sp-session:not(.sp-session-support):first-child,
+.cm-day .sp-week-body > .sp-session:not(.sp-session-support):first-child {
   padding-top: 0;
 }
 .cm-day .cm-day-context {
@@ -31,13 +31,13 @@
 .cm-day[open] > .sp-week-body {
   animation: plan-day-reveal 280ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.cm-day .sp-session {
+.cm-day .sp-session:not(.sp-session-support) {
   background: transparent;
   border: 0;
   border-radius: 0;
   padding: 18px 0 0;
 }
-.cm-day .sp-session + .sp-session {
+.cm-day .sp-session + .sp-session:not(.sp-session-support) {
   border-top: 1px solid var(--border-subtle);
 }
 .cm-day .sp-session-title {
@@ -112,7 +112,7 @@
   padding-left: 16px;
 }
 /* Mental tasks render in full on the card, under a quieter title. */
-.cm-day .sp-mental-task {
+.cm-day .sp-mental-task:not(.sp-session-support) {
   padding: 16px 0 0;
 }
 .cm-day .sp-mental-task .sp-session-title {
@@ -161,7 +161,7 @@
   .cm-day-head { gap: 6px; }
   .cm-day-title { font-size: 0.85rem; }
   .cm-day .sp-week-body { padding: 14px 14px 8px; }
-  .cm-day .sp-session { padding-top: 16px; }
+  .cm-day .sp-session:not(.sp-session-support) { padding-top: 16px; }
 }
 /* A solid safe-area band obscures content behind Create/profile when scrolling. */
 @media (max-width: 720px) {
