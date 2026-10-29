@@ -334,10 +334,10 @@ export function readableExerciseMetrics(prescription: {
       const reps = (text: string) => /^(?:\d+(?:\.\d+)?(?:\s*[-–]\s*\d+)?)(?:\s+per\s+.+)?$/.test(text)
         ? text.replace(/^(\d+(?:\.\d+)?(?:\s*[-–]\s*\d+)?)/, "$1 reps") : text;
       const pair = value.match(/^(.+?) × (.+)$/);
-      return pair ? `${pair[1]} sets × ${reps(pair[2])}` : reps(value);
+      return pair ? pair[1].trim() === "1" ? reps(pair[2]) : `${pair[1]} sets × ${reps(pair[2])}` : reps(value);
     }
     if (label === "Rounds") return `${value} ${value === "1" ? "round" : "rounds"}`;
-    const measured = time(value).replace(/^(.+?) × /, "$1 sets × ");
+    const measured = time(value).replace(/^1 × /, "").replace(/^(.+?) × /, "$1 sets × ");
     return label === "Work" ? `${measured} work` : measured;
   });
   return [...metrics, prescription.load, prescription.effort,

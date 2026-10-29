@@ -4,7 +4,7 @@ import "./test-dom";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { CampDayCard, RedFlagsCard, ActiveNotesCard, SessionCard } from "./structured-plan-renderer";
+import { StructuredPlanRenderer, CampDayCard, RedFlagsCard, ActiveNotesCard, SessionCard } from "./structured-plan-renderer";
 import { readableExerciseMetrics, selectBlockMetric } from "../lib/structured-plan";
 import { strength, mental, recovery, trainingPlan } from "../test/training-plan-fixture";
 
@@ -80,4 +80,19 @@ test("day toggles survive refreshed data and explicit navigation reopens a close
     await act(async () => root.render(<CampDayCard day={day} defaultOpen openRequest={{}} />));
     assert.equal(card.open, true);
   } finally { await act(async () => root.unmount()); host.remove(); }
+});
+
+test("single-set prescriptions omit the multiplier for reps and timed work", () => {
+  for (const [label, value, expected] of [["Volume", "1 \u00d7 10", "10 reps"], ["Duration", "1 \u00d7 30 seconds", "30 sec"], ["Work", "1 \u00d7 60 seconds", "1 min work"]]) {
+    assert.equal(readableExerciseMetrics({ metrics: [{ label, value }], load: null, effort: null, rest: null }), expected);
+  }
+});
+
+test("Today and the next actionable session retain separate markers", () => {
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={trainingPlan} today={new Date(2026, 9, 28, 12)}
+    focusDay={new Date(2026, 9, 30, 12)} currentDayLabel="Next session" />);
+  const host = document.createElement("div"); host.innerHTML = html;
+  assert.match(host.querySelector('.cm-day-current')?.textContent ?? "", /Today/);
+  assert.match(host.querySelector('.cm-day-next')?.textContent ?? "", /Next session/);
+  assert.equal(host.querySelector('.cm-day-next')?.getAttribute('data-day-index'), "3");
 });

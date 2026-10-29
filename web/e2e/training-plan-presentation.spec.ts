@@ -31,7 +31,7 @@ for (const width of [320, 375, 390, 430, 1280]) {
     await expect(today).toHaveAttribute("open", "");
     await expect(page.locator('.cm-days details[open]')).toHaveCount(1);
     await expect(today.locator(".ex-row")).toHaveCount(4);
-    await expect(today.locator(".sp-session-title")).toHaveCSS("animation-name", "plan-session-title-pulse");
+    await expect(today.locator(".sp-session-title")).toHaveCSS("animation-name", "none");
     await expect(today.locator(".sp-week-body")).toHaveCSS("animation-name", "plan-day-reveal");
     await page.emulateMedia({ reducedMotion: "reduce" });
     await expect(today.locator(".sp-session-title")).toHaveCSS("animation-name", "none");
@@ -44,7 +44,7 @@ for (const width of [320, 375, 390, 430, 1280]) {
     await expect(page.getByRole("button", { name: "Add exercise", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Jump to Today", exact: true }).click();
     await expect(today.locator("summary").first()).toBeFocused();
-    await page.waitForTimeout(400);
+    await expect.poll(() => today.locator(".sp-week-body").evaluate(el => el.getAnimations().filter(animation => animation.playState === "running").length)).toBe(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     if (width < 720) {
       const [headerBottom, targetTop, background] = await page.evaluate(() => {
@@ -83,7 +83,7 @@ for (const width of [320, 375, 390, 430, 1280]) {
     await mental.getByRole("button", { name: /View instructions/ }).click();
     const instructions = page.getByRole("dialog", { name: "Composure rehearsal", exact: true });
     await expect(instructions.locator(".sp-mental-steps li")).toHaveCount(4);
-    await page.waitForTimeout(300);
+    await expect.poll(() => instructions.evaluate(el => el.getAnimations().filter(animation => animation.playState === "running").length)).toBe(0);
     if (process.env.PLAN_SCREENSHOTS) await page.screenshot({ path: `${process.env.PLAN_SCREENSHOTS}/mental-${width}.png` });
     await instructions.press("Escape"); await expect(instructions).toHaveCount(0);
     const modified = page.locator('.cm-days [data-day-index="1"]'); await modified.locator("summary").first().click();

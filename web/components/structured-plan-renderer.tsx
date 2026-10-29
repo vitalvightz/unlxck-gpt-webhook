@@ -1987,6 +1987,7 @@ export function CampDayCard({
   openOngoing = false,
   weekNumber = 1,
   isCurrent,
+  isNext = false,
   currentLabel = "Today",
   defaultOpen,
   completionIndex,
@@ -2004,6 +2005,7 @@ export function CampDayCard({
   openOngoing?: boolean;
   weekNumber?: number;
   isCurrent?: boolean;
+  isNext?: boolean;
   /** Badge text for the highlighted day — "Today" normally, "Next session" once
    * the view has advanced past a logged today's session. */
   currentLabel?: string;
@@ -2073,7 +2075,7 @@ export function CampDayCard({
 
   return (
     <details
-      className={`sp-week cm-day${isCurrent ? " cm-day-current" : ""}`}
+      className={`sp-week cm-day${isCurrent ? " cm-day-current" : ""}${isNext ? " cm-day-next" : ""}`}
       data-day-index={dayIndex}
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
@@ -2097,6 +2099,7 @@ export function CampDayCard({
           ) : null}
           <span className="sp-week-title cm-day-title">{timelineLabel}</span>
           {isCurrent ? <span className="cm-day-now">{currentLabel}</span> : null}
+          {isNext ? <span className="cm-day-next-label">Next session</span> : null}
         </span>
 
         <span className="cm-day-meta">
@@ -2269,9 +2272,7 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
         })}
       </ul>
       ) : null}
-      <details className="sp-safety-explanation"><summary>Safety guidance</summary>
-        <SafetyNote tone="warning" showRedFlags>{PLAN_SAFETY_NOTE}</SafetyNote>
-      </details>
+      <SafetyNote tone="warning" showRedFlags>{PLAN_SAFETY_NOTE}</SafetyNote>
       </div>
     </section>
   );
@@ -2918,7 +2919,8 @@ export function StructuredPlanRenderer({
           <>
           {calendarProgress.currentWeekPos != null && calendarProgress.currentDayPos != null ? (
             <div className="cm-day-navigation"><button type="button" className="secondary-button"
-              onClick={() => handleCalendarDay(calendarProgress.currentWeekPos!, calendarProgress.currentDayPos!)}>Jump to Today</button></div>
+              onClick={() => handleCalendarDay(calendarProgress.currentWeekPos!, calendarProgress.currentDayPos!)}>Jump to Today</button>
+              {focusLabel === "Next session" && focusProgress.currentWeekPos != null && focusProgress.currentDayPos != null ? <button type="button" className="secondary-button" onClick={() => handleCalendarDay(focusProgress.currentWeekPos!, focusProgress.currentDayPos!)}>Next session</button> : null}</div>
           ) : null}
           <div className="sp-weeks cm-days">
             {dayList.length > 0 ? (
@@ -2979,6 +2981,7 @@ export function StructuredPlanRenderer({
                     openOngoing={openOngoing}
                     weekNumber={safePos + 1}
                     isCurrent={isCurrent}
+                    isNext={!isCurrent && focusProgress.currentWeekPos === safePos && focusProgress.currentDayPos === index && focusLabel === "Next session"}
                     currentLabel={calendarProgress.currentWeekPos != null ? "Today" : focusLabel}
                     defaultOpen={
                       (calendarProgress.currentWeekPos === safePos && calendarProgress.currentDayPos === index) ||

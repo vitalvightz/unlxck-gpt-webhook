@@ -1,33 +1,5 @@
 /* Small Plan-only display fixes. Keep training/scheduling data untouched. */
 
-/* Free slots keep the recovery label except D-7 through D-0. */
-.cm-rest-reason {
-  display: none;
-}
-
-.cm-rest-label {
-  font-size: 0;
-}
-
-.cm-rest-label::after {
-  content: "Rest / Recovery";
-  font-size: var(--type-label-xs);
-  line-height: 1.2;
-}
-
-.cm-fight-week-sessionless .cm-rest-label::after {
-  content: "No Planned Session";
-}
-
-/* Availability placeholders keep their truthful label in the shared row. */
-.cm-rest-label[data-neutral="true"] {
-  font-size: var(--type-label-xs);
-}
-
-.cm-rest-label[data-neutral="true"]::after {
-  content: none;
-}
-
 /* An instruction-only session card (Joint Prep, Breathing Reset, a blockless
    shadow-rhythm touch) carries its whole prescription in one line, with no
    block card under it to give the card body. Styled as the prescription it is —
@@ -66,15 +38,10 @@
   letter-spacing: -0.02em;
   line-height: 1.4;
   overflow-wrap: anywhere;
-  animation: plan-session-title-pulse 3.5s ease-in-out infinite;
 }
 @keyframes plan-day-reveal {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }
-}
-@keyframes plan-session-title-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.78; }
 }
 @media (prefers-reduced-motion: reduce) {
   .cm-day .sp-session-title,
@@ -184,11 +151,6 @@
   color: var(--danger-ink);
 }
 .cm-guardrails .sp-redflag { border: 0; background: none; padding: 4px 0; }
-.cm-day .sp-status-tag[data-tone="red"] {
-  color: var(--text-secondary);
-  background: var(--bg-support);
-  border-color: var(--border-default);
-}
 .cm-guardrails .sp-collapse-title { margin: 0; font-size: 0.9rem; }
 .cm-guardrails header.sp-collapse-summary { cursor: default; }
 .cm-guardrails header.sp-collapse-summary::after { display: none; }
@@ -223,3 +185,8 @@
 @media (max-width: 360px) {
   .ex-row-compact .ex-row-thumb { width: 44px; height: 32px; }
 }
+
+.cm-rest-reason { flex-basis: 100%; color: var(--text-secondary); font-size: 0.8rem; line-height: 1.5; }
+.cm-rest-label { font-size: var(--type-label-xs); }
+.cm-day-next-label { color: var(--text-secondary); font-size: 0.75rem; }
+.cm-day-next { border-color: var(--border-strong); }

@@ -616,7 +616,7 @@ test("shows rehab and conditioning rows while keeping detailed instructions in s
 
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
 
-  assert.equal(glossaryTerms(html).includes("Rehab"), true);
+  assert.equal(/class="ex-row-type">Rehab(?:<|\s)/.test(html), true);
   assert.equal(html.includes("Neutral-Grip Isometric Holds"), true);
   assert.equal(html.includes("Full rest between holds"), false);
   assert.equal(html.includes("Easy Assault Bike"), true);
@@ -675,16 +675,16 @@ const QUAD_OPEN_HAMSTRING_CLEARED: RehabLabelPolicy = {
 
 test("without a policy every rehab block keeps the Rehab wording", () => {
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={hamstringRehabPlan()} />);
-  assert.equal(glossaryTerms(html).includes("Rehab"), true);
-  assert.equal(glossaryTerms(html).includes("Prehab"), false);
+  assert.equal(/class="ex-row-type">Rehab(?:<|\s)/.test(html), true);
+  assert.equal(/class="ex-row-type">Prehab(?:<|\s)/.test(html), false);
 });
 
 test("a rehab block whose region is still injured stays Rehab", () => {
   const html = renderToStaticMarkup(
     <StructuredPlanRenderer plan={hamstringRehabPlan()} rehabLabelPolicy={HAMSTRING_OPEN} />,
   );
-  assert.equal(glossaryTerms(html).includes("Rehab"), true);
-  assert.equal(glossaryTerms(html).includes("Prehab"), false);
+  assert.equal(/class="ex-row-type">Rehab(?:<|\s)/.test(html), true);
+  assert.equal(/class="ex-row-type">Prehab(?:<|\s)/.test(html), false);
 });
 
 test("a cleared region reads Prehab even while another region is injured", () => {
@@ -696,8 +696,8 @@ test("a cleared region reads Prehab even while another region is injured", () =>
       rehabLabelPolicy={QUAD_OPEN_HAMSTRING_CLEARED}
     />,
   );
-  assert.equal(glossaryTerms(html).includes("Prehab"), true);
-  assert.equal(glossaryTerms(html).includes("Rehab"), false);
+  assert.equal(/class="ex-row-type">Prehab(?:<|\s)/.test(html), true);
+  assert.equal(/class="ex-row-type">Rehab(?:<|\s)/.test(html), false);
 });
 
 test("an unlocalizable open injury keeps every rehab block on Rehab", () => {
@@ -707,8 +707,8 @@ test("an unlocalizable open injury keeps every rehab block on Rehab", () => {
       rehabLabelPolicy={{ default_mode: "rehab", active_regions: [] }}
     />,
   );
-  assert.equal(glossaryTerms(html).includes("Rehab"), true);
-  assert.equal(glossaryTerms(html).includes("Prehab"), false);
+  assert.equal(/class="ex-row-type">Rehab(?:<|\s)/.test(html), true);
+  assert.equal(/class="ex-row-type">Prehab(?:<|\s)/.test(html), false);
 });
 
 test("does not duplicate a rehab insert as a summary once the blocks are expanded", () => {
@@ -2788,8 +2788,8 @@ test("a cleared region's Prehab summary is glossed with the prehab definition", 
     />,
   );
 
-  assert.equal(glossaryTerms(html).includes("Prehab"), true);
-  assert.equal(glossaryTerms(html).includes("Prehab"), true);
+  assert.equal(/class="ex-row-type">Prehab(?:<|\s)/.test(html), true);
+  assert.equal(/class="ex-row-type">Prehab(?:<|\s)/.test(html), true);
 });
 
 test("the week overview explains the selected week's camp phase", () => {
