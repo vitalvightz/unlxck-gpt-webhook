@@ -1,41 +1,28 @@
 # Strength pool depth audit
 
-Bank rows: 339 (73 late-window-only). Phase tags: {'GPP': 144, 'SPP': 149, 'TAPER': 6}. Rows tagged for neither GPP nor SPP: 2.
+Bank rows: 345 (73 late-window-only). Phase tags: {'GPP': 151, 'SPP': 154, 'TAPER': 6}. Rows tagged for neither GPP nor SPP: 2.
 
 ## Eligible pool per phase and equipment tier
 
 | Cell | Eligible | Anchors | lower_body_loaded | upper_body_push_pull | unilateral |
 |---|---|---|---|---|---|
-| GPP/full | 111 | 38 | 18 | 16 | 6 |
-| GPP/home | 63 | 14 | 7 | 5 | 4 |
-| GPP/min | 38 | 4 | 3 | 0 | 1 |
-| SPP/full | 111 | 90 | 26 | 23 | 9 |
-| SPP/home | 53 | 42 | 5 | 7 | 8 |
-| SPP/min | 39 | 35 | 2 | 3 | 6 |
+| GPP/full | 118 | 45 | 20 | 21 | 8 |
+| GPP/home | 70 | 21 | 9 | 10 | 6 |
+| GPP/min | 44 | 10 | 4 | 5 | 2 |
+| SPP/full | 116 | 95 | 27 | 27 | 10 |
+| SPP/home | 58 | 47 | 6 | 11 | 9 |
+| SPP/min | 44 | 40 | 3 | 7 | 7 |
 
 ## Thin required-category cells (≤2 eligible anchors)
 
-### GPP/min/upper_body_push_pull
-- Currently eligible: **none**
-- Existing rows a coach could review for this phase tag:
-  - Band-Resisted Push Press — tagged SPP, vertical_push, anchor_power, cost moderate, equipment bands
-  - Banded Row (Speed Focus) — tagged SPP, pull, anchor_power, cost moderate, equipment bands
-  - Judo Throw Simulation (Band-Resisted) — tagged SPP, rotation, anchor_power, cost moderate, equipment bands
-
 ### GPP/min/unilateral
-- Currently eligible: Single-Leg Forward Hops
+- Currently eligible: Single-Leg Forward Hops, Split Squat (Bodyweight Tempo 3-1-1)
 - Existing rows a coach could review for this phase tag:
   - Single-Leg 45° Bound — tagged SPP, horizontal_jump, anchor_power, cost moderate, equipment bodyweight
   - Single-Leg Box Jump — tagged SPP, vertical_jump, anchor_power, cost high, equipment bodyweight
   - Single-Leg Depth Drop (Stick Landing) — tagged SPP, vertical_jump, anchor_power, cost high, equipment bodyweight
   - Single-Leg Reactive Shuffle — tagged SPP, lateral_reactive, anchor_power, cost moderate, equipment bodyweight
   - Single-Leg Rotational Hop to Balance — tagged SPP, rotation, anchor_power, cost moderate, equipment bodyweight
-
-### SPP/min/lower_body_loaded
-- Currently eligible: Cossack Squat (Dynamic), Wrestler Shot Drill (Repetitive)
-- Existing rows a coach could review for this phase tag:
-  - Cossack Squat — tagged GPP, squat, anchor_loaded, cost moderate, equipment bodyweight
-  - Wall Sit (Knee-Friendly) — tagged GPP, squat, anchor_force_isometric, cost moderate, equipment bodyweight
 
 ## Bodyweight rows counted as `lower_body_loaded`
 
@@ -45,6 +32,7 @@ Bank rows: 339 (73 late-window-only). Phase tags: {'GPP': 144, 'SPP': 149, 'TAPE
 - Single-Leg Step-Up Hold (Mid-Range) (GPP, lunge)
 - Single-Leg Wall Sit (60°) (GPP, squat)
 - Sissy Squat (GPP, squat)
+- Split Squat (Bodyweight Tempo 3-1-1) (GPP/SPP, squat)
 - Squat Hold (Parallel) (GPP, squat)
 - Step-Up (Bodyweight) (GPP, squat)
 - Wall Sit (Knee-Friendly) (GPP, squat)
@@ -52,8 +40,8 @@ Bank rows: 339 (73 late-window-only). Phase tags: {'GPP': 144, 'SPP': 149, 'TAPE
 
 ## Rows reclassified by movement normalization
 
-The bank `movement` value is rewritten on the shared cached row the first time a
-generation touches it, so these rows classify differently before and after.
+The planner replaces each row's authored `movement` with a detected canonical
+pattern when the bank loads; these rows classify differently under the two.
 
 | Row | Movement (bank → normalized) | Class | Gains | Loses |
 |---|---|---|---|---|
@@ -85,16 +73,16 @@ generation touches it, so these rows classify differently before and after.
 
 | Cell | Camps | Distinct selected | Picked in ≥80% | Blocks missing a category |
 |---|---|---|---|---|
-| GPP/full | 168 | 46 | 7 | {'unilateral': 1} |
-| GPP/home | 168 | 27 | 6 | — |
-| GPP/min | 168 | 18 | 4 | {'upper_body_push_pull': 168} |
+| GPP/full | 168 | 46 | 5 | — |
+| GPP/home | 168 | 29 | 8 | — |
+| GPP/min | 168 | 18 | 8 | — |
 | SPP/full | 168 | 40 | 6 | {'unilateral': 109} |
 | SPP/home | 168 | 30 | 5 | {'lower_body_loaded': 36} |
-| SPP/min | 168 | 23 | 3 | {'unilateral': 5, 'lower_body_loaded': 52} |
+| SPP/min | 168 | 23 | 3 | {'lower_body_loaded': 52} |
 
-- **GPP/full** top: Z Press 100%, Cossack Squat 98%, Hang Power Clean 98%, Single-Leg Forward Hops 95%, Landmine Press 89%, Lat Pulldown 86%, Sled Push (Board) 85%, Single-Leg Lateral Squat Hold 79%
-- **GPP/home** top: DB Alternating Incline Press (30-45°) 100%, Slow-Lowered Pull-Up 100%, Cossack Squat 100%, Cossack Squat (Dynamic) 100%, Single-Leg Forward Hops 100%, Kettlebell Swing 96%, Single-Leg Farmer Carry Hold 79%, DB Plyometric Push-Up (Hands on Dumbbells) 71%
-- **GPP/min** top: Cossack Squat 100%, Cossack Squat (Dynamic) 100%, Single-Leg Forward Hops 100%, Brettzel Stretch 83%, Plank 80%, Psoas March (Banded) 79%, Plate Russian Twists 62%, Staggered Stance Hold 58%
+- **GPP/full** top: Bulgarian Split Squat 100%, Hang Power Clean 98%, Single-Leg Forward Hops 95%, Lat Pulldown 86%, Sled Push (Board) 85%, Z Press 79%, Single-Leg Lateral Squat Hold 79%, Landmine Press 79%
+- **GPP/home** top: DB Alternating Incline Press (30-45°) 100%, Slow-Lowered Pull-Up 100%, Band Bent-Over Row 100%, Bulgarian Split Squat 100%, Cossack Squat 100%, Pike Push-Up 100%, Single-Leg Forward Hops 100%, Kettlebell Swing 96%
+- **GPP/min** top: Band Bent-Over Row 100%, Cossack Squat 100%, Cossack Squat (Dynamic) 100%, Feet-Elevated Push-Up 100%, Half-Kneeling Single-Arm Band Row 100%, Pike Push-Up 100%, Tempo Push-Up (3-1-1) 100%, Single-Leg Forward Hops 100%
 - **SPP/full** top: Landmine Push Press 99%, Heavy RDL → Broad Jump 96%, Trap Bar Jump 89%, High Pull 87%, Barbell Thruster 83%, Woodchopper (Cable) 81%, Banded Row (Speed Focus) 78%, Med-Ball Rotational Slam 77%
 - **SPP/home** top: Sprawl-to-Burpee 99%, Banded Row (Speed Focus) 98%, Jump Lunge (Alternating) 95%, Lateral Bound-to-Slip 93%, Ballistic Box Jump (Min Ground Contact) 83%, Band-Resisted Sprawl to Sprint 67%, Band-Resisted Push Press 65%, Tempo Split Squat (4-0-1) 57%
-- **SPP/min** top: Banded Row (Speed Focus) 100%, Sprawl-to-Burpee 100%, Ballistic Box Jump (Min Ground Contact) 89%, Lateral Bound-to-Slip 75%, Jump Lunge (Alternating) 74%, Band-Resisted Sprawl to Sprint 74%, Band-Resisted Push Press 65%, Wrestler Shot Drill (Repetitive) 64%
+- **SPP/min** top: Banded Row (Speed Focus) 100%, Sprawl-to-Burpee 100%, Ballistic Box Jump (Min Ground Contact) 89%, Band-Resisted Sprawl to Sprint 79%, Lateral Bound-to-Slip 75%, Jump Lunge (Alternating) 74%, Band-Resisted Push Press 68%, Wrestler Shot Drill (Repetitive) 64%

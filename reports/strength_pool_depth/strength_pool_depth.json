@@ -1,17 +1,17 @@
 {
   "static": {
-    "bank_rows": 339,
+    "bank_rows": 345,
     "late_window_only_rows": 73,
     "phase_tag_counts": {
-      "GPP": 144,
-      "SPP": 149,
+      "GPP": 151,
+      "SPP": 154,
       "TAPER": 6
     },
     "rows_without_gpp_or_spp": 2,
     "cells": {
       "GPP/full": {
-        "eligible": 111,
-        "eligible_anchors": 38,
+        "eligible": 118,
+        "eligible_anchors": 45,
         "anchors_by_movement": {
           "carry": [
             "Single-Leg Farmer Carry Hold"
@@ -32,13 +32,15 @@
             "Bench Isometric (110% 1RM @ 90° Elbow)",
             "DB Alternating Incline Press (30-45°)",
             "DB Plyometric Push-Up (Hands on Dumbbells)",
+            "Feet-Elevated Push-Up",
             "Hammer Strength Chest Press",
             "Incline DB Press",
             "Kneeling Single-Arm Medicine Ball Slam",
             "Landmine Anti-Rotation Press",
             "Machine Chest Press",
             "Single-Arm Chest Press (Floor)",
-            "Single-Leg Sled Press Hold"
+            "Single-Leg Sled Press Hold",
+            "Tempo Push-Up (3-1-1)"
           ],
           "lateral_reactive": [
             "Single-Leg Lateral Squat Hold"
@@ -47,6 +49,8 @@
             "Hang Power Clean"
           ],
           "pull": [
+            "Band Bent-Over Row",
+            "Half-Kneeling Single-Arm Band Row",
             "Lat Pulldown",
             "Machine Row",
             "Rack Pull Isometric (115% 1RM @ Knees)",
@@ -60,21 +64,25 @@
           ],
           "squat": [
             "Back Squat",
+            "Bulgarian Split Squat",
             "Cossack Squat",
             "Cossack Squat (Dynamic)",
             "Front Squat Isometric (105% 1RM @ 100°)",
+            "Split Squat (Bodyweight Tempo 3-1-1)",
             "Squat Isometric (110% 1RM @ Parallel)",
             "Wall Sit (Knee-Friendly)"
           ],
           "vertical_push": [
             "Landmine Press",
             "Overhead Press Isometric (105% 1RM @ Chin)",
+            "Pike Push-Up",
             "Z Press"
           ]
         },
         "required_category_anchors": {
           "lower_body_loaded": [
             "Back Squat",
+            "Bulgarian Split Squat",
             "Cossack Squat",
             "Cossack Squat (Dynamic)",
             "Deadlift Isometric (110% 1RM @ Mid-Shin)",
@@ -90,13 +98,17 @@
             "Single-Leg Sled Press Hold",
             "Sled Pull Backward",
             "Sled Pull Forward (Harness)",
+            "Split Squat (Bodyweight Tempo 3-1-1)",
             "Squat Isometric (110% 1RM @ Parallel)",
             "Wall Sit (Knee-Friendly)"
           ],
           "upper_body_push_pull": [
+            "Band Bent-Over Row",
             "Bench Isometric (110% 1RM @ 90° Elbow)",
             "DB Alternating Incline Press (30-45°)",
             "DB Plyometric Push-Up (Hands on Dumbbells)",
+            "Feet-Elevated Push-Up",
+            "Half-Kneeling Single-Arm Band Row",
             "Hammer Strength Chest Press",
             "Incline DB Press",
             "Kneeling Single-Arm Medicine Ball Slam",
@@ -107,23 +119,27 @@
             "Machine Chest Press",
             "Machine Row",
             "Overhead Press Isometric (105% 1RM @ Chin)",
+            "Pike Push-Up",
             "Single-Arm Chest Press (Floor)",
             "Slow-Lowered Pull-Up",
+            "Tempo Push-Up (3-1-1)",
             "Z Press"
           ],
           "unilateral": [
+            "Bulgarian Split Squat",
             "Single-Leg Deadlift Hold",
             "Single-Leg Farmer Carry Hold",
             "Single-Leg Forward Hops",
             "Single-Leg Lateral Squat Hold",
             "Single-Leg Romanian Deadlift Hold",
-            "Single-Leg Sled Press Hold"
+            "Single-Leg Sled Press Hold",
+            "Split Squat (Bodyweight Tempo 3-1-1)"
           ]
         }
       },
       "GPP/home": {
-        "eligible": 63,
-        "eligible_anchors": 14,
+        "eligible": 70,
+        "eligible_anchors": 21,
         "anchors_by_movement": {
           "carry": [
             "Single-Leg Farmer Carry Hold"
@@ -140,71 +156,109 @@
           "horizontal_push": [
             "DB Alternating Incline Press (30-45°)",
             "DB Plyometric Push-Up (Hands on Dumbbells)",
+            "Feet-Elevated Push-Up",
             "Incline DB Press",
-            "Single-Arm Chest Press (Floor)"
+            "Single-Arm Chest Press (Floor)",
+            "Tempo Push-Up (3-1-1)"
           ],
           "pull": [
+            "Band Bent-Over Row",
+            "Half-Kneeling Single-Arm Band Row",
             "Slow-Lowered Pull-Up"
           ],
           "squat": [
+            "Bulgarian Split Squat",
             "Cossack Squat",
             "Cossack Squat (Dynamic)",
+            "Split Squat (Bodyweight Tempo 3-1-1)",
             "Wall Sit (Knee-Friendly)"
+          ],
+          "vertical_push": [
+            "Pike Push-Up"
           ]
         },
         "required_category_anchors": {
           "lower_body_loaded": [
+            "Bulgarian Split Squat",
             "Cossack Squat",
             "Cossack Squat (Dynamic)",
             "Kettlebell Swing",
             "Romanian Deadlift (DB)",
             "Single-Leg Deadlift Hold",
             "Single-Leg Romanian Deadlift Hold",
+            "Split Squat (Bodyweight Tempo 3-1-1)",
             "Wall Sit (Knee-Friendly)"
           ],
           "upper_body_push_pull": [
+            "Band Bent-Over Row",
             "DB Alternating Incline Press (30-45°)",
             "DB Plyometric Push-Up (Hands on Dumbbells)",
+            "Feet-Elevated Push-Up",
+            "Half-Kneeling Single-Arm Band Row",
             "Incline DB Press",
+            "Pike Push-Up",
             "Single-Arm Chest Press (Floor)",
-            "Slow-Lowered Pull-Up"
+            "Slow-Lowered Pull-Up",
+            "Tempo Push-Up (3-1-1)"
           ],
           "unilateral": [
+            "Bulgarian Split Squat",
             "Single-Leg Deadlift Hold",
             "Single-Leg Farmer Carry Hold",
             "Single-Leg Forward Hops",
-            "Single-Leg Romanian Deadlift Hold"
+            "Single-Leg Romanian Deadlift Hold",
+            "Split Squat (Bodyweight Tempo 3-1-1)"
           ]
         }
       },
       "GPP/min": {
-        "eligible": 38,
-        "eligible_anchors": 4,
+        "eligible": 44,
+        "eligible_anchors": 10,
         "anchors_by_movement": {
           "horizontal_jump": [
             "Single-Leg Forward Hops"
           ],
+          "horizontal_push": [
+            "Feet-Elevated Push-Up",
+            "Tempo Push-Up (3-1-1)"
+          ],
+          "pull": [
+            "Band Bent-Over Row",
+            "Half-Kneeling Single-Arm Band Row"
+          ],
           "squat": [
             "Cossack Squat",
             "Cossack Squat (Dynamic)",
+            "Split Squat (Bodyweight Tempo 3-1-1)",
             "Wall Sit (Knee-Friendly)"
+          ],
+          "vertical_push": [
+            "Pike Push-Up"
           ]
         },
         "required_category_anchors": {
           "lower_body_loaded": [
             "Cossack Squat",
             "Cossack Squat (Dynamic)",
+            "Split Squat (Bodyweight Tempo 3-1-1)",
             "Wall Sit (Knee-Friendly)"
           ],
-          "upper_body_push_pull": [],
+          "upper_body_push_pull": [
+            "Band Bent-Over Row",
+            "Feet-Elevated Push-Up",
+            "Half-Kneeling Single-Arm Band Row",
+            "Pike Push-Up",
+            "Tempo Push-Up (3-1-1)"
+          ],
           "unilateral": [
-            "Single-Leg Forward Hops"
+            "Single-Leg Forward Hops",
+            "Split Squat (Bodyweight Tempo 3-1-1)"
           ]
         }
       },
       "SPP/full": {
-        "eligible": 111,
-        "eligible_anchors": 90,
+        "eligible": 116,
+        "eligible_anchors": 95,
         "anchors_by_movement": {
           "core": [
             "Anti-Rotation Med Ball Slam",
@@ -241,10 +295,12 @@
             "DB Bench Press → Plyo Push-Up",
             "Explosive Incline Press",
             "Explosive Push-Up (Clap-to-Tap)",
+            "Feet-Elevated Push-Up",
             "Floor Press Isometric (130% 1RM @ lockout)",
             "Incline Bench Isometric (125% 1RM @ 45°)",
             "Landmine Anti-Rotation Press",
-            "Medicine-Ball Chest Toss"
+            "Medicine-Ball Chest Toss",
+            "Tempo Push-Up (3-1-1)"
           ],
           "lateral_reactive": [
             "Alternating Skater Hops",
@@ -257,7 +313,9 @@
             "Single-Leg Reactive Shuffle"
           ],
           "pull": [
+            "Band Bent-Over Row",
             "Banded Row (Speed Focus)",
+            "Half-Kneeling Single-Arm Band Row",
             "High Pull",
             "Machine Row",
             "Rack Pull Isometric (125% 1RM @ mid-shin)",
@@ -293,6 +351,7 @@
             "Front Squat Isometric (115% 1RM @ 100°)",
             "Safety Bar Squat Isometric (115% 1RM @ 90°)",
             "Speed Box Squat",
+            "Split Squat (Bodyweight Tempo 3-1-1)",
             "Squat Isometric (110% 1RM @ 90°)",
             "Tempo Split Squat (4-0-1)",
             "Wrestler Shot Drill (Repetitive)",
@@ -343,6 +402,7 @@
             "Sled Pull Forward (Harness)",
             "Snatch Grip Deadlift Isometric (125% 1RM @ knee)",
             "Speed Box Squat",
+            "Split Squat (Bodyweight Tempo 3-1-1)",
             "Squat Isometric (110% 1RM @ 90°)",
             "Sumo Deadlift Isometric (120% 1RM @ mid-thigh)",
             "Tempo Split Squat (4-0-1)",
@@ -351,6 +411,7 @@
             "Zercher Squat → Sprawl Jump"
           ],
           "upper_body_push_pull": [
+            "Band Bent-Over Row",
             "Band-Resisted Push Press",
             "Banded Row (Speed Focus)",
             "Barbell Overhead Press",
@@ -359,7 +420,9 @@
             "DB Bench Press → Plyo Push-Up",
             "DB Clean & Press",
             "Explosive Incline Press",
+            "Feet-Elevated Push-Up",
             "Floor Press Isometric (130% 1RM @ lockout)",
+            "Half-Kneeling Single-Arm Band Row",
             "High Pull",
             "Incline Bench Isometric (125% 1RM @ 45°)",
             "Judo Throw Simulation (Band-Resisted)",
@@ -373,7 +436,8 @@
             "Overhead Press Isometric (120% 1RM @ forehead)",
             "Push Press",
             "Slow-Lowered Pull-Up",
-            "Tempo Chin-Up (5-0-1)"
+            "Tempo Chin-Up (5-0-1)",
+            "Tempo Push-Up (3-1-1)"
           ],
           "unilateral": [
             "Bulgarian Split Squat",
@@ -384,13 +448,14 @@
             "Single-Leg Medicine Ball Chest Push Jump",
             "Single-Leg Reactive Shuffle",
             "Single-Leg Rotational Hop to Balance",
+            "Split Squat (Bodyweight Tempo 3-1-1)",
             "Tempo Split Squat (4-0-1)"
           ]
         }
       },
       "SPP/home": {
-        "eligible": 53,
-        "eligible_anchors": 42,
+        "eligible": 58,
+        "eligible_anchors": 47,
         "anchors_by_movement": {
           "core": [
             "Plank Punch Reach",
@@ -412,7 +477,9 @@
             "Burpee-to-Punch (Tabata)",
             "Clap Push-Up",
             "DB Bench Press → Plyo Push-Up",
-            "Explosive Push-Up (Clap-to-Tap)"
+            "Explosive Push-Up (Clap-to-Tap)",
+            "Feet-Elevated Push-Up",
+            "Tempo Push-Up (3-1-1)"
           ],
           "lateral_reactive": [
             "Alternating Skater Hops",
@@ -425,7 +492,9 @@
             "Single-Leg Reactive Shuffle"
           ],
           "pull": [
+            "Band Bent-Over Row",
             "Banded Row (Speed Focus)",
+            "Half-Kneeling Single-Arm Band Row",
             "Slow-Lowered Pull-Up",
             "Tempo Chin-Up (5-0-1)"
           ],
@@ -438,6 +507,7 @@
           "squat": [
             "Bulgarian Split Squat",
             "Cossack Squat (Dynamic)",
+            "Split Squat (Bodyweight Tempo 3-1-1)",
             "Tempo Split Squat (4-0-1)",
             "Wrestler Shot Drill (Repetitive)"
           ],
@@ -462,17 +532,22 @@
             "Bulgarian Split Squat",
             "Cossack Squat (Dynamic)",
             "Kettlebell Swing",
+            "Split Squat (Bodyweight Tempo 3-1-1)",
             "Tempo Split Squat (4-0-1)",
             "Wrestler Shot Drill (Repetitive)"
           ],
           "upper_body_push_pull": [
+            "Band Bent-Over Row",
             "Band-Resisted Push Press",
             "Banded Row (Speed Focus)",
             "DB Bench Press → Plyo Push-Up",
             "DB Clean & Press",
+            "Feet-Elevated Push-Up",
+            "Half-Kneeling Single-Arm Band Row",
             "Judo Throw Simulation (Band-Resisted)",
             "Slow-Lowered Pull-Up",
-            "Tempo Chin-Up (5-0-1)"
+            "Tempo Chin-Up (5-0-1)",
+            "Tempo Push-Up (3-1-1)"
           ],
           "unilateral": [
             "Bulgarian Split Squat",
@@ -482,13 +557,14 @@
             "Single-Leg Forward Hops",
             "Single-Leg Reactive Shuffle",
             "Single-Leg Rotational Hop to Balance",
+            "Split Squat (Bodyweight Tempo 3-1-1)",
             "Tempo Split Squat (4-0-1)"
           ]
         }
       },
       "SPP/min": {
-        "eligible": 39,
-        "eligible_anchors": 35,
+        "eligible": 44,
+        "eligible_anchors": 40,
         "anchors_by_movement": {
           "core": [
             "Plank Punch Reach",
@@ -508,7 +584,9 @@
           "horizontal_push": [
             "Burpee-to-Punch (Tabata)",
             "Clap Push-Up",
-            "Explosive Push-Up (Clap-to-Tap)"
+            "Explosive Push-Up (Clap-to-Tap)",
+            "Feet-Elevated Push-Up",
+            "Tempo Push-Up (3-1-1)"
           ],
           "lateral_reactive": [
             "Alternating Skater Hops",
@@ -521,7 +599,9 @@
             "Single-Leg Reactive Shuffle"
           ],
           "pull": [
-            "Banded Row (Speed Focus)"
+            "Band Bent-Over Row",
+            "Banded Row (Speed Focus)",
+            "Half-Kneeling Single-Arm Band Row"
           ],
           "rotation": [
             "Judo Throw Simulation (Band-Resisted)",
@@ -531,6 +611,7 @@
           ],
           "squat": [
             "Cossack Squat (Dynamic)",
+            "Split Squat (Bodyweight Tempo 3-1-1)",
             "Wrestler Shot Drill (Repetitive)"
           ],
           "unknown": [
@@ -551,12 +632,17 @@
         "required_category_anchors": {
           "lower_body_loaded": [
             "Cossack Squat (Dynamic)",
+            "Split Squat (Bodyweight Tempo 3-1-1)",
             "Wrestler Shot Drill (Repetitive)"
           ],
           "upper_body_push_pull": [
+            "Band Bent-Over Row",
             "Band-Resisted Push Press",
             "Banded Row (Speed Focus)",
-            "Judo Throw Simulation (Band-Resisted)"
+            "Feet-Elevated Push-Up",
+            "Half-Kneeling Single-Arm Band Row",
+            "Judo Throw Simulation (Band-Resisted)",
+            "Tempo Push-Up (3-1-1)"
           ],
           "unilateral": [
             "Single-Leg 45° Bound",
@@ -564,56 +650,17 @@
             "Single-Leg Depth Drop (Stick Landing)",
             "Single-Leg Forward Hops",
             "Single-Leg Reactive Shuffle",
-            "Single-Leg Rotational Hop to Balance"
+            "Single-Leg Rotational Hop to Balance",
+            "Split Squat (Bodyweight Tempo 3-1-1)"
           ]
         }
       }
     },
     "thin_required_category_review": {
-      "GPP/min/upper_body_push_pull": {
-        "current": [],
-        "phase_tag_candidates": [
-          {
-            "name": "Band-Resisted Push Press",
-            "phases": [
-              "SPP"
-            ],
-            "movement": "vertical_push",
-            "quality_class": "anchor_power",
-            "equipment": [
-              "bands"
-            ],
-            "cost_class": "moderate"
-          },
-          {
-            "name": "Banded Row (Speed Focus)",
-            "phases": [
-              "SPP"
-            ],
-            "movement": "pull",
-            "quality_class": "anchor_power",
-            "equipment": [
-              "bands"
-            ],
-            "cost_class": "moderate"
-          },
-          {
-            "name": "Judo Throw Simulation (Band-Resisted)",
-            "phases": [
-              "SPP"
-            ],
-            "movement": "rotation",
-            "quality_class": "anchor_power",
-            "equipment": [
-              "bands"
-            ],
-            "cost_class": "moderate"
-          }
-        ]
-      },
       "GPP/min/unilateral": {
         "current": [
-          "Single-Leg Forward Hops"
+          "Single-Leg Forward Hops",
+          "Split Squat (Bodyweight Tempo 3-1-1)"
         ],
         "phase_tag_candidates": [
           {
@@ -671,38 +718,6 @@
             ],
             "movement": "rotation",
             "quality_class": "anchor_power",
-            "equipment": [
-              "bodyweight"
-            ],
-            "cost_class": "moderate"
-          }
-        ]
-      },
-      "SPP/min/lower_body_loaded": {
-        "current": [
-          "Cossack Squat (Dynamic)",
-          "Wrestler Shot Drill (Repetitive)"
-        ],
-        "phase_tag_candidates": [
-          {
-            "name": "Cossack Squat",
-            "phases": [
-              "GPP"
-            ],
-            "movement": "squat",
-            "quality_class": "anchor_loaded",
-            "equipment": [
-              "bodyweight"
-            ],
-            "cost_class": "moderate"
-          },
-          {
-            "name": "Wall Sit (Knee-Friendly)",
-            "phases": [
-              "GPP"
-            ],
-            "movement": "squat",
-            "quality_class": "anchor_force_isometric",
             "equipment": [
               "bodyweight"
             ],
@@ -770,6 +785,17 @@
         ],
         "phases": [
           "GPP"
+        ],
+        "movement": "squat"
+      },
+      {
+        "name": "Split Squat (Bodyweight Tempo 3-1-1)",
+        "equipment": [
+          "bodyweight"
+        ],
+        "phases": [
+          "GPP",
+          "SPP"
         ],
         "movement": "squat"
       },
@@ -1165,25 +1191,17 @@
       "camps": 168,
       "distinct_selected": 46,
       "selected_in_80pct_or_more": [
-        "Cossack Squat",
+        "Bulgarian Split Squat",
         "Hang Power Clean",
-        "Landmine Press",
         "Lat Pulldown",
         "Single-Leg Forward Hops",
-        "Sled Push (Board)",
-        "Z Press"
+        "Sled Push (Board)"
       ],
-      "blocks_missing_required_category": {
-        "unilateral": 1
-      },
+      "blocks_missing_required_category": {},
       "top_share": [
         [
-          "Z Press",
+          "Bulgarian Split Squat",
           100
-        ],
-        [
-          "Cossack Squat",
-          98
         ],
         [
           "Hang Power Clean",
@@ -1194,10 +1212,6 @@
           95
         ],
         [
-          "Landmine Press",
-          89
-        ],
-        [
           "Lat Pulldown",
           86
         ],
@@ -1206,19 +1220,29 @@
           85
         ],
         [
+          "Z Press",
+          79
+        ],
+        [
           "Single-Leg Lateral Squat Hold",
+          79
+        ],
+        [
+          "Landmine Press",
           79
         ]
       ]
     },
     "GPP/home": {
       "camps": 168,
-      "distinct_selected": 27,
+      "distinct_selected": 29,
       "selected_in_80pct_or_more": [
+        "Band Bent-Over Row",
+        "Bulgarian Split Squat",
         "Cossack Squat",
-        "Cossack Squat (Dynamic)",
         "DB Alternating Incline Press (30-45°)",
         "Kettlebell Swing",
+        "Pike Push-Up",
         "Single-Leg Forward Hops",
         "Slow-Lowered Pull-Up"
       ],
@@ -1233,11 +1257,19 @@
           100
         ],
         [
+          "Band Bent-Over Row",
+          100
+        ],
+        [
+          "Bulgarian Split Squat",
+          100
+        ],
+        [
           "Cossack Squat",
           100
         ],
         [
-          "Cossack Squat (Dynamic)",
+          "Pike Push-Up",
           100
         ],
         [
@@ -1247,14 +1279,6 @@
         [
           "Kettlebell Swing",
           96
-        ],
-        [
-          "Single-Leg Farmer Carry Hold",
-          79
-        ],
-        [
-          "DB Plyometric Push-Up (Hands on Dumbbells)",
-          71
         ]
       ]
     },
@@ -1262,15 +1286,21 @@
       "camps": 168,
       "distinct_selected": 18,
       "selected_in_80pct_or_more": [
-        "Brettzel Stretch",
+        "Band Bent-Over Row",
         "Cossack Squat",
         "Cossack Squat (Dynamic)",
-        "Single-Leg Forward Hops"
+        "Feet-Elevated Push-Up",
+        "Half-Kneeling Single-Arm Band Row",
+        "Pike Push-Up",
+        "Single-Leg Forward Hops",
+        "Tempo Push-Up (3-1-1)"
       ],
-      "blocks_missing_required_category": {
-        "upper_body_push_pull": 168
-      },
+      "blocks_missing_required_category": {},
       "top_share": [
+        [
+          "Band Bent-Over Row",
+          100
+        ],
         [
           "Cossack Squat",
           100
@@ -1280,28 +1310,24 @@
           100
         ],
         [
-          "Single-Leg Forward Hops",
+          "Feet-Elevated Push-Up",
           100
         ],
         [
-          "Brettzel Stretch",
-          83
+          "Half-Kneeling Single-Arm Band Row",
+          100
         ],
         [
-          "Plank",
-          80
+          "Pike Push-Up",
+          100
         ],
         [
-          "Psoas March (Banded)",
-          79
+          "Tempo Push-Up (3-1-1)",
+          100
         ],
         [
-          "Plate Russian Twists",
-          62
-        ],
-        [
-          "Staggered Stance Hold",
-          58
+          "Single-Leg Forward Hops",
+          100
         ]
       ]
     },
@@ -1411,7 +1437,6 @@
         "Sprawl-to-Burpee"
       ],
       "blocks_missing_required_category": {
-        "unilateral": 5,
         "lower_body_loaded": 52
       },
       "top_share": [
@@ -1428,6 +1453,10 @@
           89
         ],
         [
+          "Band-Resisted Sprawl to Sprint",
+          79
+        ],
+        [
           "Lateral Bound-to-Slip",
           75
         ],
@@ -1436,12 +1465,8 @@
           74
         ],
         [
-          "Band-Resisted Sprawl to Sprint",
-          74
-        ],
-        [
           "Band-Resisted Push Press",
-          65
+          68
         ],
         [
           "Wrestler Shot Drill (Repetitive)",
