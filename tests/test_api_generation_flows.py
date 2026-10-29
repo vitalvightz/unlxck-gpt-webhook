@@ -5947,7 +5947,14 @@ def test_generate_plan_seeds_each_request_from_its_client_request_id():
 
     job = store.get_generation_job_by_client_request_id(athlete_id="athlete-1", client_request_id="seed-request-a")
     assert job["request_payload"]["random_seed"] == generation_seed("athlete-1", "seed-request-a")
-    assert generation_seed("athlete-1", "seed-request-a") != generation_seed("athlete-1", "seed-request-b")
+
+    # A failed job neither blocks a new request nor stands in for it.
+    store.update_generation_job(job["id"], status="failed", completed_at=_now())
+    second = _post("seed-request-b", payload)
+    assert second["job_id"] != first["job_id"]
+    second_job = store.get_generation_job_by_client_request_id(athlete_id="athlete-1", client_request_id="seed-request-b")
+    assert second_job["request_payload"]["random_seed"] == generation_seed("athlete-1", "seed-request-b")
+    assert second_job["request_payload"]["random_seed"] != job["request_payload"]["random_seed"]
 
 
 def test_generate_plan_keeps_an_explicit_seed():

@@ -29,10 +29,10 @@ candidates. Previously the name sort decided for everyone.
 
 | Phase / equipment | Eligible anchors | Picked in ≥80% of camps | Blocks missing a required category |
 |---|---|---|---|
-| GPP / full gym | 38 → 45 | 7 → 5 | unilateral 1 → **0** |
+| GPP / full gym | 37 → 44 | 7 → 5 | unilateral 1 → **0** |
 | GPP / home | 14 → 21 | 6 → 8 | 0 → 0 |
 | GPP / minimal | **4 → 10** | 4 → 8 | upper-body push/pull **168 → 0** |
-| SPP / full gym | 90 → 95 | 6 → 6 | unilateral 109 → 109 |
+| SPP / full gym | 75 → 80 | 6 → 6 | unilateral 109 → 109 |
 | SPP / home | 42 → 47 | 5 → 5 | lower-body loaded 36 → 36 |
 | SPP / minimal | 35 → 40 | 3 → 3 | lower-body loaded 52 → 52 |
 
@@ -50,8 +50,11 @@ missed a category, against 0 unseeded.
 
 **Measured and dropped:**
 - GPP for Single-Leg Rotational Hop to Balance: GPP then took it, and the
-  GPP→SPP novelty rule removed SPP's main single-leg option (SPP blocks
-  missing unilateral rose from 7 to 124 of 240).
+  GPP→SPP novelty rule removed SPP's main single-leg option. In a separate
+  check of 240 home and minimal-equipment camps (every 7th camp of the same
+  grid, full-gym tier excluded, unseeded), SPP blocks missing unilateral rose
+  from 7 to 124. This was measured during the change and is not in the
+  generated report, which describes the shipped bank.
 - SPP for Wall Sit: it crowded out SPP single-leg work.
 - SPP for Cossack Squat: no measurable effect.
 

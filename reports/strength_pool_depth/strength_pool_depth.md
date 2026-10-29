@@ -1,15 +1,15 @@
 # Strength pool depth audit
 
-Bank rows: 345 (73 late-window-only). Phase tags: {'GPP': 151, 'SPP': 154, 'TAPER': 6}. Rows tagged for neither GPP nor SPP: 2.
+Bank rows: 345 (73 late-window-only). Counts below cover usable rows only (not late-window-only, not banned for the sport). Phase tags: {'GPP': 151, 'SPP': 154, 'TAPER': 6}. Rows tagged for neither GPP nor SPP: 2.
 
 ## Eligible pool per phase and equipment tier
 
 | Cell | Eligible | Anchors | lower_body_loaded | upper_body_push_pull | unilateral |
 |---|---|---|---|---|---|
-| GPP/full | 118 | 45 | 20 | 21 | 8 |
+| GPP/full | 117 | 44 | 19 | 21 | 8 |
 | GPP/home | 70 | 21 | 9 | 10 | 6 |
 | GPP/min | 44 | 10 | 4 | 5 | 2 |
-| SPP/full | 116 | 95 | 27 | 27 | 10 |
+| SPP/full | 101 | 80 | 17 | 22 | 10 |
 | SPP/home | 58 | 47 | 6 | 11 | 9 |
 | SPP/min | 44 | 40 | 3 | 7 | 7 |
 

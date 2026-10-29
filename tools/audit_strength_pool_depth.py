@@ -25,16 +25,16 @@ import json
 import logging
 from pathlib import Path
 import sys
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-with redirect_stdout(io.StringIO()):  # silence degraded-parser notice
+with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):  # silence degraded-parser notice
     from fightcamp import strength  # noqa: E402
-from fightcamp.training_context import normalize_athlete_equipment_list  # noqa: E402
-from fightcamp.strength_session_quality import classify_strength_item  # noqa: E402
+    from fightcamp.training_context import normalize_athlete_equipment_list  # noqa: E402
+    from fightcamp.strength_session_quality import classify_strength_item  # noqa: E402
 
 PHASES = ("GPP", "SPP")
 # Representative intake tiers. "min" is what a fighter with no gym reports.
@@ -62,6 +62,13 @@ def _equipment_ok(exercise: dict, tier: list[str]) -> bool:
 def _banned(exercise: dict) -> bool:
     details = " ".join(str(exercise.get(k, "") or "") for k in ("notes", "method", "movement"))
     return strength.is_banned_exercise(exercise.get("name", ""), exercise.get("tags", []), FIGHT_FORMAT, details)
+
+
+def _phase_gate_ok(exercise: dict, phase: str) -> bool:
+    """The selector's isometric gates, for an intake without a tested 1RM."""
+    if phase in {"SPP", "TAPER"} and strength._is_over_100_percent_isometric(exercise):
+        return False
+    return not strength._is_supra_max_isometric(exercise)
 
 
 def _steady_state_bank() -> list[dict]:
@@ -119,7 +126,8 @@ def static_audit() -> dict:
 
     cells: dict = {}
     for phase, (tier_name, tier) in itertools.product(PHASES, EQUIPMENT_TIERS.items()):
-        eligible = [(ex, p) for ex, p in usable if phase in p["phases"] and _equipment_ok(ex, tier)]
+        eligible = [(ex, p) for ex, p in usable
+                    if phase in p["phases"] and _equipment_ok(ex, tier) and _phase_gate_ok(ex, phase)]
         anchors = [p for _, p in eligible if p["anchor_capable"]]
         by_movement = defaultdict(list)
         for p in anchors:
@@ -136,8 +144,8 @@ def static_audit() -> dict:
         }
 
     # Near-miss review list: rows that would fill a thin required-category cell
-    # if a coach judged them appropriate for that phase. Equipment and sport
-    # rules already pass for the tier; only the phase tag is missing.
+    # if a coach judged them appropriate for that phase. Equipment, sport and
+    # isometric-gate rules already pass for the tier; only the phase tag is missing.
     review: dict = {}
     for phase, (tier_name, tier) in itertools.product(PHASES, EQUIPMENT_TIERS.items()):
         cell = cells[f"{phase}/{tier_name}"]
@@ -151,6 +159,7 @@ def static_audit() -> dict:
                 and p["anchor_capable"]
                 and category in p["base_categories"]
                 and _equipment_ok(ex, tier)
+                and _phase_gate_ok(ex, phase)
             ]
             review[f"{phase}/{tier_name}/{category}"] = {
                 "current": names,
@@ -259,6 +268,7 @@ def _markdown(static: dict, selection: dict | None) -> str:
     lines = ["# Strength pool depth audit", ""]
     lines.append(
         f"Bank rows: {static['bank_rows']} ({static['late_window_only_rows']} late-window-only). "
+        "Counts below cover usable rows only (not late-window-only, not banned for the sport). "
         f"Phase tags: {static['phase_tag_counts']}. Rows tagged for neither GPP nor SPP: "
         f"{static['rows_without_gpp_or_spp']}."
     )
@@ -316,6 +326,8 @@ def main() -> None:
     parser.add_argument("--step", type=int, default=5, help="sample every Nth camp of the grid (default 5)")
     parser.add_argument("--json", type=Path, help="write the full report as JSON to this path")
     args = parser.parse_args()
+    if args.step < 1:
+        parser.error("--step must be a positive integer")
     logging.disable(logging.CRITICAL)
 
     static = static_audit()

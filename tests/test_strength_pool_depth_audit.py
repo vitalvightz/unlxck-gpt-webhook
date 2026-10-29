@@ -9,6 +9,7 @@ from __future__ import annotations
 import copy
 
 from fightcamp import strength
+from fightcamp.strength_session_quality import classify_strength_item
 from tools import audit_strength_pool_depth as audit
 
 
@@ -32,15 +33,35 @@ def test_review_candidates_only_lack_the_phase_tag():
     report = audit.static_audit()
     bank = {row["name"]: row for row in audit._steady_state_bank()}
     for key, entry in report["thin_required_category_review"].items():
-        phase, tier, _category = key.split("/")
+        phase, tier, category = key.split("/")
         for candidate in entry["phase_tag_candidates"]:
             row = bank[candidate["name"]]
+            profile = classify_strength_item(row)
             assert phase not in row["phases"]
             assert audit._equipment_ok(row, audit.EQUIPMENT_TIERS[tier])
             assert not strength._exercise_late_windows(row)
+            assert not audit._banned(row)
+            assert audit._phase_gate_ok(row, phase)
+            assert profile["anchor_capable"]
+            assert category in profile["base_categories"]
 
 
 def test_movement_normalization_flips_are_reported():
     flips = {row["name"]: row for row in audit.static_audit()["movement_normalization_classification_flips"]}
+    assert flips
     for name, row in flips.items():
         assert row["movement"][0] != row["movement"][1], name
+        assert (
+            row["quality_class"][0] != row["quality_class"][1]
+            or row["categories_gained"]
+            or row["categories_lost"]
+        ), name
+
+
+def test_isometric_gates_match_the_selector():
+    bank = audit._steady_state_bank()
+    for row in bank:
+        if strength._is_supra_max_isometric(row):
+            assert not audit._phase_gate_ok(row, "GPP")
+        if strength._is_over_100_percent_isometric(row):
+            assert not audit._phase_gate_ok(row, "SPP")

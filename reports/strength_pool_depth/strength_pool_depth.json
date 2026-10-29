@@ -10,8 +10,8 @@
     "rows_without_gpp_or_spp": 2,
     "cells": {
       "GPP/full": {
-        "eligible": 118,
-        "eligible_anchors": 45,
+        "eligible": 117,
+        "eligible_anchors": 44,
         "anchors_by_movement": {
           "carry": [
             "Single-Leg Farmer Carry Hold"
@@ -53,7 +53,6 @@
             "Half-Kneeling Single-Arm Band Row",
             "Lat Pulldown",
             "Machine Row",
-            "Rack Pull Isometric (115% 1RM @ Knees)",
             "Sled Pull Backward",
             "Sled Pull Forward (Harness)",
             "Slow-Lowered Pull-Up"
@@ -89,7 +88,6 @@
             "Front Squat Isometric (105% 1RM @ 100°)",
             "Glute Bridge Hold (Heavy Load)",
             "Kettlebell Swing",
-            "Rack Pull Isometric (115% 1RM @ Knees)",
             "Romanian Deadlift (DB)",
             "Romanian Deadlift (RDL)",
             "Single-Leg Deadlift Hold",
@@ -257,8 +255,8 @@
         }
       },
       "SPP/full": {
-        "eligible": 116,
-        "eligible_anchors": 95,
+        "eligible": 101,
+        "eligible_anchors": 80,
         "anchors_by_movement": {
           "core": [
             "Anti-Rotation Med Ball Slam",
@@ -271,13 +269,9 @@
             "Band-Resisted Clinch Knee Strike",
             "Clinch Knee Strike (Band-Resisted)",
             "Cluster Set Trap Bar Deadlift",
-            "Deadlift Isometric (120% 1RM @ knee height)",
-            "Deficit Deadlift Isometric (115% 1RM @ floor)",
             "Heavy RDL → Broad Jump",
             "Iso Deadlift Hold",
-            "Kettlebell Swing",
-            "Snatch Grip Deadlift Isometric (125% 1RM @ knee)",
-            "Sumo Deadlift Isometric (120% 1RM @ mid-thigh)"
+            "Kettlebell Swing"
           ],
           "horizontal_jump": [
             "Band-Resisted Reaction Hop",
@@ -288,16 +282,12 @@
             "Sprint Acceleration (10-20m)"
           ],
           "horizontal_push": [
-            "Bench Isometric (130% 1RM @ mid-range)",
             "Burpee-to-Punch (Tabata)",
             "Clap Push-Up",
-            "Close-Grip Bench Isometric (120% 1RM @ mid-range)",
             "DB Bench Press → Plyo Push-Up",
             "Explosive Incline Press",
             "Explosive Push-Up (Clap-to-Tap)",
             "Feet-Elevated Push-Up",
-            "Floor Press Isometric (130% 1RM @ lockout)",
-            "Incline Bench Isometric (125% 1RM @ 45°)",
             "Landmine Anti-Rotation Press",
             "Medicine-Ball Chest Toss",
             "Tempo Push-Up (3-1-1)"
@@ -318,7 +308,6 @@
             "Half-Kneeling Single-Arm Band Row",
             "High Pull",
             "Machine Row",
-            "Rack Pull Isometric (125% 1RM @ mid-shin)",
             "Sled Pull Forward (Harness)",
             "Slow-Lowered Pull-Up",
             "Tempo Chin-Up (5-0-1)"
@@ -344,18 +333,13 @@
             "Back Squat → Box Jump",
             "Barbell Thruster",
             "Bottom-Out Hold (Squat)",
-            "Box Squat Isometric (110% 1RM @ parallel)",
             "Bulgarian Split Squat",
             "Cossack Squat (Dynamic)",
             "Front Squat",
-            "Front Squat Isometric (115% 1RM @ 100°)",
-            "Safety Bar Squat Isometric (115% 1RM @ 90°)",
             "Speed Box Squat",
             "Split Squat (Bodyweight Tempo 3-1-1)",
-            "Squat Isometric (110% 1RM @ 90°)",
             "Tempo Split Squat (4-0-1)",
             "Wrestler Shot Drill (Repetitive)",
-            "Zercher Squat Isometric (110% 1RM @ bottom)",
             "Zercher Squat → Sprawl Jump"
           ],
           "unknown": [
@@ -376,7 +360,6 @@
             "DB Clean & Press",
             "Landmine Press",
             "Landmine Push Press",
-            "Overhead Press Isometric (120% 1RM @ forehead)",
             "Push Press"
           ]
         },
@@ -386,28 +369,18 @@
             "Back Squat → Box Jump",
             "Barbell Thruster",
             "Bottom-Out Hold (Squat)",
-            "Box Squat Isometric (110% 1RM @ parallel)",
             "Bulgarian Split Squat",
             "Cluster Set Trap Bar Deadlift",
             "Cossack Squat (Dynamic)",
-            "Deadlift Isometric (120% 1RM @ knee height)",
-            "Deficit Deadlift Isometric (115% 1RM @ floor)",
             "Front Squat",
-            "Front Squat Isometric (115% 1RM @ 100°)",
             "Heavy RDL → Broad Jump",
             "Iso Deadlift Hold",
             "Kettlebell Swing",
-            "Rack Pull Isometric (125% 1RM @ mid-shin)",
-            "Safety Bar Squat Isometric (115% 1RM @ 90°)",
             "Sled Pull Forward (Harness)",
-            "Snatch Grip Deadlift Isometric (125% 1RM @ knee)",
             "Speed Box Squat",
             "Split Squat (Bodyweight Tempo 3-1-1)",
-            "Squat Isometric (110% 1RM @ 90°)",
-            "Sumo Deadlift Isometric (120% 1RM @ mid-thigh)",
             "Tempo Split Squat (4-0-1)",
             "Wrestler Shot Drill (Repetitive)",
-            "Zercher Squat Isometric (110% 1RM @ bottom)",
             "Zercher Squat → Sprawl Jump"
           ],
           "upper_body_push_pull": [
@@ -415,16 +388,12 @@
             "Band-Resisted Push Press",
             "Banded Row (Speed Focus)",
             "Barbell Overhead Press",
-            "Bench Isometric (130% 1RM @ mid-range)",
-            "Close-Grip Bench Isometric (120% 1RM @ mid-range)",
             "DB Bench Press → Plyo Push-Up",
             "DB Clean & Press",
             "Explosive Incline Press",
             "Feet-Elevated Push-Up",
-            "Floor Press Isometric (130% 1RM @ lockout)",
             "Half-Kneeling Single-Arm Band Row",
             "High Pull",
-            "Incline Bench Isometric (125% 1RM @ 45°)",
             "Judo Throw Simulation (Band-Resisted)",
             "Landmine Anti-Rotation Press",
             "Landmine Press",
@@ -433,7 +402,6 @@
             "Landmine Rotational Press",
             "Machine Row",
             "Medicine Ball Hook Throw",
-            "Overhead Press Isometric (120% 1RM @ forehead)",
             "Push Press",
             "Slow-Lowered Pull-Up",
             "Tempo Chin-Up (5-0-1)",
