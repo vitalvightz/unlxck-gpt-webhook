@@ -3179,7 +3179,6 @@ export function StructuredPlanRenderer({
           )}
 
           <div className="cm-guardrails">
-            <ActiveNotesCard plan={plan} />
             <RedFlagsCard plan={plan} />
           </div>
 
