@@ -675,3 +675,25 @@ def test_wrapped_dose_never_reads_the_next_bulleted_exercise():
                     ["- Barbell Back Squat:", "- 3 x 5", "- RPE 7"]):
         (_, dose, _), = _rendered_strength_entries(wrapped, prescriptions)
         assert _parse_rendered_strength_dose(dose) == (3, 5, 7.0)
+
+
+@pytest.mark.parametrize("bullet", ["-", "*", "•"])
+@pytest.mark.parametrize("name", ["90/90 Hip Switch", "3D Lunge", "1-2 Punch", "5-10-5 Shuttle"])
+def test_numeric_leading_exercise_is_not_a_wrapped_strength_dose(bullet, name):
+    from fightcamp.stage2_validator import _rendered_strength_entries
+
+    lines = [
+        "- Heavy RDL → Broad Jump — 2 rounds: heavy movement 2 reps @ 85% 1RM → explosive movement 2 reps.",
+        f"{bullet} {name} — 9 x 9 @ RPE 10",
+    ]
+    (_, dose, _), = _rendered_strength_entries(lines, [{"name": "Heavy RDL → Broad Jump"}])
+    assert dose == lines[0]
+
+
+@pytest.mark.parametrize("wrapped", ["3 x 5", "3 sets x 5 reps", "3×5"])
+def test_numeric_strength_dose_wrap_still_detects_overdose(wrapped):
+    report = validate_stage2_output(
+        planning_brief=_d16_back_squat_brief(),
+        final_plan_text=f"D-16 (Thursday) - Strength\n- Back Squat:\n- {wrapped}\n- RPE 10\n",
+    )
+    assert any(e["code"] == "late_camp_effective_prescription_exceeded" for e in report["errors"])

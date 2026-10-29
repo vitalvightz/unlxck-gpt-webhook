@@ -3324,7 +3324,11 @@ def _rendered_strength_entries(lines: list[str], prescriptions: list[dict]) -> l
                 item_text = candidate.strip()
                 if item_text[:2] in {"- ", "• ", "* "}:
                     item_text = item_text[2:].lstrip()
-                    if item_text and not item_text[0].isdigit() and not _RENDERED_RPE.match(item_text):
+                    numeric_dose = re.match(
+                        r"^\d+(?:\.\d+)?\s*(?:[x×]|sets?\b|reps?\b|rounds?\b|holds?\b|s\b|sec(?:onds?)?\b|min(?:utes?)?\b)",
+                        item_text, re.I,
+                    )
+                    if not numeric_dose and not _RENDERED_RPE.match(item_text):
                         break
                 continuation.append(candidate)
                 dose_text = " ".join([line, *continuation])

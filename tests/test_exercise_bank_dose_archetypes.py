@@ -284,6 +284,7 @@ def test_countdown_overlay_cannot_delete_the_explosive_half(role_kind):
         dose = _prescription_templates(phase)["contrast"]
         assert _parse_sets_reps(dose) == (None, None), (phase, dose)
         out = _under_countdown_cap(dose, role_kind)
+        assert "heavy movement" in out and "1RM" in out, (phase, role_kind, out)
         assert "explosive movement" in out and "→" in out, (phase, role_kind, out)
 
 

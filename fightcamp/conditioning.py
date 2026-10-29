@@ -726,7 +726,7 @@ def _conditioning_structured_profile(drill: dict, *, system: str | None = None) 
     # does not turn their legacy work_sec rep count into seconds of conditioning.
     # Any rep unit counts ("6x1 climb", "6x2 flips"), never a time or distance.
     rep_dose = re.match(r"\s*(\d+)\s*[x×]\s*(\d+)\s*([a-z]+)\b", str(drill.get("duration") or ""), re.I)
-    if rep_dose and re.fullmatch(r"s|secs?|seconds?|mins?|minutes?|m|yds?|yards?|metres?|meters?|ft|feet",
+    if rep_dose and re.fullmatch(r"s|secs?|seconds?|mins?|minutes?|m|km|kilometres?|kilometers?|mi|miles?|yds?|yards?|metres?|meters?|ft|feet",
                                  rep_dose[3].lower()):
         rep_dose = None
     rep_speed = bool(

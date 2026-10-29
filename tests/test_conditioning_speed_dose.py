@@ -3,9 +3,33 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from fightcamp import conditioning
 from fightcamp.coordination_support_library import all_coordination_drills
 from fightcamp.stage2_planning_brief import _compress_short_camp_priorities
+
+
+@pytest.mark.parametrize("unit", [
+    "km", "kilometre", "kilometres", "kilometer", "kilometers",
+    "mi", "mile", "miles", "KM", "m", "yards", "feet", "sec", "minutes",
+])
+@pytest.mark.parametrize("separator", ["x", "×"])
+def test_distance_and_time_units_do_not_qualify_as_explosive_reps(unit, separator):
+    drill = {
+        "duration": f"6{separator}2 {unit}", "tags": ["mech_ballistic"],
+        "rest_sec": 120, "rpe": 9,
+    }
+    assert not conditioning._conditioning_structured_profile(drill)["speed_development"]
+
+
+@pytest.mark.parametrize("unit", ["reps", "flips", "climb"])
+def test_full_rest_ballistic_rep_units_still_qualify_as_speed(unit):
+    drill = {
+        "duration": f"6×2 {unit}", "tags": ["mech_ballistic"],
+        "rest_sec": 120, "rpe": 9,
+    }
+    assert conditioning._conditioning_structured_profile(drill)["speed_development"]
 
 
 def _base_flags(**overrides):
