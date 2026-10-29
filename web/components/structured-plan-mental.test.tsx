@@ -218,3 +218,13 @@ test("Plan never collapses protocols, bundled movement, or safety instructions",
   assert.doesNotMatch(warning, /sp-optional-disclosure/);
   assert.match(warning, /Important safety instruction/);
 });
+
+
+test("Plan names a single matching exercise once while Today keeps its heading", () => {
+  const session: StructuredSession = { title: "Joint Prep", session_type: "mobility", blocks: [
+    { block_id: "prep", block_type: "preparation", display_name: "Joint Prep", duration: { value: 8, unit: "minutes" } }] };
+  const html = renderToStaticMarkup(<SessionCard layout="plan" session={session} initiallyOpenFirstBlock={false} />);
+  assert.equal((html.match(/>Joint Prep</g) || []).length, 1);
+  const today = renderToStaticMarkup(<SessionCard layout="section" session={session} initiallyOpenFirstBlock={false} />);
+  assert.match(today, /<h3[^>]*>Joint Prep<\/h3>/);
+});

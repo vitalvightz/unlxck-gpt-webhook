@@ -216,12 +216,9 @@ def test_trusted_support_fillers_are_optional_for_logging_and_adherence(title, k
 
 
 @pytest.mark.parametrize("override", [
-    {"mandatory_tactical_watch": True},
-    {"governance": {"authority": "gap_fill_support_insert", "mandatory": True}},
-    {"optional": False},
     {"governance": {"authority": "model"}},
 ])
-def test_required_or_untrusted_support_cannot_become_optional(override):
+def test_untrusted_support_cannot_become_optional(override):
     from api.optional_sessions import mark_optional_support_inserts
     plan = {"weeks": [{"days": [{"countdown_label": "D-24", "sessions": [
         {"title": "Tactical Watch", "session_type": "skill", "blocks": []}]}]}]}
@@ -240,3 +237,40 @@ def test_support_role_cannot_make_mixed_physical_work_optional():
             "governance": {"authority": "gap_fill_support_insert"}}
     mark_optional_support_inserts(plan, {"weeks": [{"session_roles": [role]}]})
     assert not is_optional_session(session)
+
+
+@pytest.mark.parametrize("override", [
+    {"mandatory_tactical_watch": True},
+    {"governance": {"authority": "gap_fill_support_insert", "mandatory": True}},
+])
+def test_mandatory_tactical_placement_is_optional_for_the_athlete(override):
+    from api.optional_sessions import mark_optional_support_inserts
+    session = {"title": "Tactical Watch", "session_type": "skill", "blocks": []}
+    plan = {"weeks": [{"days": [{"countdown_label": "D-24", "sessions": [session]}]}]}
+    role = {"role_key": "tactical_watch", "category": "support_insert", "countdown_label": "D-24",
+            "governance": {"authority": "gap_fill_support_insert"}, **override}
+    mark_optional_support_inserts(plan, {"weekly_role_map": {"weeks": [{"session_roles": [role]}]}})
+    assert is_optional_session(session)
+
+
+def test_saved_camp_self_review_receives_optional_status_on_read_without_mutating_storage():
+    from copy import deepcopy
+    from api.services.effective_structured_plan import resolve_effective_structured_plan
+    store = _store()
+    row = store.plans[PLAN]
+    support = row["structured_plan"]["weeks"][0]["days"][0]["sessions"][0]
+    support.update(title="Self-Review Cues", session_type="skill")
+    support.pop("optional")
+    support["blocks"] = [{"block_type": "skill", "display_name": "Self-Review Cues"}]
+    row["planning_brief"] = {"weekly_role_map": {"weeks": [{"session_roles": [{
+        "role_key": "self_review", "category": "support_insert", "countdown_label": "D-24",
+        "governance": {"authority": "gap_fill_support_insert"}}]}]}}
+    before = deepcopy(row)
+    resolved = resolve_effective_structured_plan(row)
+    assert resolved is not None
+    support = next(s for s in resolved["weeks"][0]["days"][0]["sessions"] if s["title"] == "Self-Review Cues")
+    assert is_optional_session(support)
+    assert row == before
+    assert _view(store).today.next_session["session_id"] == STRENGTH
+    _log(store, STRENGTH, "done")
+    assert store.get_session_completion(ATHLETE, VISUALISATION, DAY) is None

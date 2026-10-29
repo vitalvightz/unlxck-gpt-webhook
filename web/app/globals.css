@@ -22787,7 +22787,7 @@ fieldset.priority-clarification-options,
 a, button, summary, [role="button"] { -webkit-tap-highlight-color: transparent; }
 
 /* Optional mental support keeps its authored task behind a calm disclosure. */
-.sp-session.sp-session-support, .cm-day .sp-session.sp-session-support { padding: 0; overflow: hidden; background: #211e32; border: 1px solid #50466f; border-radius: var(--radius-support); }
+.sp-session.sp-session-support, .cm-day .sp-session.sp-session-support { padding: 0; overflow: hidden; background: #1b1926; border: 1px solid #393244; border-radius: var(--radius-support); }
 .sp-optional-summary { position: relative; display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 60px; padding: 9px 12px; cursor: pointer; list-style: none; }
 .sp-optional-summary::-webkit-details-marker { display: none; }
 .sp-optional-heading { display: grid; gap: 4px; min-width: 0; }

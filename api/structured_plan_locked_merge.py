@@ -675,11 +675,11 @@ def merge_locked_structured_content(
         anchor = _mindset_anchor(watch)
         session["title"] = display_title
         session["objective"] = watch.get("why")
-        if watch.get("optional") is True:
-            # Offered, not required: the flag drives logging and adherence
-            # (api.optional_sessions); the prefix tells the athlete.
+        if spec.content_field in {"fight_visualization", "tactical_watch"}:
+            # Locked placement does not make mental work owed by the athlete.
             session["optional"] = True
-            session["objective"] = f"Optional. {watch.get('why') or ''}".strip()
+            if watch.get("optional") is True:
+                session["objective"] = f"Optional. {watch.get('why') or ''}".strip()
         else:
             session.pop("optional", None)
         session["mindset_anchor"] = anchor

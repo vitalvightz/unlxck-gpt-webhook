@@ -1231,6 +1231,8 @@ export function SessionCard({
   const nutrition = showDayContext ? cleanText(card?.nutrition_summary) : null;
   const weightCut = showDayContext ? cleanText(card?.weight_cut_warning) : null;
   const blocks = getBlocks(session);
+  const repeatsOnlyExercise = planLayout && blocks.length === 1
+    && sameCopy(title, cleanText(blocks[0].display_name));
   // `rehab` is the schema's home for mobility support too, so the chip is
   // resolved rather than printed raw: a joint-prep card must not claim rehab.
   const sessionTypeLabel =
@@ -1423,7 +1425,7 @@ export function SessionCard({
           ) : null}
           {/* Today keeps the technical title (it carries the why); a plan sheet
               already titles the session, so its rationale moves beside the tag. */}
-          {hideTitle && (!isTechnicalSession || planLayout) ? null : <h3 className="sp-session-title">
+          {(hideTitle || repeatsOnlyExercise) && (!isTechnicalSession || planLayout) ? null : <h3 className="sp-session-title">
             {isDeclaredLightCombat
               ? DECLARED_LIGHT_COMBAT_TITLE
               : isTechnicalSession
