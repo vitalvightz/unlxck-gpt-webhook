@@ -124,10 +124,12 @@ def test_standalone_three_exercise_session_becomes_four(role_key, phase):
 
 
 def test_session_already_at_four_is_unchanged():
+    # #2887 lets primary GPP strength hold up to six; a session already at or
+    # above four never takes the standalone-minimum extra.
     role = _single("primary_strength_day")
     assert _decision(role) is None
     assert role["strength_composition_policy"]["standalone_minimum_applied"] is False
-    assert _count(role) == 4
+    assert 4 <= _count(role) <= role["strength_composition_policy"]["effective_exercise_cap"]
 
 
 def test_minimum_never_invents_exercises_beyond_stage1_membership():
@@ -216,7 +218,8 @@ def test_any_readiness_cut_or_injury_pressure_keeps_its_existing_cap(athlete, ro
         assert policy["effective_exercise_cap"] == policy["base_exercise_cap"]
     else:
         assert policy["effective_exercise_cap"] < policy["base_exercise_cap"]
-    assert _count(role) == policy["effective_exercise_cap"]
+    # The cap is a ceiling: #3104 drops redundant patterns rather than filling it.
+    assert _count(role) <= policy["effective_exercise_cap"]
 
 
 def _mech_slot(name: str, priority: int, session_index: int, mech: str, **kwargs) -> dict:

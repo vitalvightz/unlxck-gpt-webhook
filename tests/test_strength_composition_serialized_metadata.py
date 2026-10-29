@@ -81,7 +81,9 @@ def test_serialized_support_only_is_deprioritized_when_session_shrinks():
         "weeks": [{
             "phase": "GPP",
             "session_roles": [{
-                "role_key": "primary_strength_day",
+                # #2887 lets primary GPP strength hold six; a capped role still
+                # shrinks under this pressure.
+                "role_key": "secondary_strength_day",
                 "category": "strength",
                 "strength_session_index": 1,
             }],
