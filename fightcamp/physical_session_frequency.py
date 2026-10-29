@@ -1,10 +1,10 @@
-"""Single authority for what ``training_frequency`` means as a *physical* session count.
+"""Single authority for what ``training_frequency`` means as a *training day* count.
 
 Product contract
 ----------------
-``training_frequency`` is the number of **physical training sessions** the athlete
-plans to complete per week. It is not a stress budget, not a role-candidate
-budget, and not a count of anything the athlete merely reads or watches.
+``training_frequency`` is the number of **distinct physical training days** the
+athlete plans per week. Multiple compatible sessions on one day count once.
+It is not a stress budget, role-candidate budget, or a count of passive content.
 
 Three concepts that used to be conflated live apart here:
 
@@ -27,9 +27,9 @@ Classification is deterministic and role-key first. ``stress_class`` alone is
 never sufficient: a Breathing Reset and a programmed mobility session are both
 ``support``, but only one of them is a training session.
 
-``physical_appointments`` separately counts standalone sessions for the total
-weekly ceiling. Double days consume two appointments even though they occupy
-one available day. Occupancy targets must never be used as that ceiling.
+``physical_appointments`` separately records standalone sessions to assess
+same-day stress and ownership. It must NOT be used as the weekly day ceiling:
+compatible double days occupy one training day.
 """
 
 from __future__ import annotations
@@ -185,7 +185,7 @@ def physical_session_offsets(roles: Iterable[Any]) -> set[int]:
 
 
 def count_physical_sessions(roles: Iterable[Any]) -> int:
-    """Physical sessions in ``roles``, counted as occupied training days.
+    """Distinct physical training days occupied by ``roles``.
 
     One day is one session: a Tactical Focus riding alongside a technical combat
     day adds nothing, and two prescribed blocks on one day are still one
@@ -223,11 +223,15 @@ def dated_appointments(role_map: dict) -> list[dict]:
 
 
 def appointment_budget_exceeded(role_map: dict, frequency: int) -> bool:
-    """Check actual seven-day buckets across phase/progression boundaries."""
-    appointments = dated_appointments(role_map)
+    """Check distinct occupied days in seven-day cadence windows.
+
+    Kept under its original name for legacy callers; appointments are NOT the
+    budget unit. Compatible coach + S&C doubles count as one training day.
+    """
+    occupied_days = {r["countdown_offset"] for r in dated_appointments(role_map)}
     slots = [(d["d_day"], d.get("weekday", ""))
              for w in role_map.get("weeks") or [] for d in w.get("calendar_days") or []]
-    return any(sum(r["countdown_offset"] in {d for d, _ in days} for r in appointments) > frequency
+    return any(len(occupied_days & {d for d, _ in days}) > frequency
                for days in cadence_windows(slots))
 
 
@@ -243,7 +247,7 @@ WARNING_FREQUENCY_UNMET = "physical_session_frequency_unmet"
 
 
 def requested_training_frequency(athlete_model: dict[str, Any] | None) -> int | None:
-    """The athlete's requested weekly physical-session count, or ``None``."""
+    """The athlete's requested number of weekly training days, or ``None``."""
     if not isinstance(athlete_model, dict):
         return None
     raw = athlete_model.get("training_frequency")
