@@ -216,6 +216,15 @@ def test_complete_fixed_clock_plans_have_only_explained_changes(tmp_path):
                 # support hold is refilled from the seeded fallback order.
                 expected.remove('Side Plank (Long Duration)')
                 expected.insert(expected.index('Plank (Extended Hold)'), 'Plate Russian Twists')
+            if before['case'] == 'boxing_healthy_reviewed_equipment' and phase == 'SPP':
+                # Without the ineligible pull-up, a loaded push/pull role is
+                # missing. Promotion now keeps the strength press when it adds
+                # unilateral work, instead of losing it to a plyometric refill.
+                expected[expected.index('Explosive Push-Up (Clap-to-Tap)')] = 'Tempo Push-Up (3-1-1)'
+                from fightcamp.strength_session_quality import classify_strength_item
+                press = record('Tempo Push-Up (3-1-1)')
+                assert press['method'] == 'strength'
+                assert 'upper_body_push_pull' in classify_strength_item(press)['base_categories']
             tandem = 'Tandem Gait Walk (Heel-to-Toe)'
             if (before['case'] == 'mma_no_equipment' and NAMES[3] in old_names
                     and tandem in new_names and tandem not in old_names):
@@ -237,8 +246,9 @@ def test_complete_fixed_clock_plans_have_only_explained_changes(tmp_path):
                 assert [_slot_exercise_name(s) for s in slots] == (old_names if payload is a else new_names)
         assert a == b  # Conditioning, rehab, workload, schedule and clinical payloads.
         def dose_text(text):
+            changed_press = ('- Explosive Push-Up (Clap-to-Tap):', '- Tempo Push-Up (3-1-1):') if before['case'] == 'boxing_healthy_reviewed_equipment' else ()
             return '\n'.join(line for line in text.splitlines()
-                             if not line.startswith(('**Top Exercises:**', '- Slow-Lowered Pull-Up:', '- Sissy Squat:', '- Cossack Squat:',
+                             if not line.startswith(changed_press + ('**Top Exercises:**', '- Slow-Lowered Pull-Up:', '- Sissy Squat:', '- Cossack Squat:',
                                                      '- Tandem Gait Walk (Heel-to-Toe):',
                                                      # The seeded swap above, and the core-control
                                                      # dose line its refilled support hold brings.

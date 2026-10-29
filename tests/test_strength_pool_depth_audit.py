@@ -1,67 +1,40 @@
-"""Contracts for the read-only strength pool depth audit.
-
-The cell counts are a snapshot of the bank, not a source of truth; these tests
-pin that the audit uses the selector's own eligibility and never mutates the
-cached bank it reads.
-"""
-from __future__ import annotations
-
+"""The diagnostic uses real eligibility and preserves phase continuity."""
 import copy
 
 from fightcamp import strength
-from fightcamp.strength_session_quality import classify_strength_item
 from tools import audit_strength_pool_depth as audit
 
 
-def test_static_audit_never_mutates_the_cached_bank():
-    before = copy.deepcopy(strength.get_exercise_bank())
-    audit.static_audit()
-    assert strength.get_exercise_bank() == before
-
-
-def test_cells_cover_every_phase_and_equipment_tier():
+def test_static_audit_filters_ineligible_anchors_without_mutating_bank(monkeypatch):
+    common = dict(phases=["GPP", "SPP"], movement="squat", equipment="bodyweight", method="strength", tags=[])
+    bank = [
+        dict(common, name="Split Squat"),
+        dict(common, name="Unavailable Squat", equipment="barbell"),
+        dict(common, name="Late Squat", late_windows=["d13_to_d8"]),
+        dict(common, name="Isometric Squat Hold (110% 1RM)"),
+        dict(common, name="Support Squat", support_only=True),
+        dict(common, name="Wrong Phase Squat", phases=["TAPER"]),
+    ]
+    before = copy.deepcopy(bank)
+    monkeypatch.setattr(strength, "get_exercise_bank", lambda: bank)
     report = audit.static_audit()
-    assert set(report["cells"]) == {
-        f"{phase}/{tier}" for phase in audit.PHASES for tier in audit.EQUIPMENT_TIERS
+    assert set(report) == {f"{p}/{t}" for p in audit.PHASES for t in audit.EQUIPMENT_TIERS}
+    assert report["SPP/min"] == {
+        "anchors": 1, "lower_body_loaded": 1, "upper_body_push_pull": 0, "unilateral": 1,
     }
-    for cell in report["cells"].values():
-        assert cell["eligible_anchors"] <= cell["eligible"]
-        assert set(cell["required_category_anchors"]) == set(audit.REQUIRED_CATEGORIES)
+    assert bank == before
 
 
-def test_review_candidates_only_lack_the_phase_tag():
-    report = audit.static_audit()
-    bank = {row["name"]: row for row in audit._steady_state_bank()}
-    for key, entry in report["thin_required_category_review"].items():
-        phase, tier, category = key.split("/")
-        for candidate in entry["phase_tag_candidates"]:
-            row = bank[candidate["name"]]
-            profile = classify_strength_item(row)
-            assert phase not in row["phases"]
-            assert audit._equipment_ok(row, audit.EQUIPMENT_TIERS[tier])
-            assert not strength._exercise_late_windows(row)
-            assert not audit._banned(row)
-            assert audit._phase_gate_ok(row, phase)
-            assert profile["anchor_capable"]
-            assert category in profile["base_categories"]
+def test_selection_pass_carries_prior_phase_names_movements_and_seed(monkeypatch):
+    calls = []
 
+    def generate(*, flags, weaknesses):
+        calls.append(copy.deepcopy(flags))
+        return {"exercises": [{"name": "Split Squat", "movement": "squat", "tags": []}]}
 
-def test_movement_normalization_flips_are_reported():
-    flips = {row["name"]: row for row in audit.static_audit()["movement_normalization_classification_flips"]}
-    assert flips
-    for name, row in flips.items():
-        assert row["movement"][0] != row["movement"][1], name
-        assert (
-            row["quality_class"][0] != row["quality_class"][1]
-            or row["categories_gained"]
-            or row["categories_lost"]
-        ), name
-
-
-def test_isometric_gates_match_the_selector():
-    bank = audit._steady_state_bank()
-    for row in bank:
-        if strength._is_supra_max_isometric(row):
-            assert not audit._phase_gate_ok(row, "GPP")
-        if strength._is_over_100_percent_isometric(row):
-            assert not audit._phase_gate_ok(row, "SPP")
+    monkeypatch.setattr(strength, "generate_strength_block", generate)
+    audit._camp(["strength"], [], ["wrestler"], "min", "low", 3, seed=4)
+    assert [f["phase"] for f in calls] == ["GPP", "SPP"]
+    assert all(f["random_seed"] == 4 for f in calls)
+    assert calls[1]["prev_exercises"] == ["Split Squat"]
+    assert calls[1]["recent_exercises"] == ["squat"]
