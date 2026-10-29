@@ -29,6 +29,9 @@ export const entries: LibraryEntry[] = ["Medicine Ball Hook Throw", "Standing Ca
 export async function setup(page: Page, baseURL: string, role = "athlete") {
   await isolateFromNetwork(page, baseURL);
   await page.route("https://fonts.googleapis.com/**", (route) => route.fulfill({ contentType: "text/css", body: "" }));
+  // These journeys drive the plan's day list; the Plan page itself opens on the
+  // calendar by default, which training-plan-presentation covers.
+  await page.addInitScript(() => { try { localStorage.setItem("unlxck.plan-view", "list"); } catch {} });
   await page.addInitScript(
     ([key, value]) => localStorage.setItem(key, value),
     [

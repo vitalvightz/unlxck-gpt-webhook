@@ -1227,7 +1227,8 @@ export function SessionCard({
     return (
       <article className="sp-session sp-mental-task" data-layout={planLayout ? "plan" : undefined} data-mental-category={mentalCategory.toLowerCase()}>
         <header className="sp-mental-head">
-          <h3 className="sp-session-title">{title || mentalCategory}{mentalDuration ? ` · ${compactTimeUnits(mentalDuration)}` : ""}</h3>
+          {hideTitle ? (mentalDuration ? <p className="sp-mental-duration">{compactTimeUnits(mentalDuration)}</p> : null)
+            : <h3 className="sp-session-title">{title || mentalCategory}{mentalDuration ? ` · ${compactTimeUnits(mentalDuration)}` : ""}</h3>}
           {completionInfo?.display.label ? (
             <span className="sp-tag sp-status-tag" data-tone={completionInfo.display.tone}>
               {completionInfo.display.label}
@@ -1524,11 +1525,14 @@ export function TodayCard({ day }: { day: StructuredDay }) {
 export function SessionlessDayCard({
   day,
   showDayLabels = true,
+  hideTitle = false,
 }: {
   day: StructuredDay;
   /** False inside the plan accordion, where the day row already shows the
    * countdown/date; the Today tab keeps the default. */
   showDayLabels?: boolean;
+  /** A sheet already titled with this day's work does not repeat it. */
+  hideTitle?: boolean;
 }) {
   const date = cleanText(day.date);
   const countdown = formatCountdownLabel(day.countdown_label);
@@ -1559,13 +1563,14 @@ export function SessionlessDayCard({
               {date ? <span className="sp-day-date">{formatAppDate(date)}</span> : null}
             </div>
           ) : null}
-          <h3 className="sp-session-title">
+          {hideTitle ? null : <h3 className="sp-session-title">
             {displayTitle}
             {(kind === "light_combat" || kind === "technical") ? <TechnicalCombatWhyTooltip day={day} declared={!isConverted} /> : null}
-          </h3>
+          </h3>}
         </div>
         <div className="sp-session-meta">
           {displayTag ? <span className="sp-tag sp-accent">{displayTag}</span> : null}
+          {hideTitle && (kind === "light_combat" || kind === "technical") ? <TechnicalCombatWhyTooltip day={day} declared={!isConverted} /> : null}
         </div>
       </header>
       {countdown === "D-0" && day.day_type === "competition" ? (
@@ -2093,11 +2098,12 @@ function CalendarDayPanel({
                 openWeekIntent={weekIntent}
                 occurrenceDate={day.date}
                 layout="plan"
+                hideTitle
               />
             ) : coachOnly ? (
-              <SessionlessDayCard day={day} showDayLabels={false} />
+              <SessionlessDayCard day={day} showDayLabels={false} hideTitle />
             ) : (
-              <DaySessionContext day={day} />
+              <DaySessionContext day={day} headline={opened.title} />
             )}
           </div>
         </InjuryDetailSheet>
@@ -2347,12 +2353,18 @@ export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
 
 const URGENT_NOTE_CATEGORIES = new Set(["injury", "medical", "post_op", "weight_cut"]);
 // "No weight-cut target is assumed" shares the category but restricts nothing.
-const INFORMATIONAL_NOTE = /\bis assumed\b|\bnot (?:applicable|required)\b|\bnone (?:declared|reported)\b/i;
+// Only a whole note that states the absence of a target/limit/injury counts.
+const INFORMATIONAL_NOTE = /^(?:no (?:weight[- ]cut )?(?:targets?|limits?|restrictions?|injur(?:y|ies)|medical (?:issue|condition)s?) (?:is |are )?(?:assumed|declared|reported|set|applied)|weight[- ]cut (?:is )?not (?:applicable|required|planned)|none (?:declared|reported))\.?$/i;
+// Any of these words means the note asks the athlete to do or avoid something.
+const RESTRICTIVE_WORDING = /\b(?:avoid|do not|don't|never|stop|limit|restrict|until|only|must|cleared?|clearance|max(?:imum)?|cap|reduce|keep|stay|follow|within|under|no contact|no sparring|hold)\b/i;
 
 /** A note the athlete must act on now: an injury, medical or weight-cut
- * category whose text is a live restriction, not general information. */
+ * category, unless its whole text is plainly informational. Uncertain wording
+ * stays visible. */
 function isActiveRestrictionNote(note: { category?: string | null; text: string }): boolean {
-  return URGENT_NOTE_CATEGORIES.has(cleanText(note.category) ?? "") && !INFORMATIONAL_NOTE.test(note.text);
+  if (!URGENT_NOTE_CATEGORIES.has(cleanText(note.category) ?? "")) return false;
+  const text = note.text.trim();
+  return !INFORMATIONAL_NOTE.test(text) || RESTRICTIVE_WORDING.test(text);
 }
 
 /** Map a severity label ("Red", "Amber", "High", "Low"…) to a tone class so the
