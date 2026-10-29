@@ -168,8 +168,17 @@ def test_low_load_support_days_hold_only_low_load_work_or_are_suppressed(key):
         assert names and "Kettlebell Swings (EMOM Aerobic)" not in names
         for name in names:
             assert _meets_low_load_support_contract(role, _bank(name))
-    # Week-one converted days have nothing eligible: removed, not filled.
-    assert any(s["role_key"].startswith("converted_") for s in _empty_suppressions(brief))
+    # #2984/#3108 changed eligible content and resolved-contact calendars, so
+    # a real converted day need not be empty. Keep the suppression check by
+    # explicitly emptying one such day; keep all real low-load checks above.
+    empty = copy.deepcopy(brief)
+    week, role = next((w, r) for w, roles, _ in _surfaces(empty) for r in roles
+                     if (r.get("governance") or {}).get("authority") == "unused_day_low_load_support_upgrade")
+    role_key, d_day = role["role_key"], role_d_day(week, role)
+    role["selected_exercise_assignments"] = []
+    suppress_unfilled_physical_roles(empty)
+    assert any(s["role_key"] == role_key and s["original_d_day"] == d_day
+               for s in _empty_suppressions(empty))
 
 
 def _low_load_week(alternate_authority):
@@ -194,10 +203,31 @@ def test_a_low_load_alternate_with_fulfilment_authority_replaces_the_failing_dri
     assert _low_load_week(alternate_authority=True) == ["Tempo Shadowboxing"]
 
 
-def test_dedicated_rehab_roles_are_not_rewritten():
-    brief = _plan("bjj35_shoulder_rehab_friendly")
+def test_dedicated_rehab_roles_are_not_rewritten(monkeypatch):
+    from fightcamp.rehab_clinical import load_clinical_policies
+    policy = next(p for p in load_clinical_policies() if p.policy_id == "ankle_sprain")
+    assert policy.activation == "live"
+    # #2984: use a specific published injury decision, not legacy drills for
+    # generic shoulder pain. This is the server-attached live episode context.
+    owned = {"id": "ankle-1", "episode_id": "episode-1", "athlete_id": "athlete-1",
+             "side": "left", "injury_type": "sprain", "canonical_location": "ankle",
+             "body_region": "ankle", "severity": "moderate", "status": "monitoring",
+             "latest_reported_status": "improving", "rehab_stage": "restore"}
+    context = {"rehab_stage": "restore", "injury_id": owned["id"], "episode_id": owned["episode_id"],
+               "athlete_id": owned["athlete_id"], "available_equipment": ["stable_support"],
+               "policy_injury": owned}
+    monkeypatch.setitem(_SCENARIOS, "published_ankle", {
+        "days": 35, "sport": "bjj", "goals": ("strength",), "target": "68",
+        "equipment": _FULL_GYM + ("stable_support",),
+        "guided": [{"area": "Left ankle", "severity": "moderate", "trend": "improving",
+                    "injury_type": "sprain", "timeframe": "last_month", "rehab_generation_context": context}],
+    })
+    brief = _plan("published_ankle")
     rehab = [r for _, roles, _ in _surfaces(brief) for r in roles if r["role_key"] == "mobility_rehab"]
     assert any(r.get("selected_exercise_assignments") for r in rehab)
+    published_ids = {rx.drill_id for rx in policy.prescriptions}
+    assert all(a["rehab_drill_id"] in published_ids for r in rehab
+               for a in r.get("selected_exercise_assignments") or [])
 
 
 @pytest.mark.parametrize("key", sorted(_SCENARIOS))
