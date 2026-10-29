@@ -85,9 +85,50 @@ def _slug(value: Any) -> str:
     return _SLUG_RE.sub("-", str(value or "").strip().lower()).strip("-")[:32].strip("-")
 
 
+def _rows(container: Any, key: str) -> list[Any]:
+    """A saved card's nested rows, or ``[]`` when malformed (never iterate a scalar)."""
+    rows = container.get(key) if isinstance(container, Mapping) else None
+    return rows if isinstance(rows, list) else []
+
+
 def _session_rows(day: Any) -> list[Any]:
-    sessions = day.get("sessions") if isinstance(day, Mapping) else None
-    return sessions if isinstance(sessions, list) else []
+    return _rows(day, "sessions")
+
+
+_NESTED_ROWS = ("weeks", "days", "sessions", "blocks")
+
+
+def _without_scalar_rows(plan: dict[str, Any]) -> dict[str, Any]:
+    """Replace a stored non-list weeks/days/sessions/blocks value with ``[]``.
+
+    Every reader iterates these as lists; a malformed card (a number or flag
+    where rows belong) then degrades to an empty level instead of crashing.
+    The stored card is never mutated.
+    """
+    def malformed(node: Any, depth: int) -> bool:
+        if depth == len(_NESTED_ROWS) or not isinstance(node, Mapping):
+            return False
+        rows = node.get(_NESTED_ROWS[depth])
+        if rows is None:
+            return False
+        if not isinstance(rows, list):
+            return True
+        return any(malformed(row, depth + 1) for row in rows)
+
+    def repair(node: Any, depth: int) -> None:
+        if depth == len(_NESTED_ROWS) or not isinstance(node, dict):
+            return
+        key = _NESTED_ROWS[depth]
+        if key in node and node[key] is not None and not isinstance(node[key], list):
+            node[key] = []
+        for row in node.get(key) or []:
+            repair(row, depth + 1)
+
+    if not malformed(plan, 0):
+        return plan
+    plan = deepcopy(plan)
+    repair(plan, 0)
+    return plan
 
 
 def _needs_session_ids(plan: Mapping[str, Any]) -> bool:
@@ -184,6 +225,7 @@ def resolve_effective_structured_plan(
     resolved = _resolve_effective_structured_plan(plan_row, raw_markdown=raw_markdown)
     if resolved is None:
         return None
+    resolved = _without_scalar_rows(resolved)
     # These fields are server-owned by custom publication, never by a model.
     # A generated card cannot claim athlete authority or private attachments.
     brief = _mapping(plan_row.get("planning_brief")) or {}
@@ -201,23 +243,23 @@ def resolve_effective_structured_plan(
     if not brief.get("custom_plan"):
         fields = ("prescription_source", "prescription_text", "athlete_dose",
                   "private_media_id", "community_revision_id", "source_session_id", "catalogue_id")
-        sessions = [session for week in resolved.get("weeks") or [] if isinstance(week, Mapping)
-                    for day in week.get("days") or [] for session in _session_rows(day) if isinstance(session, Mapping)]
+        sessions = [session for week in _rows(resolved, "weeks") if isinstance(week, Mapping)
+                    for day in _rows(week, "days") for session in _session_rows(day) if isinstance(session, Mapping)]
         nodes = [resolved.get("plan_metadata") or {}, *sessions,
-                 *(block for session in sessions for block in session.get("blocks") or [] if isinstance(block, Mapping))]
+                 *(block for session in sessions for block in _rows(session, "blocks") if isinstance(block, Mapping))]
         if any(node.get(field) is not None for node in nodes if isinstance(node, Mapping) for field in fields):
             resolved = deepcopy(resolved)
             if isinstance(resolved.get("plan_metadata"), dict):
                 resolved["plan_metadata"].pop("prescription_source", None)
-            for week in resolved.get("weeks") or []:
+            for week in _rows(resolved, "weeks"):
                 if not isinstance(week, Mapping):
                     continue
-                for day in week.get("days") or []:
+                for day in _rows(week, "days"):
                     for session in _session_rows(day):
                         if not isinstance(session, dict):
                             continue
                         session.pop("prescription_source", None)
-                        for block in session.get("blocks") or []:
+                        for block in _rows(session, "blocks"):
                             if not isinstance(block, dict):
                                 continue
                             for field in fields:
@@ -248,20 +290,20 @@ def _without_athlete_change_claims(plan: dict[str, Any]) -> dict[str, Any]:
     custom) never carries them legitimately, so a model cannot fake an
     athlete-directed change or hide one.
     """
-    sessions = [session for week in plan.get("weeks") or [] if isinstance(week, Mapping)
-                for day in week.get("days") or [] for session in _session_rows(day) if isinstance(session, Mapping)]
+    sessions = [session for week in _rows(plan, "weeks") if isinstance(week, Mapping)
+                for day in _rows(week, "days") for session in _session_rows(day) if isinstance(session, Mapping)]
     if not any("athlete_removed" in session or any(
-            isinstance(block, Mapping) and "athlete_change" in block for block in session.get("blocks") or [])
+            isinstance(block, Mapping) and "athlete_change" in block for block in _rows(session, "blocks"))
             for session in sessions):
         return plan
     plan = deepcopy(plan)
-    for week in plan.get("weeks") or []:
-        for day in (week.get("days") or []) if isinstance(week, Mapping) else []:
+    for week in _rows(plan, "weeks"):
+        for day in _rows(week, "days"):
             for session in _session_rows(day):
                 if not isinstance(session, dict):
                     continue
                 session.pop("athlete_removed", None)
-                for block in session.get("blocks") or []:
+                for block in _rows(session, "blocks"):
                     if isinstance(block, dict):
                         block.pop("athlete_change", None)
     return plan

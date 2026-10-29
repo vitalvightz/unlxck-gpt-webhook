@@ -80,3 +80,20 @@ are not appointment counts.
 The old snapshots also differed from live Main's mental/support cadence before
 this change. Those existing Main rows are reflected in the refreshed fixtures;
 this PR changes no mental preparation implementation or coaching UI.
+
+## Hard-sparring lock stacking review
+
+The hard-sparring lock now keeps work the shared combat policy lets share a
+converted technical-only day, instead of displacing it. Two baselines changed:
+
+- `d24_one_hard.json`: the final taper calendar is identical (D-7..D-0). Only
+  the suppression ledger differs. The neural primer is no longer displaced from
+  converted Thursday, so `fight_week_freshness_day` is the spar-first-cap cut.
+  The provisional flush that D-0 overrides is now `aerobic_flush_day`, not
+  `converted_recovery_flush_day`: with the primer kept, the second pass places
+  the converted flush on Wednesday. Both are low-load recovery conditioning
+  placeholders, and neither renders; D-0 stays fight-day protocol only.
+- `d24_high_fatigue.json`: GPP `primary_strength_day` and SPP
+  `neural_plus_strength_day` are kept instead of displaced by the lock; GPP
+  `aerobic_coordination_day` moves from Monday to Thursday. Contact rows are
+  unchanged.

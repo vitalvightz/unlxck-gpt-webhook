@@ -2772,6 +2772,23 @@ class TestCommandView:
 
         assert view.active_plan.get("phase") == "GPP"
 
+    @pytest.mark.parametrize("level", ["weeks", "days", "sessions", "blocks"])
+    @pytest.mark.parametrize("bad", [5, True, 1.5, "text", {"x": 1}])
+    def test_scalar_or_mapping_where_rows_belong_degrades_without_crashing(self, level, bad):
+        blocks = bad if level == "blocks" else []
+        sessions = bad if level == "sessions" else [{"title": "Strength", "blocks": blocks}]
+        days = bad if level == "days" else [{"date": "2026-06-23", "day_type": "high", "sessions": sessions}]
+        weeks = bad if level == "weeks" else [{"phase_label": "GPP", "days": days}]
+        store = _store_with_plan()
+        store.plans[PLAN]["structured_plan"] = {"weeks": weeks}
+
+        build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=datetime(2026, 6, 23, 12, 0, tzinfo=timezone.utc),
+        )
+
     def test_other_plan_checkin_warning_surfaces_in_command_view_without_blocking(self):
         store = _store_with_plan()
         store.plans[OTHER_PLAN] = {
