@@ -198,3 +198,23 @@ test("server optional sessions collapse without an Optional prose prefix", () =>
   assert.match(html, /<span>Optional<\/span>/);
   assert.match(html, /Rehearse the opening exchange/);
 });
+
+
+test("Plan never collapses protocols, bundled movement, or safety instructions", () => {
+  const sessions: StructuredSession[] = [
+    { title: "Fight-day protocol", session_type: "protocol" },
+    { title: "Fight Visualisation", session_type: "protocol" },
+    { title: "Fight Visualisation", session_type: "conditioning" },
+    { title: "Fight Visualisation", session_type: "skill", blocks: [{block_type: "preparation", display_name: "Hip CARs"}] },
+    { title: "Breathing Reset", session_type: "recovery", blocks: [{block_type: "preparation", display_name: "Walk flush"}] },
+    { title: "Fight Visualisation", session_type: "mindset", blocks: [{block_type: "mindset", stop_rules: ["Stop if dizzy."]}] },
+  ];
+  for (const session of sessions) {
+    const html = renderToStaticMarkup(<SessionCard layout="plan" session={session} initiallyOpenFirstBlock={false} />);
+    assert.doesNotMatch(html, /sp-session-support|sp-optional-disclosure/);
+  }
+  const warning = renderToStaticMarkup(<SessionCard layout="plan" session={{title: "Breathing Reset", session_type: "recovery"}}
+    day={{today_card: {primary_warning: "Important safety instruction."}}} />);
+  assert.doesNotMatch(warning, /sp-optional-disclosure/);
+  assert.match(warning, /Important safety instruction/);
+});

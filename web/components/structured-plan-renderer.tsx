@@ -9,6 +9,7 @@ import {
   readableExerciseMetrics,
   classifySessionlessDay,
   isZeroLoadSupportSession,
+  isCompactPlanSupportSession,
   mentalSessionCategory,
   mentalSessionSummary,
   mentalTaskSteps,
@@ -1215,7 +1216,8 @@ export function SessionCard({
   const isDeclaredLightCombat = isDeclaredLightCombatTitle(title);
   const isTechnicalSession = title === "Technical-only combat";
   const sessionType = cleanText(session.session_type);
-  const supportCard = planLayout && isZeroLoadSupportSession(session);
+  const supportCard = planLayout && isCompactPlanSupportSession(session)
+    && !cleanText(card?.primary_warning) && !cleanText(card?.weight_cut_warning);
   const rawObjective = formatSessionObjective(session.objective);
   const objective = supportCard ? rawObjective?.replace(/^Optional[.:]\s*/i, "") || null : rawObjective;
   // A rationale that is just the session title again ("Strength" / "Why

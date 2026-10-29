@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import pytest
+
 from api.optional_sessions import is_optional_session
 from api.services.streaks import _scheduled_days, _training_schedule
 from api.services.today_service import build_today_command_view, submit_today_checkin, upsert_session_completion
@@ -182,3 +184,59 @@ def test_only_the_server_can_mark_a_session_optional():
     # And without a planning brief the model's flag is still cleared.
     bare = merge_locked_structured_content(plan, None).plan
     assert not is_optional_session(bare["weeks"][0]["days"][0]["sessions"][0])
+
+
+@pytest.mark.parametrize(("title", "key", "session_type"), [
+    ("Self-Review Cues", "self_review", "skill"),
+    ("Breathing Reset", "breathing_reset", "recovery"),
+    ("Tactical Watch", "tactical_watch", "skill"),
+])
+def test_trusted_support_fillers_are_optional_for_logging_and_adherence(title, key, session_type):
+    store = _store()
+    plan = store.plans[PLAN]["structured_plan"]
+    support = plan["weeks"][0]["days"][0]["sessions"][0]
+    support.update(title=title, session_type=session_type)
+    role = {"role_key": key, "category": "support_insert", "countdown_label": "D-24",
+            "governance": {"authority": "gap_fill_support_insert"}}
+    merged = merge_locked_structured_content(plan, {"weeks": [{"session_roles": [role]}]}).plan
+    store.plans[PLAN]["structured_plan"] = merged
+    support = merged["weeks"][0]["days"][0]["sessions"][0]
+    assert is_optional_session(support)
+    assert _view(store).today.next_session["session_id"] == STRENGTH
+    _log(store, STRENGTH, "done")
+    assert store.get_session_completion(ATHLETE, VISUALISATION, DAY) is None
+    assert _view(store).today.completion_status == "done"
+    assert all(VISUALISATION not in ids for ids in _training_schedule(store.plans[PLAN], DAY).values())
+    week = merged["weeks"][0]
+    result = evaluate_week_completion(week=week, completions=[
+        {"session_id": STRENGTH, "status": "done", "training_day": DAY},
+        {"session_id": "2026-06-24-sparring", "status": "done", "training_day": "2026-06-24"}])
+    assert result["complete"] is True
+    assert result["planned"] == 2
+
+
+@pytest.mark.parametrize("override", [
+    {"mandatory_tactical_watch": True},
+    {"governance": {"authority": "gap_fill_support_insert", "mandatory": True}},
+    {"optional": False},
+    {"governance": {"authority": "model"}},
+])
+def test_required_or_untrusted_support_cannot_become_optional(override):
+    from api.optional_sessions import mark_optional_support_inserts
+    plan = {"weeks": [{"days": [{"countdown_label": "D-24", "sessions": [
+        {"title": "Tactical Watch", "session_type": "skill", "blocks": []}]}]}]}
+    role = {"role_key": "tactical_watch", "category": "support_insert", "countdown_label": "D-24",
+            "governance": {"authority": "gap_fill_support_insert"}, **override}
+    mark_optional_support_inserts(plan, {"weeks": [{"session_roles": [role]}]})
+    assert not is_optional_session(plan["weeks"][0]["days"][0]["sessions"][0])
+
+
+def test_support_role_cannot_make_mixed_physical_work_optional():
+    from api.optional_sessions import mark_optional_support_inserts
+    session = {"title": "Breathing Reset", "session_type": "recovery", "blocks": [
+        {"block_type": "preparation", "display_name": "Hip CARs"}]}
+    plan = {"weeks": [{"days": [{"countdown_label": "D-24", "sessions": [session]}]}]}
+    role = {"role_key": "breathing_reset", "category": "support_insert", "countdown_label": "D-24",
+            "governance": {"authority": "gap_fill_support_insert"}}
+    mark_optional_support_inserts(plan, {"weeks": [{"session_roles": [role]}]})
+    assert not is_optional_session(session)

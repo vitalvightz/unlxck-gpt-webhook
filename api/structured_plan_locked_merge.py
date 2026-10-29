@@ -734,6 +734,9 @@ def merge_locked_structured_content(
             ]
         result.applied.append(LockedMergeApplication(day_label, str(block["display_name"])))
 
+    from .optional_sessions import mark_optional_support_inserts
+
+    mark_optional_support_inserts(plan, planning_brief)
     return result
 
 
