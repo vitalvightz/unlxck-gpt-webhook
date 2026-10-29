@@ -195,6 +195,7 @@ export function validateQuickBuildInput(
     input.hard_sparring_days,
     input.support_work_days,
     !input.no_scheduled_fight,
+    input.weekly_training_frequency,
   );
   if (combatSchedule.hardError) {
     errors.combat_sessions = combatSchedule.hardError;

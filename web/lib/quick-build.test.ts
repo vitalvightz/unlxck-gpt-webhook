@@ -432,3 +432,14 @@ for (const impact of ["not_limiting", "limiting", "cant_train"] as const) {
     assert.equal(planRequestToQuickBuildInput(updated).guided_injuries?.[0].severity, "high");
   });
 }
+
+test("validateQuickBuildInput blocks more combat days than total weekly sessions", () => {
+  const input = {
+    ...buildValidInput(),
+    weekly_training_frequency: 2,
+    hard_sparring_days: ["monday"],
+    support_work_days: ["wednesday", "friday"],
+  };
+  assert.match(validateQuickBuildInput(input).combat_sessions ?? "", /3 combat sessions but entered 2 total/);
+  assert.equal(validateQuickBuildInput({ ...input, weekly_training_frequency: 3 }).combat_sessions, undefined);
+});
