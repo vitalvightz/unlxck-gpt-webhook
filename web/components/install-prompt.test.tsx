@@ -7,6 +7,7 @@ import { InstallPrompt } from "./install-unlxck";
 import { PwaRegister } from "./pwa-register";
 import { INSTALL_PROMPT_EVENT, offerPushNotifications, PUSH_PROMPT_EVENT } from "@/lib/push-prompt";
 import { PWA_INSTALL_GUIDE_DISMISSED_KEY, PWA_INSTALL_PROMPT_SEEN_KEY } from "@/lib/pwa";
+import { SHEET_EXIT_MS } from "@/lib/use-sheet-exit";
 
 const SAFARI_26 = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1";
 const CHROME_IOS = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/141.0.0.0 Mobile/15E148 Safari/604.1";
@@ -37,13 +38,17 @@ function offer() {
   return event.defaultPrevented;
 }
 
+// Compared as a boolean: a failing assert on a DOM node makes node:assert
+// inspect the whole jsdom graph, which exhausts memory instead of failing.
+const noDialog = (root: HTMLElement) => root.querySelector("dialog") === null;
+
 const button = (root: HTMLElement, label: string) =>
   Array.from(root.querySelectorAll("button")).find(candidate => candidate.textContent?.startsWith(label));
 
 test("installed, unsupported and already-offered devices leave the moment to notifications", async () => {
   for (const options of [{ standalone: true }, { userAgent: "Mozilla/5.0 (Linux; Android 15) Firefox/140.0" }]) {
     const app = await mount(options);
-    try { assert.equal(offer(), false); await wait(); assert.equal(app.container.querySelector("dialog"), null); }
+    try { assert.equal(offer(), false); await wait(); assert.equal(noDialog(app.container), true); }
     finally { await app.cleanup(); }
   }
   const app = await mount();
@@ -69,9 +74,9 @@ test("Android uses the captured native prompt only from the Install click", asyn
     assert.doesNotMatch(dialog.textContent!, /Share/);
     assert.equal(prompts, 0);
     await act(async () => button(dialog, "Install UNLXCK")!.click());
-    await wait(20);
+    await wait(SHEET_EXIT_MS + 50);
     assert.equal(prompts, 1);
-    assert.equal(app.container.querySelector("dialog"), null);
+    assert.equal(noDialog(app.container), true);
   } finally { await app.cleanup(); }
 });
 
@@ -84,7 +89,7 @@ test("iPhone Chrome gets Chrome steps behind open modals, and claims priority ov
   try {
     offerPushNotifications("token");
     await wait();
-    assert.equal(app.container.querySelector("dialog"), null, "never stacks on another modal");
+    assert.equal(noDialog(app.container), true, "never stacks on another modal");
     review.remove();
     await wait();
     const dialog = app.container.querySelector("dialog")!;
@@ -94,11 +99,12 @@ test("iPhone Chrome gets Chrome steps behind open modals, and claims priority ov
     assert.doesNotMatch(dialog.textContent!, /Safari/);
     assert.ok(window.localStorage.getItem(PWA_INSTALL_PROMPT_SEEN_KEY));
     await act(async () => button(dialog, "Got it")!.click());
-    assert.equal(app.container.querySelector("dialog"), null);
+    await wait(SHEET_EXIT_MS + 50);
+    assert.equal(noDialog(app.container), true);
     offerPushNotifications("token");
     await wait();
     assert.equal(pushOffers, 0, "notifications wait for a later visit");
-    assert.equal(app.container.querySelector("dialog"), null);
+    assert.equal(noDialog(app.container), true);
   } finally { review.remove(); window.removeEventListener(PUSH_PROMPT_EVENT, onPush); await app.cleanup(); }
 });
 
@@ -113,7 +119,8 @@ test("iPhone Safari 26 shows the ••• → Share → Add to Home Screen rout
     for (const text of [/Tap ••• in Safari’s toolbar/, /Select Share/, /Tap Add to Home Screen/, /View More/, /Open as Web App/]) assert.match(dialog.textContent!, text);
     assert.doesNotMatch(dialog.textContent!, /installed/i);
     await act(async () => button(dialog, "Maybe later")!.click());
-    assert.equal(app.container.querySelector("dialog"), null);
+    await wait(SHEET_EXIT_MS + 50);
+    assert.equal(noDialog(app.container), true);
     assert.equal(offer(), false, "a dismissed prompt is not offered again");
   } finally { await app.cleanup(); }
 });

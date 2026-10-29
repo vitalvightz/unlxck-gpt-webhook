@@ -5,6 +5,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { RehabProgressStatus, RehabStageMeter, rehabNextStep, rehabEntryExplanation } from "./rehab-progress-status";
+import { SHEET_EXIT_MS } from "@/lib/use-sheet-exit";
 import type { InjuryFlagRecord } from "@/lib/types";
 
 const decision: NonNullable<InjuryFlagRecord["rehab_decision"]> = {
@@ -229,7 +230,11 @@ for (const closed of [false, true]) {
         assert.doesNotMatch(dialog.textContent ?? "", /medical clearance issued|heel-rise|assessor/);
       }
       await act(async () => document.dispatchEvent(new domWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
-      assert.equal(document.querySelector('[role="dialog"]'), null);
+      // The sheet plays its closing animation before it is removed.
+      await act(async () => { await new Promise(resolve => setTimeout(resolve, SHEET_EXIT_MS + 50)); });
+      // Compared as a boolean: a failing assert on a DOM node makes node:assert
+      // inspect the whole jsdom graph, which exhausts memory instead of failing.
+      assert.equal(document.querySelector('[role="dialog"]') === null, true);
       assert.equal(document.activeElement, trigger);
       assert.equal(document.body.style.position, "");
     } finally { act(() => root.unmount()); container.remove(); }
