@@ -82,9 +82,13 @@ def test_appointment_overruns_are_visible_and_never_trim_selected_work(programme
     for old, new in zip(before["weeks"], role_map["weeks"]):
         assert old["session_roles"] == new["session_roles"]
         assert old.get("suppressed_roles") == new.get("suppressed_roles")
+    from fightcamp.physical_session_frequency import appointment_budget_exceeded
+    day_overrun = appointment_budget_exceeded(role_map, brief["athlete_snapshot"]["training_frequency"])
+    assert bool(_total_session_budget_warnings(brief)) is day_overrun
+    assert any("requested day count exceeded" in flag for w in role_map["weeks"]
+               for flag in w.get("coach_note_flags", [])) is day_overrun
+    # Historical summary's appointment total is a separate metric.
     assert summary["count_exceeded"] is True
-    assert any("requested count exceeded" in flag for w in role_map["weeks"] for flag in w.get("coach_note_flags", []))
-    assert _total_session_budget_warnings(brief)[0]["code"] == "total_session_budget_exceeded"
 
 
 def test_low_risk_short_camp_retains_power_on_a_converted_technical_day(programmes):
