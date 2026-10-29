@@ -2103,6 +2103,10 @@ def build_planning_brief(
     consolidate_compatible_physical_sessions(role_map, athlete_model=athlete_model)
     if role_map.get("session_consolidation_audit"):
         refresh_goal_evidence_after_composition(brief)
+    # Goal repair and consolidation can move the physical session a mental
+    # task was attached to; govern mental support again on the final calendar.
+    from .camp_week_fillers_impl import govern_weekly_mental_training
+    govern_weekly_mental_training(role_map, athlete_model)
     enforce_total_session_budget(role_map, athlete_model, candidate_pools)
     return stamp_role_execution_order(brief)
 
