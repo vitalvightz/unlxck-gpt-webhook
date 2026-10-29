@@ -2322,8 +2322,9 @@ def test_high_fatigue_compression_uses_declared_spar_count_for_cap_and_priority(
     ] == ["Tuesday", "Thursday"]
     assert week["effective_hard_sparring_days"] == []
     # The compression under test is unchanged: both declared days stay locked as
-    # roles on their declared weekdays rather than being moved or dropped.
-    assert locked_spar_days == ["Tuesday", "Thursday"]
+    # roles on their declared weekdays rather than being moved or dropped
+    # (roles follow calendar order, which can start mid-week).
+    assert sorted(locked_spar_days) == ["Thursday", "Tuesday"]
     assert week["coach_note_flags"] == ["deload hard sparring"]
     assert week["intentional_compression"]["active"] is False
     # The legacy helper still evaluates effective count for its own reason codes
@@ -2554,14 +2555,15 @@ def test_boxing_crowded_week_does_not_overcompress_on_single_signal():
     assert len(suppressed_compression) == 0
 
 
-def test_compute_readiness_compression_still_counts_mild_injury_in_generic_path():
+def test_compute_readiness_compression_does_not_count_mild_injury_in_generic_path():
+    # #3033: a low-severity symptom alone adds no global compression.
     athlete = _base_athlete(
         fatigue="low",
         injuries=["mild shoulder irritation"],
         days_until_fight=35,
     )
 
-    assert _compute_readiness_compression(athlete) == 1
+    assert _compute_readiness_compression(athlete) == 0
 
 
 def test_boxing_crowded_week_does_not_treat_mild_injury_as_moderate_plus_signal():
@@ -2629,7 +2631,9 @@ def test_high_fatigue_compression_blocks_glycolytic_on_next_training_day_after_r
             "phase": "SPP",
             "week_index": 1,
             "declared_hard_sparring_days": ["Monday", "Wednesday"],
-            "resolved_rule_state": {"must_keep": ["glycolytic", "primary_strength"]},
+            # Glycolytic placement only: primary_strength must-keep (#3035)
+            # would also protect neural_plus_strength_day for the one slot.
+            "resolved_rule_state": {"must_keep": ["glycolytic"]},
         },
         session_roles,
         [],
@@ -2696,7 +2700,9 @@ def test_high_fatigue_compression_allows_glycolytic_when_not_on_next_training_da
             "phase": "SPP",
             "week_index": 1,
             "declared_hard_sparring_days": ["Monday", "Wednesday"],
-            "resolved_rule_state": {"must_keep": ["glycolytic", "primary_strength"]},
+            # Glycolytic placement only: primary_strength must-keep (#3035)
+            # would also protect neural_plus_strength_day for the one slot.
+            "resolved_rule_state": {"must_keep": ["glycolytic"]},
         },
         session_roles,
         [],

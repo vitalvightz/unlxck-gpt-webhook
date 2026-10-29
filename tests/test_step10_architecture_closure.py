@@ -621,6 +621,9 @@ def test_crowded_week_injury_respects_explicit_moderate_plus_flags(readiness_fla
         "weight_cut_pct": 0.0,
         "surface_injury_only": True,
     }
+    if readiness_flag == "moderate_injury":
+        # #3035: this contact-readiness flag counts only with capacity evidence.
+        athlete["readiness_evidence"] = [{"flag": "moderate_injury", "scope": "training_capacity"}]
 
     policy = stage2_role_map._boxing_crowded_week_policy_state(
         {"declared_hard_sparring_days": []}, athlete
