@@ -499,3 +499,12 @@
 .sp-active-notes .sp-plan-notes-text .sp-collapse-title { font-size: 0.95rem; font-weight: 650; }
 .sp-plan-notes-static { cursor: default; }
 .sp-mental-duration { margin: 0; color: var(--text-secondary); font-size: 0.85rem; }
+.cm-cal-cell.cm-cal-fight-day {
+  outline: 2px solid var(--brand-red);
+  outline-offset: -2px;
+  background: var(--brand-red-soft);
+  box-shadow: inset 0 0 16px rgba(181, 18, 43, 0.16);
+}
+.cm-cal-fight-label { display: block; color: var(--text-primary); font: 700 9px/1.2 var(--font-mono); text-transform: uppercase; letter-spacing: 0.02em; }
+.cm-cal-fight-day .cm-cal-dot { display: none; }
+.cm-cal-fight-key { width: 10px; height: 10px; border: 2px solid var(--brand-red); border-radius: 3px; }

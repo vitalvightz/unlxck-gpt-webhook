@@ -36,6 +36,7 @@ export type CalendarCell = {
   dayIndex: number | null;
   state: CalendarCellState;
   isToday: boolean;
+  isFightDay?: boolean;
   /** Screen-reader description ("Tue 27 Oct 2026: app session planned"). */
   label: string;
 };
@@ -206,6 +207,7 @@ export function buildPlanCalendar(
           dayIndex: entry?.dayIndex ?? null,
           state,
           isToday: iso === today,
+          isFightDay: entry?.day.day_type === "competition" || /^D[-−]0$/i.test(entry?.day.countdown_label?.trim() ?? ""),
           label: describe(iso, iso, state),
         });
       }
@@ -249,6 +251,7 @@ export function buildPlanCalendar(
         dayIndex: entry?.dayIndex ?? null,
         state,
         isToday,
+        isFightDay: entry?.day.day_type === "competition" || /^D[-−]0$/i.test(entry?.day.countdown_label?.trim() ?? ""),
         label: describe(iso, `Week ${weekPos + 1} ${weekday}`, state),
       };
     });
