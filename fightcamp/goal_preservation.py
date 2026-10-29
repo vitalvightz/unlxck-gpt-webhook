@@ -692,6 +692,7 @@ def _other_stimuli(role: dict, pools: dict, phase: str, brief: dict) -> list[dic
         ):
             if metadata.get(field) is not None:
                 dose_source[field] = metadata[field]
+        bank_interval = (_number(dose_source.get("work_sec")), _number(dose_source.get("rounds")))
         # The member's own effective dose wins over the bank dose: composition
         # may partition high-load rounds, and the persisted pool is compacted.
         for field in ("work_sec", "rest_sec", "rounds", "rpe"):
@@ -699,6 +700,19 @@ def _other_stimuli(role: dict, pools: dict, phase: str, brief: dict) -> list[dic
                 dose_source[field] = member[field]
         if member.get("effective_rounds") is not None:
             dose_source["rounds"] = member["effective_rounds"]
+        # total_minutes is elapsed block time (work plus between-round rest).
+        # The bank's figure describes the bank's own interval, so once the
+        # member re-anchors work or rounds (an athlete-round 6 x 3 min of a
+        # 6 x 2 min bank drill) it is restated from that effective dose, as
+        # config.conditioning_effective_dose does. The prescription is untouched.
+        from .config import conditioning_work_is_timed
+        effective_work, effective_rounds = _number(dose_source.get("work_sec")), _number(dose_source.get("rounds"))
+        if ((effective_work, effective_rounds) != bank_interval and effective_work > 0 and effective_rounds > 0
+                and conditioning_work_is_timed(dose_source)):
+            dose_source["total_minutes"] = (
+                effective_work * effective_rounds
+                + max(0.0, effective_rounds - 1) * _number(dose_source.get("rest_sec"))
+            ) / 60.0
         # A recovery morph / support flush does not become energy-system work
         # through its old pool identity. Positive work metadata is required.
         if (role.get("late_camp_role_morph") or role.get("counts_toward_conditioning_cap") is False
@@ -759,7 +773,6 @@ def _other_stimuli(role: dict, pools: dict, phase: str, brief: dict) -> list[dic
                             "development_capable": "speed_quality" not in intents or profile["rpe"] is None or profile["rpe"] >= 6,
                             "effective_prescription": member.get("effective_prescription")
                             or selected.get("prescription") or ""}
-            from .config import conditioning_work_is_timed
             if not conditioning_work_is_timed(dose_source):
                 # Existing rep-dose witnesses/validator already speak sets and
                 # reps. Preserve ballistic speed evidence without fake seconds.
@@ -894,12 +907,23 @@ def _requirements(entry: dict, brief: dict) -> list[dict]:
     if complete_calendar and (entry["goal"] == "strength" or entry["state"] == "build"):
         weekly_windows = []
         for week in _effective_map(brief).get("weeks") or []:
-            eligible = [d["d_day"] for d in week.get("calendar_days") or []
-                        if isinstance(d.get("d_day"), int)
-                        and max(14, horizon_floor) <= d["d_day"] <= days
-                        and not d.get("is_fight_day") and not d.get("is_after_fight_day")]
+            trainable = [d["d_day"] for d in week.get("calendar_days") or []
+                         if isinstance(d.get("d_day"), int) and d["d_day"] <= days
+                         and not d.get("is_fight_day") and not d.get("is_after_fight_day")]
+            eligible = [day for day in trainable if day >= max(14, horizon_floor)]
             if eligible and str(week.get("phase") or "").upper() != "TAPER":
-                weekly_windows.append({"min_d_day": min(eligible), "max_d_day": max(eligible)})
+                window = {"min_d_day": min(eligible), "max_d_day": max(eligible)}
+                # A programme week that straddles the D-14 cutoff leaves only a
+                # boundary fragment (often D-14 alone) eligible. That sliver is
+                # not a development week of its own: it extends the adjacent
+                # earlier window, as the cadence path's earliest window absorbs
+                # its remainder. A majority-eligible week keeps its own promise.
+                if (weekly_windows and len(eligible) < len(trainable)
+                        and 2 * len(eligible) < 7
+                        and weekly_windows[-1]["min_d_day"] == window["max_d_day"] + 1):
+                    weekly_windows[-1]["min_d_day"] = window["min_d_day"]
+                else:
+                    weekly_windows.append(window)
         if weekly_windows:
             return weekly_windows
     # Direct late-countdown plans retain their own maintenance window and
