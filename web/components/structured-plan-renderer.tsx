@@ -1047,7 +1047,18 @@ function ExerciseDetail({
           <ol>{steps.map(step => <li key={step}>{step}</li>)}</ol>
         </div>
       ) : null}
-      {cues.map(cue => <p className="sp-block-aside" key={cue}><span className="sp-stat-label">Cue</span>{cue}</p>)}
+      {cues[0] ? (
+        <p className="ex-detail-key-cue">
+          <span className="sp-stat-label">Key cue</span>
+          <strong>{cues[0]}</strong>
+        </p>
+      ) : null}
+      {cues.length > 1 ? (
+        <details className="ex-detail-section">
+          <summary>Coaching cues</summary>
+          {cues.slice(1).map(cue => <p className="sp-block-aside" key={cue}><span className="sp-stat-label">Cue</span>{cue}</p>)}
+        </details>
+      ) : null}
       {swap ? <p className="sp-block-aside"><span className="sp-stat-label">Swaps</span>{swap}</p> : null}
       {easier.map(text => <p className="sp-block-aside" key={text}><span className="sp-stat-label">Easier</span>{text}</p>)}
       {progression && openWeekIntent?.key !== "deload" ? <p className="sp-block-aside"><span className="sp-stat-label">Progress</span>{progression}</p> : null}
