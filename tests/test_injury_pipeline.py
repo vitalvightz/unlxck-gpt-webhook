@@ -608,6 +608,8 @@ def test_build_rehab_injury_string_prefers_structured_knee_instability():
         ),
         injuries_only_text="Right knee went back as I planted it I think I overextended it",
     )
+    # #2867: parsed injuries come from the runtime training context.
+    context.training_context = SimpleNamespace(parsed_injuries=context.plan_input.parsed_injuries)
 
     assert _build_rehab_injury_string(context) == "right knee instability mild stable"
 
@@ -622,6 +624,8 @@ def test_build_rehab_injury_string_falls_back_to_raw_when_no_parsed_entries():
         plan_input=SimpleNamespace(parsed_injuries=[], guided_injury=None),
         injuries_only_text=raw_text,
     )
+    # #2867: parsed injuries come from the runtime training context.
+    context.training_context = SimpleNamespace(parsed_injuries=context.plan_input.parsed_injuries)
 
     assert _build_rehab_injury_string(context) == raw_text
 
@@ -782,6 +786,8 @@ def test_build_rehab_injury_string_uses_entry_level_guided_types_without_leakage
         ),
         injuries_only_text="",
     )
+    # #2867: parsed injuries come from the runtime training context.
+    context.training_context = SimpleNamespace(parsed_injuries=context.plan_input.parsed_injuries)
 
     injury_string = _build_rehab_injury_string(context)
 
@@ -835,6 +841,10 @@ def test_generate_rehab_support_bundle_counts_guided_only_parsed_injury_as_injur
         apply_muay_thai_filters=False,
         sanitize_labels=(),
     )
+    # #2867: parsed injuries come from the runtime training context.
+    context.training_context.parsed_injuries = context.plan_input.parsed_injuries
+    context.training_context.injuries_raw_text = context.plan_input.injuries
+    context.training_context.injury_restrictions = context.plan_input.restrictions
 
     # The pipeline builds the rehab injury string once and hands it to the bundle.
     _, _, support_notes, has_injuries, *_ = _generate_rehab_support_bundle(

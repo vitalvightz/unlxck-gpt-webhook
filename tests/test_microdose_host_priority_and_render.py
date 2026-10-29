@@ -205,7 +205,8 @@ def test_no_separate_session_is_created_for_the_microdose():
 
 def test_the_microdose_carries_its_dose_into_the_rendered_block():
     block = _blocks(_host_with_microdose(), 26, "light_combat_day")[0]
-    assert block["coaching_cues"] == ["2 x 3/side @ RPE 7"]
+    # Movement guidance may precede it (#2894); the dose itself is carried.
+    assert block["coaching_cues"][-1] == "2 x 3/side @ RPE 7"
 
 
 @pytest.mark.parametrize(

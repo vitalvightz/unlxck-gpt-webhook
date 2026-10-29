@@ -116,8 +116,13 @@ def _athlete_saved_timezone(store: AppStore, athlete_id: str) -> str:
     """
     try:
         profile_row = store.get_profile(athlete_id)
-    except Exception:  # noqa: BLE001 - fall back to the payload's zone
-        logger.exception("[jobs] generation:saved_timezone_read_failed athlete_id=%s", athlete_id)
+    except Exception as exc:  # noqa: BLE001 - fall back to the payload's zone
+        logger.warning(
+            "[jobs] generation:saved_timezone_read_failed athlete_id=%s exc_type=%s error=%s",
+            athlete_id,
+            type(exc).__name__,
+            sanitize_error_text(exc),
+        )
         return ""
     return str((profile_row or {}).get("athlete_timezone") or "").strip()
 

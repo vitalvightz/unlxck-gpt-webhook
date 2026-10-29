@@ -34,7 +34,9 @@ def test_conditioning_bank_taper_restrictions_for_flagged_drills():
     by_name = {entry["name"]: entry for entry in conditioning_bank}
 
     assert by_name["Split-Step Ankle Snap Pogo"]["phases"] == ["GPP", "SPP"]
-    assert by_name["Nasal Jog"]["phases"] == ["GPP"]
+    # #2913 restored SPP running coverage; flagged drills stay out of TAPER.
+    assert by_name["Nasal Jog"]["phases"] == ["GPP", "SPP"]
+    assert "TAPER" not in by_name["Nasal Jog"]["phases"]
     assert by_name["Jump Rope (Recovery Pace)"]["phases"] == ["GPP", "SPP"]
     assert by_name["Pool Running (Weight Belt)"]["phases"] == ["GPP"]
     assert by_name["Pool Running (No Impact)"]["phases"] == ["SPP"]

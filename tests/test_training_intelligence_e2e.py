@@ -47,6 +47,9 @@ def test_selected_objectives_reach_real_rendered_plans_or_causal_deferral(name):
             if volume["sets"] and volume["unit"] == "reps":
                 assert any(dose.rstrip(".") in str(b.get("execution_instructions") or "")
                            or (b.get("sets") == volume["sets"] and b.get("reps") == volume["amount"])
+                           # Contrast pairs render rounds of per-component reps.
+                           or (b.get("rounds") == volume["sets"] and b.get("components")
+                               and all(c.get("reps") == volume["amount"] for c in b["components"]))
                            for b in cards), (name, witness, cards)
     assert validate_goal_preservation(brief) == []
 

@@ -1,3 +1,4 @@
+import pytest
 from fightcamp.stage2_payload_late_fight import (
     CANONICAL_HARD_SPARRING_NOTE,
     CANONICAL_TECHNICAL_ONLY_NOTE,
@@ -431,7 +432,8 @@ def test_low_cost_filler_can_share_locked_coach_combat_label():
         roles,
         ["D-9"],
         {"D-9": "tuesday"},
-        hard_weekdays={"tuesday"},
+        # #2884: resolved contacts replace raw declared-weekday exclusion.
+        resolved_contacts=[(9, "hard")],
     )
 
     assert assignment is not None
@@ -531,7 +533,8 @@ def test_stressor_cannot_share_locked_coach_combat_label():
         roles,
         ["D-9"],
         {"D-9": "tuesday"},
-        hard_weekdays={"tuesday"},
+        # #2884: resolved contacts replace raw declared-weekday exclusion.
+        resolved_contacts=[(9, "hard")],
     ) is None
 
 
@@ -712,7 +715,7 @@ def test_coach_owned_context_sequence_keeps_downgraded_declared_hard_day():
     assert context[0]["athlete_facing_label"] == "Technical-only combat"
     # A technical-only (D-17+ ban) day must carry the technical note, never the
     # hard-sparring note — it must not tell the athlete to spar hard.
-    assert context[0]["display_text"] == "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority."
+    assert context[0]["display_text"] == "Technical-only contact today — no hard sparring. Keep freshness priority."  # #2884 wording
 
 
 def test_coach_owned_context_sequence_forces_default_hard_spar_label_and_note():
@@ -744,7 +747,7 @@ def test_coach_owned_context_sequence_downgraded_hard_spar_gets_ban_label():
     assert len(context) == 1
     assert context[0]["athlete_facing_label"] == "Technical-only combat"
     # Downgraded (D-17+ ban) day gets the technical note, never the hard-sparring note.
-    assert context[0]["display_text"] == "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority."
+    assert context[0]["display_text"] == "Technical-only contact today — no hard sparring. Keep freshness priority."  # #2884 wording
 
 
 def test_technical_only_context_never_carries_hard_sparring_note():
@@ -840,7 +843,10 @@ def test_declared_coach_combat_spine_coexists_with_same_day_fillers():
     assert {"hard_sparring_day", "neural_visualization"} <= roles_by_label["D-6"]
 
 
-def test_declared_coach_combat_spine_removes_app_stressor_from_coach_day():
+def _coach_spine_d13(monkeypatch=None, resolved=None):
+    if monkeypatch is not None:
+        monkeypatch.setattr("fightcamp.stage2_payload_late_fight.resolve_late_fight_contacts",
+                            lambda days, athlete: [(13, resolved)])
     athlete = _athlete(
         13,
         plan_creation_weekday="friday",
@@ -862,7 +868,19 @@ def test_declared_coach_combat_spine_removes_app_stressor_from_coach_day():
         athlete,
         _countdown_weekday_map("friday", 13),
     )
+    return [role["role_key"] for role in sequence if role.get("countdown_label") == "D-13"]
 
-    d13_roles = [role["role_key"] for role in sequence if role.get("countdown_label") == "D-13"]
+
+@pytest.mark.parametrize("resolved", ["hard", "reduced"])
+def test_declared_coach_combat_spine_removes_app_stressor_from_coach_day(monkeypatch, resolved):
+    d13_roles = _coach_spine_d13(monkeypatch, resolved)
     assert "hard_sparring_day" in d13_roles
     assert "strength_touch_day" not in d13_roles
+
+
+def test_declared_coach_combat_spine_keeps_compatible_work_on_technical_conversion():
+    # #2884: inside the D-14 cutoff the declared day resolves to technical-only,
+    # which no longer deletes compatible app work on that day.
+    d13_roles = _coach_spine_d13()
+    assert "hard_sparring_day" in d13_roles
+    assert "strength_touch_day" in d13_roles

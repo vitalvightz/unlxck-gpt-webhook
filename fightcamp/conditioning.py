@@ -724,7 +724,11 @@ def _conditioning_structured_profile(drill: dict, *, system: str | None = None) 
     # This bank entry explicitly ends at the landing without propulsion.
     # Full-rest ballistic jump sets can train speed/power in REP units. That
     # does not turn their legacy work_sec rep count into seconds of conditioning.
-    rep_dose = re.match(r"\s*(\d+)\s*x\s*(\d+)\s*reps?\b", str(drill.get("duration") or ""), re.I)
+    # Any rep unit counts ("6x1 climb", "6x2 flips"), never a time or distance.
+    rep_dose = re.match(r"\s*(\d+)\s*[x×]\s*(\d+)\s*([a-z]+)\b", str(drill.get("duration") or ""), re.I)
+    if rep_dose and re.fullmatch(r"s|secs?|seconds?|mins?|minutes?|m|km|kilometres?|kilometers?|mi|miles?|yds?|yards?|metres?|meters?|ft|feet",
+                                 rep_dose[3].lower()):
+        rep_dose = None
     rep_speed = bool(
         rep_dose and int(rep_dose[1]) >= 2 and 1 <= int(rep_dose[2]) <= 5
         and "mech_ballistic" in (drill.get("tags") or [])
