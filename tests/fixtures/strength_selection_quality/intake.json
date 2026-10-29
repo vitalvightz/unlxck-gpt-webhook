@@ -1,0 +1,109 @@
+{
+  "notes": "",
+  "athlete": {
+    "age": 23,
+    "sex": null,
+    "record": "",
+    "stance": "",
+    "full_name": "Strength Selection Regression",
+    "height_cm": null,
+    "weight_kg": null,
+    "athlete_locale": "",
+    "tactical_style": [
+      "distance_striker"
+    ],
+    "technical_style": [
+      "boxing"
+    ],
+    "athlete_timezone": "Europe/London",
+    "target_weight_kg": null,
+    "professional_status": ""
+  },
+  "injuries": "",
+  "intake_id": null,
+  "key_goals": [
+    "strength",
+    "skill_refinement"
+  ],
+  "fight_date": "2026-11-30",
+  "weak_areas": [
+    "balance",
+    "strength"
+  ],
+  "random_seed": 2837615948,
+  "primary_goal": "strength",
+  "fatigue_level": "",
+  "guided_injury": null,
+  "rounds_format": "3 x 3",
+  "guided_injuries": [],
+  "open_camp_weeks": 12,
+  "equipment_access": [
+    "dumbbells",
+    "kettlebells",
+    "barbell",
+    "trap_bar",
+    "plate",
+    "bench",
+    "cable",
+    "landmine",
+    "log",
+    "atlas_stone",
+    "assault_bike",
+    "rower",
+    "treadmill",
+    "step_mill",
+    "pool",
+    "sled",
+    "battle_ropes",
+    "tire",
+    "sledgehammer",
+    "weight_vest",
+    "heavy_bag",
+    "pads",
+    "box",
+    "agility_ladder",
+    "hurdles",
+    "jump_rope",
+    "medicine_ball",
+    "sandbag",
+    "bulgarian_bag",
+    "bands",
+    "trx",
+    "pullup_bar",
+    "swiss_ball",
+    "bosu_ball",
+    "neck_harness",
+    "weight_belt",
+    "water_jug",
+    "foam_roller",
+    "towel",
+    "dowel",
+    "cloth",
+    "soft_ball"
+  ],
+  "primary_weak_area": "balance",
+  "support_work_days": [
+    "Monday",
+    "Tuesday"
+  ],
+  "hard_sparring_days": [
+    "Thursday",
+    "Friday"
+  ],
+  "mindset_challenges": "",
+  "no_scheduled_fight": false,
+  "training_preference": "",
+  "training_availability": [
+    "Monday",
+    "Saturday",
+    "Thursday",
+    "Friday",
+    "Wednesday",
+    "Tuesday"
+  ],
+  "reduced_contact_requested": false,
+  "weekly_training_frequency": 5,
+  "goal_weakness_collision_tags": [],
+  "goal_weakness_collision_detail": "",
+  "goal_weakness_collision_details": []
+}
