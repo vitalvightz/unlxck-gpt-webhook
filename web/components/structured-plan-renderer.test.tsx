@@ -1138,11 +1138,25 @@ test("a hard-sparring day carries the hard-sparring note, not the technical note
 
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
 
-  assert.equal(html.includes("Hard sparring — controlled hard contact"), true);
+  assert.match(html, /cm-day-context-contact[\s\S]*?class="sp-session-title">Hard sparring<\/h3>/);
+  assert.match(html, /sp-sparring-caution[\s\S]*?Controlled hard contact<\/p>/);
+  assert.equal(html.includes("Hard sparring — controlled hard contact"), false);
   assert.equal(html.includes("This is your declared hard-sparring/contact day"), true);
   // A hard-sparring day must not borrow the technical-only "no hard sparring" wording.
   assert.equal(html.includes("Technical-only contact today"), false);
   assert.equal(html.includes("sp-day-card-sparring"), true);
+});
+
+test("a plain hard-sparring title stays inside the contact card", () => {
+  const html = renderToStaticMarkup(<SessionlessDayCard day={{
+    date: "2026-06-21",
+    day_type: "high",
+    today_card: { headline: "Hard sparring" },
+    sessions: [],
+  }} showDayLabels={false} />);
+
+  assert.match(html, /cm-day-context-contact[\s\S]*?class="sp-session-title">Hard sparring<\/h3>/);
+  assert.equal(html.includes("sp-sparring-caution"), false);
 });
 
 test("open plans keep session categories inside chronological day cards", () => {

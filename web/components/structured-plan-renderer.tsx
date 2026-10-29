@@ -171,14 +171,26 @@ const TECHNICAL_COMBAT_STAGE_RATIONALES: Record<string, string> = {
 const HARD_SPARRING_CONTACT_NOTE =
   "Your declared hard-sparring/contact work, plus the app work below. Stay fresh.";
 
+function sparringHeading(title: string): { title: string; caution: string | null } {
+  const match = title.match(/^(.*\bhard sparring)\s*(?:—|–|-|\/)\s*controlled hard contact$/i);
+  return match
+    ? { title: match[1].trim(), caution: "Controlled hard contact" }
+    : { title, caution: null };
+}
+
+function SparringCaution({ text }: { text: string | null }) {
+  return text ? <p className="sp-sparring-caution"><span aria-hidden="true">⚠️</span> {text}</p> : null;
+}
+
 /** The red-edged coach-day box shared by Today, the calendar and the list. */
-function CoachDayBox({ tag, tooltip, children }: { tag: string | null; tooltip?: ReactNode; children: ReactNode }) {
+function CoachDayBox({ tag, tooltip, heading, children }: { tag: string | null; tooltip?: ReactNode; heading?: ReactNode; children: ReactNode }) {
   return (
     <div className="cm-day-context cm-day-context-contact">
       <div className="cm-light-technical cm-coach-led-contact">
-        {tag || tooltip ? (
+        {tag || tooltip || heading ? (
           <div className="cm-light-technical-head">
             {tag ? <span className="sp-tag sp-accent">{tag}</span> : null}
+            {heading}
             {tooltip}
           </div>
         ) : null}
@@ -1625,6 +1637,7 @@ export function SessionlessDayCard({
         ? (title === "Technical-only combat" ? TECHNICAL_COMBAT_TITLE : title)
         : title;
   const displayTag = isConverted ? TECHNICAL_COMBAT_TAG : tag;
+  const sparring = kind === "sparring" ? sparringHeading(displayTitle) : null;
   const isRest = kind === "rest";
   const reducedReason = getReducedContactReason(day);
   // Every coach day reads as the same red-edged box as the Today contact block.
@@ -1640,7 +1653,7 @@ export function SessionlessDayCard({
               {date ? <span className="sp-day-date">{formatAppDate(date)}</span> : null}
             </div>
           ) : null}
-          {hideTitle ? null : <h3 className="sp-session-title">
+          {hideTitle || sparring ? null : <h3 className="sp-session-title">
             {displayTitle}
             {(kind === "light_combat" || kind === "technical") ? <TechnicalCombatWhyTooltip day={day} declared={!isConverted} /> : null}
           </h3>}
@@ -1657,8 +1670,10 @@ export function SessionlessDayCard({
       {boxed ? (
         <CoachDayBox
           tag={displayTag}
+          heading={sparring ? <h3 className="sp-session-title">{sparring.title}</h3> : null}
           tooltip={hideTitle && (kind === "light_combat" || kind === "technical") ? <TechnicalCombatWhyTooltip day={day} declared={!isConverted} /> : null}
         >
+          <SparringCaution text={sparring?.caution ?? null} />
           {kind === "light_combat" || (kind === "technical" && !isConverted) ? (
             <p className="sp-today-note">{DECLARED_LIGHT_COMBAT_DESCRIPTION}</p>
           ) : isConverted ? (
@@ -1736,6 +1751,7 @@ function CoachLedDayContext({
       ? (title === "Technical-only combat" ? TECHNICAL_COMBAT_TITLE : title)
       : title;
   const displayTag = isTechnical ? TECHNICAL_COMBAT_TAG : tag;
+  const sparring = kind === "sparring" ? sparringHeading(displayTitle) : null;
   const repeatsHeadline = Boolean(
     headline && displayTitle.trim().toLocaleLowerCase() === headline.trim().toLocaleLowerCase(),
   );
@@ -1747,15 +1763,16 @@ function CoachLedDayContext({
     <div className="cm-light-technical cm-coach-led-contact">
       <div className="cm-light-technical-head">
         {displayTag ? <span className="sp-tag sp-accent">{displayTag}</span> : null}
-        {repeatsHeadline ? (
+        {repeatsHeadline && !sparring ? (
           isTechnical || isLightCombat || isDeclaredTechnical ? <TechnicalCombatWhyTooltip day={day} declared={!isTechnical} /> : null
         ) : (
           <p className="sp-today-headline">
-            {displayTitle}
+            {sparring?.title ?? displayTitle}
             {isTechnical || isLightCombat || isDeclaredTechnical ? <TechnicalCombatWhyTooltip day={day} declared={!isTechnical} /> : null}
           </p>
         )}
       </div>
+      <SparringCaution text={sparring?.caution ?? null} />
       {isTechnical ? (
         <TechnicalCombatRationale title={displayTitle} />
       ) : (
