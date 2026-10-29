@@ -1,9 +1,9 @@
 {
   "GPP": {
-    "block": "\n#### Conditioning\n**Intent:** Build aerobic base, improve repeatability, low damage.\n**Dosage Template:** 3\u20135 rounds of 3\u20135 min @ RPE 6\u20137, work:rest 1:1\u20131:0.5 (cap 20\u201330 min). Template applies unless a drill lists its own structure.\n**Combat Pressure Floor:** one gas-tank / repeatability touch \u2014 6-8 x 60 sec hard / 60-90 sec easy @ RPE 8. Controlled discomfort, not punishment. Stop when output or technique drops.\n**Weekly Progression:** Add 1 round or ~5\u201310% volume weekly; deload final week by ~20%.\n**If Time Short:** Keep 2 aerobic rounds + 1 alactic pop.\n**If Fatigue High:** If fatigue high: drop 1\u20132 rounds, keep intensity easy.\n\n**Aerobic**\n- **Heavy Bag Aerobic Pace**\n  - Load: zone 2\n  - Rest: \u2014\n  - Timing: 10min continuous steady pace\n  - Purpose: Low-intensity bag work; rhythm focused\n  - Red Flags: None\n\n\n**Glycolytic**\n- **KB Swing Intervals**\n  - Load: high\n  - Rest: 90 sec between sets\n  - Timing: 6x30s on/1:30 off\n  - Purpose: 24-32kg. Focus on hip snap, not arm pull (RPE 8)\n  - Red Flags: None\n\n\n#### Conditioning\n**Intent:** Build aerobic base, improve repeatability, low damage.\n**Dosage Template:** 3\u20135 rounds of 3\u20135 min @ RPE 6\u20137, work:rest 1:1\u20131:0.5 (cap 20\u201330 min). Template applies unless a drill lists its own structure.\n**Combat Pressure Floor:** one gas-tank / repeatability touch \u2014 6-8 x 60 sec hard / 60-90 sec easy @ RPE 8. Controlled discomfort, not punishment. Stop when output or technique drops.\n**Weekly Progression:** Add 1 round or ~5\u201310% volume weekly; deload final week by ~20%.\n**If Time Short:** Keep 2 aerobic rounds + 1 alactic pop.\n**If Fatigue High:** If fatigue high: drop 1\u20132 rounds, keep intensity easy.\n\n**Glycolytic**\n- **Heavy Bag Power Intervals**\n  - Load: high (Requires: Heavy Bag)\n  - Rest: 90 sec between sets\n  - Timing: 8x30s on/1:30 off\n  - Purpose: 16oz gloves. Power shots only (RPE 8)\n  - Red Flags: None\n\n\n**Footwork Speed Repeatability**\n- **Broad Jump Repeats**\n  - Load: max\n  - Rest: 120 sec between sets\n  - Timing: 6x3 reps, 2min rest\n  - Purpose: Stick landings. Full reset between reps (max effort)\n  - Red Flags: None\n",
+    "block": "\n#### Conditioning\n**Intent:** Build aerobic base, improve repeatability, low damage.\n**Dosage Template:** 3\u20135 rounds of 3\u20135 min @ RPE 6\u20137, work:rest 1:1\u20131:0.5 (cap 20\u201330 min). Template applies unless a drill lists its own structure.\n**Combat Pressure Floor:** one gas-tank / repeatability touch \u2014 6-8 x 60 sec hard / 60-90 sec easy @ RPE 8. Controlled discomfort, not punishment. Stop when output or technique drops.\n**Weekly Progression:** Repeat the authorised dose; advance one variable only when the next prescription permits it. Reduce or defer when recovery or boxing load requires it.\n**If Time Short:** Keep 2 aerobic rounds + 1 alactic pop.\n**If Fatigue High:** If fatigue high: drop 1\u20132 rounds, keep intensity easy.\n\n**Aerobic**\n- **5K Steady Run**\n  - Load: moderate\n  - Rest: \u2014\n  - Timing: 5 km continuous, conversational pace\n  - Purpose: Conversational, controlled aerobic run. Distance is fixed; completion time depends on the runner. Keep easy around hard sparring.\n  - Red Flags: None\n\n\n**Glycolytic**\n- **KB Swing Intervals**\n  - Load: high\n  - Rest: 90 sec between sets\n  - Timing: 6x30s on/1:30 off\n  - Purpose: 24-32kg. Focus on hip snap, not arm pull (RPE 8)\n  - Red Flags: None\n\n\n#### Conditioning\n**Intent:** Build aerobic base, improve repeatability, low damage.\n**Dosage Template:** 3\u20135 rounds of 3\u20135 min @ RPE 6\u20137, work:rest 1:1\u20131:0.5 (cap 20\u201330 min). Template applies unless a drill lists its own structure.\n**Combat Pressure Floor:** one gas-tank / repeatability touch \u2014 6-8 x 60 sec hard / 60-90 sec easy @ RPE 8. Controlled discomfort, not punishment. Stop when output or technique drops.\n**Weekly Progression:** Repeat the authorised dose; advance one variable only when the next prescription permits it. Reduce or defer when recovery or boxing load requires it.\n**If Time Short:** Keep 2 aerobic rounds + 1 alactic pop.\n**If Fatigue High:** If fatigue high: drop 1\u20132 rounds, keep intensity easy.\n\n**Glycolytic**\n- **Heavy Bag Power Intervals**\n  - Load: high (Requires: Heavy Bag)\n  - Rest: 90 sec between sets\n  - Timing: 8x30s on/1:30 off\n  - Purpose: 16oz gloves. Power shots only (RPE 8)\n  - Red Flags: None\n\n\n**Footwork Speed Repeatability**\n- **Broad Jump Repeats**\n  - Load: max\n  - Rest: 120 sec between sets\n  - Timing: 6x3 reps, 2min rest\n  - Purpose: Stick landings. Full reset between reps (max effort)\n  - Red Flags: None\n",
     "grouped": {
       "aerobic": [
-        "Heavy Bag Aerobic Pace"
+        "5K Steady Run"
       ],
       "glycolytic": [
         "Heavy Bag Power Intervals",
@@ -15,30 +15,30 @@
     },
     "missing_systems": [],
     "names": [
-      "Heavy Bag Aerobic Pace",
+      "5K Steady Run",
       "KB Swing Intervals",
       "Heavy Bag Power Intervals",
       "Broad Jump Repeats"
     ]
   },
   "SPP": {
-    "block": "\n#### Conditioning\n**Intent:** Match fight demands with intervals and skill-relevant density.\n**Dosage Template:** 4\u20136 rounds of 2\u20135 min @ RPE 7\u20138, work:rest 1:1\u20131:0.5 (cap 18\u201325 min). Template applies unless a drill lists its own structure.\n**Weekly Progression:** Increase density or intensity weekly; keep volume flat; deload final week by ~20%.\n**If Time Short:** Keep 2 fight-pace rounds (system priority).\n**If Fatigue High:** If fatigue high: drop volume, keep rest longer.\n\n**Aerobic**\n- **Tempo Shadowboxing**\n  - Load: zone 2\n  - Rest: \u2014\n  - Timing: 20-30min continuous\n  - Purpose: Focus on breathing/technique; no power output (zone 2 (50-60% effort))\n  - Red Flags: None\n\n\n**Footwork Speed Repeatability**\n- **Alternating Bounds**\n  - Load: moderate\n  - Rest: 120 sec between sets\n  - Timing: 4x5/side, 2min rest\n  - Purpose: ANKLE STABILITY: Not for acute sprains. SURFACE: Grass preferred\n  - Red Flags: None\n\n\n#### Fight-pace conditioning\n**Intent:** Match fight demands with intervals and skill-relevant density.\n**Dosage Template:** 4\u20136 rounds of 2\u20135 min @ RPE 7\u20138, work:rest 1:1\u20131:0.5 (cap 18\u201325 min). Template applies unless a drill lists its own structure.\n**Combat Pressure Floor:** 4-6 x 2-3 min fight-pace on / 60 sec off @ RPE 8-9. Repeat high output under fatigue and hold technique while breathing hard \u2014 hard enough to breathe, not sloppy. Stop the round when output or technique drops.\n**Weekly Progression:** Increase density or intensity weekly; keep volume flat; deload final week by ~20%.\n**If Time Short:** Keep 2 fight-pace rounds (system priority).\n**If Fatigue High:** If fatigue high: drop volume, keep rest longer.\n- **Striking Combos Under Fatigue**\n  - Load: moderate\n  - Rest: 60 sec between sets\n  - Timing: 6 x 3 min round; 60 sec rest; RPE 6\n  - Purpose: Glove weight 12-16oz. Hold technique as fatigue builds.\n  - Red Flags: None\n",
+    "block": "\n#### Conditioning\n**Intent:** Match fight demands with intervals and skill-relevant density.\n**Dosage Template:** 4\u20136 rounds of 2\u20135 min @ RPE 7\u20138, work:rest 1:1\u20131:0.5 (cap 18\u201325 min). Template applies unless a drill lists its own structure.\n**Weekly Progression:** Protect boxing quality. Repeat, reduce or defer according to workload; advance only to the next authorised dose, keeping recovery intact.\n**If Time Short:** Keep 2 fight-pace rounds (system priority).\n**If Fatigue High:** If fatigue high: drop volume, keep rest longer.\n\n**Aerobic**\n- **5K Steady Run**\n  - Load: moderate\n  - Rest: \u2014\n  - Timing: 5 km continuous, conversational pace\n  - Purpose: Conversational, controlled aerobic run. Distance is fixed; completion time depends on the runner. Keep easy around hard sparring.\n  - Red Flags: None\n\n\n**Footwork Speed Repeatability**\n- **Hill Sprint Repeats**\n  - Load: high\n  - Rest: 120 sec between sets\n  - Timing: 8x8sec max effort, 2min rest\n  - Purpose: Maximal-quality short hill efforts with full recovery. Stop for hamstring tightness or loss of speed; use a non-impact modality when running is restricted.\n  - Red Flags: None\n\n\n#### Fight-pace conditioning\n**Intent:** Match fight demands with intervals and skill-relevant density.\n**Dosage Template:** 4\u20136 rounds of 2\u20135 min @ RPE 7\u20138, work:rest 1:1\u20131:0.5 (cap 18\u201325 min). Template applies unless a drill lists its own structure.\n**Combat Pressure Floor:** 4-6 x 2-3 min fight-pace on / 60 sec off @ RPE 8-9. Repeat high output under fatigue and hold technique while breathing hard \u2014 hard enough to breathe, not sloppy. Stop the round when output or technique drops.\n**Weekly Progression:** Protect boxing quality. Repeat, reduce or defer according to workload; advance only to the next authorised dose, keeping recovery intact.\n**If Time Short:** Keep 2 fight-pace rounds (system priority).\n**If Fatigue High:** If fatigue high: drop volume, keep rest longer.\n- **Heavy Bag Power Rounds**\n  - Load: moderate (Requires: Heavy Bag)\n  - Rest: 60 sec between sets\n  - Timing: 5 x 3 min round; 60 sec rest; RPE 6\n  - Purpose: Glove weight 12-16oz. Power shots on the call, pace between.\n  - Red Flags: None\n",
     "grouped": {
       "aerobic": [
-        "Tempo Shadowboxing"
+        "5K Steady Run"
       ],
       "alactic": [
-        "Alternating Bounds"
+        "Hill Sprint Repeats"
       ],
       "glycolytic": [
-        "Striking Combos Under Fatigue"
+        "Heavy Bag Power Rounds"
       ]
     },
     "missing_systems": [],
     "names": [
-      "Tempo Shadowboxing",
-      "Alternating Bounds",
-      "Striking Combos Under Fatigue"
+      "5K Steady Run",
+      "Hill Sprint Repeats",
+      "Heavy Bag Power Rounds"
     ]
   },
   "TAPER": {
