@@ -170,6 +170,23 @@ const TECHNICAL_COMBAT_STAGE_RATIONALES: Record<string, string> = {
 const HARD_SPARRING_CONTACT_NOTE =
   "Your declared hard-sparring/contact work, plus the app work below. Stay fresh.";
 
+/** The red-edged coach-day box shared by Today, the calendar and the list. */
+function CoachDayBox({ tag, tooltip, children }: { tag: string | null; tooltip?: ReactNode; children: ReactNode }) {
+  return (
+    <div className="cm-day-context cm-day-context-contact">
+      <div className="cm-light-technical cm-coach-led-contact">
+        {tag || tooltip ? (
+          <div className="cm-light-technical-head">
+            {tag ? <span className="sp-tag sp-accent">{tag}</span> : null}
+            {tooltip}
+          </div>
+        ) : null}
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function blockCountLabel(count: number): string {
   return `${count} block${count === 1 ? "" : "s"}`;
 }
@@ -1379,11 +1396,7 @@ export function SessionCard({
               there, the objective IS the whole prescription ("Neck CARs,
               shoulder CARs, wrist circles…"), so the kicker is dropped and the
               line reads as the instruction it is. */}
-          {isDeclaredLightCombat ? (
-            <p className="sp-today-note">{DECLARED_LIGHT_COMBAT_DESCRIPTION}</p>
-          ) : isTechnicalSession ? (
-            <TechnicalCombatRationale />
-          ) : objective && !objectiveRepeatsTitle ? (
+          {isDeclaredLightCombat || isTechnicalSession ? null : objective && !objectiveRepeatsTitle ? (
             <p
               className={`sp-session-objective${blocks.length > 0 ? "" : " sp-session-instruction"}`}
             >
@@ -1393,17 +1406,7 @@ export function SessionCard({
           ) : null}
         </div>
         <div className="sp-session-meta">
-          {isDeclaredLightCombat ? (
-            <>
-              <span className="sp-tag sp-accent">Technical</span>
-              {hideTitle ? <TechnicalCombatWhyTooltip day={day} declared /> : null}
-            </>
-          ) : isTechnicalSession ? (
-            <>
-              <span className="sp-tag sp-accent">{TECHNICAL_COMBAT_TAG}</span>
-              {hideTitle && planLayout ? <TechnicalCombatWhyTooltip day={day} declared={false} /> : null}
-            </>
-          ) : sessionType && (!planLayout || !sameCopy(sessionTypeLabel, title)) ? (
+          {isDeclaredLightCombat || isTechnicalSession ? null : sessionType && (!planLayout || !sameCopy(sessionTypeLabel, title)) ? (
             <span className="sp-tag">{sessionTypeLabel}</span>
           ) : null}
           {/* Scheduled mental / tactical / breathing-only work renders in full,
@@ -1417,6 +1420,23 @@ export function SessionCard({
           ) : null}
         </div>
       </header>
+
+      {isDeclaredLightCombat || isTechnicalSession ? (
+        <CoachDayBox
+          tag={isDeclaredLightCombat ? "Technical" : TECHNICAL_COMBAT_TAG}
+          tooltip={
+            isDeclaredLightCombat
+              ? hideTitle ? <TechnicalCombatWhyTooltip day={day} declared /> : null
+              : hideTitle && planLayout ? <TechnicalCombatWhyTooltip day={day} declared={false} /> : null
+          }
+        >
+          {isDeclaredLightCombat ? (
+            <p className="sp-today-note">{DECLARED_LIGHT_COMBAT_DESCRIPTION}</p>
+          ) : (
+            <TechnicalCombatRationale />
+          )}
+        </CoachDayBox>
+      ) : null}
 
       <SessionCompletionDetails info={completionInfo} compact={planLayout} />
 
@@ -1560,6 +1580,8 @@ export function SessionlessDayCard({
   const displayTag = isConverted ? TECHNICAL_COMBAT_TAG : tag;
   const isRest = kind === "rest";
   const reducedReason = getReducedContactReason(day);
+  // Every coach day reads as the same red-edged box as the Today contact block.
+  const boxed = kind === "light_combat" || kind === "technical" || coachLed;
 
   return (
     <article className={`sp-session sp-day-card sp-day-card-${kind}`}>
@@ -1576,23 +1598,31 @@ export function SessionlessDayCard({
             {(kind === "light_combat" || kind === "technical") ? <TechnicalCombatWhyTooltip day={day} declared={!isConverted} /> : null}
           </h3>}
         </div>
-        <div className="sp-session-meta">
-          {displayTag ? <span className="sp-tag sp-accent">{displayTag}</span> : null}
-          {hideTitle && (kind === "light_combat" || kind === "technical") ? <TechnicalCombatWhyTooltip day={day} declared={!isConverted} /> : null}
-        </div>
+        {boxed ? null : (
+          <div className="sp-session-meta">
+            {displayTag ? <span className="sp-tag sp-accent">{displayTag}</span> : null}
+          </div>
+        )}
       </header>
       {countdown === "D-0" && day.day_type === "competition" ? (
         <p className="sp-today-note">Follow your coach&apos;s warm-up and fight protocol; no additional S&amp;C.</p>
       ) : null}
-      {kind === "light_combat" || (kind === "technical" && !isConverted) ? (
-        <p className="sp-today-note">{DECLARED_LIGHT_COMBAT_DESCRIPTION}</p>
-      ) : isConverted ? (
-        <TechnicalCombatRationale title={displayTitle} />
-      ) : coachLed ? (
-        <>
-          <p className="sp-today-note">{HARD_SPARRING_SESSIONLESS_NOTE}</p>
-          {reducedReason ? <p className="sp-today-note sp-contact-reason">{reducedReason}</p> : null}
-        </>
+      {boxed ? (
+        <CoachDayBox
+          tag={displayTag}
+          tooltip={hideTitle && (kind === "light_combat" || kind === "technical") ? <TechnicalCombatWhyTooltip day={day} declared={!isConverted} /> : null}
+        >
+          {kind === "light_combat" || (kind === "technical" && !isConverted) ? (
+            <p className="sp-today-note">{DECLARED_LIGHT_COMBAT_DESCRIPTION}</p>
+          ) : isConverted ? (
+            <TechnicalCombatRationale title={displayTitle} />
+          ) : (
+            <>
+              <p className="sp-today-note">{HARD_SPARRING_SESSIONLESS_NOTE}</p>
+              {reducedReason ? <p className="sp-today-note sp-contact-reason">{reducedReason}</p> : null}
+            </>
+          )}
+        </CoachDayBox>
       ) : null}
       <PriorityMicrodoseCard day={day} />
       {warning ? <p className="sp-warning">{warning}</p> : null}
