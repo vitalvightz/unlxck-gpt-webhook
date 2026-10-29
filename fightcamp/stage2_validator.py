@@ -356,7 +356,10 @@ _LATE_FIGHT_ANNOTATION_LABEL = re.compile(
     r"how|setup|set[\s-]?up|tempo|load(?:ing)?|dose|dosage|rest|format|"
     r"equipment|targets?|scaling|adjust(?:ment)s?|modif(?:y|ication)s?|"
     # Tactical / mental card fields ("Step 2: Choose the punch...").
-    r"step\s*\d+|reset|anchor"
+    # Only when the line carries no dose, so a dosed "Step 1: ..." exercise
+    # is still checked as one.
+    r"(?:step\s*\d+|reset|anchor)"
+    r"(?!.*\b\d+\s*(?:x|sets?|reps?|sec|seconds?|min|minutes?|rounds?)\b)"
     # Tolerate a parenthetical qualifier before the label punctuation, e.g.
     # "Regression/stop (D-13+ rule — regressions/stop only): ...".
     r")\s*(?:\([^)]*\))?\s*[:\-–—]",

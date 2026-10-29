@@ -2558,8 +2558,10 @@ def _with_final_compression(progression: dict, role_map: dict) -> dict:
     weeks = []
     for week in (progression or {}).get("weeks") or []:
         source = final.get(week.get("week_index")) if isinstance(week, dict) else None
-        if source is not None and "intentional_compression" in week and "intentional_compression" in source:
+        if source is not None and "intentional_compression" in source:
             week = {**week, "intentional_compression": deepcopy(source["intentional_compression"])}
+        elif source is not None and "intentional_compression" in week:
+            week = {key: value for key, value in week.items() if key != "intentional_compression"}
         weeks.append(week)
     return {**progression, "weeks": weeks} if isinstance(progression, dict) and "weeks" in progression else progression
 

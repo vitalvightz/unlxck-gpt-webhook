@@ -95,10 +95,9 @@ def validate_source_coaching(brief: dict, text: str) -> tuple[str, list[dict]]:
                         selected.setdefault(key, []).append((role, assignment, None))
     # Direct late-fight briefs keep their sessions in a flat countdown sequence.
     for role in brief.get("late_fight_session_sequence") or []:
-        label = re.search(r"D-\s*(\d+)", str(role.get("scheduled_countdown_label")
-                                             or role.get("countdown_label") or "")) if isinstance(role, dict) else None
-        if label and mental_category(role):
-            nonphysical.add((int(label[1]), coaching_identity(role.get("athlete_facing_label"))))
+        day = role_d_day({}, role) if isinstance(role, dict) else None
+        if isinstance(day, int) and mental_category(role):
+            nonphysical.add((day, coaching_identity(role.get("athlete_facing_label"))))
     athlete = brief.get("athlete_snapshot") or {}
     day = title = name = None
     result, findings = [], []

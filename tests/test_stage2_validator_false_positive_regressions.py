@@ -165,3 +165,11 @@ def test_goal_witness_rep_dose_accepts_spelled_out_sets() -> None:
     }
     assert _goal_witness_dose_matches(witness, "- Depth Drop (No Rebound): 6 sets x 3 reps; rest 90 sec; RPE 7.")
     assert not _goal_witness_dose_matches(witness, "- Depth Drop (No Rebound): 4 sets x 3 reps; rest 90 sec; RPE 7.")
+
+
+def test_tactical_step_labels_annotate_only_undosed_lines():
+    from fightcamp.stage2_validator import _LATE_FIGHT_ANNOTATION_LABEL as label
+    assert label.match("Step 2: Choose the punch you will lead with")
+    assert label.match("Reset - one breath, eyes on the target")
+    assert not label.match("Step 1: Band pull-aparts 3 x 15")
+    assert not label.match("Reset: shadow rounds 2 rounds")
