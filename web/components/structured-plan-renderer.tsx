@@ -9,6 +9,7 @@ import {
   readableExerciseMetrics,
   classifySessionlessDay,
   isZeroLoadSupportSession,
+  isCompactPlanSupportSession,
   mentalSessionCategory,
   mentalSessionSummary,
   mentalTaskSteps,
@@ -1121,6 +1122,29 @@ function SessionCompletionDetails({ info, compact }: { info?: SessionCompletionI
   </>;
 }
 
+function PlanSupportCard({ title, duration, category, optional, children }: {
+  title: string;
+  duration: string | null;
+  category: string | null;
+  optional: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <article className={`sp-session sp-session-support${category && category !== "Breathe" ? " sp-mental-task" : ""}`} data-layout="plan" data-mental-category={category && category !== "Breathe" ? category.toLowerCase() : undefined}>
+      <details className="sp-optional-disclosure">
+        <summary className="sp-optional-summary">
+          <span className="sp-optional-main">
+            <span className="sp-optional-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{category === "Visualise" ? <><path d="M12 5a3 3 0 0 0-5.5-1.5A4 4 0 0 0 4 9a4 4 0 0 0 1 7 3.5 3.5 0 0 0 7 1V5Z"/><path d="M12 5a3 3 0 0 1 5.5-1.5A4 4 0 0 1 20 9a4 4 0 0 1-1 7 3.5 3.5 0 0 1-7 1V5ZM8 8c2 0 2 2 2 3M16 8c-2 0-2 2-2 3M8 15c2 0 2-2 2-3M16 15c-2 0-2-2-2-3"/></> : category === "Analyse" ? <><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="3"/></> : category === "Breathe" ? <><path d="M3 8h12a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h6"/></> : <><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h7M8 12h7M8 16h4"/></>}</svg></span>
+            <span className="sp-optional-heading"><strong>{title}</strong>{duration ? <span>{duration}</span> : null}</span>
+          </span>
+          <span className="sp-optional-side">{optional ? <span>Optional</span> : null}<span className="sp-optional-chevron" aria-hidden="true">⌄</span></span>
+        </summary>
+        <div className="sp-optional-content">{children}</div>
+      </details>
+    </article>
+  );
+}
+
 export function SessionCard({
   session,
   day,
@@ -1192,7 +1216,10 @@ export function SessionCard({
   const isDeclaredLightCombat = isDeclaredLightCombatTitle(title);
   const isTechnicalSession = title === "Technical-only combat";
   const sessionType = cleanText(session.session_type);
-  const objective = formatSessionObjective(session.objective);
+  const supportCard = planLayout && isCompactPlanSupportSession(session)
+    && !cleanText(card?.primary_warning) && !cleanText(card?.weight_cut_warning);
+  const rawObjective = formatSessionObjective(session.objective);
+  const objective = supportCard ? rawObjective?.replace(/^Optional[.:]\s*/i, "") || null : rawObjective;
   // A rationale that is just the session title again ("Strength" / "Why
   // Strength") explains nothing; show the line only when it adds a reason.
   const objectiveRepeatsTitle =
@@ -1252,8 +1279,9 @@ export function SessionCard({
     // drill and bloat the card. A constraint Context line still prints.
     const context = getSessionCoachingLines(sessionMindset).filter(line =>
       line.label === "Context" && !steps.some(step => sameCopy(step, line.value)));
-    return (
-      <article className="sp-session sp-mental-task" data-layout={planLayout ? "plan" : undefined} data-mental-category={mentalCategory.toLowerCase()}>
+    const cleanOptional = (value: string) => supportCard ? value.replace(/^Optional[.:]\s*/i, "") : value;
+    const content = (
+      <>
         <header className="sp-mental-head">
           {hideTitle ? (mentalDuration ? <p className="sp-mental-duration">{compactTimeUnits(mentalDuration)}</p> : null)
             : <h3 className="sp-session-title">{title || mentalCategory}{mentalDuration ? ` · ${compactTimeUnits(mentalDuration)}` : ""}</h3>}
@@ -1264,12 +1292,12 @@ export function SessionCard({
           ) : null}
         </header>
         {mentalDrill ? <p className="sp-session-instruction">{mentalDrill}</p> : null}
-        {mentalObjective ? <p className="sp-session-objective">{mentalObjective}</p> : null}
+        {mentalObjective ? <p className="sp-session-objective">{cleanOptional(mentalObjective)}</p> : null}
         {steps.length > 0 ? (
           <ol className="sp-cues sp-mental-steps">
             {steps.map((instruction, index) => <li key={`${index}-${instruction}`}>{instruction}</li>)}
           </ol>
-        ) : <p className="sp-session-instruction">{summary}</p>}
+        ) : <p className="sp-session-instruction">{cleanOptional(summary)}</p>}
         <SessionCompletionDetails info={completionInfo} compact={planLayout} />
         {context.map(line => <p className="sp-block-aside" key={`${line.label}-${line.value}`}>
           <span className="sp-stat-label">{line.label}</span>{line.value}
@@ -1287,8 +1315,11 @@ export function SessionCard({
         ) : null}
         {warning ? <p className="sp-warning">{warning}</p> : null}
         {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
-      </article>
+      </>
     );
+    return supportCard ? (
+      <PlanSupportCard title={title || mentalCategory} duration={mentalDuration} category={mentalCategory} optional={session.optional === true}>{content}</PlanSupportCard>
+    ) : <article className="sp-session sp-mental-task" data-layout={planLayout ? "plan" : undefined} data-mental-category={mentalCategory.toLowerCase()}>{content}</article>;
   }
 
   if (layout === "section") {
@@ -1380,8 +1411,8 @@ export function SessionCard({
     );
   }
 
-  return (
-    <article className="sp-session" data-layout={planLayout ? "plan" : undefined}>
+  const content = (
+    <>
       <header className="sp-session-head">
         <div>
           {showDayLabels && (countdown || date) ? (
@@ -1519,8 +1550,11 @@ export function SessionCard({
       ) : <ExerciseSessionScope date={occurrenceDate ?? day?.date} session={session}>
         <SessionChangesFoot session={session} />
       </ExerciseSessionScope>}
-    </article>
+    </>
   );
+  return supportCard ? (
+    <PlanSupportCard title={title} duration={duration} category={/breath/i.test(title) ? "Breathe" : null} optional={session.optional === true}>{content}</PlanSupportCard>
+  ) : <article className="sp-session" data-layout={planLayout ? "plan" : undefined}>{content}</article>;
 }
 
 export function TodayCard({ day }: { day: StructuredDay }) {

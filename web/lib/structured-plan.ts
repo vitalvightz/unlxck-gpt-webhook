@@ -813,6 +813,20 @@ export function mentalSessionCategory(session: StructuredSession): "Visualise" |
   return null;
 }
 
+/** Compact only standalone mental/breathing tasks, never protocols or movement. */
+export function isCompactPlanSupportSession(session: StructuredSession): boolean {
+  const type = cleanText(session.session_type);
+  if (type && !["mindset", "skill", "recovery"].includes(type)) return false;
+  if (getBlocks(session).some(block => getBlockAdjustmentDisplay(block).stopRules.length > 0)) return false;
+  if (mentalSessionCategory(session)) return true;
+  if (!/^breathing reset$/i.test(cleanText(session.title) || "")) return false;
+  if (!["recovery", "mindset", "skill"].includes(cleanText(session.session_type) || "")) return false;
+  return getBlocks(session).every(block =>
+    !cleanText(block.exercise_key) &&
+    (!block.block_type || ["mindset", "recovery"].includes(block.block_type)) &&
+    (!cleanText(block.display_name) || /^breathing reset$/i.test(cleanText(block.display_name)!)));
+}
+
 /** Preview the selected activity's authored instruction, preserving its full
  * copy in the disclosure. Prefer a complete sentence, then a word boundary. */
 export function mentalSessionSummary(session: StructuredSession): string | null {
