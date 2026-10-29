@@ -62,7 +62,6 @@ import {
   type SessionDisplayStatus,
 } from "@/lib/camp-map";
 import {
-  OPEN_BLOCK_WEEK_LABELS,
   openBlockWeekDirective,
   openBlockWeekIntent,
   type OpenBlockWeekIntent,
@@ -75,9 +74,9 @@ import {
   resolveRehabSummaryLabel,
 } from "@/lib/rehab-label";
 import { useTrainingDay } from "@/lib/use-training-day";
-import { describeRelativeDay, formatAppDate, formatAppDateRange } from "@/lib/date-format";
+import { describeRelativeDay, formatAppDate } from "@/lib/date-format";
+import { buildPlanCalendar, calendarCaption } from "@/lib/plan-calendar";
 import { resolveFiniteWeekNumber } from "@/lib/plan-format";
-import { buildPlanCalendar } from "@/lib/plan-calendar";
 import { PlanCalendar } from "@/components/plan-calendar";
 import {
   DECLARED_LIGHT_COMBAT_TITLE,
@@ -1148,7 +1147,6 @@ export function SessionCard({
   // One exercise open at a time. Today and the current plan day can start with
   // compact rows so a demo does not push the rest of the session below the fold.
   const [openBlockIndex, setOpenBlockIndex] = useState<number | null>(initiallyOpenFirstBlock && layout !== "plan" ? 0 : null);
-  const [instructionsOpen, setInstructionsOpen] = useState(false);
   const planLayout = layout === "plan";
 
   useEffect(() => {
@@ -1200,7 +1198,6 @@ export function SessionCard({
     const mentalDuration = mentalCategory === "Analyse" || mentalCategory === "Reflect"
       ? null
       : duration || formatMeasured(blocks.find((block) => block.duration)?.duration);
-    const preview = objective ? mentalSessionSummary({ ...session, blocks: [] }) : mentalSessionSummary(session);
     const summary = mentalSessionSummary(session) || (mentalCategory === "Reflect"
       ? "What worked? What needs adjusting next time?"
       : mentalCategory === "Analyse"
@@ -1228,42 +1225,17 @@ export function SessionCard({
             </span>
           ) : null}
         </header>
-        {planLayout ? <>
-          {mentalDrill ? <p className="sp-today-note">{mentalDrill}</p> : null}
-          {preview ? <p className="sp-session-objective">{preview}</p> : null}
-          <button type="button" className="secondary-button sp-instructions-open" aria-haspopup="dialog"
-            onClick={() => setInstructionsOpen(true)}>View instructions<span aria-hidden="true"> →</span></button>
-          {instructionsOpen ? <InjuryDetailSheet title={title} onClose={() => setInstructionsOpen(false)}>
-            <div className="injury-sheet-body sp-mental-detail">
-              {mentalDrill ? <p className="sp-today-note">{mentalDrill}</p> : null}
-              {objective ? <p className="sp-session-objective">{objective}</p> : null}
-              {steps.length > 0 ? <ol className="sp-cues sp-mental-steps">
-                {steps.map((instruction, index) => <li key={`${index}-${instruction}`}>{instruction}</li>)}
-              </ol> : null}
-              {mentalStops.length > 0 ? <p className="sp-block-aside" data-kind="stop">
-                <span className="sp-stat-label">Stop rule</span>{mentalStops.join("; ")}
-              </p> : null}
-              <ExerciseSessionScope date={occurrenceDate ?? day?.date} session={session}>
-                {blocks.map((block, index) => <ExerciseRow key={cleanText(block.block_id) || index} block={block}
-                  open={openBlockIndex === index} onToggle={() => setOpenBlockIndex(current => current === index ? null : index)}
-                  detail="sheet" compact openWeekIntent={openWeekIntent} sourceCountdown={sourceCountdown} />)}
-                <SessionChangesFoot session={session} />
-              </ExerciseSessionScope>
-            </div>
-          </InjuryDetailSheet> : null}
-        </> : <>
         {mentalDrill ? <p className="sp-session-instruction">{mentalDrill}</p> : null}
         {steps.length > 0 ? (
           <ol className="sp-cues sp-mental-steps">
             {steps.map((instruction, index) => <li key={`${index}-${instruction}`}>{instruction}</li>)}
           </ol>
         ) : <p className="sp-session-instruction">{summary}</p>}
-        </>}
         <SessionCompletionDetails info={completionInfo} compact={planLayout} />
         {context.map(line => <p className="sp-block-aside" key={`${line.label}-${line.value}`}>
           <span className="sp-stat-label">{line.label}</span>{line.value}
         </p>)}
-        {!planLayout && mentalStops.length > 0 ? (
+        {mentalStops.length > 0 ? (
           <p className="sp-block-aside" data-kind="stop"><span className="sp-stat-label">Stop rule</span>{mentalStops.join("; ")}</p>
         ) : null}
         {completionInfo?.onLog ? (
@@ -1980,6 +1952,146 @@ function CompletionTag({ completion }: { completion: Completion }) {
  * the current day's session blocks are expanded too. Session-less days reuse the
  * deterministic coach-led / rest classification.
  */
+type DayCompletionOptions = {
+  completionIndex?: CompletionIndex;
+  currentTrainingDayIso?: string | null;
+  planStartIso?: string | null;
+  onLogSession?: (day: StructuredDay, session: StructuredSession, sessionId: string) => void;
+};
+
+/** One session's live status and retro-log action, shared by the list day card
+ * and the calendar's selected-day panel so both log the same way. */
+function sessionCompletionInfo(
+  day: StructuredDay,
+  session: StructuredSession,
+  { completionIndex, currentTrainingDayIso, planStartIso, onLogSession }: DayCompletionOptions,
+): SessionCompletionInfo | undefined {
+  if (!completionIndex || session.optional === true) {
+    return undefined;
+  }
+  const storedDate = cleanText(day.date);
+  const dayIso = storedDate ? storedDate.slice(0, 10) : null;
+  const record = completionForSession(completionIndex, day, session);
+  const sessionId = completionSessionId(day, session);
+  // A session with no completion identity (id-less secondary) stays neutral.
+  if (!sessionId) {
+    return undefined;
+  }
+  const display = getSessionDisplayStatus(record, dayIso, currentTrainingDayIso ?? null, planStartIso ?? null);
+  const terminal = display.state === "done" || display.state === "modified" || display.state === "skipped";
+  const canLog =
+    Boolean(onLogSession) && !terminal && canRetroLog(dayIso, currentTrainingDayIso ?? null, planStartIso ?? null);
+  return {
+    display,
+    completion: record,
+    onLog: canLog ? () => onLogSession?.(day, session, sessionId) : undefined,
+  };
+}
+
+/** The calendar's selected day: every session on it as a compact row, each
+ * opening the same content the list shows in a focused sheet, so the athlete
+ * explores by date without leaving the calendar. */
+function CalendarDayPanel({
+  day,
+  completionIndex,
+  currentTrainingDayIso,
+  planStartIso,
+  onLogSession,
+  openOngoing,
+  weekNumber,
+}: DayCompletionOptions & { day: StructuredDay; openOngoing: boolean; weekNumber: number }) {
+  const rehabLabelPolicy = useContext(RehabLabelContext);
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const sessions = getSessions(day);
+  const iso = cleanText(day.date)?.slice(0, 10) ?? null;
+  const heading = iso ? formatAppDate(iso).replace(/\s\d{4}$/, "") : "Training day";
+  const countdown = formatCountdownLabel(day.countdown_label);
+  const completion = dayCompletion(day, completionIndex);
+  const completionOptions = { completionIndex, currentTrainingDayIso, planStartIso, onLogSession };
+  const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber, sessions.some(s => s.prescription_source === "athlete")) : null;
+  // Coach-owned work has no app card: a sessionless coach day is one row, and a
+  // coach-led contact block beside app work gets its own row ahead of it.
+  const sessionless = sessions.length === 0 ? classifySessionlessDay(day) : null;
+  const contact = sessions.length > 0 ? getCoachLedContactView(day) : null;
+  const coachTitle = sessionless?.title ?? contact?.title ?? null;
+  type Item = { key: string; title: string; detail: string; glyph: ExerciseGlyphName; session?: StructuredSession };
+  const items: Item[] = [
+    ...(coachTitle ? [{ key: "coach", title: coachTitle, detail: "Scheduled gym day", glyph: "strength" as const }] : []),
+    ...sessions.map((session, index): Item => {
+      const title = stripLeadingWeekday(cleanText(session.title) || titleize(cleanText(session.session_type) || "Session"));
+      const duration = formatMeasured(session.planned_duration);
+      const status = sessionCompletionInfo(day, session, completionOptions)?.display.label;
+      const blocks = getBlocks(session);
+      return {
+        key: cleanText(session.session_id) || `session-${index}`,
+        title,
+        detail: [
+          mentalSessionCategory(session) || resolveSessionTypeLabel(session, rehabLabelPolicy) || null,
+          duration ? compactTimeUnits(duration) : null,
+          status || null,
+        ].filter(Boolean).join(" · ") || "Open session",
+        glyph: blocks[0] ? exerciseGlyph(blocks[0]) : "skill",
+        session,
+      };
+    }),
+  ];
+  const opened = items.find(item => item.key === openKey) ?? null;
+  const coachOnly = sessions.length === 0;
+
+  return (
+    <section className="sp-card cm-cal-day" aria-label={`${heading} sessions`}>
+      <header className="cm-cal-day-head">
+        <h3 className="cm-cal-day-title">
+          {heading}
+          {countdown ? <span className="cm-cal-day-countdown">{countdown}</span> : null}
+        </h3>
+        {coachOnly ? (
+          <span className="cm-cal-day-kind"><span className="cm-cal-dot" data-state="coach" aria-hidden="true" />Coach / gym day</span>
+        ) : completion.total > 0 ? <CompletionTag completion={completion} /> : null}
+      </header>
+      <p className="cm-cal-day-count">{items.length} {items.length === 1 ? "session" : "sessions"}</p>
+      <ul className="cm-cal-day-list">
+        {items.map(item => (
+          <li key={item.key}>
+            <button type="button" className="cm-cal-day-row" aria-haspopup="dialog" onClick={() => setOpenKey(item.key)}>
+              <span className="cm-cal-day-icon" aria-hidden="true"><ExerciseGlyphIcon name={item.glyph} /></span>
+              <span className="cm-cal-day-text">
+                <span className="cm-cal-day-name">{item.title}</span>
+                <span className="cm-cal-day-detail">{item.detail}</span>
+              </span>
+              <span className="cm-cal-day-chevron" aria-hidden="true" />
+            </button>
+          </li>
+        ))}
+      </ul>
+      {opened ? (
+        <InjuryDetailSheet title={opened.title} onClose={() => setOpenKey(null)}>
+          <div className="injury-sheet-body cm-cal-day-sheet">
+            {opened.session ? (
+              <SessionCard
+                session={opened.session}
+                day={day}
+                sourceCountdown={day.countdown_label}
+                initiallyOpenFirstBlock={false}
+                showDayContext={false}
+                showDayLabels={false}
+                completionInfo={sessionCompletionInfo(day, opened.session, completionOptions)}
+                openWeekIntent={weekIntent}
+                occurrenceDate={day.date}
+                layout="plan"
+              />
+            ) : coachOnly ? (
+              <SessionlessDayCard day={day} showDayLabels={false} />
+            ) : (
+              <DaySessionContext day={day} />
+            )}
+          </div>
+        </InjuryDetailSheet>
+      ) : null}
+    </section>
+  );
+}
+
 export function CampDayCard({
   day,
   displayDate,
@@ -2050,28 +2162,9 @@ export function CampDayCard({
     : weekday || date || fallbackLabel || "Training day";
   const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber, sessions.some(s => s.prescription_source === "athlete")) : null;
   const completion = dayCompletion(day, completionIndex);
-  const dayIso = storedDate ? storedDate.slice(0, 10) : null;
 
-  const completionInfoFor = (session: StructuredSession): SessionCompletionInfo | undefined => {
-    if (!completionIndex || session.optional === true) {
-      return undefined;
-    }
-    const record = completionForSession(completionIndex, day, session);
-    const sessionId = completionSessionId(day, session);
-    // A session with no completion identity (id-less secondary) stays neutral.
-    if (!sessionId) {
-      return undefined;
-    }
-    const display = getSessionDisplayStatus(record, dayIso, currentTrainingDayIso ?? null, planStartIso ?? null);
-    const terminal = display.state === "done" || display.state === "modified" || display.state === "skipped";
-    const canLog =
-      Boolean(onLogSession) && !terminal && canRetroLog(dayIso, currentTrainingDayIso ?? null, planStartIso ?? null);
-    return {
-      display,
-      completion: record,
-      onLog: canLog ? () => onLogSession?.(day, session, sessionId) : undefined,
-    };
-  };
+  const completionInfoFor = (session: StructuredSession) =>
+    sessionCompletionInfo(day, session, { completionIndex, currentTrainingDayIso, planStartIso, onLogSession });
 
   return (
     <details
@@ -2214,17 +2307,31 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
   const rules = getDisplayableRedFlags(plan);
   const fallbackNotes = rules.length === 0 ? getFallbackSafetyNotes(plan) : [];
   const hasStopRules = rules.length > 0 || fallbackNotes.length > 0;
-  // The safety/medical disclaimer is folded in here (it used to be a separate
-  // banner) so safety lives in one block. The body therefore always renders the
-  // disclaimer, with the stop/report rules above it when present.
+  // Collapsed by default so the sessions sit higher; the "stop & report" title
+  // stays on screen so the rules are always one tap away. The athlete's own
+  // active notes render open beside it. The safety/medical disclaimer is folded
+  // in here so safety lives in one block, with the stop/report rules above it.
+  const [open, setOpen] = useState(false);
   return (
-    <section className="sp-collapse sp-redflags" aria-label="Red flags and safety actions">
-      <header className="sp-collapse-summary sp-redflags-summary">
+    <details
+      className="sp-collapse sp-redflags"
+      aria-label="Red flags and safety actions"
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary className="sp-collapse-summary sp-redflags-summary">
+        <span className="sp-redflags-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z" />
+            <path d="M12 8v4.5M12 16h.01" />
+          </svg>
+        </span>
         <span className="sp-redflags-summary-text">
           <span className="sp-eyebrow">Safety priority</span>
           <span className="sp-collapse-title">Red flags - stop &amp; report</span>
         </span>
-        </header>
+        <span className="sp-collapse-action">{open ? "Hide" : "Show"}</span>
+      </summary>
       <div className="sp-collapse-body">
       {hasStopRules ? (
       <ul className="sp-redflag-list">
@@ -2274,7 +2381,7 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
       ) : null}
       <SafetyNote tone="warning" showRedFlags>{PLAN_SAFETY_NOTE}</SafetyNote>
       </div>
-    </section>
+    </details>
   );
 }
 
@@ -2306,6 +2413,7 @@ function WeekStrip({
   completionIndex,
   openOngoing,
   controls,
+  label,
 }: {
   weeks: StructuredWeek[];
   selectedPos: number;
@@ -2315,6 +2423,8 @@ function WeekStrip({
   openOngoing: boolean;
   /** Extra controls for the navigation row (the List / Calendar switch). */
   controls?: ReactNode;
+  /** Navigation heading; an open block names its block ("Block 1 · Week 2 of 4"). */
+  label?: string;
 }) {
   const stripRef = useRef<HTMLElement>(null);
   const scrollable = weeks.length > WEEK_STRIP_FIT_LIMIT;
@@ -2345,7 +2455,7 @@ function WeekStrip({
     <>
     <div className="cm-week-navigation">
       <p className="cm-week-navigation-label" aria-live="polite" aria-atomic="true">
-        Week {selectedPos + 1} of {weeks.length}
+        {label ?? `Week ${selectedPos + 1} of ${weeks.length}`}
       </p>
       <div className="cm-week-nav-actions">
         {currentPos !== null && currentPos !== selectedPos ? (
@@ -2366,16 +2476,12 @@ function WeekStrip({
         // This compact fraction is a progress action: count the same app sessions
         // as the week overview, not coach-owned days that cannot be logged here.
         const completion = weekCompletion(week, completionIndex, { includeCoachLed: false });
-        const phase = openOngoing
-          ? OPEN_BLOCK_WEEK_LABELS[pos] || `Week ${pos + 1}`
-          : resolvedWeekPhase(week);
         const index =
           typeof week.week_index === "number" && Number.isFinite(week.week_index)
             ? week.week_index
             : pos + 1;
         const selected = pos === selectedPos;
         const current = pos === currentPos;
-        const phaseLabel = phase ? titleize(phase) : null;
         return (
           <button
             key={cleanText(week.week_id) || `week-${pos}`}
@@ -2392,17 +2498,12 @@ function WeekStrip({
               <span className="cm-week-pill-index">W{index}</span>
               {current ? <span className="cm-week-pill-dot" aria-hidden="true" /> : null}
             </span>
-            {phaseLabel ? (
-              <span className="cm-week-pill-phase" title={phaseLabel}>
-                {phaseLabel}
-              </span>
-            ) : null}
             {completion.total > 0 ? (
               <span
                 className="cm-week-pill-completion"
                 title="App sessions completed. Coach/gym days are tracked separately."
               >
-                {completion.done}/{completion.total} app
+                {completion.done}/{completion.total}
                 <span className="sr-only"> sessions completed. Coach/gym days are tracked separately.</span>
               </span>
             ) : null}
@@ -2415,92 +2516,74 @@ function WeekStrip({
   );
 }
 
-/** The selected week's heading, intent, and one summary line of dates, work
- *  sources and app completion. The phase is already visible in the week pill,
- *  so this overview avoids repeating it. */
+/** A week's phase as printed text, for phases the glossary does not define. */
+function weekPhaseLabel(week: StructuredWeek | undefined): string | null {
+  const phase = week ? resolvedWeekPhase(week) : null;
+  return phase ? titleize(phase) : null;
+}
+
+/** The selected week's dates, phase badge and countdown, then one line of work
+ *  sources. The week squares above already carry the week number and app
+ *  completion, so this card never repeats them. */
 function WeekOverview({
   week,
   weekNumber,
-  completionIndex,
   openOngoing,
-  scheduleContext,
 }: {
   week: StructuredWeek;
   /** 1-based position of the viewed week; drives the open-plan week intent. */
   weekNumber: number;
-  completionIndex?: CompletionIndex;
   openOngoing: boolean;
-  scheduleContext?: PlanScheduleContext | null;
 }) {
-  // "App completed" promises app work: a coach-owned combat day carries no app
-  // card, so it is reported by the Coach/gym counter, not by this fraction.
-  const completion = weekCompletion(week, completionIndex, { includeCoachLed: false });
   const sessionSummary = weekSessionSummary(week);
-  const countdownStart = formatCountdownLabel(week.countdown_start);
-  const countdownEnd = formatCountdownLabel(week.countdown_end);
-  const countdownRange =
-    countdownStart && countdownEnd
-      ? `${countdownStart} → ${countdownEnd}`
-      : countdownStart || countdownEnd;
-  const startDate = cleanText(week.start_date);
-  const endDate = cleanText(week.end_date);
-  const dateRange =
-    startDate && endDate
-      ? formatAppDateRange(startDate, endDate)
-      : startDate || endDate
-        ? formatAppDate(startDate || endDate)
-        : null;
+  // Older payloads carry dates and countdowns only on their days.
+  const days = getDays(week);
+  const dayDates = days.map(day => cleanText(day.date)).filter((date): date is string => Boolean(date));
+  const countdown = formatCountdownLabel(week.countdown_start) || formatCountdownLabel(week.countdown_end)
+    || formatCountdownLabel(days[0]?.countdown_label);
+  const startDate = cleanText(week.start_date) || dayDates[0] || null;
+  const endDate = cleanText(week.end_date) || dayDates[dayDates.length - 1] || null;
+  // "26 Oct – 1 Nov": short enough to share a line with the phase and countdown.
+  const short = (value: string | null) => {
+    const iso = value?.slice(0, 10);
+    return iso && ISO_DAY_PATTERN.test(iso)
+      ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })
+      : value ? formatAppDate(value) : null;
+  };
+  const dateRange = startDate && endDate && startDate !== endDate
+    ? `${short(startDate)} – ${short(endDate)}`
+    : short(startDate || endDate);
 
-  // One plain line of facts rather than a grid of bordered tiles: the tiles
-  // read as buttons and pushed the training days below the fold.
   const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
   const facts = [
-    { key: "dates", text: dateRange },
-    { key: "countdown", text: countdownRange },
-    {
-      key: "app",
-      text: sessionSummary.appSessions > 0 ? plural(sessionSummary.appSessions, "app session", "app sessions") : null,
-    },
-    {
-      key: "coach",
-      text: sessionSummary.coachLedSessions > 0
-        ? plural(sessionSummary.coachLedSessions, "coach/gym day", "coach/gym days")
-        : null,
-    },
-    {
-      key: "support",
-      text: sessionSummary.supportSessions > 0
-        ? plural(sessionSummary.supportSessions, "support card", "support cards")
-        : null,
-    },
-  ].filter((fact): fact is { key: string; text: string } => Boolean(fact.text));
-  const openWeekNumber = resolveFiniteWeekNumber(
-    week.week_index,
-    scheduleContext?.current_week_number,
-  );
-  // The week's goal is already carried by the intent line below, so the
-  // heading stays short instead of truncating a sentence.
-  const heading = openOngoing
-    ? `Block ${scheduleContext?.block_number ?? 1} · Week ${openWeekNumber} of 4`
-    : `Week ${weekNumber}`;
-  const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber, getDays(week).some(d => getSessions(d).some(s => s.prescription_source === "athlete"))) : null;
-  // The pill only names the phase (GPP / SPP / Taper); the selected week's
-  // heading is where it gets explained, one tap away.
+    sessionSummary.appSessions > 0 ? plural(sessionSummary.appSessions, "app session", "app sessions") : null,
+    sessionSummary.coachLedSessions > 0 ? plural(sessionSummary.coachLedSessions, "coach day", "coach days") : null,
+    sessionSummary.supportSessions > 0 ? plural(sessionSummary.supportSessions, "support card", "support cards") : null,
+  ].filter((fact): fact is string => Boolean(fact));
+  const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber, days.some(d => getSessions(d).some(s => s.prescription_source === "athlete"))) : null;
+  // The squares stay bare (W1 · 0/2); the phase is named and explained here.
   const phaseEntry = openOngoing ? null : glossaryEntry(resolvedWeekPhase(week));
+  const phaseLabel = openOngoing ? null : phaseEntry?.term ?? weekPhaseLabel(week);
 
+  if (!dateRange && !countdown && !phaseLabel && !weekIntent && facts.length === 0) {
+    return null;
+  }
   return (
     <section className="sp-card cm-week-overview">
-      <div className="cm-week-overview-head">
-        <h2 className="sp-redflags-title">
-          {heading}
-          {phaseEntry ? (
-            <span className="cm-week-phase">
-              <span className="sp-tag sp-accent">{phaseEntry.term}</span>
-              <GlossaryTooltip term={phaseEntry.term} />
-            </span>
-          ) : null}
-        </h2>
-      </div>
+      {dateRange || countdown || phaseLabel ? (
+        <div className="cm-week-overview-head">
+          <h2 className="cm-week-dates">
+            {dateRange ?? `Week ${weekNumber}`}
+            {phaseLabel ? (
+              <span className="cm-week-phase">
+                <span className="sp-tag sp-accent" title={phaseLabel}>{phaseLabel}</span>
+                {phaseEntry ? <GlossaryTooltip term={phaseEntry.term} /> : null}
+              </span>
+            ) : null}
+          </h2>
+          {countdown ? <span className="cm-week-countdown">{countdown}</span> : null}
+        </div>
+      ) : null}
 
       {weekIntent ? (
         <p className="sp-block-purpose cm-week-intent">
@@ -2509,18 +2592,11 @@ function WeekOverview({
         </p>
       ) : null}
 
-      {facts.length > 0 || completion.total > 0 ? (
+      {facts.length > 0 ? (
         <p className="cm-week-summary">
           {facts.map((fact) => (
-            <span key={fact.key} className="cm-week-fact">{fact.text}</span>
+            <span key={fact} className="cm-week-fact">{fact}</span>
           ))}
-          {completion.total > 0 ? (
-            // Counts app work only, so it is labelled as such; coach/gym days
-            // are listed beside it but never logged here.
-            <span className="cm-week-fact cm-week-fact-done">
-              {`${completion.done}/${completion.total} app done`}
-            </span>
-          ) : null}
         </p>
       ) : null}
     </section>
@@ -2749,11 +2825,14 @@ export function StructuredPlanRenderer({
     setSelectedPos(pos);
     setRequestedDay(null);
   };
-  const handleCalendarDay = (weekPos: number, dayIndex: number) => {
+  // List navigation (Jump to Today / Next session): open and scroll to the day.
+  const openListDay = (weekPos: number, dayIndex: number) => {
     setSelectedPos(weekPos);
     setRequestedDay({ weekPos, dayIndex });
-    changeView("list");
   };
+  // Calendar taps stay in the calendar and show that day below it; only the
+  // List button switches views.
+  const [calendarSelection, setCalendarSelection] = useState<{ weekPos: number; dayIndex: number } | null>(null);
 
   const effectivePos = selectedPos ?? calendarProgress.currentWeekPos ?? focusProgress.currentWeekPos ?? 0;
   const safePos = effectivePos >= 0 && effectivePos < weeks.length ? effectivePos : 0;
@@ -2849,6 +2928,23 @@ export function StructuredPlanRenderer({
         : [],
     [view, weeks, completionIndex, calendarTodayIso, planStartIso, scheduleContext?.anchor_date, activeWeekPos],
   );
+  // Selected calendar day: the athlete's pick, else today when it is a training
+  // day in the camp, else the next session, else the first openable day.
+  const calendarDaySelection = useMemo(() => {
+    if (view !== "calendar") return null;
+    const cells = calendarRows.flatMap(row => row.cells)
+      .filter(cell => cell.weekPos !== null && cell.dayIndex !== null && cell.state !== "rest" && cell.state !== "outside");
+    const pick = (weekPos: number | null | undefined, dayIndex: number | null | undefined) =>
+      cells.find(cell => cell.weekPos === weekPos && cell.dayIndex === dayIndex);
+    const cell = (calendarSelection && pick(calendarSelection.weekPos, calendarSelection.dayIndex))
+      || cells.find(candidate => candidate.isToday)
+      || pick(focusProgress.currentWeekPos, focusProgress.currentDayPos)
+      || cells[0];
+    return cell ? { weekPos: cell.weekPos as number, dayIndex: cell.dayIndex as number } : null;
+  }, [view, calendarRows, calendarSelection, focusProgress.currentWeekPos, focusProgress.currentDayPos]);
+  const calendarSelectedDay = calendarDaySelection
+    ? getDays(weeks[calendarDaySelection.weekPos])[calendarDaySelection.dayIndex] ?? null
+    : null;
   const viewToggle = <PlanViewToggle view={view} onChange={changeView} />;
 
   return (
@@ -2870,14 +2966,36 @@ export function StructuredPlanRenderer({
           ) : null}
           {view === "calendar" ? (
             <>
-              <div className="cm-week-navigation">
-                <p className="cm-week-navigation-label">
-                  {openOngoing ? `Block ${scheduleContext?.block_number ?? 1}` : "Camp"} · {weeks.length}{" "}
-                  {weeks.length === 1 ? "week" : "weeks"}
-                </p>
+              <div className="cm-week-navigation cm-cal-navigation">
+                <div className="cm-cal-heading">
+                  <p className="cm-week-navigation-label">
+                    {openOngoing ? `Block ${scheduleContext?.block_number ?? 1}` : "Camp"} · {weeks.length}{" "}
+                    {weeks.length === 1 ? "week" : "weeks"}
+                  </p>
+                  {calendarCaption(calendarRows) ? <p className="cm-cal-subtitle">{calendarCaption(calendarRows)}</p> : null}
+                </div>
                 <div className="cm-week-nav-actions">{viewToggle}</div>
               </div>
-              <PlanCalendar rows={calendarRows} selectedWeekPos={safePos} onSelectDay={handleCalendarDay} />
+              <PlanCalendar
+                rows={calendarRows}
+                selectedWeekPos={calendarDaySelection?.weekPos ?? safePos}
+                selected={calendarDaySelection}
+                phaseFor={openOngoing ? undefined : (weekPos) =>
+                  glossaryEntry(resolvedWeekPhase(weeks[weekPos]))?.term ?? weekPhaseLabel(weeks[weekPos])}
+                onSelectDay={(weekPos, dayIndex) => setCalendarSelection({ weekPos, dayIndex })}
+              />
+              {calendarSelectedDay && calendarDaySelection ? (
+                <CalendarDayPanel
+                  key={`${calendarDaySelection.weekPos}-${calendarDaySelection.dayIndex}`}
+                  day={calendarSelectedDay}
+                  openOngoing={openOngoing}
+                  weekNumber={calendarDaySelection.weekPos + 1}
+                  completionIndex={completionIndex}
+                  currentTrainingDayIso={currentTrainingDayIso}
+                  planStartIso={planStartIso}
+                  onLogSession={onLogSession}
+                />
+              ) : null}
             </>
           ) : (
             <>
@@ -2889,15 +3007,16 @@ export function StructuredPlanRenderer({
                 completionIndex={completionIndex}
                 openOngoing={openOngoing}
                 controls={viewToggle}
+                label={openOngoing && selectedWeek
+                  ? `Block ${scheduleContext?.block_number ?? 1} · Week ${resolveFiniteWeekNumber(selectedWeek.week_index, scheduleContext?.current_week_number)} of 4`
+                  : undefined}
               />
 
               {selectedWeek ? (
                 <WeekOverview
                   week={selectedWeek}
                   weekNumber={safePos + 1}
-                  completionIndex={completionIndex}
                   openOngoing={openOngoing}
-                  scheduleContext={scheduleContext}
                 />
               ) : null}
             </>
@@ -2919,8 +3038,8 @@ export function StructuredPlanRenderer({
           <>
           {calendarProgress.currentWeekPos != null && calendarProgress.currentDayPos != null ? (
             <div className="cm-day-navigation"><button type="button" className="secondary-button"
-              onClick={() => handleCalendarDay(calendarProgress.currentWeekPos!, calendarProgress.currentDayPos!)}>Jump to Today</button>
-              {focusLabel === "Next session" && focusProgress.currentWeekPos != null && focusProgress.currentDayPos != null ? <button type="button" className="secondary-button" onClick={() => handleCalendarDay(focusProgress.currentWeekPos!, focusProgress.currentDayPos!)}>Next session</button> : null}</div>
+              onClick={() => openListDay(calendarProgress.currentWeekPos!, calendarProgress.currentDayPos!)}>Jump to Today</button>
+              {focusLabel === "Next session" && focusProgress.currentWeekPos != null && focusProgress.currentDayPos != null ? <button type="button" className="secondary-button" onClick={() => openListDay(focusProgress.currentWeekPos!, focusProgress.currentDayPos!)}>Next session</button> : null}</div>
           ) : null}
           <div className="sp-weeks cm-days">
             {dayList.length > 0 ? (
