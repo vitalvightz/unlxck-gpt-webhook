@@ -22,7 +22,11 @@
   isolation: isolate;
   display: grid;
   gap: 56px;
-  padding-bottom: var(--space-3);
+  padding-bottom: 0;
+}
+
+.app-main:has(.public-landing) {
+  padding-bottom: 0;
 }
 
 /* Brand glow behind the hero; decorative, never intercepts taps. */
@@ -652,7 +656,7 @@
    width. */
 .public-final-cta {
   position: relative;
-  margin-top: -16px;
+  margin-top: 0;
   overflow: hidden;
   isolation: isolate;
   display: flex;
@@ -959,8 +963,15 @@
   }
 
   .public-final-cta {
-    margin-top: -40px;
+    /* The grid contributes 112px: leave 80px before the final action. */
+    margin-top: -32px;
     padding: 28px 28px 28px 40px;
+  }
+
+  .app-content:has(.public-landing) > .app-safety-footer {
+    /* 32px margin + 16px inset = 48px from CTA to disclaimer text. */
+    margin-top: 32px;
+    padding-top: 16px;
   }
 
   .public-flex + .public-flex {
