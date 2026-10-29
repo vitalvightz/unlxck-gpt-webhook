@@ -45,6 +45,7 @@ for (const width of [320, 375, 390, 430, 1280]) {
     await page.getByRole("button", { name: "Jump to Today", exact: true }).click();
     await expect(today.locator("summary").first()).toBeFocused();
     await expect.poll(() => today.locator(".sp-week-body").evaluate(el => el.getAnimations().filter(animation => animation.playState === "running").length)).toBe(0);
+    await expect.poll(() => today.evaluate(el => Math.abs(el.getBoundingClientRect().top - parseFloat(getComputedStyle(el).scrollMarginTop)))).toBeLessThan(2);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     if (width < 720) {
       const [headerBottom, targetTop, background] = await page.evaluate(() => {
@@ -65,7 +66,7 @@ for (const width of [320, 375, 390, 430, 1280]) {
     await expect(demo.getByRole("link", { name: /Watch on YouTube/ })).toHaveAttribute("href", /youtube.com/);
     await demo.press("Escape");
     await expect(demo).toHaveCount(0);
-    expect(Math.abs(await page.evaluate(() => scrollY) - scrollBefore)).toBeLessThan(3);
+    await expect.poll(async () => Math.abs(await page.evaluate(() => scrollY) - scrollBefore)).toBeLessThan(3);
     await today.getByRole("button", { name: "Alternating Bounds", exact: true }).click();
     const noDemo = page.getByRole("dialog", { name: "Alternating Bounds", exact: true });
     await expect(noDemo).toBeVisible(); await noDemo.getByRole("button", { name: "Close", exact: true }).click();
