@@ -92,5 +92,6 @@ def test_archived_plan_action_does_not_claim_to_duplicate():
     assert "Duplicate as New Plan" not in dashboard
     assert "Duplicate as New Plan" not in plan_viewer
     assert "PlanManageSheet" in plans_page
-    assert "Create new plan" in dashboard
-    assert "Create New Plan" in plan_viewer
+    # #2988 unified the CTA wording.
+    assert "Create a plan" in dashboard
+    assert "Create a plan" in plan_viewer

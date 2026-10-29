@@ -205,7 +205,9 @@ def test_underfilled_conditioning_holds_release_for_planner_regeneration():
     report = validate_stage2_output(planning_brief=brief, final_plan_text="Aerobic support")
 
     assert any(item["code"] == "conditioning_role_workload_underfilled" for item in report["errors"])
-    assert apply_stage2_release_policy(report)["release_decision"] == "hold"
+    # Workload defects are release flags, never gates (stage2_policy); the
+    # underfill still forces planner regeneration below.
+    assert apply_stage2_release_policy(report)["release_decision"] == "publish_with_flags"
     retry = build_stage2_retry(
         stage1_result={"planning_brief": brief},
         final_plan_text="Aerobic support",

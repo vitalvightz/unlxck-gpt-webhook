@@ -76,10 +76,11 @@ def test_reduce_increase_maintain_are_real_authorised_doses_and_idempotent():
     role = roles['weeks'][0]['session_roles'][0]
     coaching = exercise_coaching(members[0], role, phase='SPP', d_day=42, athlete=athlete,
         progression_context=contexts[occurrence_key(role, members[0], 42)])
-    assert 'from 3 to 4' in coaching['progression_rule']
-    assert 'keep rest and effort unchanged' in coaching['progression_rule']
-    assert len(coaching['progression_rule']) < 120
-    assert any('2' in line for line in coaching['regression_options'])
+    # #2895: Progress/Easier notes belong to the final-session writer; the
+    # deterministic card never manufactures an increment or a reduced dose.
+    assert 'progression_rule' not in coaching
+    assert coaching['regression_options'] == []
+    assert contexts[occurrence_key(role, members[0], 42)]['next']['dose']['sets'] == 4
     assert roles == before  # Coaching cannot author a dose.
 
 

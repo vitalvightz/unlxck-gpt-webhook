@@ -122,8 +122,11 @@ def test_no_legacy_token_in_data():
     repo_root = Path(__file__).resolve().parents[1]
     forbidden = "med balls / bands"
     forbidden_combo = '"medicine_ball", "bands"'
+    # Frozen audit snapshots retain historical source text as evidence, as in
+    # tools/check_tag_retirement.py; they are not active data.
+    frozen = {repo_root / "tools" / "metadata_integrity_original_sources.json"}
     for path in repo_root.rglob("*.json"):
-        if "tests" in path.parts:
+        if "tests" in path.parts or path in frozen:
             continue
         text = path.read_text(encoding="utf-8").lower()
         assert forbidden not in text, f"Legacy token found in {path}"
