@@ -1,7 +1,7 @@
 """Physical-session frequency contract.
 
 ``training_frequency`` means one thing across the planner: the number of
-*physical* training sessions the athlete plans to do in a week. The late-fight
+distinct *physical training days* the athlete plans in a week. The late-fight
 taper may make those sessions cheaper — less volume, less contact, less
 eccentric load, shorter — but it may not silently delete the sessions
 themselves, and zero-load tactical/education support may never stand in for one.
@@ -22,6 +22,8 @@ from fightcamp.physical_session_frequency import (
     audit_physical_session_frequency,
     cadence_windows,
     count_physical_sessions,
+    appointment_budget_exceeded,
+    would_add_excess_training_day,
     is_physical_session_role,
     physical_session_offsets,
     plan_physical_occupancy,
