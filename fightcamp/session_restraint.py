@@ -21,6 +21,15 @@ def _candidate_fatigue_cost(candidate: dict[str, Any]) -> float:
     return float(candidate.get("fatigue_cost", 0.0))
 
 
+def _candidate_tie_key(candidate: dict[str, Any]) -> tuple:
+    # A seeded caller supplies ``tie_rank`` (its shuffled source order) so the
+    # seed, not the alphabet, decides between equally rated candidates.
+    tie_rank = candidate.get("tie_rank")
+    if tie_rank is None:
+        return (0, _candidate_name(candidate))
+    return (int(tie_rank), _candidate_name(candidate))
+
+
 def sort_weighted_candidates(
     weighted_candidates: list[dict[str, Any]],
     *,
@@ -35,6 +44,9 @@ def sort_weighted_candidates(
     then name, so lower-fatigue items may intentionally rise above slightly
     higher-scored items within the same group. Cross-group order remains score-driven,
     and the grouping pass avoids non-transitive pairwise comparison logic.
+
+    When candidates carry ``tie_rank`` it replaces name as the in-group
+    fallback after fatigue cost; candidates without one keep name order.
     """
     if len(weighted_candidates) < 2:
         return list(weighted_candidates)
@@ -57,7 +69,7 @@ def sort_weighted_candidates(
 
         group = score_sorted[group_start:group_end]
         ordered.extend(
-            sorted(group, key=lambda candidate: (_candidate_fatigue_cost(candidate), _candidate_name(candidate)))
+            sorted(group, key=lambda candidate: (_candidate_fatigue_cost(candidate), _candidate_tie_key(candidate)))
         )
         group_start = group_end
 

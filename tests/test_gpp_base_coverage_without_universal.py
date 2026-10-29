@@ -106,15 +106,13 @@ def _generate_gpp(equipment: list[str], *, explosive_priority: bool = False) -> 
 def test_gpp_fills_equipment_supported_base_categories_without_universal(profile_name):
     equipment = EQUIPMENT_PROFILES[profile_name]
     bank = _exercise_bank()
-    # Base-role promotion requires an anchor-capable provider. After removing
-    # Slow-Lowered Pull-Up from bodyweight-only access, the remaining upper-pull
-    # match is a rehab support row; it cannot promise a loaded base anchor.
+    # Base-role promotion requires an anchor-capable provider. Bodyweight-only
+    # access has no pull-up bar, but the equipment-free push-up rows are
+    # anchor-capable presses, so upper-body push/pull is providable there too.
     providers = [ex for ex in _equipment_eligible(bank, equipment)
                  if classify_strength_item(ex)["anchor_capable"]]
     providable = _providable_categories(providers)
-    if profile_name == "bodyweight_only":
-        assert "upper_body_push_pull" not in providable
-    elif profile_name == "bodyweight_pullup_bar":
+    if profile_name in {"bodyweight_only", "bodyweight_pullup_bar"}:
         assert "upper_body_push_pull" in providable
 
     exercises = _generate_gpp(equipment)

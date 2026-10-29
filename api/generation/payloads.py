@@ -22,6 +22,17 @@ def _stable_payload_hash(payload: dict[str, Any]) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
+def generation_seed(athlete_id: str, client_request_id: str) -> int:
+    """Selection seed for one generation request.
+
+    Equally rated strength candidates are ordered by a shuffle seeded from this
+    value, so a new request varies those ties while a retry of the same request
+    (same client request id) reproduces the same plan and payload hash.
+    """
+    digest = hashlib.sha256(f"{athlete_id}:{client_request_id}".encode("utf-8")).digest()
+    return int.from_bytes(digest[:4], "big")
+
+
 def parse_plan_request(value: Any) -> PlanRequest:
     if isinstance(value, PlanRequest):
         return value

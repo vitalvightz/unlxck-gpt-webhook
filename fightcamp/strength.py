@@ -1,5 +1,6 @@
 import logging
 import os
+import hashlib
 import json
 import random
 import re
@@ -272,6 +273,16 @@ def _exercise_fatigue_cost(exercise: dict, quality_profile: dict) -> float:
         fatigue_cost += 0.5
 
     return round(fatigue_cost, 2)
+
+
+def _seeded_tie_rank(seed, name: str) -> int:
+    """Tie order for one exercise under one seed.
+
+    Keyed on the exercise itself rather than its position in a shuffled bank,
+    so adding or removing an unrelated row never reorders other tied picks.
+    """
+    digest = hashlib.sha256(f"{seed}:{name}".encode("utf-8")).digest()
+    return int.from_bytes(digest[:8], "big")
 
 
 def _strength_late_window_severity(window: str | None) -> float:
@@ -1464,20 +1475,24 @@ def get_exercise_bank() -> list[dict]:
         for item in _exercise_bank_cache:
             validate_training_item(item, source="exercise_bank.json", require_phases=True, mode="runtime")
             normalize_item_tags(item)
+            # Selection writes the canonical movement back onto the row it reads
+            # (``normalize_exercise_movement``), and classification reads that
+            # movement. Normalizing here means every caller sees the same rows,
+            # whether or not ``prime_strength_banks`` ran first.
+            normalize_exercise_movement(item)
     return _exercise_bank_cache
 
 
 def prime_strength_banks() -> None:
-    """Load and normalize strength banks once so later runs see consistent state.
+    """Load the strength bank once so later runs skip the cold read.
 
     `_detect_movement_pattern` includes the exercise's existing `movement` value
-    in its keyword haystack and writes the result back in-place, so the first
-    plan-generation call would otherwise produce different per-item movement
-    classifications than later calls. Normalizing at prime time pins the
-    canonical movement up front and removes that source of seeded-output drift.
+    in its keyword haystack and writes the result back in-place, so an
+    unnormalized bank would classify items differently on the first
+    plan-generation call than on later ones. ``get_exercise_bank`` pins the
+    canonical movement as it loads, so priming only needs to trigger the load.
     """
-    for item in get_exercise_bank():
-        normalize_exercise_movement(item)
+    get_exercise_bank()
 
 
 MOVEMENT_PATTERN_TAGS = {
@@ -2475,6 +2490,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
             "name": ex.get("name", ""),
             "score": score,
             "fatigue_cost": breakdown.get("fatigue_cost", ex.get("fatigue_cost", 0.0)),
+            # Seeded runs break ties by a per-exercise seeded rank; unseeded
+            # runs keep the deterministic name fallback.
+            "tie_rank": _seeded_tie_rank(seed, ex.get("name", "")) if rng is not None else None,
             "payload": (ex, score, breakdown),
         }
         for ex, score, breakdown in weighted_exercises

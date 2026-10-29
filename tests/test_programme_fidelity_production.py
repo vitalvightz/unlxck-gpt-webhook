@@ -15,7 +15,7 @@ from api.stage2_automation import OpenAIStage2Automator
 from api.generation.persistence import persist_plan_and_finalize
 from api.services.effective_structured_plan import resolve_effective_structured_plan
 from api.structured_plan_models import safe_parse_structured_plan
-from fightcamp import input_parsing, stage2_planning_brief
+from fightcamp import input_parsing, stage2_planning_brief, strength
 from fightcamp.conditioning import _conditioning_structured_profile, get_conditioning_bank
 from fightcamp.goal_preservation import collect_goal_evidence
 from fightcamp.late_fight_phase_eligibility import _stage1_phase_for_offset
@@ -29,14 +29,37 @@ from support import FakeOpenAIClient, FakeStore
 
 FIXTURES = Path(__file__).parent / "fixtures" / "programme_fidelity"
 
+# The recorded render was written for the strength bank production used on
+# 2026-10-14. Replays regenerate against that bank: rows added since are
+# removed and later phase edits undone, so the recording still matches.
+ROWS_ADDED_AFTER_RECORDING = frozenset({
+    "Tempo Push-Up (3-1-1)", "Feet-Elevated Push-Up", "Pike Push-Up", "Band Bent-Over Row",
+    "Half-Kneeling Single-Arm Band Row", "Split Squat (Bodyweight Tempo 3-1-1)",
+})
+PHASES_AT_RECORDING = {"Bulgarian Split Squat": ["SPP"]}
+
+
+def _bank_at_recording():
+    rows = []
+    for row in deepcopy(strength.get_exercise_bank()):
+        if row["name"] in ROWS_ADDED_AFTER_RECORDING:
+            continue
+        if row["name"] in PHASES_AT_RECORDING:
+            row["phases"] = list(PHASES_AT_RECORDING[row["name"]])
+        rows.append(row)
+    return rows
+
 
 @pytest.fixture(scope="module")
 def production_replay():
     intake = json.loads((FIXTURES / "affected_intake.json").read_text(encoding="utf8"))
-    # Production did not persist its random seed. Fix it only for the source
-    # regeneration; the recorded model response and authority are separate.
-    intake["random_seed"] = 1
+    # Production requests carried no seed at the time, so the source is
+    # regenerated unseeded (name-order ties), as production ran it; the
+    # recorded model response and authority are separate.
+    intake["random_seed"] = None
     with pytest.MonkeyPatch.context() as patch:
+        recorded_bank = _bank_at_recording()
+        patch.setattr(strength, "get_exercise_bank", lambda: recorded_bank)
         patch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 10, 14, 3, 40))
         patch.setattr(stage2_planning_brief, "_utc_now", lambda: datetime(2026, 10, 14, 3, 40))
         stage1 = generate_plan_sync(PlanRequest(**intake).to_payload())
@@ -309,8 +332,10 @@ def test_a_label_or_low_effort_bag_touch_cannot_clear_power(production_replay):
 ])
 def test_earlier_saved_intakes_and_recorded_responses_have_the_same_fidelity_contract(name, created_at):
     intake = json.loads((FIXTURES / f"{name}.json").read_text(encoding="utf8"))
-    intake["random_seed"] = 1
+    intake["random_seed"] = None  # unseeded, as production ran it
     with pytest.MonkeyPatch.context() as patch:
+        recorded_bank = _bank_at_recording()
+        patch.setattr(strength, "get_exercise_bank", lambda: recorded_bank)
         patch.setattr(input_parsing, "_utc_now", lambda: created_at)
         patch.setattr(stage2_planning_brief, "_utc_now", lambda: created_at)
         patch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")

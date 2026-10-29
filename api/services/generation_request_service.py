@@ -10,7 +10,7 @@ from fastapi import BackgroundTasks, HTTPException, Request, status
 from api.compliance import evaluate_profile_compliance, profile_age_years
 from api.compliance_guards import require_health_data_consent, require_onboarding_compliance
 from api.generation_health import build_non_health_generation_payload, health_generation_fields
-from api.generation.payloads import _stable_payload_hash
+from api.generation.payloads import _stable_payload_hash, generation_seed
 from api.generation_job_helpers import (
     _PROTECTED_TRIAGE_STATUSES,
     _build_protected_triage_response,
@@ -140,6 +140,11 @@ async def generate_plan_for_current_user(
         request.headers.get("X-Client-Request-Id"),
         "cli",
     )
+    seed_derived = request_body.random_seed is None
+    if seed_derived:
+        # Seeded before hashing: a retry with the same client request id keeps
+        # the same seed and payload hash; a new request varies tied selections.
+        request_body.random_seed = generation_seed(profile.athlete_id, client_request_id)
     request_payload = request_body.model_dump(mode="json")
     if (
         profile.role == "athlete"
@@ -167,6 +172,15 @@ async def generate_plan_for_current_user(
         client_request_id=client_request_id,
     )
     stale_after_seconds = _generation_job_stale_after_seconds()
+    if existing_job and seed_derived:
+        # A job that already owns this client request id keeps its own seed,
+        # including "none" for jobs created before requests were seeded, so a
+        # retry is never mistaken for a different payload.
+        stored_payload = existing_job.get("request_payload")
+        if isinstance(stored_payload, dict) and stored_payload.get("random_seed") != request_payload.get("random_seed"):
+            request_body.random_seed = stored_payload.get("random_seed")
+            request_payload = {**request_payload, "random_seed": stored_payload.get("random_seed")}
+            payload_hash = _stable_payload_hash(request_payload)
     if existing_job:
         existing_payload_hash = existing_job.get("payload_hash")
         if existing_payload_hash and existing_payload_hash != payload_hash:

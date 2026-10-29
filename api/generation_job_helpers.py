@@ -545,13 +545,18 @@ def _find_existing_terminal_job_for_same_payload(
     athlete_id: str,
     request_payload: dict[str, Any],
 ) -> dict[str, Any] | None:
-    target_hash = _stable_payload_signature(request_payload)
+    # The selection seed differs per request by design, so it never makes an
+    # otherwise identical intake a different request here.
+    def _signature(payload: dict[str, Any]) -> str:
+        return _stable_payload_signature({k: v for k, v in payload.items() if k != "random_seed"})
+
+    target_hash = _signature(request_payload)
     jobs = store.list_generation_jobs_for_athlete(athlete_id, limit=25)
     for job in jobs:
         job_payload = job.get("request_payload")
         if not isinstance(job_payload, dict):
             continue
-        if _stable_payload_signature(job_payload) != target_hash:
+        if _signature(job_payload) != target_hash:
             continue
         plan_id = str(job.get("plan_id") or "").strip()
         if plan_id:

@@ -5922,3 +5922,75 @@ def test_age_is_normalised_before_the_generation_payload_is_hashed():
     second_job = store.get_generation_job(second["job_id"])
     assert first_job["payload_hash"] == second_job["payload_hash"]
     assert first["job_id"] == second["job_id"]
+
+
+def test_generate_plan_seeds_each_request_from_its_client_request_id():
+    from api.generation.payloads import generation_seed
+
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    _seed_athlete_profile(store)
+    payload = _build_request().model_dump(mode="json")
+    payload.pop("random_seed", None)
+
+    def _post(client_request_id: str, body: dict) -> dict:
+        response = client.post(
+            "/api/plans/generate",
+            headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": client_request_id},
+            json=body,
+        )
+        assert response.status_code == 202
+        return response.json()
+
+    first = _post("seed-request-a", payload)
+    retry = _post("seed-request-a", payload)
+    assert retry["job_id"] == first["job_id"]
+
+    job = store.get_generation_job_by_client_request_id(athlete_id="athlete-1", client_request_id="seed-request-a")
+    assert job["request_payload"]["random_seed"] == generation_seed("athlete-1", "seed-request-a")
+
+    # A failed job neither blocks a new request nor stands in for it.
+    store.update_generation_job(job["id"], status="failed", completed_at=_now())
+    second = _post("seed-request-b", payload)
+    assert second["job_id"] != first["job_id"]
+    second_job = store.get_generation_job_by_client_request_id(athlete_id="athlete-1", client_request_id="seed-request-b")
+    assert second_job["request_payload"]["random_seed"] == generation_seed("athlete-1", "seed-request-b")
+    assert second_job["request_payload"]["random_seed"] != job["request_payload"]["random_seed"]
+
+
+def test_generate_plan_keeps_an_explicit_seed():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    _seed_athlete_profile(store)
+    payload = _build_request().model_dump(mode="json")
+    payload["random_seed"] = 12345
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "explicit-seed-request"},
+        json=payload,
+    )
+    assert response.status_code == 202
+    job = store.get_generation_job_by_client_request_id(athlete_id="athlete-1", client_request_id="explicit-seed-request")
+    assert job["request_payload"]["random_seed"] == 12345
+
+
+def test_retry_of_a_job_created_before_seeding_is_not_a_payload_mismatch():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    _seed_athlete_profile(store)
+    legacy_payload = _build_request().model_dump(mode="json")
+    legacy_payload["random_seed"] = None
+    existing = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="pre-seed-request",
+        source="self_serve",
+        request_payload=legacy_payload,
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "pre-seed-request"},
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert response.status_code == 202
+    assert response.json()["job_id"] == existing["id"]
+    assert len(store.generation_jobs) == 1

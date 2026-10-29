@@ -96,6 +96,7 @@
     "name": "Bulgarian Split Squat",
     "category": "lower_body",
     "phases": [
+      "GPP",
       "SPP"
     ],
     "method": "strength",
@@ -16175,5 +16176,250 @@
     "cost_class": "low",
     "support_only": true,
     "meaningful_stress": false
+  },
+  {
+    "name": "Tempo Push-Up (3-1-1)",
+    "category": "upper_body",
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "horizontal_push",
+    "type": "bilateral",
+    "tags": [
+      "upper_body",
+      "mech_upper_press",
+      "mech_trunk_stability"
+    ],
+    "equipment": "bodyweight",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "moderate",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
+    "low_impact": true,
+    "low_eccentric": false,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true,
+    "notes": "Equipment-free horizontal press. Lower for 3 seconds, pause 1 second just above the floor, press up in 1 second with a rigid plank from head to heels. Stop the set when the hips sag or the tempo breaks. Progress by elevating the feet; regress by raising the hands onto a sturdy surface."
+  },
+  {
+    "name": "Feet-Elevated Push-Up",
+    "category": "upper_body",
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "horizontal_push",
+    "type": "bilateral",
+    "tags": [
+      "upper_body",
+      "mech_upper_press",
+      "mech_trunk_stability"
+    ],
+    "equipment": "bodyweight",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true,
+    "notes": "Feet on a step, chair or bed edge so more bodyweight loads the press. Hands under the shoulders, ribs down, chest to just above the floor on every rep. Stop when the hips pike or the lockout softens. Regress to a floor push-up."
+  },
+  {
+    "name": "Pike Push-Up",
+    "category": "upper_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "vertical_push",
+    "type": "bilateral",
+    "tags": [
+      "upper_body",
+      "shoulders",
+      "mech_upper_press",
+      "mech_shoulder_overhead"
+    ],
+    "equipment": "bodyweight",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_shoulder_overhead",
+      "mech_upper_press"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true,
+    "notes": "Equipment-free overhead press. Hips high in an inverted V, lower the crown of the head toward the floor between the hands, then press back up. Keep elbows about 45 degrees from the body. Skip with any shoulder pain overhead; regress by keeping the hands on a raised surface."
+  },
+  {
+    "name": "Band Bent-Over Row",
+    "category": "upper_body",
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "pull",
+    "type": "bilateral",
+    "tags": [
+      "mech_upper_pull",
+      "mech_grip_support",
+      "mech_trunk_stability"
+    ],
+    "equipment": "bands",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true,
+    "notes": "Stand on the band, bend at the hips to a flat back, and row both handles to the lower ribs. Pause 1 second with the shoulder blades back, lower under control. Choose a band that makes the last two reps of each set hard but clean; shorten the band or double it to progress."
+  },
+  {
+    "name": "Half-Kneeling Single-Arm Band Row",
+    "category": "upper_body",
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "pull",
+    "type": "unilateral",
+    "tags": [
+      "anti_rotation",
+      "mech_upper_pull",
+      "mech_grip_support",
+      "mech_trunk_stability"
+    ],
+    "equipment": "bands",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true,
+    "notes": "Anchor the band at chest height. Half-kneeling with the working-side knee down, row one handle to the ribs without letting the torso rotate toward the band. Pause 1 second, lower slowly, finish all reps on one side, then change sides."
+  },
+  {
+    "name": "Split Squat (Bodyweight Tempo 3-1-1)",
+    "category": "lower_body",
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "squat",
+    "type": "unilateral",
+    "tags": [
+      "quad_dominant",
+      "mech_lower_lunge",
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "equipment": "bodyweight",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "moderate",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "moderate",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": false,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true,
+    "notes": "Equipment-free unilateral leg strength. Long split stance, lower for 3 seconds until the back knee hovers just above the floor, pause 1 second, drive up through the front foot. Finish all reps on one leg, then change legs. Progress by elevating the rear foot on a step; regress by shortening the range."
   }
 ]
