@@ -282,9 +282,9 @@ def test_revalidation_does_not_force_a_move_when_final_doses_are_legal():
     brief = _plan("boxer56_novice_revalidation_move")
     actions = (brief["weekly_role_map"].get("realised_load_revalidation") or {}).get("actions") or []
     assert actions == []
-    assert appointment_budget_exceeded(brief["weekly_role_map"], 3)
-    assert any("requested count exceeded" in flag for w in brief["weekly_role_map"]["weeks"]
-               for flag in w.get("coach_note_flags", []))
+    day_overrun = appointment_budget_exceeded(brief["weekly_role_map"], 3)
+    assert any("requested day count exceeded" in flag for w in brief["weekly_role_map"]["weeks"]
+               for flag in w.get("coach_note_flags", [])) == day_overrun
     assert all(g["satisfied"] for g in brief["goal_preservation"])
     for index, week in enumerate(brief["weekly_role_map"]["weeks"]):
         for role in _normal_strength(week):
