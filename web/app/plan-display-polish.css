@@ -68,11 +68,14 @@
   letter-spacing: -0.02em;
   line-height: 1.4;
   overflow-wrap: anywhere;
+  animation: plan-session-title-pulse 3.5s ease-in-out infinite;
 }
-.cm-day .sp-session-head,
-.cm-day .sp-mental-head {
-  border-inline-start: 3px solid var(--brand-red);
-  padding-inline-start: 10px;
+@keyframes plan-session-title-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.78; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-day .sp-session-title { animation: none; }
 }
 .sp-session[data-layout="plan"] .sp-session-instruction,
 .cm-day .sp-coaching {
