@@ -2729,13 +2729,16 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         *,
         replacement_profile: dict | None = None,
         replacement_late_safe_profile: dict | None = None,
+        eligible_indices: set[int] | None = None,
     ) -> int | None:
+        eligible = [idx for idx in range(len(exercises))
+                    if eligible_indices is None or idx in eligible_indices]
         support_positions = [
             idx
-            for idx, exercise in enumerate(exercises)
-            if _cached_classify(exercise)["support_only"]
+            for idx in eligible
+            if _cached_classify(exercises[idx])["support_only"]
         ]
-        candidate_indices = support_positions or list(range(len(exercises)))
+        candidate_indices = support_positions or eligible
         if not candidate_indices:
             return None
 
@@ -2813,23 +2816,67 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
 
     def _promote_base_categories(exercises: list[dict]) -> list[dict]:
         updated = list(exercises)
+        targets = {priority_adaptation(value) for value in
+                   [*priority_profile.all_goals, *priority_profile.all_weak_areas]} - {""}
         for category in _required_base_categories(updated):
+            # Earlier promotions may already have supplied more than one role.
+            missing = set(_required_base_categories(updated))
+            if category not in missing:
+                continue
+            adaptation_sets = [strength_adaptation_relevance(
+                ex, prescription_type=_classify_prescription_type(ex)) & targets for ex in updated]
+            adaptations = set().union(*adaptation_sets)
+            retain_rotation = rotational_power_coverage_gap and any(
+                _cached_classify(ex)["anchor_capable"] and "rotational_power" in _cached_classify(ex)["base_categories"]
+                for ex in updated)
+            remaining_options = []
+            for idx in range(len(updated)):
+                remaining = updated[:idx] + updated[idx + 1:]
+                remaining_adaptations = set().union(*(values for j, values in enumerate(adaptation_sets) if j != idx))
+                remaining_missing = set(_required_base_categories(remaining))
+                if retain_rotation and not any(_cached_classify(ex)["anchor_capable"]
+                        and "rotational_power" in _cached_classify(ex)["base_categories"] for ex in remaining):
+                    remaining_missing.add("rotational_power")
+                remaining_options.append((idx, remaining, remaining_missing, remaining_adaptations))
+            replacement_indices: dict[str, int] = {}
+
+            def can_promote(cand, _score, _reasons, profile):
+                if not profile["anchor_capable"] or category not in profile["base_categories"]:
+                    return False
+                if _cached_guarded_decision(cand).action == "exclude":
+                    return False
+                movement = _cached_movement(cand)
+                candidate_adaptations = strength_adaptation_relevance(cand, prescription_type=_classify_prescription_type(cand))
+                eligible = set()
+                for idx, remaining, remaining_missing, remaining_adaptations in remaining_options:
+                    # A third movement would be discarded by the next cap pass.
+                    if movement != "unknown" and sum(_cached_movement(ex) == movement for ex in remaining) >= 2:
+                        continue
+                    if remaining_missing - set(profile["base_categories"]) - missing:
+                        continue
+                    # Coverage must not displace a selected training stimulus.
+                    if not adaptations <= remaining_adaptations | candidate_adaptations:
+                        continue
+                    eligible.add(idx)
+                index = _support_replacement_index(
+                    updated, replacement_profile=profile,
+                    replacement_late_safe_profile=_cached_late_safe_profile(cand, profile),
+                    eligible_indices=eligible,
+                )
+                if index is None:
+                    return False
+                replacement_indices[cand["name"]] = index
+                return True
+
             selected_names = _selected_names(updated)
             replacement_entry = _best_candidate(
-                lambda cand, _score, _reasons, profile: profile["anchor_capable"]
-                and category in profile["base_categories"],
+                can_promote,
                 exclude_names=selected_names,
             )
             if not replacement_entry:
                 continue
-            replacement, replacement_score, replacement_reasons, replacement_profile, late_safe_profile = replacement_entry
-            replace_index = _support_replacement_index(
-                updated,
-                replacement_profile=replacement_profile,
-                replacement_late_safe_profile=late_safe_profile,
-            )
-            if replace_index is None:
-                break
+            replacement, replacement_score, replacement_reasons, _replacement_profile, _late_safe_profile = replacement_entry
+            replace_index = replacement_indices[replacement["name"]]
             _replace_exercise(
                 updated,
                 index=replace_index,
