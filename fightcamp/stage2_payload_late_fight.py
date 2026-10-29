@@ -3017,6 +3017,11 @@ def _late_fight_legality_cost(
     return (forbid_count, deprioritize_count)
 
 
+def _neural_primer_on_fight_eve(role: dict[str, Any], label: str) -> bool:
+    """A neural primer is never scheduled on D-1 (the eve of the fight)."""
+    return str(role.get("role_key") or "").strip().lower() == "neural_primer_day" and _countdown_offset(label) == 1
+
+
 def _late_fight_best_assignment(
     selected_roles: list[dict[str, Any]],
     legal_countdown_labels: list[str],
@@ -3058,7 +3063,8 @@ def _late_fight_best_assignment(
         base_labels = [
             label
             for label in legal_countdown_labels
-            if not role_consumes_day_slot or label not in occupied_labels
+            if (not role_consumes_day_slot or label not in occupied_labels)
+            and not _neural_primer_on_fight_eve(role, label)
         ]
         label_options = base_labels
         for label in label_options:
@@ -3200,6 +3206,13 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
     max_meaningful_stress_exposures = role_budget.get("max_meaningful_stress_exposures")
     max_support_roles = role_budget.get("max_support_roles")
 
+    # No neural primer on D-1: drop a primer whose only legal day is D-1 so a
+    # required one cannot empty the whole window.
+    eligible_candidates = [
+        role for role in eligible_candidates
+        if not all(_neural_primer_on_fight_eve(role, label) for label in eligible_countdown_labels)
+        or not eligible_countdown_labels
+    ]
     required_roles = [role for role in eligible_candidates if role.get("_required")]
     optional_roles = [role for role in eligible_candidates if not role.get("_required")]
 
