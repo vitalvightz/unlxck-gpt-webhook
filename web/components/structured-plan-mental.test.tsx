@@ -124,3 +124,77 @@ test("old D-40 mixed Tactical Picture gets mental layout", () => {
   assert.match(html, /sp-mental-steps/);
   assert.doesNotMatch(html, /Show less/);
 });
+
+
+for (const title of ["Fight Visualisation", "Self-Review Cues", "Tactical Watch", "Breathing Reset"]) {
+  test(`Plan collapses ${title} and trusts only the server optional flag`, () => {
+    for (const optional of [true, false, undefined]) {
+      const session: StructuredSession = { title, session_type: title === "Breathing Reset" ? "recovery" : "mindset",
+        optional, objective: "Optional. Preserve this authored description.",
+        blocks: [{ block_id: "support", block_type: "mindset", display_name: title,
+          coaching_cues: ["Step 1: Keep the first instruction.", "Step 2: Keep the second instruction."] }] };
+      const html = renderToStaticMarkup(<SessionCard session={session} layout="plan" defaultOpenBlocks />);
+      assert.match(html, /sp-session-support/);
+      assert.match(html, /<details class="sp-optional-disclosure">/);
+      assert.doesNotMatch(html, /<details[^>]* open/);
+      assert.equal(html.includes("<span>Optional</span>"), optional === true);
+      assert.doesNotMatch(html, /Optional\./);
+      assert.match(html, /Preserve this authored description/);
+      assert.match(html, /Keep the first instruction/);
+      assert.match(html, /Keep the second instruction/);
+      for (const layout of ["section", "card"] as const) {
+        const today = renderToStaticMarkup(<SessionCard session={session} layout={layout} initiallyOpenFirstBlock={false} />);
+        assert.doesNotMatch(today, /sp-session-support|sp-optional-disclosure/);
+        if (title === "Breathing Reset") assert.match(today, /Optional\./);
+      }
+    }
+  });
+}
+
+test("primary Plan sessions keep their presentation even when prose says Optional", () => {
+  for (const session_type of ["strength_power", "conditioning", "skill", "sparring"]) {
+    const html = renderToStaticMarkup(<SessionCard layout="plan" session={{ title: "Primary training", session_type,
+      objective: "Optional. This is authored prose." }} />);
+    assert.doesNotMatch(html, /sp-session-support|sp-optional-disclosure/);
+  }
+});
+
+test("Plan support disclosure opens, closes, and retains logging", async () => {
+  await import("./test-dom");
+  const { act } = await import("react");
+  const { createRoot } = await import("react-dom/client");
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  let logged = 0;
+  try {
+    await act(async () => root.render(<SessionCard layout="plan" defaultOpenBlocks session={{ title: "Self-Review Cues",
+      session_type: "mindset", optional: true, objective: "Keep this description.",
+      blocks: [{ block_type: "mindset", coaching_cues: ["Step 1: Keep this numbered instruction."] }] }}
+      completionInfo={{ display: { state: "done", tone: "green", label: "Done" }, onLog: () => logged++ }} />));
+    const details = host.querySelector("details.sp-optional-disclosure")! as HTMLDetailsElement;
+    const summary = details.querySelector("summary")!;
+    assert.equal(details.open, false);
+    await act(async () => summary.click());
+    assert.equal(details.open, true);
+    assert.match(details.textContent ?? "", /Keep this numbered instruction/);
+    assert.match(details.textContent ?? "", /Done/);
+    const log = Array.from(details.querySelectorAll("button")).find(button => button.textContent === "Log this session")!;
+    await act(async () => log.click());
+    assert.equal(logged, 1);
+    await act(async () => summary.click());
+    assert.equal(details.open, false);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
+
+
+test("server optional sessions collapse without an Optional prose prefix", () => {
+  const html = renderToStaticMarkup(<SessionCard layout="plan" session={{ title: "Fight Visualisation",
+    session_type: "mindset", optional: true, objective: "Rehearse the opening exchange." }} />);
+  assert.match(html, /sp-session-support/);
+  assert.match(html, /<span>Optional<\/span>/);
+  assert.match(html, /Rehearse the opening exchange/);
+});
