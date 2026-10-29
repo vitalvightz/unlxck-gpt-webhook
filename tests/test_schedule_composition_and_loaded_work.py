@@ -37,8 +37,10 @@ _SCENARIOS = {
     # Audit reproductions.
     "mma21_two_strength_on_d17": {"sport": "mma", "goals": ("strength", "speed"), "hard": ("Tuesday",),
                                   "target": "68"},
+    # Unseeded: this scenario pins the no-move case, and a seed decides between
+    # equally rated strength picks, some of which legitimately need relocating.
     "boxer56_novice_revalidation_move": {"days": 56, "frequency": 3, "target": "68",
-                                         "goals": ("strength", "conditioning")},
+                                         "goals": ("strength", "conditioning"), "seed": None},
     "boxer70_power_only_session_held": {"days": 70, "goals": ("strength", "power"), "target": "68",
                                         "weak": ("trunk_strength", "gas_tank"),
                                         "equipment": ("barbell", "dumbbells", "kettlebells", "sled", "yoke", "sandbag",
@@ -66,7 +68,7 @@ _SCENARIOS = {
 def _payload(key):
     kw = {"days": 21, "sport": "boxing", "goals": ("speed", "conditioning"), "weak": ("trunk_strength",),
           "frequency": 4, "equipment": _FULL_GYM, "hard": ("Thursday",), "weight": "68", "target": "65",
-          "guided": None, **_SCENARIOS[key]}
+          "guided": None, "seed": 7, **_SCENARIOS[key]}
     fields = {
         "Full name": "Regression", "Age": "24", "Weight (kg)": kw["weight"], "Target Weight (kg)": kw["target"],
         "Height (cm)": "175", "Stance": "Orthodox", "Fighting Style (Technical)": kw["sport"],
@@ -80,7 +82,7 @@ def _payload(key):
         "When is your next fight?": (_NOW.date() + dt.timedelta(days=kw["days"])).isoformat(),
         "Athlete Time Zone": "UTC",
     }
-    data = {"data": {"fields": [{"label": k, "value": v} for k, v in fields.items()]}, "random_seed": 7}
+    data = {"data": {"fields": [{"label": k, "value": v} for k, v in fields.items()]}, "random_seed": kw["seed"]}
     if kw["guided"]:
         data["guided_injuries"] = kw["guided"]
     return data
