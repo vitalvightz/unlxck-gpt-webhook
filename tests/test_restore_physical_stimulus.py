@@ -208,3 +208,17 @@ def test_validator_detects_exact_d26_double_strength_and_repeated_footwork():
     }
     roles[1]["scheduled_countdown_label"] = "D-19"
     assert _same_day_strength_ownership_warnings(brief) == []
+
+
+def test_guided_surface_cut_reaches_the_movement_guard_with_its_type(programmes):
+    # The guided card's phrase is only its area. Without the resolved type the
+    # guard read "left bicep" as a moderate elbow injury and excluded jumps.
+    from fightcamp.injury_guard import injury_decision
+
+    brief, _ = programmes["saved_plan"]
+    injuries = brief["athlete_snapshot"]["injuries"]
+    assert injuries == ["left bicep cut"]
+    jump = next(row for row in json.loads((ROOT / "data/exercise_bank.json").read_text())
+                if row["name"] == "Jump-in-Place (Max Frequency)")
+    assert injury_decision(jump, injuries, "SPP", "low").action == "allow"
+    assert injury_decision(jump, ["left bicep"], "SPP", "low").action == "exclude"

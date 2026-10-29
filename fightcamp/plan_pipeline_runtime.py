@@ -372,7 +372,17 @@ def build_runtime_context(
     short_notice = is_short_notice_days(plan_input.days_until_fight)
 
     injuries_only_text = "; ".join(parsed_injury_phrases)
-    raw_injury_list = [phrase.strip().lower() for phrase in parsed_injury_phrases if phrase.strip()]
+    # The movement guard re-parses these phrases. A guided card's phrase is
+    # only its area ("left bicep"); without the card's resolved type a closed
+    # cut reads as a generic moderate elbow injury and blocks ballistic work.
+    def _guard_phrase(entry: dict) -> str:
+        phrase = str(entry.get("original_phrase") or "").strip()
+        injury_type = str(entry.get("injury_type") or "").strip().lower()
+        if phrase and injury_type and injury_type != "unspecified" and injury_type not in phrase.lower():
+            return f"{phrase} {injury_type}"
+        return phrase
+
+    raw_injury_list = [phrase.lower() for phrase in map(_guard_phrase, parsed_injuries) if phrase]
     source_guided_injuries = list(plan_input.guided_injuries or [])
     if not source_guided_injuries and plan_input.guided_injury is not None:
         source_guided_injuries = [plan_input.guided_injury]
