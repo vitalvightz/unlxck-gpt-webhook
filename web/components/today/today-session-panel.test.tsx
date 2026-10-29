@@ -1088,6 +1088,30 @@ test("a tapped rehab answer is marked at once while the save is still in flight"
   } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
 });
 
+test("a rehab answer is dropped when Today moves on to another session", async () => {
+  const container = document.createElement("div"); document.body.appendChild(container);
+  const root = createRoot(container);
+  const state = reviewedSessionState(false);
+  state.today.completion_status = "started";
+  const original = globalThis.fetch;
+  globalThis.fetch = (async (_input, init) => init?.method === "POST"
+    ? new Promise<Response>(() => {})
+    : new Response('{"response_sets":[],"history_truncated":false}', { status: 200 })) as typeof fetch;
+  const render = (next: typeof state) => root.render(<AuthProvider><ToastProvider><TodaySessionPanel state={next} structuredPlan={null} token="token" onRefresh={async () => {}} /></ToastProvider></AuthProvider>);
+  const chosen = () => container.querySelector(".today-segment-chosen");
+  try {
+    await act(async () => { render(state); });
+    const modified = Array.from(container.querySelectorAll<HTMLButtonElement>('[aria-label="Did you complete your rehab?"] button'))
+      .find(b => b.textContent?.trim() === "Modified")!;
+    await act(async () => { modified.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
+    assert.ok(chosen());
+    const next = structuredClone(state);
+    next.today.next_session = { ...next.today.next_session, session_id: `${next.today.next_session.session_id}-next` };
+    await act(async () => { render(next); });
+    assert.equal(chosen(), null);
+  } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
+});
+
 test("one live rehab session renders every reviewed bundle drill", () => {
   const state = contactDayState("green");
   state.today.next_session = {

@@ -2353,12 +2353,18 @@ export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
 
 const URGENT_NOTE_CATEGORIES = new Set(["injury", "medical", "post_op", "weight_cut"]);
 // "No weight-cut target is assumed" shares the category but restricts nothing.
-const INFORMATIONAL_NOTE = /\bis assumed\b|\bnot (?:applicable|required)\b|\bnone (?:declared|reported)\b/i;
+// Only a whole note that states the absence of a target/limit/injury counts.
+const INFORMATIONAL_NOTE = /^(?:no (?:weight[- ]cut )?(?:targets?|limits?|restrictions?|injur(?:y|ies)|medical (?:issue|condition)s?) (?:is |are )?(?:assumed|declared|reported|set|applied)|weight[- ]cut (?:is )?not (?:applicable|required|planned)|none (?:declared|reported))\.?$/i;
+// Any of these words means the note asks the athlete to do or avoid something.
+const RESTRICTIVE_WORDING = /\b(?:avoid|do not|don't|never|stop|limit|restrict|until|only|must|cleared?|clearance|max(?:imum)?|cap|reduce|keep|stay|follow|within|under|no contact|no sparring|hold)\b/i;
 
 /** A note the athlete must act on now: an injury, medical or weight-cut
- * category whose text is a live restriction, not general information. */
+ * category, unless its whole text is plainly informational. Uncertain wording
+ * stays visible. */
 function isActiveRestrictionNote(note: { category?: string | null; text: string }): boolean {
-  return URGENT_NOTE_CATEGORIES.has(cleanText(note.category) ?? "") && !INFORMATIONAL_NOTE.test(note.text);
+  if (!URGENT_NOTE_CATEGORIES.has(cleanText(note.category) ?? "")) return false;
+  const text = note.text.trim();
+  return !INFORMATIONAL_NOTE.test(text) || RESTRICTIVE_WORDING.test(text);
 }
 
 /** Map a severity label ("Red", "Amber", "High", "Low"…) to a tone class so the
