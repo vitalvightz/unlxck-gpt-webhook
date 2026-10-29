@@ -32,8 +32,10 @@ for (const width of [320, 375, 390, 430, 1280]) {
     await expect(page.locator('.cm-days details[open]')).toHaveCount(1);
     await expect(today.locator(".ex-row")).toHaveCount(4);
     await expect(today.locator(".sp-session-title")).toHaveCSS("animation-name", "plan-session-title-pulse");
+    await expect(today.locator(".sp-week-body")).toHaveCSS("animation-name", "plan-day-reveal");
     await page.emulateMedia({ reducedMotion: "reduce" });
     await expect(today.locator(".sp-session-title")).toHaveCSS("animation-name", "none");
+    await expect(today.locator(".sp-week-body")).toHaveCSS("animation-name", "none");
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await expect(today).toContainText("4 rounds · 2 min work · 2 min rest");
     await expect(today).toContainText("3 sets × 8 reps · 40 kg · RPE 6");

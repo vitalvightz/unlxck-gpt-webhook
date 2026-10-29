@@ -1,10 +1,5 @@
 /* Small Plan-only display fixes. Keep training/scheduling data untouched. */
 
-/* Give expanded day content breathing room below the D-day summary strip. */
-.cm-day .sp-week-body {
-  padding-top: var(--space-2);
-}
-
 /* Free slots keep the recovery label except D-7 through D-0. */
 .cm-rest-reason {
   display: none;
@@ -51,31 +46,39 @@
 
 /* Plan: Day → Session → Exercise. Today keeps its existing section layout. */
 .cm-day .sp-week-body {
-  padding: 4px 12px 12px;
+  padding: 0 16px 12px;
+}
+.cm-day[open] > .sp-week-body {
+  animation: plan-day-reveal 280ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .cm-day .sp-session {
-  background: var(--bg-surface-alt);
-  border-color: transparent;
-  padding: 16px 12px 4px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 18px 0 0;
 }
 .cm-day .sp-session + .sp-session {
-  border-top-color: var(--border-subtle);
-  border-radius: 0 0 var(--radius-support) var(--radius-support);
+  border-top: 1px solid var(--border-subtle);
 }
 .cm-day .sp-session-title {
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   font-weight: 750;
   letter-spacing: -0.02em;
   line-height: 1.4;
   overflow-wrap: anywhere;
   animation: plan-session-title-pulse 3.5s ease-in-out infinite;
 }
+@keyframes plan-day-reveal {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
 @keyframes plan-session-title-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.78; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .cm-day .sp-session-title { animation: none; }
+  .cm-day .sp-session-title,
+  .cm-day[open] > .sp-week-body { animation: none; }
 }
 .sp-session[data-layout="plan"] .sp-session-instruction,
 .cm-day .sp-coaching {
@@ -101,13 +104,13 @@
   min-height: 44px;
 }
 .ex-row-compact .ex-row-title {
-  font-size: 0.95rem;
+  font-size: 1rem;
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
 .ex-row-compact .ex-row-meta {
   font-family: var(--font-sans);
-  font-size: 0.83rem;
+  font-size: 0.85rem;
   line-height: 1.65;
   color: var(--text-secondary);
 }
@@ -117,7 +120,13 @@
 .ex-row-compact .ex-row-chevron {
   transform: rotate(-45deg);
 }
-.ex-row-compact .ex-row-stop,
+.ex-row-compact .ex-row-thumb {
+  height: 36px;
+  border: 1px solid var(--border-subtle);
+}
+@media (hover: hover) {
+  .ex-row-compact:hover { background: var(--bg-support); }
+}
 .ex-row-compact .rehab-guide-safety {
   font-size: 0.8rem;
   color: var(--danger-ink);
@@ -135,6 +144,13 @@
   margin: 16px 0 12px;
   text-align: left;
 }
+.cm-day .sp-instructions-open {
+  background: var(--brand-red);
+  border-color: var(--brand-red);
+  color: #fff;
+  font-weight: 650;
+}
+.cm-day .sp-instructions-open:hover { background: var(--brand-red-hover); }
 .sp-mental-detail .ex-row-compact {
   margin-top: 16px;
 }
@@ -156,7 +172,7 @@
   justify-content: flex-end;
   margin-bottom: 10px;
 }
-.cm-day-navigation button { min-height: 44px; }
+.cm-day-navigation button { min-height: 44px; width: auto; padding: 8px 14px; }
 .cm-day-count { font-family: var(--font-sans); font-size: 0.75rem; }
 .cm-day-head, .cm-day-meta { flex-wrap: wrap; }
 .cm-day-current { box-shadow: inset 2px 0 0 var(--brand-red); }
@@ -184,8 +200,8 @@
   .cm-day-summary { padding: 12px; }
   .cm-day-head { gap: 6px; }
   .cm-day-title { font-size: 0.85rem; }
-  .cm-day .sp-week-body { padding: 0 8px 8px; }
-  .cm-day .sp-session { padding: 12px 8px 0; }
+  .cm-day .sp-week-body { padding: 0 14px 8px; }
+  .cm-day .sp-session { padding-top: 16px; }
 }
 /* A solid safe-area band obscures content behind Create/profile when scrolling. */
 @media (max-width: 720px) {
@@ -203,7 +219,6 @@
   box-shadow: none;
 }
 .ex-row-summary-body { padding-bottom: 16px; }
-.ex-row-summary-body .ex-row-stop { margin-bottom: 0; }
 .ex-row-compact [data-exercise-actions] { width: 44px; height: 44px; }
 @media (max-width: 360px) {
   .ex-row-compact .ex-row-thumb { width: 44px; height: 32px; }
