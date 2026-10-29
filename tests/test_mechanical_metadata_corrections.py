@@ -206,9 +206,17 @@ def test_unrelated_edit_cannot_hide_in_mechanical_history():
         reverse_mechanical_source('data/conditioning_bank.json', json.dumps(rows).encode())
 
 
+def query_results(index):
+    from api.services import training_library as library
+    cases = json.loads((ROOT / 'tools/training_library_search_cases.json').read_bytes())['cases']
+    return [{'query': case['query'], 'total': result['total'],
+             'ordered_ids': [entry['catalogue_id'] for entry in result['entries']],
+             'discovery_matches': [entry['discovery_match'] for entry in result['entries']]}
+            for case in cases for result in [library.search(index, q=case['query'], limit=3000)]]
+
+
 def test_actual_search_queries_and_all_facets_have_before_after_parity():
     from api.services import training_library as library
-    from tools.audit_canonical_metadata import query_results
     current = LibraryCache().get()
     with mechanical_baseline_sources() as before_root:
         reviews = json.loads((before_root / 'shared/equipment-requirements.json').read_bytes())['reviews']
@@ -239,13 +247,12 @@ def test_actual_search_queries_and_all_facets_have_before_after_parity():
 
 
 def test_complete_fixed_clock_main_plan_comparison(tmp_path):
-    from tools.audit_canonical_metadata import BASELINE
     outputs = []
     with mechanical_baseline_sources() as before_root:
         for label, root in [('before', before_root), ('after', ROOT)]:
             path = tmp_path / (label + '.json')
             subprocess.run([sys.executable, str(ROOT / 'tools/canonical_metadata_plan_probe.py'),
-                            str(BASELINE), str(path)], cwd=root, check=True, capture_output=True,
+                            str(ROOT / 'tools/canonical_metadata_baseline.json'), str(path)], cwd=root, check=True, capture_output=True,
                            env={**os.environ, 'PYTHONHASHSEED': '0', 'PYTHONUTF8': '1'})
             outputs.append(json.loads(path.read_bytes()))
     assert outputs[0] == outputs[1]

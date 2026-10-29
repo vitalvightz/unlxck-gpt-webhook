@@ -37,27 +37,11 @@ def digest(path: Path) -> str:
     return hashlib.sha256(pre_combat_round_source(relative, original_safety_source(relative, path.read_bytes()))).hexdigest()
 
 
-def original_vocabulary_source(current: bytes) -> bytes:
-    """Reconstruct frozen audit evidence, accepting only the exact 16-line edit.
-
-    Audit replay additionally verifies these bytes against its original digest.
-    This adapter is never used by the planner or bank validation.
-    """
-    review = json.loads(REVIEW.read_text(encoding="utf-8"))
-    original = (json.dumps(review["original_vocabulary"], indent=2) + "\n").encode()
-    removed_lines = {b'  "' + tag.encode() + b'",\n' for tag in review["retired_tags"]}
-    expected = b"".join(line for line in original.splitlines(keepends=True) if line not in removed_lines)
-    if current.replace(b"\r\n", b"\n") != expected:
-        raise ValueError("Unreviewed tag vocabulary drift")
-    return original
-
-
 def reference_paths() -> list[Path]:
     tracked = subprocess.check_output(["git", "ls-files", "-z"], cwd=ROOT).decode().split("\0")
     # Include archived data, migrations, deployment configuration and tooling.
     # Frozen audit snapshots are evidence, rather than active consumers.
-    excluded = {"tools/metadata_integrity_original_sources.json",
-                "tools/tag_retirement_review.json",
+    excluded = {"tools/tag_retirement_review.json",
                 "tools/metadata_integrity_baseline.json",
                 "tools/canonical_metadata_baseline.json",
                 "tools/metadata_integrity_review.json"}

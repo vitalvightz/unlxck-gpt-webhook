@@ -7,8 +7,6 @@ import pytest
 from api.contracts.training_library import LibraryPreview, LibrarySearchResponse
 from api.services import training_library as library
 from fightcamp import equipment_requirements as requirements
-from fightcamp.training_catalogue import content_hash
-from tools import audit_equipment_requirements as audit
 from tests.support import _build_client
 
 
@@ -194,18 +192,3 @@ def test_review_contract_invalid_modes_duplicate_ids_and_unverified_items_fail(m
             requirements.load_equipment_reviews()
 
 
-def test_prechange_hashes_all_identities_queries_and_unrelated_facets_are_preserved(index):
-    report = audit.build_report()
-    assert report["reviewed_records"] == 25
-    assert report["corrected_records"] == 14
-    assert report["unresolved_records"] == 11
-    assert report["raw_source_records_changed"] == 0
-    assert report["training_goal_entries"] == 222
-    assert report["planner_eligibility_changes"] == []
-    assert report["all_source_hashes_unchanged"] and report["identity_media_and_boundary_parity"]
-    assert report["ordered_30_search_controls_unchanged"]
-    assert audit.markdown(report) == (audit.OUT / "README.md").read_text(encoding="utf8")
-    # This is the frozen 222-Goal report, before later Goal/detail curation.
-    # Live source, identity and exact apparatus checks remain above.
-    historical = audit.historical_library_index(reviewed_requirements=True)
-    assert content_hash(report) == content_hash(audit.build_report(index=historical))

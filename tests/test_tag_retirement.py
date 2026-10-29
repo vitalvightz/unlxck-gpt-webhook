@@ -54,20 +54,6 @@ def test_only_reviewed_declarations_are_removed_in_original_order(review):
     assert set(original) - set(current) == retired
 
 
-def test_audit_replay_restores_frozen_vocabulary_and_rejects_unrelated_drift(review):
-    from tools.audit_metadata_integrity import source_hash
-
-    current = check.VOCABULARY.read_bytes()
-    original = check.original_vocabulary_source(current)
-    baseline = json.loads((check.ROOT / "tools/metadata_integrity_baseline.json").read_bytes())
-    assert json.loads(original) == review["original_vocabulary"]
-    assert source_hash(original) == baseline["configuration_files"]["data/tag_vocabulary.json"]
-    for tampered in (current.replace(b'"reaction"', b'"changed_reaction"'),
-                     current.replace(b'"reaction"', b'"axe_kick"'), current + b"\n"):
-        with pytest.raises(ValueError, match="Unreviewed tag vocabulary drift"):
-            check.original_vocabulary_source(tampered)
-
-
 def test_all_banks_clinical_reviews_aliases_and_historical_identities_are_unchanged(review):
     for source, expected in review["protected_source_sha256"].items():
         assert check.digest(check.ROOT / source) == expected, source

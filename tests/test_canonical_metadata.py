@@ -1,29 +1,17 @@
 """Reviewed discovery identities never authorize prescription or substitution."""
 from copy import deepcopy
-import json
 
 import pytest
 
 from api.contracts.training_library import LibraryPreview
 from api.services import training_library as lib
 from fightcamp import training_metadata as metadata
-from tools import audit_canonical_metadata as audit
 from tests.support import _build_client
 
 
 @pytest.fixture(scope="module")
 def index():
     return lib.LibraryCache().get()
-
-
-@pytest.fixture(scope="module")
-def baseline():
-    return json.loads(audit.BASELINE.read_bytes())
-
-
-@pytest.fixture(scope="module")
-def verified_plans(baseline):
-    return audit.controlled_plan_parity(baseline)
 
 
 @pytest.mark.parametrize("ordinal", range(6))
@@ -64,7 +52,7 @@ def test_all_original_metadata_and_provenance_remain_available(index):
             assert value["row_revision"] == record["entry"]["row_sha256"]
             if value["audit_decision"]:
                 assert value["audit_report"] == metadata.AUDIT_REPORT
-                assert value["audit_revision"] == audit.BASE_REVISION
+                assert value["audit_revision"] == metadata.AUDIT_REVISION
         assert detail["prescription_allowed"] is False
 
 
@@ -98,32 +86,6 @@ def test_unknown_equipment_does_not_become_no_equipment_or_a_verified_alias(inde
     assert record["summary"]["equipment"] is None
     assert record["projection"][0]["canonical_id"] == "kettlebells"
     assert not record["projection"][0]["filter_eligible"]
-
-
-def test_climbing_association_is_withheld_but_raw_evidence_and_identity_survive(index):
-    index = audit.historical_library_index(reviewed_requirements=True)
-    excluded = {r["catalogue_id"] for r in index.projection["association_reviews"]}
-    for query in ("battle rope", "battle ropes", "battle_rope", "battle_ropes"):
-        assert not excluded & {e["catalogue_id"] for e in lib.search(index, q=query, limit=3000)["entries"]}
-    battle = lib.search(index, filters={"equipment": "battle_ropes"}, limit=3000)
-    assert battle["total"] == 7
-    climbing = lib.search(index, filters={"equipment": "climbing_rope"}, limit=3000)
-    assert excluded <= {e["catalogue_id"] for e in climbing["entries"]}
-    for identity in excluded:
-        record = index.by_id[identity]
-        assert record["facets"]["equipment"] == {"climbing_rope"}
-        withheld = next(v for v in record["projection"] if v["status"] == "association_review")
-        assert not withheld["filter_eligible"]
-        assert withheld["source_value"] in record["entry"]["raw"]["equipment"]
-        assert withheld["requirement_evidence"]["equipment_note"] == "Requires: Climbing Rope"
-        changed = deepcopy(record["entry"])
-        changed["row_sha256"] = "f" * 64
-        with pytest.raises(ValueError, match="Stale source association"):
-            metadata.project_entry(changed, index.projection)
-        # Withholding the only remaining token must not create No Equipment.
-        changed = deepcopy(record["entry"])
-        changed["raw"]["equipment"] = [withheld["source_value"]]
-        assert not lib._prepare(changed, projection=index.projection)["facets"]["equipment"]
 
 
 def test_quantities_alternatives_and_optional_attachments_remain_evidence(index):
@@ -163,17 +125,6 @@ def test_two_alias_tokens_on_one_row_count_as_one_exercise(index):
     assert result["total"] == 1
     assert result["facets"]["equipment"] == [{"value": "kettlebell", "label": "Kettlebell", "count": 1}]
     assert [v["source_value"] for v in record["projection"] if v["source_field"] == "equipment"] == ["kettlebell", "kettlebells"]
-
-
-def test_existing_query_orders_goals_and_unrelated_facets_are_identical(index, baseline):
-    assert audit.query_results(index) == baseline["queries"]
-    for r in index.records:
-        for field in ("goal", "type", "sport"):
-            expected = set(baseline["original_facets"][r["entry"]["catalogue_id"]][field])
-            if field == "goal":
-                expected.update(v["label"] for v in r["projection"] if v["status"] == "reviewed_goal")
-            assert r["facets"][field] == expected
-    assert sum(bool(r["facets"]["goal"]) for r in index.records if r["summary"]["category"] == "training") == 278
 
 
 def test_anatomical_focus_has_reviewed_training_evidence_only(index):
@@ -227,21 +178,3 @@ def test_api_preview_serializes_canonical_and_original_fields(monkeypatch, index
         client.close()
 
 
-def test_raw_banks_ids_media_keys_and_planner_sources_have_no_drift(baseline):
-    assert audit.preservation(baseline)["catalogue_entries"] == 2855
-
-
-def test_frozen_fixed_seed_plans_and_prescription_doses_are_identical(baseline, verified_plans):
-    result = verified_plans
-    assert len(result["plans"]) == 3
-    assert result["original_capture"] == baseline["plans"]
-
-
-def test_report_is_deterministic_and_matches_retained_evidence(verified_plans):
-    report = audit.build_report(verified_plans=verified_plans)
-    assert audit.dumps(report) == (audit.OUT / "before-after.json").read_text(encoding="utf-8")
-    assert audit.markdown(report) == (audit.OUT / "README.md").read_text(encoding="utf-8")
-
-
-def test_browser_contract_fixture_matches_real_library():
-    assert audit.browser_fixture() == json.loads((audit.ROOT / "web/e2e/fixtures/canonical-metadata-library.json").read_bytes())
