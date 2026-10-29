@@ -91,8 +91,9 @@ def classify(entry: dict):
     """Return ``(action, reason)`` for one bank entry.
 
     action: ``fix`` (auto-correctable but not yet correct), ``ambiguous`` (manual
-    review), ``ok`` (clean timed interval already consistent), ``skip`` (not a
-    timed multi-round interval).
+    review), ``ok`` (clean timed interval already consistent), ``interval`` (rest
+    encoded, deliberately no ``total_minutes``), ``skip`` (not a timed
+    multi-round interval).
     """
     duration = _duration(entry)
     work = _num(entry.get("work_sec"))
@@ -120,6 +121,11 @@ def classify(entry: dict):
                 and abs(total - target) <= 0.01
             ):
                 return "ok", None
+            if work == work_sec and rest == rest_sec and total is None:
+                # The stated rest is encoded. ``total_minutes`` is omitted on
+                # purpose: conditioning_dose_shape reads it as continuous work,
+                # and #2913's running rows must stay interval doses.
+                return "interval", None
             return "fix", None
         if _ACTIVE_RECOVERY.search(duration):
             return "ambiguous", "active-recovery interval; between-interval bout is work"
