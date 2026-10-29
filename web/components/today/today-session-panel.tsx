@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { ExerciseMediaProvider } from "@/components/exercise-demo";
 import { useFadeThrough } from "@/components/fade-through";
@@ -486,6 +486,7 @@ export function TodaySessionPanel({
   const fadeThrough = useFadeThrough();
   const [intent, setIntent] = useState<CompletionIntent>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [rehabCheckOff, setRehabCheckOff] = useState<{ value: "done" | "modified" | "skipped"; label: string; saved?: boolean } | null>(null);
   const [rehabPerformance, setRehabPerformance] = useState<"done_as_shown" | "changed" | "stopped" | "skipped" | undefined>();
   // The session the athlete just logged as trained, captured at write time.
   // The refresh that follows can advance `next_session` to tomorrow's card, so
@@ -1006,6 +1007,36 @@ export function TodaySessionPanel({
     setReviewFromTimer(fromTimer);
     setReviewOpen(true);
   }
+
+  // Rehab-only check-off: the tapped answer is marked at once (red outline) and
+  // saved straight away, or — while the session timer is running or handing
+  // off its results — as soon as the timer is done, so a tap is never lost.
+  // shownTimer also covers a session timer resumed from storage after a reload.
+  const timerBusy = timerHandoffPending || shownTimer?.source === "session";
+  const rehabCheckOffPending = rehabCheckOff !== null && !["done", "modified", "skipped"].includes(status);
+  // The answer belongs to this session: Today moving on to another drops it.
+  const [rehabCheckOffSession, setRehabCheckOffSession] = useState(session.session_id);
+  if (rehabCheckOffSession !== session.session_id) {
+    setRehabCheckOffSession(session.session_id);
+    setRehabCheckOff(null);
+  }
+  const rehabCheckOffSaving = useRef(false);
+  useEffect(() => {
+    if (!rehabCheckOff || rehabCheckOff.saved || rehabCheckOffSaving.current || timerBusy || isSubmitting
+      || ["done", "modified", "skipped"].includes(status)) return;
+    const { value, label } = rehabCheckOff;
+    rehabCheckOffSaving.current = true;
+    void saveCompletion(value, { modificationReason: value === "done" ? "" : `Rehab ${label.toLowerCase()}` })
+      .then((saved) => {
+        rehabCheckOffSaving.current = false;
+        // Saved: stays marked until the logged status replaces the prompt.
+        // Failed: cleared so the athlete can tap again.
+        setRehabCheckOff((current) => current?.value === value ? (saved ? { ...current, saved: true } : null) : current);
+      });
+    // saveCompletion reads the latest render; re-run whenever the gate changes,
+    // including another submission finishing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rehabCheckOff, timerBusy, isSubmitting, status]);
 
   // Asked once a session with reviewed rehab is logged as done.
   const rehabChoice = (
@@ -1605,10 +1636,16 @@ export function TodaySessionPanel({
         {rehabOnlyPrescription && (canCompleteSession || guidanceCanCheckOff) && !["done", "modified", "skipped"].includes(status) ? <div className="today-injury-guidance" role="group" aria-label={calmOnly ? "Did you follow the guidance?" : "Did you complete your rehab?"}>
           <p>{calmOnly ? "Did you follow the guidance?" : "Did you complete your rehab?"}</p>
           <div className="today-segment-row">
-            {([["done", "Completed"], ["modified", "Modified"], ["skipped", "Skipped"]] as const).map(([value, label]) =>
-              <button key={value} type="button" className="today-segment" disabled={isSubmitting}
-                onClick={() => saveCompletion(value, { modificationReason: value === "done" ? "" : `Rehab ${label.toLowerCase()}` })}>{label}</button>)}
+            {([["done", "Completed"], ["modified", "Modified"], ["skipped", "Skipped"]] as const).map(([value, label]) => {
+              const chosen = rehabCheckOff?.value === value;
+              return <button key={value} type="button" className={chosen ? "today-segment today-segment-chosen" : "today-segment"}
+                aria-pressed={chosen} disabled={isSubmitting && !chosen}
+                onClick={() => { if (!rehabCheckOff?.saved) setRehabCheckOff(chosen && timerBusy ? null : { value, label }); }}>{label}</button>;
+            })}
           </div>
+          {rehabCheckOffPending ? <p className="today-rehab-checkoff-note" role="status">
+            {rehabCheckOff?.saved ? "Saved." : timerBusy ? "Saved when you finish the timer." : "Saving…"}
+          </p> : null}
         </div> : null}
         {sparringPrompt}
 

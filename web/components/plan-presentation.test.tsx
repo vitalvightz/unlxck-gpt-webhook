@@ -149,3 +149,46 @@ test("the Plan page opens on the calendar; other hosts keep the list", () => {
   const list = renderToStaticMarkup(<StructuredPlanRenderer plan={trainingPlan} today={new Date(2026, 9, 28, 12)} />);
   assert.match(list, /class="sp-weeks cm-days"/);
 });
+
+test("Plan notes: only plainly informational safety-category notes fold", () => {
+  const visible = (text: string, category = "weight_cut") => {
+    const host = document.createElement("div");
+    host.innerHTML = renderToStaticMarkup(<ActiveNotesCard plan={notesPlan([
+      { category, text }, { category: "conditioning", text: "Aerobic base is built on easy bike work." },
+    ])} />);
+    const note = Array.from(host.querySelectorAll(".sp-note-text")).find(node => node.textContent === text);
+    assert.ok(note, text);
+    return note.closest("details") === null;
+  };
+  // Informational: folds.
+  assert.equal(visible("No weight-cut target is assumed."), false);
+  assert.equal(visible("No restrictions reported.", "injury"), false);
+  assert.equal(visible("Target weight is not set."), false);
+  assert.equal(visible("Target weight is not set; keep bodyweight within 1 kg."), true);
+  // Mixed wording keeps the restriction on screen.
+  assert.equal(visible("No weight-cut target is assumed; stay within 2 kg of walk-around weight."), true);
+  assert.equal(visible("No injury is reported, but avoid contact until the review.", "injury"), true);
+  assert.equal(visible("Weight cut not required until fight week, then follow your coach.", "weight_cut"), true);
+  // Restrictions and uncertain wording stay visible.
+  assert.equal(visible("Shoulder is assumed healthy; no overhead pressing.", "injury"), true);
+  assert.equal(visible("Recent concussion.", "medical"), true);
+});
+
+
+test("a calendar sheet's technical session drops its title but keeps the why", () => {
+  const session = { session_id: "tech", title: "Technical-only combat", session_type: "skill", blocks: [] };
+  const sheet = renderToStaticMarkup(<SessionCard session={session} layout="plan" hideTitle />);
+  assert.doesNotMatch(sheet, /class="sp-session-title"/);
+  assert.match(sheet, /class="sp-tag sp-accent"/);
+  const card = renderToStaticMarkup(<SessionCard session={session} layout="plan" />);
+  assert.match(card, /class="sp-session-title"/);
+});
+
+test("a calendar sheet's technical session drops its title but keeps the why", () => {
+  const session = { session_id: "tech", title: "Technical-only combat", session_type: "skill", blocks: [] };
+  const sheet = renderToStaticMarkup(<SessionCard session={session} layout="plan" hideTitle />);
+  assert.doesNotMatch(sheet, /class="sp-session-title"/);
+  assert.match(sheet, /class="sp-tag sp-accent"/);
+  const card = renderToStaticMarkup(<SessionCard session={session} layout="plan" />);
+  assert.match(card, /class="sp-session-title"/);
+});
