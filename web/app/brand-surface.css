@@ -963,8 +963,15 @@
   }
 
   .public-final-cta {
-    margin-top: 0;
+    /* The grid contributes 112px: leave 80px before the final action. */
+    margin-top: -32px;
     padding: 28px 28px 28px 40px;
+  }
+
+  .app-content:has(.public-landing) > .app-safety-footer {
+    /* 32px margin + 16px inset = 48px from CTA to disclaimer text. */
+    margin-top: 32px;
+    padding-top: 16px;
   }
 
   .public-flex + .public-flex {
