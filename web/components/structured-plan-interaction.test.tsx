@@ -76,7 +76,7 @@ function weekPill(container: HTMLElement, label: string): HTMLButtonElement {
 const overviewPhase = (container: HTMLElement) =>
   (container.querySelector(".cm-week-overview .cm-week-phase")?.textContent ?? "").toLowerCase();
 
-test("open-plan overview follows the selected week instead of the current calendar week", async () => {
+test("open-plan week heading follows the selected week instead of the current calendar week", async () => {
   const { container, root } = mount();
   const plan = {
     schema_version: "1.0",
@@ -239,23 +239,22 @@ test("selecting an off-screen week scrolls the rail to centre it", async () => {
   }
 });
 
-test("current week shortcut restores selection after browsing another week", async () => {
+test("Jump to Today restores the current week; no separate current-week control", async () => {
   const { container, root } = mount();
   try {
     await act(async () => {
       root.render(<StructuredPlanRenderer plan={manyWeekPlan(8)} today={new Date(2026, 5, 1)} />);
     });
-    assert.equal(container.querySelector(".cm-current-week"), null);
     const later = container.querySelector<HTMLButtonElement>('[data-week-pos="6"]');
     assert.ok(later);
     await act(async () => later.click());
-    assert.equal(container.querySelector(".cm-week-navigation-label")?.textContent, "Week 7 of 8");
-    const returnButton = container.querySelector<HTMLButtonElement>(".cm-current-week");
-    assert.ok(returnButton);
-    await act(async () => returnButton.click());
-    assert.equal(container.querySelector(".cm-week-pill-selected")?.getAttribute("data-week-pos"), "0");
-    assert.equal(container.querySelector(".cm-week-navigation-label")?.textContent, "Week 1 of 8");
     assert.equal(container.querySelector(".cm-current-week"), null);
+    assert.equal(container.querySelector(".cm-week-navigation-label"), null);
+    const jump = Array.from(container.querySelectorAll<HTMLButtonElement>(".cm-day-navigation button"))
+      .find((button) => button.textContent === "Jump to Today");
+    assert.ok(jump);
+    await act(async () => jump.click());
+    assert.equal(container.querySelector(".cm-week-pill-selected")?.getAttribute("data-week-pos"), "0");
   } finally {
     cleanup(container, root);
   }
@@ -375,6 +374,28 @@ test("calendar taps stay in the calendar and list that day's sessions below it",
     const sheet = document.querySelector('[role="dialog"]');
     assert.ok(sheet, "tapping a session opens its details");
     assert.match(sheet.textContent ?? "", /Mobility D/);
+  } finally {
+    window.localStorage.removeItem("unlxck.plan-view");
+    cleanup(container, root);
+  }
+});
+
+test("on a rest day the calendar opens on the next training day, not the first", async () => {
+  const { container, root } = mount();
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      { week_id: "wk-1", week_index: 1, days: [{ date: "2026-06-15", sessions: [{ session_id: "a", title: "Strength A", blocks: [] }] }] },
+      { week_id: "wk-2", week_index: 2, days: [{ date: "2026-06-24", sessions: [{ session_id: "b", title: "Strength B", blocks: [] }] }] },
+    ],
+  } as StructuredPlan;
+  try {
+    window.localStorage.setItem("unlxck.plan-view", "calendar");
+    await act(async () => {
+      root.render(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 17)} currentTrainingDayIso="2026-06-17" />);
+    });
+    assert.match(container.querySelector(".cm-cal-day")?.textContent ?? "", /Strength B/);
   } finally {
     window.localStorage.removeItem("unlxck.plan-view");
     cleanup(container, root);

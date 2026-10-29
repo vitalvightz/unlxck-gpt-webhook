@@ -12,7 +12,7 @@ const LEGEND: { state: CalendarCellState; label: string }[] = [
   { state: "missed", label: "Missed" },
   { state: "planned", label: "Planned" },
   { state: "coach", label: "Coach / gym" },
-  { state: "outside", label: "Outside camp" },
+  { state: "outside", label: "Outside plan" },
 ];
 
 /** Whole-block calendar: one row per week, Monday first. Tapping a training
