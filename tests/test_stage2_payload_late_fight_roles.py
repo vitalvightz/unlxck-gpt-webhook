@@ -431,7 +431,8 @@ def test_low_cost_filler_can_share_locked_coach_combat_label():
         roles,
         ["D-9"],
         {"D-9": "tuesday"},
-        hard_weekdays={"tuesday"},
+        # #2884: resolved contacts replace raw declared-weekday exclusion.
+        resolved_contacts=[(9, "hard")],
     )
 
     assert assignment is not None
@@ -531,7 +532,8 @@ def test_stressor_cannot_share_locked_coach_combat_label():
         roles,
         ["D-9"],
         {"D-9": "tuesday"},
-        hard_weekdays={"tuesday"},
+        # #2884: resolved contacts replace raw declared-weekday exclusion.
+        resolved_contacts=[(9, "hard")],
     ) is None
 
 
@@ -712,7 +714,7 @@ def test_coach_owned_context_sequence_keeps_downgraded_declared_hard_day():
     assert context[0]["athlete_facing_label"] == "Technical-only combat"
     # A technical-only (D-17+ ban) day must carry the technical note, never the
     # hard-sparring note — it must not tell the athlete to spar hard.
-    assert context[0]["display_text"] == "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority."
+    assert context[0]["display_text"] == "Technical-only contact today — no hard sparring. Keep freshness priority."  # #2884 wording
 
 
 def test_coach_owned_context_sequence_forces_default_hard_spar_label_and_note():
@@ -744,7 +746,7 @@ def test_coach_owned_context_sequence_downgraded_hard_spar_gets_ban_label():
     assert len(context) == 1
     assert context[0]["athlete_facing_label"] == "Technical-only combat"
     # Downgraded (D-17+ ban) day gets the technical note, never the hard-sparring note.
-    assert context[0]["display_text"] == "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority."
+    assert context[0]["display_text"] == "Technical-only contact today — no hard sparring. Keep freshness priority."  # #2884 wording
 
 
 def test_technical_only_context_never_carries_hard_sparring_note():
