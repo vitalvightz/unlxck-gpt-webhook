@@ -2014,9 +2014,9 @@ function CalendarDayPanel({
   const sessionless = sessions.length === 0 ? classifySessionlessDay(day) : null;
   const contact = sessions.length > 0 ? getCoachLedContactView(day) : null;
   const coachTitle = sessionless?.title ?? contact?.title ?? null;
-  type Item = { key: string; title: string; detail: string; glyph: ExerciseGlyphName; session?: StructuredSession };
+  type Item = { key: string; title: string; detail: string | null; glyph: ExerciseGlyphName; session?: StructuredSession };
   const items: Item[] = [
-    ...(coachTitle ? [{ key: "coach", title: coachTitle, detail: "Scheduled gym day", glyph: "strength" as const }] : []),
+    ...(coachTitle ? [{ key: "coach", title: coachTitle, detail: null, glyph: "strength" as const }] : []),
     ...sessions.map((session, index): Item => {
       const title = stripLeadingWeekday(cleanText(session.title) || titleize(cleanText(session.session_type) || "Session"));
       const duration = formatMeasured(session.planned_duration);
@@ -2028,6 +2028,7 @@ function CalendarDayPanel({
         detail: [
           mentalSessionCategory(session) || resolveSessionTypeLabel(session, rehabLabelPolicy) || null,
           duration ? compactTimeUnits(duration) : null,
+          blocks.length > 0 ? `${blocks.length} ${blocks.length === 1 ? "exercise" : "exercises"}` : null,
           status || null,
         ].filter(Boolean).join(" · ") || "Open session",
         glyph: blocks[0] ? exerciseGlyph(blocks[0]) : "skill",
@@ -2057,7 +2058,7 @@ function CalendarDayPanel({
               <span className="cm-cal-day-icon" aria-hidden="true"><ExerciseGlyphIcon name={item.glyph} /></span>
               <span className="cm-cal-day-text">
                 <span className="cm-cal-day-name">{item.title}</span>
-                <span className="cm-cal-day-detail">{item.detail}</span>
+                {item.detail ? <span className="cm-cal-day-detail">{item.detail}</span> : null}
               </span>
               <span className="cm-cal-day-chevron" aria-hidden="true" />
             </button>
