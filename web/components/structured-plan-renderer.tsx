@@ -2974,9 +2974,11 @@ export function StructuredPlanRenderer({
     const cell = (calendarSelection && pick(calendarSelection.weekPos, calendarSelection.dayIndex))
       || cells.find(candidate => candidate.isToday)
       || pick(focusProgress.currentWeekPos, focusProgress.currentDayPos)
+      // Today is a rest/gap day: the next dated training day, not the first one.
+      || (calendarTodayIso ? cells.find(candidate => candidate.iso !== null && candidate.iso > calendarTodayIso) : undefined)
       || cells[0];
     return cell ? { weekPos: cell.weekPos as number, dayIndex: cell.dayIndex as number } : null;
-  }, [view, calendarRows, calendarSelection, focusProgress.currentWeekPos, focusProgress.currentDayPos]);
+  }, [view, calendarRows, calendarSelection, focusProgress.currentWeekPos, focusProgress.currentDayPos, calendarTodayIso]);
   const calendarSelectedDay = calendarDaySelection
     ? getDays(weeks[calendarDaySelection.weekPos])[calendarDaySelection.dayIndex] ?? null
     : null;

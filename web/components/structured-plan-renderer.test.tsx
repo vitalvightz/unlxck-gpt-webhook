@@ -1617,9 +1617,9 @@ test("marks the current day and keeps the camp overview title compact", () => {
 
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 19)} />);
 
-  // Countdown + week focus surface via the week strip / overview.
+  // Countdown + the selected week's dates surface in the overview.
   assert.equal(html.includes("D-28"), true);
-  assert.equal(html.includes("class=\"cm-week-dates\""), true);
+  assert.equal(html.includes('<h2 class="cm-week-dates">19 Jun'), true);
   assert.equal(html.includes("Convert strength into speed."), false);
   // The day's readiness_status must never leak the exact train/modify/pull-back
   // call — that stays on Today.
@@ -1692,8 +1692,8 @@ test("compresses the plan: dedupes safety, folds the disclaimer, trims the week 
   // The week overview no longer prints a Phase stat row (phase lives in the
   // status chips and the week pill).
   assert.equal(html.includes(">Phase</span>"), false);
-  // Fight-camp overviews intentionally show only the selected week number.
-  assert.equal(html.includes("class=\"cm-week-dates\""), true);
+  // Fight-camp overviews head with the selected week's dates.
+  assert.equal(html.includes('<h2 class="cm-week-dates">19 Jun'), true);
   assert.equal(count("Build single-leg drive."), 0);
 });
 
@@ -2510,7 +2510,7 @@ test("D-10 countdown plans render taper mini-titles with a compact week overview
   // The squares stay bare; the selected week's overview names the phase once.
   assert.equal(countOccurrences(html, 'class="cm-week-pill-phase"'), 0);
   assert.equal(countOccurrences(html, 'title="Taper"'), 1);
-  assert.equal(html.includes("class=\"cm-week-dates\""), true);
+  assert.equal(html.includes('<h2 class="cm-week-dates">27 Jul'), true);
   assert.equal(html.includes("Week 1: Compressed Pre-Fight Week"), false);
 });
 

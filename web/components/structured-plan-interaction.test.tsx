@@ -76,7 +76,7 @@ function weekPill(container: HTMLElement, label: string): HTMLButtonElement {
 const overviewPhase = (container: HTMLElement) =>
   (container.querySelector(".cm-week-overview .cm-week-phase")?.textContent ?? "").toLowerCase();
 
-test("open-plan overview follows the selected week instead of the current calendar week", async () => {
+test("open-plan week heading follows the selected week instead of the current calendar week", async () => {
   const { container, root } = mount();
   const plan = {
     schema_version: "1.0",
@@ -375,6 +375,28 @@ test("calendar taps stay in the calendar and list that day's sessions below it",
     const sheet = document.querySelector('[role="dialog"]');
     assert.ok(sheet, "tapping a session opens its details");
     assert.match(sheet.textContent ?? "", /Mobility D/);
+  } finally {
+    window.localStorage.removeItem("unlxck.plan-view");
+    cleanup(container, root);
+  }
+});
+
+test("on a rest day the calendar opens on the next training day, not the first", async () => {
+  const { container, root } = mount();
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      { week_id: "wk-1", week_index: 1, days: [{ date: "2026-06-15", sessions: [{ session_id: "a", title: "Strength A", blocks: [] }] }] },
+      { week_id: "wk-2", week_index: 2, days: [{ date: "2026-06-24", sessions: [{ session_id: "b", title: "Strength B", blocks: [] }] }] },
+    ],
+  } as StructuredPlan;
+  try {
+    window.localStorage.setItem("unlxck.plan-view", "calendar");
+    await act(async () => {
+      root.render(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 17)} currentTrainingDayIso="2026-06-17" />);
+    });
+    assert.match(container.querySelector(".cm-cal-day")?.textContent ?? "", /Strength B/);
   } finally {
     window.localStorage.removeItem("unlxck.plan-view");
     cleanup(container, root);
