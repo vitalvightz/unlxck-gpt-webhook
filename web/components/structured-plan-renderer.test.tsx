@@ -82,7 +82,7 @@ for (const openOngoing of [false, true]) {
     assert.equal(countOccurrences(html, "cm-rest-day"), 4);
     assert.equal(countOccurrences(html, ">Unavailable<"), 2);
     assert.equal(countOccurrences(html, "cm-day-current"), 1);
-    assert.match(html, /Next session/);
+    assert.match(html, /cm-day-now">Today/);
     assert.match(html, /Hard sparring/);
     assert.match(html, /Keep the prescribed mobility dose/);
     assert.doesNotMatch(html, /Recover well/);
@@ -91,7 +91,7 @@ for (const openOngoing of [false, true]) {
       const withoutTodayResponse = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} openOngoing
         today={new Date(2026, 9, 26)} />);
       assert.equal(countOccurrences(withoutTodayResponse, "cm-day-current"), 1);
-      assert.match(withoutTodayResponse, /cm-day-now">Next session/);
+      assert.match(withoutTodayResponse, /cm-day-now">Today/);
     }
   });
 }
@@ -105,7 +105,7 @@ test("legacy open neutral rows use the real training date on a recurring weekday
   assert.match(html, /cm-day-now">Today/);
 });
 
-test("structured renderer uses one session card and hides detail blocks until expanded", () => {
+test("structured renderer uses one session and exposes compact rows inside each day", () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -161,10 +161,10 @@ test("structured renderer uses one session card and hides detail blocks until ex
   assert.equal(html.includes("Morning intro duplicate"), false); // headline not shown on session days
   // The more specific session mindset suppresses the broader day fallback.
   assert.equal(html.includes("Duplicate intro intent"), false);
-  assert.equal(html.includes("Breathing reset"), false);
+  assert.equal(html.includes("Breathing reset"), true);
   assert.equal(html.includes("MORE"), false);
   assert.equal(html.includes("LESS"), false);
-  assert.equal(html.includes("Show more (1 block)"), true);
+  assert.equal(html.includes("Show more (1 block)"), false);
   assert.equal(html.includes("Context"), true);
   assert.equal(html.includes("Taper freshness day"), true);
   // A session without exercise cues gets one specific coaching instruction.
@@ -576,7 +576,7 @@ test("mindset scenario 5: no mindset anywhere renders no mindset block", () => {
   assert.equal(html.includes(">Mindset<"), false);
 });
 
-test("surfaces rehab summary while keeping full rehab details collapsed", () => {
+test("shows rehab and conditioning rows while keeping detailed instructions in sheets", () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -616,11 +616,11 @@ test("surfaces rehab summary while keeping full rehab details collapsed", () => 
 
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
 
-  assert.equal(html.includes("Rehab / Mobility"), true);
+  assert.equal(glossaryTerms(html).includes("Rehab"), true);
   assert.equal(html.includes("Neutral-Grip Isometric Holds"), true);
   assert.equal(html.includes("Full rest between holds"), false);
-  assert.equal(html.includes("Easy Assault Bike"), false);
-  assert.equal(html.includes("Show more (2 blocks)"), true);
+  assert.equal(html.includes("Easy Assault Bike"), true);
+  assert.equal(html.includes("Show more (2 blocks)"), false);
 });
 
 // A one-session plan whose only rehab block targets the hamstring. The tag on
@@ -675,16 +675,16 @@ const QUAD_OPEN_HAMSTRING_CLEARED: RehabLabelPolicy = {
 
 test("without a policy every rehab block keeps the Rehab wording", () => {
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={hamstringRehabPlan()} />);
-  assert.equal(html.includes("Rehab / Mobility"), true);
-  assert.equal(html.includes("Prehab / Mobility"), false);
+  assert.equal(glossaryTerms(html).includes("Rehab"), true);
+  assert.equal(glossaryTerms(html).includes("Prehab"), false);
 });
 
 test("a rehab block whose region is still injured stays Rehab", () => {
   const html = renderToStaticMarkup(
     <StructuredPlanRenderer plan={hamstringRehabPlan()} rehabLabelPolicy={HAMSTRING_OPEN} />,
   );
-  assert.equal(html.includes("Rehab / Mobility"), true);
-  assert.equal(html.includes("Prehab / Mobility"), false);
+  assert.equal(glossaryTerms(html).includes("Rehab"), true);
+  assert.equal(glossaryTerms(html).includes("Prehab"), false);
 });
 
 test("a cleared region reads Prehab even while another region is injured", () => {
@@ -696,8 +696,8 @@ test("a cleared region reads Prehab even while another region is injured", () =>
       rehabLabelPolicy={QUAD_OPEN_HAMSTRING_CLEARED}
     />,
   );
-  assert.equal(html.includes("Prehab / Mobility"), true);
-  assert.equal(html.includes("Rehab / Mobility"), false);
+  assert.equal(glossaryTerms(html).includes("Prehab"), true);
+  assert.equal(glossaryTerms(html).includes("Rehab"), false);
 });
 
 test("an unlocalizable open injury keeps every rehab block on Rehab", () => {
@@ -707,8 +707,8 @@ test("an unlocalizable open injury keeps every rehab block on Rehab", () => {
       rehabLabelPolicy={{ default_mode: "rehab", active_regions: [] }}
     />,
   );
-  assert.equal(html.includes("Rehab / Mobility"), true);
-  assert.equal(html.includes("Prehab / Mobility"), false);
+  assert.equal(glossaryTerms(html).includes("Rehab"), true);
+  assert.equal(glossaryTerms(html).includes("Prehab"), false);
 });
 
 test("does not duplicate a rehab insert as a summary once the blocks are expanded", () => {
@@ -1454,7 +1454,7 @@ test("surfaces technical contact alongside prescribed app work in the same day c
   assert.equal(html.includes("Technical Combat"), true);
   assert.equal(html.includes(">Low load<"), true);
   assert.equal(html.includes("Fight-week freshness"), true);
-  assert.equal(html.includes("Show more (1 block)"), true);
+  assert.equal(html.includes("Show more (1 block)"), false);
   assert.equal(countOccurrences(html, 'aria-label="Why this changed: Technical Combat"'), 1);
   assert.equal(html.includes("Technical only, no hard sparring. Stay sharp and leave fresh."), true);
   assert.equal(html.includes("Technical-only contact today"), false);
@@ -2371,7 +2371,7 @@ test("a backend-classified rest day keeps the definite 'Rest' label", () => {
   assert.equal(html.includes("No planned session"), false);
 });
 
-test("gap rows are not highlighted once the plan advances to a future 'Next session'", () => {
+test("today remains highlighted when next-session focus points to a future day", () => {
   const plan = gapFillPlan([
     {
       date: "2026-07-07",
@@ -2400,9 +2400,8 @@ test("gap rows are not highlighted once the plan advances to a future 'Next sess
     />,
   );
 
-  // No rest row carries the current-day treatment (which is also what would
-  // render the marker label), so today's gap row is never stamped "Next session".
-  assert.equal(html.includes("cm-rest-day cm-day-current"), false);
+  // Today remains the calendar anchor even when Today has no physical work.
+  assert.equal(html.includes("cm-rest-day cm-day-current"), true);
 });
 
 test("a synthesized rest row on the athlete's current day is highlighted", () => {
@@ -2789,7 +2788,7 @@ test("a cleared region's Prehab summary is glossed with the prehab definition", 
     />,
   );
 
-  assert.equal(html.includes("Prehab / Mobility"), true);
+  assert.equal(glossaryTerms(html).includes("Prehab"), true);
   assert.equal(glossaryTerms(html).includes("Prehab"), true);
 });
 

@@ -203,17 +203,17 @@ test("real rehab work keeps its clinical chip, through the region policy", () =>
 test("a parsed drill card keeps Why, prescription, cues and its stop rule", () => {
   const markup = render(planWith([day("D-9", "2026-10-06", [pressureStepCut])]));
 
-  // The Why kicker is correct here: there IS work below for it to explain.
-  assert.match(markup, /sp-session-why-label/);
+  // The objective stays prominent without a repeated Why label.
+  assert.doesNotMatch(markup, /sp-session-why-label/);
   assert.match(markup, /Read the opponent&#x27;s exit lane/);
   // No "WHY Why:" duplication of the source label.
   assert.equal(/Why<\/span>\s*Why:/.test(markup), false);
   // The current Plan day starts with compact exercise rows. The safety rule
-  // remains visible, while the full prescription waits for the row tap.
+  // opens with the exercise, while active restrictions remain on the plan.
   assert.match(markup, /aria-expanded="false"/);
   assert.match(markup, /2 sets x 4 clean reactions each direction/);
-  assert.match(markup, /Stop rule/);
-  assert.match(markup, /braking control, or stance reset loses quality/);
+  assert.doesNotMatch(markup, /Stop rule/);
+  assert.doesNotMatch(markup, /braking control, or stance reset loses quality/);
 
   const expanded = renderToStaticMarkup(
     <SessionCard session={pressureStepCut} defaultOpenBlocks />,

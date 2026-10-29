@@ -45,7 +45,7 @@ for (const label of ["D-42", "D-35", "D-28", "D-21"]) {
     // The zero-load companion still renders as its own card, unchanged.
     const companion = label === "D-35" || label === "D-21" ? "Self-Review Cues" : "Breathing Reset";
     assert.match(html, new RegExp(companion));
-    assert.match(html, /0\/1/);
+    assert.match(html, /0 of 1 complete/);
 
     // Classification, completion summary and the contact round timer agree.
     assert.equal(getPhysicalSessions(day).length, 0);

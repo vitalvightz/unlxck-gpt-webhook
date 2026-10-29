@@ -290,8 +290,6 @@ test("Custom drafts and published plans use the same editable exercise cards", a
   expect(publish.ok()).toBe(true);
   const published = await publish.json();
   await page.goto(`/plans/${published.plan_id}`);
-  const showMore = page.getByRole("button", { name: /Show more session detail/ }).first();
-  if (await showMore.isVisible()) await showMore.click();
   await page.getByRole("button", { name: "Change My shadowboxing", exact: true }).first().click();
   await page.getByRole("dialog", { name: "My shadowboxing", exact: true }).getByRole("button", { name: "Edit", exact: true }).click();
   const edit = page.getByRole("dialog", { name: "Edit My shadowboxing" });
@@ -317,8 +315,9 @@ test("Cue-only editing preserves an existing RIR prescription after reload", asy
   await page.getByRole("button", { name: "Change Back Squat", exact: true }).click();
   await page.getByRole("dialog", { name: "Back Squat", exact: true }).getByRole("button", { name: "Edit", exact: true }).click();
   const edit = page.getByRole("dialog", { name: "Edit Back Squat", exact: true });
-  await expect(edit.locator("details")).not.toHaveAttribute("open");
-  await edit.locator("summary").click();
+  const coaching = edit.locator("details").filter({ has: page.getByLabel("Cues", { exact: true }) });
+  await expect(coaching).not.toHaveAttribute("open");
+  await coaching.locator("summary").click();
   await edit.getByLabel("Cues", { exact: true }).fill("Brace before moving");
   await edit.getByRole("button", { name: "Save changes" }).click();
   await expect(edit).toHaveCount(0);
@@ -334,7 +333,7 @@ test("Cue-only editing preserves an existing RIR prescription after reload", asy
   await expect(page.locator(".ex-row").filter({ hasText: "Back Squat" })).toContainText("RIR 3");
   await page.getByRole("button", { name: "Change Back Squat", exact: true }).click();
   await page.getByRole("dialog", { name: "Back Squat", exact: true }).getByRole("button", { name: "Edit", exact: true }).click();
-  await edit.locator("summary").click();
+  await coaching.locator("summary").click();
   await expect(edit.getByLabel("Cues", { exact: true })).toHaveValue("Brace before moving");
 });
 
