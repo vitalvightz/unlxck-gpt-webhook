@@ -43,7 +43,7 @@ def test_exact_seven_source_deltas_preserve_every_identity_and_other_row():
     after = {e['catalogue_id']: e for e in build_catalogue()}
     with mechanical_baseline_sources() as before_root:
         before = {e['catalogue_id']: e for e in build_catalogue(before_root / 'data')}
-    assert len(after) == len(before) == 2855 and after.keys() == before.keys()
+    assert len(after) == len(before) == 2889 and after.keys() == before.keys()
     changes = {c['catalogue_id']: c for c in CHANGES}
     assert len(changes) == 7
     for identity, entry in after.items():

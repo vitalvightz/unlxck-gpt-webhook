@@ -57,10 +57,13 @@ def test_each_review_adds_a_supported_goal_filter_and_preview(index, review):
 def test_exact_new_coverage_and_no_other_facet_or_category_changes(index):
     base = json.loads((ROOT / "tools/canonical_metadata_baseline.json").read_bytes())
     assert base["goal_filter_entries"] == 222
-    changed = {r["entry"]["catalogue_id"] for r in index.records if sorted(r["facets"]["goal"]) != base["original_facets"][r["entry"]["catalogue_id"]]["goal"]}
+    # Rows added after the baseline take Goal facets from existing source rules;
+    # this pins only the reviewed changes to baseline rows.
+    baseline_records = [r for r in index.records if r["entry"]["catalogue_id"] in base["original_facets"]]
+    changed = {r["entry"]["catalogue_id"] for r in baseline_records if sorted(r["facets"]["goal"]) != base["original_facets"][r["entry"]["catalogue_id"]]["goal"]}
     assert changed == {r["catalogue_id"] for r in REVIEWS}
     assert len(changed) == 56
-    assert sum(bool(r["facets"]["goal"]) for r in index.records if r["summary"]["category"] == "training") == 278
+    assert sum(bool(r["facets"]["goal"]) for r in baseline_records if r["summary"]["category"] == "training") == 278
 
 
 @pytest.mark.parametrize("raw", [

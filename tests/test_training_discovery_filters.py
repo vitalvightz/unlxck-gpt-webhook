@@ -48,8 +48,8 @@ def test_dictionary_is_field_scoped_descriptive_and_source_supported():
         "Boxing Round Running Intervals (10-10-10)",
     }
     assert sum(bool(r["facets"]["goal"]) for r in training
-               if r["entry"]["name"] not in added_running) == 278
-    assert sum(bool(r["facets"]["goal"]) for r in training) == 285
+               if r["entry"]["name"] not in added_running) == 280
+    assert sum(bool(r["facets"]["goal"]) for r in training) == 286
     assert sum(bool(r["summary"]["exercise_details"]) for r in training) > 483
     holds = lib.search(index, filters={"training_method": "static_holds"}, limit=3000)
     assert holds["total"] > 0
