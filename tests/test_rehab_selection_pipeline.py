@@ -294,3 +294,17 @@ def test_a_drill_with_nothing_to_say_in_this_phase_is_not_a_candidate():
         {"id": "nameless", "notes": "x"}, "GPP", "low"
     )
 
+@pytest.mark.parametrize("stage", [STAGE_CALM, STAGE_RESTORE])
+def test_missing_published_policy_cannot_fall_back_to_legacy_drills(monkeypatch, stage):
+    """#2984: bank coverage alone never authorises a generation prescription."""
+    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
+    entry = _parsed_entry_from_flag(_injury_flag(), stage)
+    block, seen = generate_rehab_protocols(
+        injury_string="left ankle sprain",
+        exercise_data=[],
+        current_phase="GPP",
+        parsed_entries=[entry],
+    )
+    assert "No published rehab is available" in block
+    assert _build_rehab_slots(block, "GPP") == []
+    assert not seen

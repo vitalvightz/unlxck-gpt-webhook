@@ -942,7 +942,10 @@ def _select_rehab_drills_per_episode(
     episode_summaries: list[str | None] = []
     for episode in sorted(episodes, key=_episode_sort_key):
         reviewed = _reviewed_episode_option(episode, loc, current_phase)
-        episode_summaries.append(reviewed["decision"].get("summary") if reviewed is not None and not reviewed["line"] else None)
+        episode_summaries.append(
+            "No published rehab is available for this injury. Follow your current restrictions."
+            if reviewed is None else reviewed["decision"].get("summary") if not reviewed["line"] else None
+        )
         if reviewed is not None:
             per_episode.append([reviewed["line"]] if reviewed["line"] else [])
         else:
