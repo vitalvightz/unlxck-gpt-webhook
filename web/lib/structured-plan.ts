@@ -323,6 +323,27 @@ export function selectBlockMetric(block: StructuredBlock | null | undefined): Bl
   return metrics;
 }
 
+/** Labels come from the reconciled display metrics, including exact source ranges.
+ * Never reinterpret a duration as reps or a set count as rounds. */
+export function readableExerciseMetrics(prescription: {
+  metrics: BlockMetric[]; load: string | null; effort: string | null; rest: string | null;
+}): string | null {
+  const time = (value: string) => compactTimeUnits(value.replace(/(\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?)\s*s\b/g, "$1 seconds"));
+  const metrics = prescription.metrics.map(({ label, value }) => {
+    if (label === "Volume") {
+      const reps = (text: string) => /^(?:\d+(?:\.\d+)?(?:\s*[-–]\s*\d+)?)(?:\s+per\s+.+)?$/.test(text)
+        ? text.replace(/^(\d+(?:\.\d+)?(?:\s*[-–]\s*\d+)?)/, "$1 reps") : text;
+      const pair = value.match(/^(.+?) × (.+)$/);
+      return pair ? pair[1].trim() === "1" ? reps(pair[2]) : `${pair[1]} sets × ${reps(pair[2])}` : reps(value);
+    }
+    if (label === "Rounds") return `${value} ${value === "1" ? "round" : "rounds"}`;
+    const measured = time(value).replace(/^1 × /, "").replace(/^(.+?) × /, "$1 sets × ");
+    return label === "Work" ? `${measured} work` : measured;
+  });
+  return [...metrics, prescription.load, prescription.effort,
+    prescription.rest ? `${time(prescription.rest)} rest` : null].filter(Boolean).join(" · ") || null;
+}
+
 export type BlockComponentLine = { label: string; name: string; detail: string | null };
 
 /**

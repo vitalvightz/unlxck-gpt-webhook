@@ -52,6 +52,6 @@ test("a day with physical work keeps its count and no support label", () => {
     <CampDayCard day={day([visualisation, skipFlush] as StructuredDay["sessions"])} />,
   );
 
-  assert.match(html, /0\/1/);
+  assert.match(html, /0 of 1 complete/);
   assert.doesNotMatch(html, /cm-day-support/);
 });

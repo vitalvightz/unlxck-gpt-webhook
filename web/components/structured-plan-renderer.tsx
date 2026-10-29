@@ -2,10 +2,11 @@
 
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { ExerciseGlyphIcon, type ExerciseGlyphName } from "./exercise-glyph";
-import { rehabExerciseTarget } from "@/lib/rehab-exercise-guide";
+import { getRehabExerciseGuide, rehabExerciseTarget } from "@/lib/rehab-exercise-guide";
 
 import {
   compactTimeUnits,
+  readableExerciseMetrics,
   classifySessionlessDay,
   isZeroLoadSupportSession,
   mentalSessionCategory,
@@ -608,10 +609,17 @@ export function BlockCard({
 /** One compact exercise-list stat line, not a full prescription paragraph. */
 function exerciseRowSummary(
   block: StructuredBlock,
-  prescription: { metrics: { value: string }[]; load: string | null; effort: string | null },
+  prescription: { metrics: { label: string; value: string }[]; load: string | null; effort: string | null; rest: string | null },
+  compact = false,
 ): string | null {
+  if (compact && block.block_type === "rehab" && block.drill_snapshot) {
+    const guide = getRehabExerciseGuide(block);
+    return guide.selfPaced ? "Self-paced · follow prescribed instructions"
+      : guide.metrics.map(metric => `${metric.value} ${metric.label.toLowerCase()}`).join(" · ") || null;
+  }
   const cluster = formatClusterSummary(block);
   if (cluster) return cluster;
+  if (compact && prescription.metrics.length > 0) return readableExerciseMetrics(prescription);
   if (block.prescription_text) {
     const full = block.prescription_text.trim();
     if (full.length <= 72) return full;
@@ -621,6 +629,9 @@ function exerciseRowSummary(
     // paragraph as a tiny exercise-list subtitle.
     return [duration ? compactTimeUnits(duration) : null, effort]
       .filter(Boolean).join(" · ") || "See prescription";
+  }
+  if (compact) {
+    return readableExerciseMetrics(prescription) || getBlockExecutionDisplay(block).prescription;
   }
   const headline =
     prescription.metrics[0]?.value || getBlockExecutionDisplay(block).prescription
@@ -708,6 +719,7 @@ export function ExerciseRow({
   openWeekIntent,
   sourceCountdown,
   detail = "inline",
+  compact = false,
   actions,
 }: {
   block: StructuredBlock;
@@ -715,6 +727,8 @@ export function ExerciseRow({
   onToggle: () => void;
   /** "sheet" opens the exercise in its own sheet (Today) instead of in place. */
   detail?: "inline" | "sheet";
+  /** Plan lists use plain-language prescriptions and dividers, with full details in a sheet. */
+  compact?: boolean;
   actions?: ReactNode;
   openWeekIntent?: OpenBlockWeekIntent | null;
   sourceCountdown?: string | null;
@@ -724,10 +738,14 @@ export function ExerciseRow({
   const prescription = useBlockPrescription(block, sourceCountdown);
   const { title, compactStopRule } = prescription;
   const blockType = cleanText(block.block_type);
-  const tagLabel = blockType ? blockTagLabel(block, rehabLabelPolicy) : null;
+  const tagLabel = blockType && (!compact || isRehabBlock(block)) ? blockTagLabel(block, rehabLabelPolicy) : null;
   const resolvedMedia = useExerciseMedia(block.display_name, block.exercise_key);
   const media = block.prescription_source === "athlete" && !block.exercise_key ? null : resolvedMedia;
-  const summary = exerciseRowSummary(block, prescription);
+  const summary = exerciseRowSummary(block, prescription, compact);
+  // Stop criteria live in the opened exercise. Active range/contact/clinical
+  // restrictions still belong on the plan, independent of the stop disclosure.
+  const rehabLimits = compact && isRehabBlock(block)
+    ? getRehabExerciseGuide(block).safety.filter(rule => !/^stop\b/i.test(rule)) : [];
   const showRationale = useContext(ExerciseRationaleContext);
   const builds = showRationale ? athleteFacingRationale(block.purpose) : null;
   const whyTodayRaw = showRationale ? athleteFacingRationale(block.why_today) : null;
@@ -739,8 +757,32 @@ export function ExerciseRow({
   // A row whose detail opens in a sheet keeps its compact face underneath.
   const rowCollapsed = !open || detail === "sheet";
 
+  const metadata = tagLabel || summary ? (
+    <span className="ex-row-meta">
+      {tagLabel ? (
+        <span className="ex-row-type">
+          {tagLabel}
+          {/* Only Rehab/Prehab/Mobility carry a definition. */}
+          <GlossaryTooltip term={tagLabel} />
+        </span>
+      ) : null}
+      {summary ? (
+        <span className="ex-row-summary">
+          {/* Each part stays whole ("RPE 7", never "RPE / 7"); lines
+              break only at the separators. */}
+          {summary.split(" · ").map((part, index) => (
+            <span key={`${index}:${part}`} className="ex-row-summary-part">
+              {index > 0 ? " · " : null}
+              <span>{part}</span>
+            </span>
+          ))}
+        </span>
+      ) : null}
+    </span>
+  ) : null;
+
   return (
-    <div className="ex-row" data-open={open ? "true" : "false"}
+    <div className={`ex-row${compact ? " ex-row-compact" : ""}`} data-open={open ? "true" : "false"}
       id={detail === "sheet" ? rehabExerciseTarget(block) : undefined}
       tabIndex={detail === "sheet" && rehabExerciseTarget(block) ? -1 : undefined}>
       {/* The toggle covers the whole header through its ::after, so the row
@@ -749,7 +791,7 @@ export function ExerciseRow({
       <div className="ex-row-head">
         {/* Today, once the session is started: one tap logs it as written. */}
         <ExerciseLogTick block={block} onOpen={() => (open ? undefined : onToggle())} />
-        <span className="ex-row-text">
+        <div className="ex-row-text">
           <button
             type="button"
             className="ex-row-toggle"
@@ -761,41 +803,16 @@ export function ExerciseRow({
             <span className="ex-row-title">{title}</span>
             {media || block.private_media_id || block.community_revision_id ? <span className="sr-only"> Has demo video.</span> : null}
           </button>
-          {tagLabel || summary ? (
-            <span className="ex-row-meta">
-              {tagLabel ? (
-                <span className="ex-row-type">
-                  {tagLabel}
-                  {/* Only Rehab/Prehab/Mobility carry a definition. */}
-                  <GlossaryTooltip term={tagLabel} />
-                </span>
-              ) : null}
-              {summary ? (
-                <span className="ex-row-summary">
-                  {/* Each part stays whole ("RPE 7", never "RPE / 7"); lines
-                      break only at the separators. */}
-                  {summary.split(" · ").map((part, index) => (
-                    <span key={`${index}:${part}`} className="ex-row-summary-part">
-                      {index > 0 ? " · " : null}
-                      <span>{part}</span>
-                    </span>
-                  ))}
-                </span>
-              ) : null}
-            </span>
-          ) : null}
+          {!compact ? metadata : null}
           {/* What was logged for it today; open, the log panel below says so. */}
           {rowCollapsed ? <ExerciseLogBadge block={block} /> : null}
           {/* Stop criteria are safety instructions: never hidden behind the tap.
               Collapsed, the row carries it; open, the full card below does.
               Rows that open a sheet leave it to the sheet, which leads with it. */}
-          {!open && detail === "inline" && compactStopRule ? (
-            <span className="ex-row-stop">
-              <span className="sp-stat-label">Stop rule</span>
-              {compactStopRule}
-            </span>
-          ) : null}
-        </span>
+          {!compact && !open && detail === "inline" && compactStopRule ? <span className="ex-row-stop">
+            <span className="sp-stat-label">Stop rule</span>{compactStopRule}
+          </span> : null}
+        </div>
         {/* Collapsed rows show which exercises have a demo; open, the demo
             itself is right below. On the right so every title lines up. */}
         {rowCollapsed && (block.private_media_id || block.community_revision_id) ? (
@@ -826,6 +843,10 @@ export function ExerciseRow({
         {actions ?? <ExerciseActions block={block} title={title} />}
         <span className="ex-row-chevron" aria-hidden="true" />
       </div>
+      {compact ? <div className="ex-row-summary-body">
+        {metadata}
+        {rehabLimits.length > 0 ? <RehabExerciseLimits rules={rehabLimits} compact /> : null}
+      </div> : null}
       {open && detail === "sheet" ? (
         <InjuryDetailSheet title={title} onClose={onToggle}>
           <div id={bodyId}>
@@ -1056,6 +1077,23 @@ function RehabSummary({ blocks }: { blocks: StructuredBlock[] }) {
   );
 }
 
+/** Completion copy is shared by physical and mental sessions; the stored reason stays intact. */
+function SessionCompletionDetails({ info, compact }: { info?: SessionCompletionInfo; compact: boolean }) {
+  const record = info?.completion;
+  if (!record) return null;
+  const reason = cleanText(record.modification_reason);
+  const summary = reason?.replace(/^(?:Reason:\s*)?(?:Changed:\s*)?/i, "").split(/\n/)[0];
+  return <>
+    {record.session_rpe != null ? <p className="sp-session-log-meta">
+      {`RPE ${record.session_rpe}/10`}<GlossaryTooltip term="RPE" />
+    </p> : null}
+    {reason ? compact ? <details className="sp-modification-detail">
+      <summary>{summary && summary.length > 100 ? `${summary.slice(0, 100).trimEnd()}…` : summary || "Modification details"}</summary>
+      <p>{reason}</p>
+    </details> : <p className="sp-session-log-meta">Reason: {reason}</p> : null}
+  </>;
+}
+
 export function SessionCard({
   session,
   day,
@@ -1076,7 +1114,7 @@ export function SessionCard({
   occurrenceDate?: string | null;
   /** "section" is Today's numbered session part: every exercise row in view,
    * the rationale and coaching cues behind one disclosure. */
-  layout?: "card" | "section";
+  layout?: "card" | "section" | "plan";
   /** Zero-based position of this session in the day, for the "01 / ..." label. */
   sectionIndex?: number;
   session: StructuredSession;
@@ -1109,7 +1147,9 @@ export function SessionCard({
   const userToggledDetails = useRef(false);
   // One exercise open at a time. Today and the current plan day can start with
   // compact rows so a demo does not push the rest of the session below the fold.
-  const [openBlockIndex, setOpenBlockIndex] = useState<number | null>(initiallyOpenFirstBlock ? 0 : null);
+  const [openBlockIndex, setOpenBlockIndex] = useState<number | null>(initiallyOpenFirstBlock && layout !== "plan" ? 0 : null);
+  const [instructionsOpen, setInstructionsOpen] = useState(false);
+  const planLayout = layout === "plan";
 
   useEffect(() => {
     if (!userToggledDetails.current) {
@@ -1152,13 +1192,15 @@ export function SessionCard({
         ? card?.mindset_anchor
         : undefined;
 
-  const mentalCategory = mentalSessionCategory(session);
+  const mentalCategory = mentalSessionCategory(session)
+    || (planLayout && blocks.length > 0 && blocks.every(block => block.block_type === "mindset") ? "Mental" : null);
   if (mentalCategory) {
     // Tactical analysis and reflection are prompt-driven, not timed workouts.
     // Ignore synthetic durations in legacy saved cards as well as new plans.
     const mentalDuration = mentalCategory === "Analyse" || mentalCategory === "Reflect"
       ? null
       : duration || formatMeasured(blocks.find((block) => block.duration)?.duration);
+    const preview = objective ? mentalSessionSummary({ ...session, blocks: [] }) : mentalSessionSummary(session);
     const summary = mentalSessionSummary(session) || (mentalCategory === "Reflect"
       ? "What worked? What needs adjusting next time?"
       : mentalCategory === "Analyse"
@@ -1177,7 +1219,7 @@ export function SessionCard({
     const context = getSessionCoachingLines(sessionMindset).filter(line =>
       line.label === "Context" && !steps.some(step => sameCopy(step, line.value)));
     return (
-      <article className="sp-session sp-mental-task" data-mental-category={mentalCategory.toLowerCase()}>
+      <article className="sp-session sp-mental-task" data-layout={planLayout ? "plan" : undefined} data-mental-category={mentalCategory.toLowerCase()}>
         <header className="sp-mental-head">
           <h3 className="sp-session-title">{title || mentalCategory}{mentalDuration ? ` · ${compactTimeUnits(mentalDuration)}` : ""}</h3>
           {completionInfo?.display.label ? (
@@ -1186,16 +1228,42 @@ export function SessionCard({
             </span>
           ) : null}
         </header>
+        {planLayout ? <>
+          {mentalDrill ? <p className="sp-today-note">{mentalDrill}</p> : null}
+          {preview ? <p className="sp-session-objective">{preview}</p> : null}
+          <button type="button" className="secondary-button sp-instructions-open" aria-haspopup="dialog"
+            onClick={() => setInstructionsOpen(true)}>View instructions<span aria-hidden="true"> →</span></button>
+          {instructionsOpen ? <InjuryDetailSheet title={title} onClose={() => setInstructionsOpen(false)}>
+            <div className="injury-sheet-body sp-mental-detail">
+              {mentalDrill ? <p className="sp-today-note">{mentalDrill}</p> : null}
+              {objective ? <p className="sp-session-objective">{objective}</p> : null}
+              {steps.length > 0 ? <ol className="sp-cues sp-mental-steps">
+                {steps.map((instruction, index) => <li key={`${index}-${instruction}`}>{instruction}</li>)}
+              </ol> : null}
+              {mentalStops.length > 0 ? <p className="sp-block-aside" data-kind="stop">
+                <span className="sp-stat-label">Stop rule</span>{mentalStops.join("; ")}
+              </p> : null}
+              <ExerciseSessionScope date={occurrenceDate ?? day?.date} session={session}>
+                {blocks.map((block, index) => <ExerciseRow key={cleanText(block.block_id) || index} block={block}
+                  open={openBlockIndex === index} onToggle={() => setOpenBlockIndex(current => current === index ? null : index)}
+                  detail="sheet" compact openWeekIntent={openWeekIntent} sourceCountdown={sourceCountdown} />)}
+                <SessionChangesFoot session={session} />
+              </ExerciseSessionScope>
+            </div>
+          </InjuryDetailSheet> : null}
+        </> : <>
         {mentalDrill ? <p className="sp-session-instruction">{mentalDrill}</p> : null}
         {steps.length > 0 ? (
           <ol className="sp-cues sp-mental-steps">
             {steps.map((instruction, index) => <li key={`${index}-${instruction}`}>{instruction}</li>)}
           </ol>
         ) : <p className="sp-session-instruction">{summary}</p>}
+        </>}
+        <SessionCompletionDetails info={completionInfo} compact={planLayout} />
         {context.map(line => <p className="sp-block-aside" key={`${line.label}-${line.value}`}>
           <span className="sp-stat-label">{line.label}</span>{line.value}
         </p>)}
-        {mentalStops.length > 0 ? (
+        {!planLayout && mentalStops.length > 0 ? (
           <p className="sp-block-aside" data-kind="stop"><span className="sp-stat-label">Stop rule</span>{mentalStops.join("; ")}</p>
         ) : null}
         {completionInfo?.onLog ? (
@@ -1299,7 +1367,7 @@ export function SessionCard({
   }
 
   return (
-    <article className="sp-session">
+    <article className="sp-session" data-layout={planLayout ? "plan" : undefined}>
       <header className="sp-session-head">
         <div>
           {showDayLabels && (countdown || date) ? (
@@ -1331,7 +1399,7 @@ export function SessionCard({
             <p
               className={`sp-session-objective${blocks.length > 0 ? "" : " sp-session-instruction"}`}
             >
-              {blocks.length > 0 ? <span className="sp-session-why-label">Why</span> : null}
+              {blocks.length > 0 && !planLayout ? <span className="sp-session-why-label">Why</span> : null}
               {objective}
             </p>
           ) : null}
@@ -1341,7 +1409,7 @@ export function SessionCard({
             <span className="sp-tag sp-accent">Technical</span>
           ) : isTechnicalSession ? (
             <span className="sp-tag sp-accent">{TECHNICAL_COMBAT_TAG}</span>
-          ) : sessionType ? (
+          ) : sessionType && (!planLayout || !sameCopy(sessionTypeLabel, title)) ? (
             <span className="sp-tag">{sessionTypeLabel}</span>
           ) : null}
           {/* Scheduled mental / tactical / breathing-only work renders in full,
@@ -1356,23 +1424,7 @@ export function SessionCard({
         </div>
       </header>
 
-      {completionInfo?.completion &&
-      (completionInfo.completion.session_rpe != null || completionInfo.completion.modification_reason) ? (
-        <p className="sp-session-log-meta">
-          {completionInfo.completion.session_rpe != null ? (
-            <>
-              {`RPE ${completionInfo.completion.session_rpe}/10`}
-              <GlossaryTooltip term="RPE" />
-            </>
-          ) : null}
-          {completionInfo.completion.session_rpe != null && completionInfo.completion.modification_reason
-            ? " · "
-            : null}
-          {completionInfo.completion.modification_reason
-            ? `Reason: ${completionInfo.completion.modification_reason}`
-            : null}
-        </p>
-      ) : null}
+      <SessionCompletionDetails info={completionInfo} compact={planLayout} />
 
       {completionInfo?.onLog ? (
         <button type="button" className="secondary-button sp-log-session" onClick={completionInfo.onLog}>
@@ -1401,11 +1453,11 @@ export function SessionCard({
           only while the full blocks are collapsed. Once expanded, every rehab
           block renders in full below, so keeping the summary too would print the
           same insert as two separate cards. */}
-      {!showDetails ? <RehabSummary blocks={rehabBlocks} /> : null}
+      {!showDetails && !planLayout ? <RehabSummary blocks={rehabBlocks} /> : null}
 
       {blocks.length > 0 ? (
         <>
-          <button
+          {!planLayout ? <button
             type="button"
             className="sp-more-toggle sp-session-toggle"
             aria-expanded={showDetails}
@@ -1417,9 +1469,9 @@ export function SessionCard({
             }}
           >
             {showDetails ? "Show less" : `Show more (${blocksLabel})`}
-          </button>
+          </button> : null}
 
-          {showDetails ? (
+          {showDetails || planLayout ? (
             <ExerciseSessionScope date={occurrenceDate ?? day?.date} session={session}>
               <div id={detailsId} className="sp-blocks ex-rows">
                 {blocks.map((block, index) => (
@@ -1430,6 +1482,8 @@ export function SessionCard({
                     onToggle={() => setOpenBlockIndex((current) => (current === index ? null : index))}
                     openWeekIntent={openWeekIntent}
                     sourceCountdown={sourceCountdown}
+                    detail={planLayout ? "sheet" : "inline"}
+                    compact={planLayout}
                   />
                 ))}
                 <SessionChangesFoot session={session} />
@@ -1872,6 +1926,7 @@ function RestDayRow({
   reason = null,
   isCurrent,
   currentLabel = "Today",
+  dayIndex,
 }: {
   countdown: string | null;
   weekday: string | null;
@@ -1879,11 +1934,14 @@ function RestDayRow({
   reason?: string | null;
   isCurrent?: boolean;
   currentLabel?: string;
+  dayIndex?: number;
 }) {
   const fightWeekSessionless = /^D-[0-7]$/i.test(countdown ?? "");
   return (
     <div
       className={`sp-week cm-day cm-rest-day${fightWeekSessionless ? " cm-fight-week-sessionless" : ""}${isCurrent ? " cm-day-current" : ""}`}
+      data-day-index={dayIndex}
+      tabIndex={dayIndex != null ? -1 : undefined}
     >
       <span className="cm-day-head">
         {countdown ? (
@@ -1907,13 +1965,11 @@ function CompletionTag({ completion }: { completion: Completion }) {
   const done = completion.done >= completion.total && completion.total > 0;
   // "Done" is a positive, completed state — give it a calm success tone rather
   // than the brand red, which we keep reserved for current action / risk. The
-  // bare fraction keeps the closed row to one line; screen readers still get
-  // the full meaning.
+  // completion wording keeps the closed row understandable at a glance.
   return (
     <span className={`cm-day-count${done ? " cm-day-count-done" : ""}`}>
       {done ? "✓ " : ""}
-      {completion.done}/{completion.total}
-      <span className="sr-only"> sessions done</span>
+      {completion.done} of {completion.total} complete
     </span>
   );
 }
@@ -1931,6 +1987,7 @@ export function CampDayCard({
   openOngoing = false,
   weekNumber = 1,
   isCurrent,
+  isNext = false,
   currentLabel = "Today",
   defaultOpen,
   completionIndex,
@@ -1938,6 +1995,7 @@ export function CampDayCard({
   planStartIso,
   onLogSession,
   dayIndex,
+  openRequest,
 }: {
   day: StructuredDay;
   /** Truthful calendar date for a recurring weekday match. The stored projected
@@ -1947,6 +2005,7 @@ export function CampDayCard({
   openOngoing?: boolean;
   weekNumber?: number;
   isCurrent?: boolean;
+  isNext?: boolean;
   /** Badge text for the highlighted day — "Today" normally, "Next session" once
    * the view has advanced past a logged today's session. */
   currentLabel?: string;
@@ -1962,6 +2021,8 @@ export function CampDayCard({
   onLogSession?: (day: StructuredDay, session: StructuredSession, sessionId: string) => void;
   /** Position in the week's day list; lets the calendar scroll to this card. */
   dayIndex?: number;
+  /** Explicit calendar/Today navigation reopens even a manually closed day. */
+  openRequest?: object;
 }) {
   const [open, setOpen] = useState<boolean>(Boolean(defaultOpen));
   const userToggledOpen = useRef(false);
@@ -1971,6 +2032,9 @@ export function CampDayCard({
       setOpen(Boolean(defaultOpen));
     }
   }, [defaultOpen]);
+  useEffect(() => {
+    if (openRequest) setOpen(true);
+  }, [openRequest]);
 
   const sessions = getSessions(day);
   const storedDate = cleanText(day.date);
@@ -2011,7 +2075,7 @@ export function CampDayCard({
 
   return (
     <details
-      className={`sp-week cm-day${isCurrent ? " cm-day-current" : ""}`}
+      className={`sp-week cm-day${isCurrent ? " cm-day-current" : ""}${isNext ? " cm-day-next" : ""}`}
       data-day-index={dayIndex}
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
@@ -2035,6 +2099,7 @@ export function CampDayCard({
           ) : null}
           <span className="sp-week-title cm-day-title">{timelineLabel}</span>
           {isCurrent ? <span className="cm-day-now">{currentLabel}</span> : null}
+          {isNext ? <span className="cm-day-next-label">Next session</span> : null}
         </span>
 
         <span className="cm-day-meta">
@@ -2062,13 +2127,13 @@ export function CampDayCard({
                 session={session}
                 day={index === 0 ? day : undefined}
                 sourceCountdown={day.countdown_label}
-                defaultOpenBlocks={isCurrent}
                 initiallyOpenFirstBlock={false}
                 showDayContext={false}
                 showDayLabels={false}
                 completionInfo={completionInfoFor(session)}
                 openWeekIntent={weekIntent}
                 occurrenceDate={day.date}
+                layout="plan"
               />
             ))}
           </div>
@@ -2106,24 +2171,12 @@ export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
     const text = stripSafetyOwnedClause(cleanText(note.text) || "", safetyPriorityTexts);
     return text ? [{ ...note, text }] : [];
   });
-  // Collapsed by default so the plan opens short: the title + count stay visible
-  // and the detail is one tap away.
-  const [open, setOpen] = useState(false);
   if (notes.length === 0) {
     return null;
   }
   return (
-    <details
-      className="sp-collapse sp-active-notes"
-      open={open}
-      onToggle={(event) => setOpen(event.currentTarget.open)}
-    >
-      <summary className="sp-collapse-summary">
-        <span className="sp-collapse-title">Active notes</span>
-        <span className="sp-collapse-action">
-          {open ? "Hide" : "Show"} ({notes.length})
-        </span>
-      </summary>
+    <section className="sp-collapse sp-active-notes" aria-label="Active notes">
+      <header className="sp-collapse-summary"><h3 className="sp-collapse-title">Active notes</h3></header>
       <div className="sp-collapse-body">
         <ul className="sp-note-list">
           {notes.map((note, index) => (
@@ -2134,7 +2187,7 @@ export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
           ))}
         </ul>
       </div>
-    </details>
+    </section>
   );
 }
 
@@ -2161,26 +2214,17 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
   const rules = getDisplayableRedFlags(plan);
   const fallbackNotes = rules.length === 0 ? getFallbackSafetyNotes(plan) : [];
   const hasStopRules = rules.length > 0 || fallbackNotes.length > 0;
-  // Collapsed by default to keep the plan short; the "stop & report" title stays
-  // on screen so the rules are always one tap away.
-  const [open, setOpen] = useState(false);
   // The safety/medical disclaimer is folded in here (it used to be a separate
   // banner) so safety lives in one block. The body therefore always renders the
   // disclaimer, with the stop/report rules above it when present.
   return (
-    <details
-      className="sp-collapse sp-redflags"
-      aria-label="Red flags and safety actions"
-      open={open}
-      onToggle={(event) => setOpen(event.currentTarget.open)}
-    >
-      <summary className="sp-collapse-summary sp-redflags-summary">
+    <section className="sp-collapse sp-redflags" aria-label="Red flags and safety actions">
+      <header className="sp-collapse-summary sp-redflags-summary">
         <span className="sp-redflags-summary-text">
           <span className="sp-eyebrow">Safety priority</span>
           <span className="sp-collapse-title">Red flags - stop &amp; report</span>
         </span>
-        <span className="sp-collapse-action">{open ? "Hide" : "Show"}</span>
-      </summary>
+        </header>
       <div className="sp-collapse-body">
       {hasStopRules ? (
       <ul className="sp-redflag-list">
@@ -2230,7 +2274,7 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
       ) : null}
       <SafetyNote tone="warning" showRedFlags>{PLAN_SAFETY_NOTE}</SafetyNote>
       </div>
-    </details>
+    </section>
   );
 }
 
@@ -2696,7 +2740,8 @@ export function StructuredPlanRenderer({
       `.cm-days [data-day-index="${requestedDay.dayIndex}"]`,
     );
     if (card && typeof card.scrollIntoView === "function") {
-      card.scrollIntoView({ block: "start", behavior: "smooth" });
+      card.scrollIntoView({ block: "start", behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+      (card.querySelector<HTMLElement>("summary") ?? card).focus({ preventScroll: true });
     }
   }, [requestedDay, view]);
 
@@ -2710,7 +2755,7 @@ export function StructuredPlanRenderer({
     changeView("list");
   };
 
-  const effectivePos = selectedPos ?? focusProgress.currentWeekPos ?? 0;
+  const effectivePos = selectedPos ?? calendarProgress.currentWeekPos ?? focusProgress.currentWeekPos ?? 0;
   const safePos = effectivePos >= 0 && effectivePos < weeks.length ? effectivePos : 0;
   const selectedWeek = weeks[safePos];
 
@@ -2741,9 +2786,7 @@ export function StructuredPlanRenderer({
   // future "Next session" (focusDay set), that future session card owns the
   // marker, so gap rows stay plain instead of stamping today with a label that
   // belongs to a different day.
-  const restCurrentIso = resolvedFocusDay
-    ? null
-    : (cleanText(currentTrainingDayIso)?.slice(0, 10) ??
+  const restCurrentIso = (cleanText(currentTrainingDayIso)?.slice(0, 10) ??
       cleanText(scheduleContext?.current_training_day)?.slice(0, 10) ??
       (calendarDay ? toLocalIsoDay(calendarDay) : null));
   // A block that starts on a future Monday — an open plan generated late enough
@@ -2873,6 +2916,12 @@ export function StructuredPlanRenderer({
           ) : null}
 
           {view === "list" ? (
+          <>
+          {calendarProgress.currentWeekPos != null && calendarProgress.currentDayPos != null ? (
+            <div className="cm-day-navigation"><button type="button" className="secondary-button"
+              onClick={() => handleCalendarDay(calendarProgress.currentWeekPos!, calendarProgress.currentDayPos!)}>Jump to Today</button>
+              {focusLabel === "Next session" && focusProgress.currentWeekPos != null && focusProgress.currentDayPos != null ? <button type="button" className="secondary-button" onClick={() => handleCalendarDay(focusProgress.currentWeekPos!, focusProgress.currentDayPos!)}>Next session</button> : null}</div>
+          ) : null}
           <div className="sp-weeks cm-days">
             {dayList.length > 0 ? (
               dayTimeline.map((entry) => {
@@ -2886,7 +2935,7 @@ export function StructuredPlanRenderer({
                       label={gapLabel.label}
                       reason={gapLabel.reason}
                       isCurrent={entry.dateIso === restCurrentIso}
-                      currentLabel={focusLabel}
+                      currentLabel={calendarProgress.currentWeekPos != null ? "Today" : focusLabel}
                     />
                   );
                 }
@@ -2895,12 +2944,10 @@ export function StructuredPlanRenderer({
                 // plan) match carries no date, so it is identified by week/day
                 // position instead — only while the matched week is the one
                 // being viewed.
-                const isCurrent =
-                  focusProgress.currentDayDate != null
-                    ? cleanText(day.date)?.slice(0, 10) === focusProgress.currentDayDate
-                    : focusProgress.currentWeekPos === safePos &&
-                      focusProgress.currentDayPos === index &&
-                      focusProgress.currentDayPos != null;
+                const dayProgress = calendarProgress.currentWeekPos != null ? calendarProgress : focusProgress;
+                const isCurrent = dayProgress.currentDayDate != null
+                  ? cleanText(day.date)?.slice(0, 10) === dayProgress.currentDayDate
+                  : dayProgress.currentWeekPos === safePos && dayProgress.currentDayPos === index;
 
                 // A pure rest day renders identically to a synthesized gap row,
                 // so real and filled-in rest days read as one continuous line.
@@ -2911,11 +2958,12 @@ export function StructuredPlanRenderer({
                   return (
                     <RestDayRow
                       key={restDate || `day-${index}`}
+                      dayIndex={index}
                       countdown={formatCountdownLabel(day.countdown_label)}
                       weekday={openOngoing ? openTimelineDayLabel(displayDay, safePos + 1, `Training day ${index + 1}`) : weekdayLabel(restDate)}
                       label={cleanText(day.today_card?.headline) || "Rest"}
                       isCurrent={isCurrent}
-                      currentLabel={focusLabel}
+                      currentLabel={calendarProgress.currentWeekPos != null ? "Today" : focusLabel}
                     />
                   );
                 }
@@ -2933,12 +2981,13 @@ export function StructuredPlanRenderer({
                     openOngoing={openOngoing}
                     weekNumber={safePos + 1}
                     isCurrent={isCurrent}
-                    currentLabel={focusLabel}
+                    isNext={!isCurrent && focusProgress.currentWeekPos === safePos && focusProgress.currentDayPos === index && focusLabel === "Next session"}
+                    currentLabel={calendarProgress.currentWeekPos != null ? "Today" : focusLabel}
                     defaultOpen={
-                      isCurrent ||
-                      (focusProgress.currentWeekPos == null && index === 0) ||
+                      (calendarProgress.currentWeekPos === safePos && calendarProgress.currentDayPos === index) ||
                       (requestedDay?.weekPos === safePos && requestedDay.dayIndex === index)
                     }
+                    openRequest={requestedDay?.weekPos === safePos && requestedDay.dayIndex === index ? requestedDay : undefined}
                     dayIndex={index}
                     completionIndex={completionIndex}
                     currentTrainingDayIso={currentTrainingDayIso}
@@ -2951,6 +3000,7 @@ export function StructuredPlanRenderer({
               <p className="sp-muted">No days scheduled this week.</p>
             )}
           </div>
+          </>
           ) : null}
         </>
       ) : null}
