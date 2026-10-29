@@ -194,7 +194,7 @@ html[data-app-surface="brand"] .app-safety-footer {
 .settings-card .appearance-mode-card { min-width: 0; padding: 14px; }
 .settings-card .settings-toggle-row { min-height: 60px; padding: 12px 0; border: 0; border-bottom: 1px solid var(--border-subtle); border-radius: 0; background: transparent; }
 
-@media (max-width: 1180px) {
+@media (max-width: 1399px) {
   .settings-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
   .settings-section-nav { position: sticky; top: var(--mobile-nav-clearance, 64px); z-index: 4; display: block; padding: 10px 12px; }
   .settings-section-nav-label, .settings-section-nav-list { display: none; }
@@ -203,6 +203,31 @@ html[data-app-surface="brand"] .app-safety-footer {
   .settings-layout { scroll-margin-top: calc(var(--mobile-nav-clearance, 64px) + 8px); }
   .settings-disclosure > summary { flex-wrap: wrap; gap: 4px 10px; }
   .settings-disclosure > summary span { order: 3; flex-basis: 100%; margin-left: 0; }
+}
+
+/* Desktop keeps the editing surface wide and uses columns for related fields. */
+@media (min-width: 1100px) {
+  .settings-page { width: min(100%, 1400px); gap: 28px; }
+  .settings-page > .section-heading > .athlete-motion-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 24px; align-items: center; width: 100%; }
+  .settings-page > .section-heading .kicker,
+  .settings-page > .section-heading h1,
+  .settings-page > .section-heading .muted { grid-column: 1; }
+  .settings-quick-account { grid-column: 2; grid-row: 1 / 4; margin: 0; }
+  .settings-card { padding: 28px; gap: 24px; }
+  #account.settings-card, #admin-account.settings-card { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  #account.settings-card > *, #admin-account.settings-card > * { grid-column: 1 / -1; }
+  #account.settings-card > .avatar-editor-row, #admin-account.settings-card > .avatar-editor-row { grid-column: 1; grid-row: 2; grid-template-columns: 88px minmax(0, 1fr); gap: 16px; height: 100%; box-sizing: border-box; }
+  #account.settings-card > .settings-identity-grid, #admin-account.settings-card > .settings-identity-grid { grid-column: 2; grid-row: 2; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .settings-card .appearance-mode-grid { max-width: 680px; }
+  .settings-card .appearance-mode-preview { height: 108px; }
+  .settings-profile-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settings-card .settings-toggle-list { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 28px; }
+}
+
+@media (min-width: 1400px) {
+  .settings-layout { grid-template-columns: 200px minmax(0, 1fr); gap: 28px; }
+  .settings-section-nav { padding: 10px; box-shadow: none; }
+  .settings-section-nav-link { min-height: 44px; letter-spacing: 0.04em; }
 }
 
 /* The heading's entrance animation makes it a stacking context; lift it so the
