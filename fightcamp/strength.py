@@ -1464,20 +1464,24 @@ def get_exercise_bank() -> list[dict]:
         for item in _exercise_bank_cache:
             validate_training_item(item, source="exercise_bank.json", require_phases=True, mode="runtime")
             normalize_item_tags(item)
+            # Selection writes the canonical movement back onto the row it reads
+            # (``normalize_exercise_movement``), and classification reads that
+            # movement. Normalizing here means every caller sees the same rows,
+            # whether or not ``prime_strength_banks`` ran first.
+            normalize_exercise_movement(item)
     return _exercise_bank_cache
 
 
 def prime_strength_banks() -> None:
-    """Load and normalize strength banks once so later runs see consistent state.
+    """Load the strength bank once so later runs skip the cold read.
 
     `_detect_movement_pattern` includes the exercise's existing `movement` value
-    in its keyword haystack and writes the result back in-place, so the first
-    plan-generation call would otherwise produce different per-item movement
-    classifications than later calls. Normalizing at prime time pins the
-    canonical movement up front and removes that source of seeded-output drift.
+    in its keyword haystack and writes the result back in-place, so an
+    unnormalized bank would classify items differently on the first
+    plan-generation call than on later ones. ``get_exercise_bank`` pins the
+    canonical movement as it loads, so priming only needs to trigger the load.
     """
-    for item in get_exercise_bank():
-        normalize_exercise_movement(item)
+    get_exercise_bank()
 
 
 MOVEMENT_PATTERN_TAGS = {

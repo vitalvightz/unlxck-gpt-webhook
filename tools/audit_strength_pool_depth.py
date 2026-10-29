@@ -65,18 +65,16 @@ def _banned(exercise: dict) -> bool:
 
 
 def _steady_state_bank() -> list[dict]:
-    """Private copy of the bank with movement normalized.
+    """Private copy of the loaded (movement-normalized) bank, so the audit never touches the cache."""
+    return copy.deepcopy(strength.get_exercise_bank())
 
-    ``normalize_exercise_movement`` writes the canonical movement back onto the
-    row it is given, and the selector calls it on the shared cached bank. A
-    long-lived process therefore classifies a row by its normalized movement
-    once any generation has touched it. Audit that steady state, on a copy, so
-    this tool never mutates the live cache.
-    """
-    bank = copy.deepcopy(strength.get_exercise_bank())
-    for exercise in bank:
-        strength.normalize_exercise_movement(exercise)
-    return bank
+
+def _raw_bank() -> list[dict]:
+    """Bank rows as authored: tags normalized, ``movement`` as written in the JSON."""
+    rows = json.loads((REPO_ROOT / "data" / "exercise_bank.json").read_text(encoding="utf-8"))
+    for row in rows:
+        strength.normalize_item_tags(row)
+    return rows
 
 
 def _profile(exercise: dict) -> dict:
@@ -95,9 +93,9 @@ def _profile(exercise: dict) -> dict:
 
 
 def _classification_flips(steady: list[dict]) -> list[dict]:
-    """Rows whose quality class or base categories change once movement is normalized."""
+    """Rows whose authored movement classifies differently from the planner's normalized one."""
     flips = []
-    for raw, normalized in zip(copy.deepcopy(strength.get_exercise_bank()), steady):
+    for raw, normalized in zip(_raw_bank(), steady):
         before, after = classify_strength_item(raw), classify_strength_item(normalized)
         if before["quality_class"] == after["quality_class"] and set(before["base_categories"]) == set(after["base_categories"]):
             continue
@@ -288,8 +286,8 @@ def _markdown(static: dict, selection: dict | None) -> str:
     for row in static["bodyweight_rows_classed_lower_body_loaded"]:
         lines.append(f"- {row['name']} ({'/'.join(row['phases'])}, {row['movement']})")
     lines += ["", "## Rows reclassified by movement normalization", "",
-              "The bank `movement` value is rewritten on the shared cached row the first time a",
-              "generation touches it, so these rows classify differently before and after.", "",
+              "The planner replaces each row's authored `movement` with a detected canonical",
+              "pattern when the bank loads; these rows classify differently under the two.", "",
               "| Row | Movement (bank → normalized) | Class | Gains | Loses |", "|---|---|---|---|---|"]
     for row in static["movement_normalization_classification_flips"]:
         quality = row["quality_class"][0] if row["quality_class"][0] == row["quality_class"][1] else " → ".join(row["quality_class"])
