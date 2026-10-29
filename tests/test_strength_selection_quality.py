@@ -143,3 +143,7 @@ def test_original_intake_through_scheduled_strength_sessions(monkeypatch, seed):
     assert all(goal["satisfied"] for goal in brief["goal_preservation"])
     assert brief["primary_weakness_disposition"]["weakness"] == "balance"
     assert brief["primary_weakness_disposition"]["subsystem"] == "coordination_support_library"
+    # An athlete asking for five days can combine compatible coach work and
+    # strength; optional filler work must not create a sixth occupied day.
+    from fightcamp.physical_session_frequency import appointment_budget_exceeded
+    assert not appointment_budget_exceeded(brief["weekly_role_map"], 5)
