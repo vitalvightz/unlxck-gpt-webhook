@@ -2666,7 +2666,7 @@ def reserve_dense_day_receiver(
     from .calendar_context import contact_refs, role_d_day, build_events
     from .combat_load_policy import LoadClass
     from .physical_session_frequency import (
-        dated_appointments, requested_training_frequency,
+        requested_training_frequency, would_add_excess_training_day,
     )
     from .pre_hard_contact_strength import _power_microdose_eligible
 
@@ -2713,12 +2713,6 @@ def reserve_dense_day_receiver(
             d["d_day"] for d in week.get("calendar_days") or []
             if isinstance(d, dict) and isinstance(d.get("d_day"), int)
         }
-        scheduled = [
-            row for row in dated_appointments(role_map)
-            if row["countdown_offset"] in days
-        ]
-        if len(scheduled) >= frequency:
-            continue
         occupied = {
             role_d_day(week, role) for role in roles
             if role_d_day(week, role) is not None
@@ -2737,6 +2731,8 @@ def reserve_dense_day_receiver(
                 or day.lower() not in allowed or d_day in occupied
                 or d_day - 1 not in contact_days or d_day == source_d
             ):
+                continue
+            if would_add_excess_training_day(role_map, frequency, d_day):
                 continue
             receiver = {
                 "category": "strength",
@@ -2782,12 +2778,20 @@ def reserve_dense_day_receiver(
 
 
 def enforce_total_session_budget(role_map: dict, athlete_model: dict, candidate_pools: dict | None = None) -> dict:
-    """Report appointment discrepancies without deleting selected physical work.
+    """Report distinct training-day overruns without deleting selected work.
 
-    Selection, calendar compatibility and prescription owners have already
-    judged this work. A requested appointment count is not a medical dose cap.
-    The independent validator also keeps over-target totals visible.
+    Compatible double-session days count once. Calendar compatibility, dosage,
+    and safety owners remain authoritative; any genuine excess day is reported
+    rather than silently deleting selected or coach-owned work.
     """
+    # This pass can run before and after repairs. Its notes describe the current
+    # effective schedule; earlier budget findings must not survive a valid repair.
+    for week in role_map.get("weeks") or []:
+        if "coach_note_flags" in week:
+            week["coach_note_flags"] = [
+                flag for flag in week["coach_note_flags"]
+                if not str(flag).startswith("Training day count discrepancy ")
+            ]
     frequency = requested_training_frequency(athlete_model)
     if not frequency:
         return role_map
@@ -2797,11 +2801,12 @@ def enforce_total_session_budget(role_map: dict, athlete_model: dict, candidate_
     for days in cadence_windows(slots):
         offsets = {d for d, _ in days}
         scheduled = [r for r in appointments if r["countdown_offset"] in offsets]
-        if len(scheduled) > frequency:
+        training_days = {r["countdown_offset"] for r in scheduled}
+        if len(training_days) > frequency:
             _append_week_coach_note_flag(scheduled[0]["_source_week"],
-                f"Session count discrepancy D-{max(offsets)}..D-{min(offsets)}: "
-                f"{len(scheduled)} standalone physical appointments versus {frequency} requested; "
-                "compatible selected work retained, requested count exceeded.")
+                f"Training day count discrepancy D-{max(offsets)}..D-{min(offsets)}: "
+                f"{len(training_days)} physical training days versus {frequency} requested; "
+                "compatible selected work retained, requested day count exceeded.")
     return role_map
 
 

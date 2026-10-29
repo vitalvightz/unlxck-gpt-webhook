@@ -92,7 +92,8 @@ def test_final_pipeline_reports_totals_without_trimming_compatible_work(monkeypa
                 if sum(role_d_day(week, r) == day for r in full) >= 2:
                     double_days.append(day)
     slots = [(d["d_day"], d["weekday"]) for w in brief["weekly_role_map"]["weeks"] for d in w["calendar_days"]]
-    exceeded = any(sum(day in {d for d, _ in days} for day in appointment_days) > frequency
+    # The weekly allowance is distinct physical training days, not appointments.
+    exceeded = any(len(set(appointment_days) & {d for d, _ in days}) > frequency
                    for days in cadence_windows(slots))
     from fightcamp.stage2_validator import _total_session_budget_warnings
     assert bool(_total_session_budget_warnings(brief)) is exceeded
@@ -127,7 +128,7 @@ def test_budget_retains_host_and_embedded_support_and_reports_overrun():
     enforce_total_session_budget(role_map, {"training_frequency": 1})
     assert len(roles) == 3
     assert len(physical_appointments([{**r, "countdown_offset": role_d_day({}, r)} for r in roles])) == 2
-    assert any("requested count exceeded" in flag for flag in role_map["weeks"][0]["coach_note_flags"])
+    assert any("requested day count exceeded" in flag for flag in role_map["weeks"][0]["coach_note_flags"])
 
 
 def test_impossible_coach_schedule_is_flagged_without_deleting_coach_sessions():

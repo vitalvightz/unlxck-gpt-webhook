@@ -986,3 +986,29 @@ def test_any_declared_pre_hard_weekday_can_receive_not_only_monday() -> None:
     assert len(main["selected_exercise_assignments"]) == 3
     assert len(wednesday["selected_exercise_assignments"]) == 2
     assert week["pre_hard_power_redistribution"]["status"] == "transferred"
+
+
+def test_dense_receiver_uses_its_seven_day_window_in_eight_day_phase_week():
+    from fightcamp.stage2_role_map import reserve_dense_day_receiver
+
+    weekly, _ = _composed_dense_week_without_secondary()
+    week = weekly["weeks"][0]
+    week["calendar_days"] = _calendar(
+        ("Saturday", 25), ("Sunday", 24), ("Monday", 23), ("Tuesday", 22),
+        ("Wednesday", 21), ("Thursday", 20), ("Friday", 19), ("Saturday", 18),
+    )
+    week["session_roles"].extend(
+        {"role_key": "light_combat_day", "category": "technical", "countdown_offset": d}
+        for d in (22, 21, 20, 19)
+    )
+    # Five days across the phase span, but only four in D-25..D-19.
+    # The dense donor at D-18 belongs to the next cadence window.
+    reserve_dense_day_receiver(weekly, {
+        "training_days": ["Monday", "Tuesday", "Thursday", "Saturday"],
+        "hard_sparring_days": ["Tuesday", "Thursday"],
+        "training_frequency": 5, "primary_goal": "power", "fatigue": "low",
+        "cut_severity_bucket": "none",
+    })
+    receivers = [r for r in week["session_roles"] if r.get("dense_day_receiver_provisional")]
+    assert len(receivers) == 1
+    assert receivers[0]["scheduled_d_day"] == 23

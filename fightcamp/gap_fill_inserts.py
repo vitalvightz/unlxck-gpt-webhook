@@ -1646,6 +1646,7 @@ def select_gap_fill_insert(
     gap_span: int | None = None,
     force_tactical: bool = False,
     force_conditioning: bool = False,
+    allow_physical: bool = True,
     legality: CalendarLegalityView | None = None,
     scheduled_roles: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any] | None:
@@ -1657,6 +1658,10 @@ def select_gap_fill_insert(
         insert_offset,
         on_hard_sparring_day=on_hard_sparring_day,
     )
+    if not allow_physical:
+        # Aerobic maintenance also occupies a real training day. Never let it
+        # bypass the day quota just because it is low cost.
+        allowed -= PHYSICAL_INSERTS | LOW_COST_AEROBIC_INSERTS
     # Shared calendar legality is the authority on physical coexistence: drop any
     # candidate the policy would FORBID at this position and prefer its ALLOW
     # options over DEPRIORITIZE ones, all read from the same canonical calendar

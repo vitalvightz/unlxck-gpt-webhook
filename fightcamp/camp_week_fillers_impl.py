@@ -159,6 +159,10 @@ def _select_filler_for_day(
     if d_day is None or d_day in set(week.get("late_fight_tail_days") or []):
         return None
 
+    from .physical_session_frequency import requested_training_frequency, would_add_excess_training_day
+    allow_physical = allow_physical and not would_add_excess_training_day(
+        weekly_role_map, requested_training_frequency(athlete_model), d_day,
+    )
     legality = weekly_role_map_legality(weekly_role_map, week, week_ordinal)
     on_hard_sparring_day = d_day in legality.contact_offsets()
     coverage_roles = usage_ledger.setdefault("coverage_roles", [])
@@ -170,9 +174,14 @@ def _select_filler_for_day(
         legality=legality,
         scheduled_roles=coverage_roles,
         force_conditioning=prefer_conditioning,
+        allow_physical=allow_physical,
     )
-    if insert is None or (not allow_physical and insert.get("role_key") in PHYSICAL_INSERTS):
+    if insert is None:
         return None
+    if not allow_physical:
+        from .physical_session_frequency import is_physical_session_role
+        if is_physical_session_role({**insert, "countdown_offset": d_day}):
+            return None
     if legality.role_is_forbidden(insert, d_day):
         return None
     return insert, d_day
@@ -190,19 +199,22 @@ def _place_filler(
     allow_physical: bool,
     prefer_conditioning: bool = False,
 ) -> dict[str, Any] | None:
+    candidate_ledger = deepcopy(usage_ledger)
+    candidate_ledger["coverage_roles"] = list(usage_ledger.get("coverage_roles", []))
     selected = _select_filler_for_day(
         week,
         athlete_model,
         day,
         weekly_role_map=weekly_role_map,
         week_ordinal=week_ordinal,
-        usage_ledger=usage_ledger,
+        usage_ledger=candidate_ledger,
         allow_physical=allow_physical,
         prefer_conditioning=prefer_conditioning,
     )
     if selected is None:
         return None
     insert, d_day = selected
+    usage_ledger.update(candidate_ledger)
     _decorate_filler(insert, day, d_day)
     session_roles.append(insert)
     usage_ledger.setdefault("coverage_roles", []).append(insert)
@@ -967,6 +979,8 @@ def _complete_week_physical_occupancy(
     week: dict[str, Any],
     athlete_model: dict[str, Any],
     usage_ledger: dict[str, Any],
+    *,
+    weekly_role_map: dict[str, Any] | None = None,
 ) -> None:
     """Give every declared training day a session, or a recorded reason for not.
 
@@ -985,6 +999,7 @@ def _complete_week_physical_occupancy(
         roles=[role for role in session_roles if isinstance(role, dict)],
         athlete_model=athlete_model,
         usage_ledger=usage_ledger,
+        frequency_role_map=weekly_role_map or {"weeks": [week]},
     )
     for role in added:
         role["camp_week_filler"] = True
@@ -1136,7 +1151,9 @@ def apply_camp_week_fillers(
     if fight_dated:
         for week in weekly_role_map.get("weeks", []) or []:
             if isinstance(week, dict):
-                _complete_week_physical_occupancy(week, athlete_model, usage_ledger)
+                _complete_week_physical_occupancy(
+                    week, athlete_model, usage_ledger, weekly_role_map=weekly_role_map,
+                )
         # Settle Tactical Focus / reflection first so the camp visualisations
         # land on days that keep no other mental task, then govern the finished
         # calendar: nothing placed above can outlive the shared policy.

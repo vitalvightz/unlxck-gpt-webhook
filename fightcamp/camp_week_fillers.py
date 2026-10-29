@@ -549,7 +549,9 @@ def apply_camp_week_fillers(
     if fight_dated:
         for week in weekly_role_map.get("weeks", []) or []:
             if isinstance(week, dict):
-                _complete_week_physical_occupancy(week, athlete_model, usage_ledger)
+                _complete_week_physical_occupancy(
+                    week, athlete_model, usage_ledger, weekly_role_map=weekly_role_map,
+                )
         # Mental-training frequency is one shared policy. Settle Tactical Focus
         # and reflections first so the optional camp Fight Visualisation
         # (D-42..D-14; the tail places its own) lands on a day with no other

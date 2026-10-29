@@ -1,7 +1,7 @@
 """Physical-session frequency contract.
 
 ``training_frequency`` means one thing across the planner: the number of
-*physical* training sessions the athlete plans to do in a week. The late-fight
+distinct *physical training days* the athlete plans in a week. The late-fight
 taper may make those sessions cheaper — less volume, less contact, less
 eccentric load, shorter — but it may not silently delete the sessions
 themselves, and zero-load tactical/education support may never stand in for one.
@@ -22,6 +22,8 @@ from fightcamp.physical_session_frequency import (
     audit_physical_session_frequency,
     cadence_windows,
     count_physical_sessions,
+    appointment_budget_exceeded,
+    would_add_excess_training_day,
     is_physical_session_role,
     physical_session_offsets,
     plan_physical_occupancy,
@@ -223,7 +225,132 @@ def test_fight_day_protocol_is_not_training():
     assert count_physical_sessions(roles) == 0
 
 
-# ── target arithmetic ───────────────────────────────────────────────────────
+
+def _day_budget_map(days: list[int], *, double: bool = False) -> dict:
+    roles = [_role("light_combat_day", "technical", day) for day in days]
+    if double:
+        roles.append(_role("primary_strength_day", "strength", days[0]))
+        roles.append(_role("tactical_watch", "support_insert", days[0]))
+    return {
+        "weeks": [{
+            "phase": "SPP",
+            "session_roles": roles,
+            "calendar_days": [
+                {"d_day": d, "weekday": ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")[i]}
+                for i, d in enumerate(range(20, 13, -1))
+            ],
+        }]
+    }
+
+
+def test_double_session_day_counts_once_against_training_day_budget():
+    from fightcamp.stage2_validator import _total_session_budget_warnings
+    from fightcamp.stage2_role_map import enforce_total_session_budget
+
+    role_map = _day_budget_map([20, 19, 18, 17, 16], double=True)
+    assert count_physical_sessions(role_map["weeks"][0]["session_roles"]) == 5
+    assert not appointment_budget_exceeded(role_map, 5)
+    assert not would_add_excess_training_day(role_map, 5, 20)
+    brief = {"athlete_snapshot": {"training_frequency": 5}, "weekly_role_map": role_map}
+    assert _total_session_budget_warnings(brief) == []
+    enforce_total_session_budget(role_map, brief["athlete_snapshot"])
+    assert not role_map["weeks"][0].get("coach_note_flags")
+
+
+def test_sixth_distinct_day_warns_without_deleting_coach_work():
+    from fightcamp.stage2_validator import _total_session_budget_warnings
+    from fightcamp.stage2_role_map import enforce_total_session_budget
+
+    role_map = _day_budget_map([20, 19, 18, 17, 16], double=True)
+    assert would_add_excess_training_day(role_map, 5, 15)
+    role_map["weeks"][0]["session_roles"].append(
+        _role("footwork_walkthrough", "skill", 15)
+    )
+    assert appointment_budget_exceeded(role_map, 5)
+    warnings = _total_session_budget_warnings({
+        "athlete_snapshot": {"training_frequency": 5}, "weekly_role_map": role_map,
+    })
+    assert len(warnings) == 1
+    assert warnings[0]["scheduled_training_days"] == 6
+    assert warnings[0]["requested_training_days"] == 5
+    assert warnings[0]["scheduled_sessions"] == 7
+    assert warnings[0]["requested_sessions"] == 5
+    before = list(role_map["weeks"][0]["session_roles"])
+    enforce_total_session_budget(role_map, {"training_frequency": 5})
+    assert role_map["weeks"][0]["session_roles"] == before
+    assert any("requested day count exceeded" in note
+               for note in role_map["weeks"][0].get("coach_note_flags", []))
+
+
+def test_public_filler_entry_point_cannot_open_sixth_day_or_reserve_usage(monkeypatch):
+    from copy import deepcopy
+    from fightcamp import camp_week_fillers as public
+    from fightcamp import camp_week_fillers_impl as fillers
+    from fightcamp import physical_occupancy_fill as occupancy
+
+    first = {
+        "phase": "TAPER",
+        "calendar_days": [{"d_day": d, "weekday": "Thursday"} for d in [11, 10, 9]],
+        "session_roles": [_role("light_combat_day", "technical", d) for d in [11, 10, 9]],
+    }
+    last = {
+        "phase": "TAPER",
+        "calendar_days": [{"d_day": d, "weekday": "Wednesday"} for d in [7, 6, 5]],
+        "session_roles": [_role("light_combat_day", "technical", d) for d in [7, 6]],
+        "intentionally_unused_days": [],
+    }
+    role_map = {"weeks": [first, last]}
+    # Run the public adapter and real occupancy pass, isolating unrelated work.
+    for name in ("_ensure_tactical_watch", "_ensure_coordination_support", "_fill_week",
+                 "_place_camp_visualizations"):
+        monkeypatch.setattr(public, name, lambda *args, **kwargs: False)
+    monkeypatch.setattr(fillers, "govern_weekly_mental_training", lambda *args: None)
+    ledger = fillers._new_usage_ledger()
+    monkeypatch.setattr(public, "_new_usage_ledger", lambda: ledger)
+    selected = []
+    def select(*args, **kwargs):
+        selected.append(args[1])
+        return _role("technical_shadow_rhythm", "support_insert", args[1])
+    monkeypatch.setattr(occupancy, "select_physical_occupancy_insert", select)
+    before = deepcopy(role_map)
+    public.apply_camp_week_fillers(role_map, {"training_frequency": 5, "days_until_fight": 11})
+    assert selected == []
+    assert ledger["role_key_offsets"] == {}
+    assert not appointment_budget_exceeded(role_map, 5)
+    for old, new in zip(before["weeks"], role_map["weeks"]):
+        assert old["session_roles"] == new["session_roles"]
+    assert last["intentionally_unused_days"][0]["reason_code"] == "requested_frequency_already_met"
+
+
+def test_generic_probe_and_placement_share_frequency_filter(monkeypatch):
+    from fightcamp import camp_week_fillers_impl as fillers
+    from fightcamp import gap_fill_inserts as inserts
+    week = _day_budget_map([20, 19, 18, 17, 16])["weeks"][0]
+    week["intentionally_unused_days"] = [{"day": "Saturday", "role": "off_day"}]
+    role_map = {"weeks": [week]}
+    monkeypatch.setattr(inserts, "_allowed_inserts", lambda *a, **k: {"joint_prep", "breathing_reset"})
+    def choose(*args, **kwargs):
+        return "joint_prep" if "joint_prep" in args[2] else "breathing_reset"
+    monkeypatch.setattr(inserts, "_select_role_key", choose)
+    ledger = fillers._new_usage_ledger()
+    kwargs = dict(weekly_role_map=role_map, week_ordinal=1, usage_ledger=ledger)
+    probe = fillers._probe_first_generic_filler(
+        week, week["session_roles"], {"training_frequency": 5},
+        coverage_roles=[], **kwargs,
+    )
+    monkeypatch.setattr(fillers, "_priority_contribution",
+                        lambda key, state: {"joint_prep": 2, "coordination_support": 1}.get(key, 0))
+    assert fillers._coordination_is_best_remaining_option(
+        week, week["session_roles"], {"training_frequency": 5},
+        coverage_roles=[], **kwargs,
+    )
+    placed = fillers._place_filler(
+        week, week["session_roles"], {"training_frequency": 5}, "Saturday",
+        allow_physical=True, **kwargs,
+    )
+    assert probe["role_key"] == placed["role_key"] == "breathing_reset"
+    assert not any(r.get("countdown_offset") == 15 and is_physical_session_role(r)
+                   for r in week["session_roles"])
 
 
 def test_target_is_frequency_when_availability_allows():
@@ -795,3 +922,36 @@ def test_legacy_weekday_only_unused_record_still_dedupes_against_its_offset():
         "Monday",
         "Tuesday",
     ]
+
+
+def test_rejected_generic_candidate_does_not_change_usage_history(monkeypatch):
+    from copy import deepcopy
+    from fightcamp import camp_week_fillers_impl as fillers
+    week = _day_budget_map([20])["weeks"][0]
+    ledger = fillers._new_usage_ledger()
+    before = deepcopy(ledger)
+    def reject(*args, **kwargs):
+        kwargs["usage_ledger"].setdefault("used_technical_footwork_names", set()).add("rejected exercise")
+        kwargs["usage_ledger"]["role_key_offsets"]["footwork_walkthrough"] = [19]
+        return None
+    monkeypatch.setattr(fillers, "_select_filler_for_day", reject)
+    assert fillers._place_filler(
+        week, week["session_roles"], {"training_frequency": 5}, "Tuesday",
+        weekly_role_map={"weeks": [week]}, week_ordinal=1, usage_ledger=ledger,
+        allow_physical=True,
+    ) is None
+    assert ledger == before
+
+
+def test_budget_notes_are_refreshed_after_schedule_repair():
+    from fightcamp.stage2_role_map import enforce_total_session_budget
+    role_map = _day_budget_map([20, 19, 18, 17, 16, 15], double=True)
+    week = role_map["weeks"][0]
+    week["coach_note_flags"] = ["Keep coach-owned work"]
+    athlete = {"training_frequency": 5}
+    enforce_total_session_budget(role_map, athlete)
+    enforce_total_session_budget(role_map, athlete)
+    assert len(week["coach_note_flags"]) == 2
+    week["session_roles"] = [r for r in week["session_roles"] if r["countdown_offset"] != 15]
+    enforce_total_session_budget(role_map, athlete)
+    assert week["coach_note_flags"] == ["Keep coach-owned work"]

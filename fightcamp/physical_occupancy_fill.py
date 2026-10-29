@@ -29,6 +29,7 @@ from .physical_session_frequency import (
     plan_week_physical_occupancy,
     requested_training_frequency,
     unused_day_record,
+    would_add_excess_training_day,
 )
 
 
@@ -57,12 +58,15 @@ def fill_physical_occupancy(
     athlete_model: dict[str, Any],
     resolved_contacts: list[dict[str, Any]] | None = None,
     usage_ledger: dict[str, Any] | None = None,
+    frequency_role_map: dict[str, Any] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Return ``(added_roles, intentionally_unused_records)`` for one planner week.
 
     ``day_slots`` is ``[(countdown_offset, weekday), ...]`` for the week being
     completed. ``roles`` is the week's already-placed sequence and is not
-    mutated.
+    mutated. ``frequency_role_map`` supplies the full calendar when a phase
+    week covers only part of a seven-day frequency window. Check that budget
+    before selecting or reserving exercise usage.
 
     The week is split into real seven-day cadence windows first. A planner week
     can span eight days and repeat a weekday, and a weekly frequency target may
@@ -102,6 +106,17 @@ def fill_physical_occupancy(
                     unused_day_record(weekday, offset, REASON_FREQUENCY_TARGET_MET)
                 )
                 continue
+            if frequency_role_map is not None:
+                # Include accepted candidates before reserving the next exercise.
+                budget_map = {"weeks": [
+                    *(frequency_role_map.get("weeks") or []),
+                    {"session_roles": added},
+                ]}
+                if would_add_excess_training_day(
+                    budget_map, requested_training_frequency(athlete_model), offset,
+                ):
+                    unused.append(unused_day_record(weekday, offset, REASON_FREQUENCY_TARGET_MET))
+                    continue
             legality = sequence_legality(
                 list(roles) + added,
                 resolved_contacts=list(resolved_contacts or []),
