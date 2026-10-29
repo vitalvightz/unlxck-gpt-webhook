@@ -121,8 +121,11 @@ def test_count_discrepancies_remain_visible_across_progression_boundaries(produc
     warnings = production_replay[2]["stage2_validator_report"]["warnings"]
     budget_warnings = [w for w in warnings if w["code"] == "total_session_budget_exceeded"]
     assert bool(budget_warnings) == (max(counts) > 6)
-    if budget_warnings:
-        assert max(w["scheduled_training_days"] for w in budget_warnings) == max(counts)
+    for warning in budget_warnings:
+        offsets = set(range(warning["min_d_day"], warning["max_d_day"] + 1))
+        scheduled = [r for r in appointments if r["countdown_offset"] in offsets]
+        assert warning["scheduled_training_days"] == len({r["countdown_offset"] for r in scheduled})
+        assert warning["scheduled_sessions"] == len(scheduled)
     # A legitimate same-day coach + S&C pair consumes two appointments but one day.
     assert sum(r["countdown_offset"] == 44 for r in appointments) == 2
     extra = deepcopy(role_map)

@@ -159,6 +159,10 @@ def _select_filler_for_day(
     if d_day is None or d_day in set(week.get("late_fight_tail_days") or []):
         return None
 
+    from .physical_session_frequency import requested_training_frequency, would_add_excess_training_day
+    allow_physical = allow_physical and not would_add_excess_training_day(
+        weekly_role_map, requested_training_frequency(athlete_model), d_day,
+    )
     legality = weekly_role_map_legality(weekly_role_map, week, week_ordinal)
     on_hard_sparring_day = d_day in legality.contact_offsets()
     coverage_roles = usage_ledger.setdefault("coverage_roles", [])
@@ -170,6 +174,7 @@ def _select_filler_for_day(
         legality=legality,
         scheduled_roles=coverage_roles,
         force_conditioning=prefer_conditioning,
+        allow_physical=allow_physical,
     )
     if insert is None or (not allow_physical and insert.get("role_key") in PHYSICAL_INSERTS):
         return None
@@ -190,26 +195,22 @@ def _place_filler(
     allow_physical: bool,
     prefer_conditioning: bool = False,
 ) -> dict[str, Any] | None:
+    candidate_ledger = deepcopy(usage_ledger)
+    candidate_ledger["coverage_roles"] = list(usage_ledger.get("coverage_roles", []))
     selected = _select_filler_for_day(
         week,
         athlete_model,
         day,
         weekly_role_map=weekly_role_map,
         week_ordinal=week_ordinal,
-        usage_ledger=usage_ledger,
+        usage_ledger=candidate_ledger,
         allow_physical=allow_physical,
         prefer_conditioning=prefer_conditioning,
     )
     if selected is None:
         return None
     insert, d_day = selected
-    from .physical_session_frequency import (
-        is_physical_session_role, requested_training_frequency, would_add_excess_training_day,
-    )
-    if is_physical_session_role({**insert, "countdown_offset": d_day}) and would_add_excess_training_day(
-        weekly_role_map, requested_training_frequency(athlete_model), d_day,
-    ):
-        return None
+    usage_ledger.update(candidate_ledger)
     _decorate_filler(insert, day, d_day)
     session_roles.append(insert)
     usage_ledger.setdefault("coverage_roles", []).append(insert)
@@ -994,20 +995,9 @@ def _complete_week_physical_occupancy(
         roles=[role for role in session_roles if isinstance(role, dict)],
         athlete_model=athlete_model,
         usage_ledger=usage_ledger,
-    )
-    from .physical_session_frequency import (
-        REASON_FREQUENCY_TARGET_MET, requested_training_frequency,
-        unused_day_record, would_add_excess_training_day,
+        frequency_role_map=weekly_role_map or {"weeks": [week]},
     )
     for role in added:
-        offset = role.get("countdown_offset")
-        if (isinstance(offset, int) and weekly_role_map is not None
-                and would_add_excess_training_day(
-                    weekly_role_map, requested_training_frequency(athlete_model), offset,
-                )):
-            weekday = next((day for day_offset, day in day_slots if day_offset == offset), "")
-            unused.append(unused_day_record(weekday, offset, REASON_FREQUENCY_TARGET_MET))
-            continue
         role["camp_week_filler"] = True
         if week.get("late_fight_tail_days") and role.get("countdown_offset") in set(
             week.get("late_fight_tail_days") or []

@@ -114,16 +114,19 @@ def test_replacement_paths_do_not_reintroduce_the_other_rdl(monkeypatch, seed, e
 
 
 @pytest.mark.parametrize("seed", [2837615948, 0, 4])
-def test_original_intake_through_scheduled_strength_sessions(monkeypatch, seed):
+@pytest.mark.parametrize("hour,minute", [(9, 18), (10, 37)])
+def test_original_intake_through_scheduled_strength_sessions(monkeypatch, seed, hour, minute):
     from api.models import PlanRequest
     from fightcamp import input_parsing, stage2_planning_brief
     from fightcamp.main import generate_plan_sync
 
     # Original generation_jobs request, with only the display name anonymised.
+    # Supabase confirms the 10:42:35 plan used the same intake as the earlier
+    # replay; its generation job started at 10:37:30 on 2026-10-29.
     payload = json.loads((Path(__file__).parent / "fixtures" / "strength_selection_quality" / "intake.json").read_text(encoding="utf8"))
     payload["random_seed"] = seed
-    monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 10, 29, 9, 18))
-    monkeypatch.setattr(stage2_planning_brief, "_utc_now", lambda: datetime(2026, 10, 29, 9, 18))
+    monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 10, 29, hour, minute))
+    monkeypatch.setattr(stage2_planning_brief, "_utc_now", lambda: datetime(2026, 10, 29, hour, minute))
     result = generate_plan_sync(PlanRequest(**payload).to_payload())
     brief = result["planning_brief"]
     roles = [r for w in brief["weekly_role_map"]["weeks"] for r in w["session_roles"] if r["category"] == "strength"]
@@ -147,3 +150,11 @@ def test_original_intake_through_scheduled_strength_sessions(monkeypatch, seed):
     # strength; optional filler work must not create a sixth occupied day.
     from fightcamp.physical_session_frequency import appointment_budget_exceeded
     assert not appointment_budget_exceeded(brief["weekly_role_map"], 5)
+    from fightcamp.calendar_context import contact_refs
+    contacts = {ref.d_day: ref.profile.load_class.value
+                for ref in contact_refs(brief["weekly_role_map"])}
+    assert contacts == {
+        31: "reduced_contact", 25: "hard_contact", 24: "reduced_contact",
+        18: "hard_contact", 17: "reduced_contact", 11: "technical_contact",
+        10: "technical_contact", 4: "technical_contact", 3: "technical_contact",
+    }

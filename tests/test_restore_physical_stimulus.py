@@ -76,7 +76,8 @@ def test_existing_strength_session_carries_speed_and_moving_footwork(programmes)
 
 def test_appointment_overruns_are_visible_and_never_trim_selected_work(programmes):
     brief, summary = programmes["saved_plan"]
-    role_map = deepcopy(brief["weekly_role_map"])
+    from fightcamp.goal_preservation import _effective_map
+    role_map = deepcopy(_effective_map(brief))
     before = deepcopy(role_map)
     enforce_total_session_budget(role_map, brief["athlete_snapshot"], brief["candidate_pools"])
     for old, new in zip(before["weeks"], role_map["weeks"]):
