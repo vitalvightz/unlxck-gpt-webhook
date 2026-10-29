@@ -24,7 +24,7 @@ Rules of ownership:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from typing import Any, Hashable, Iterable, Mapping, Sequence
 
@@ -114,6 +114,9 @@ class CalendarLoadProfile:
     # stress rule abstains. A role stamp supplies the planned vector; composition
     # restamps it with the realised one once exercises and doses are known.
     stress: SessionStress | None = None
+    # Easy effort does not make a long continuous endurance dose a recovery
+    # flush. Keep its existing contact/adjacency rules, but protect S&C quality.
+    substantial_endurance: bool = False
 
 
 @dataclass(frozen=True)
@@ -631,6 +634,7 @@ def _with_role_stress(
         occupancy=profile.occupancy,
         allows_light_combat_stack=profile.allows_light_combat_stack,
         stress=realised,
+        substantial_endurance=profile.substantial_endurance,
     )
 
 
@@ -660,7 +664,12 @@ def role_load_profile(role: Mapping[str, Any] | None) -> CalendarLoadProfile | N
         return canonical
 
     profile = _reconcile_role_stamp(role, _derived_role_profile(role))
-    return _with_role_stress(role, _realised_microdose_profile(role_key, role, profile))
+    profile = _with_role_stress(role, _realised_microdose_profile(role_key, role, profile))
+    if profile is not None:
+        from .session_workload import role_has_substantial_endurance
+        if role_has_substantial_endurance(role):
+            profile = replace(profile, substantial_endurance=True)
+    return profile
 
 
 def _realised_microdose_profile(
@@ -782,6 +791,15 @@ def _same_day_decision(
 ) -> PlacementDecision | None:
     if not existing:
         return None
+
+    from .session_workload import UNSAFE_STACKING_CODE
+    if ((candidate.substantial_endurance
+         and any(p.load_class is LoadClass.MEANINGFUL_STRENGTH for p in existing))
+            or (candidate.load_class is LoadClass.MEANINGFUL_STRENGTH
+                and any(p.substantial_endurance for p in existing))):
+        return _decision(PlacementDirective.FORBID, UNSAFE_STACKING_CODE,
+                         "Substantial continuous endurance and full S&C need separate days; "
+                         "defer lower-priority work when no compatible available day remains.")
 
     # Two independent strength appointments cannot own the same date. This is
     # not a general ban on technical + strength or conditioning + strength:

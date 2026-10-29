@@ -4157,6 +4157,8 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str, final_
         errors.extend(_goal_preservation_render_errors(planning_brief, final_plan_text))
     errors.extend(_priority_microdose_render_errors(planning_brief, final_plan_text))
     errors.extend(_underfilled_conditioning_errors(planning_brief))
+    from .session_workload import raw_stacking_findings
+    errors.extend(raw_stacking_findings(final_plan_text))
     warnings: list[dict[str, Any]] = _total_session_budget_warnings(planning_brief)
     warnings.extend(_same_day_strength_ownership_warnings(planning_brief))
     if not plan_lines:
