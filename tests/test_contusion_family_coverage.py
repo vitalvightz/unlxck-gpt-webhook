@@ -181,7 +181,9 @@ def test_original_audit_hashes_ids_and_review_history_preserved(tmp_path):
     assert hashes.keys() <= bank.keys()
     family_ids = {row["drill_id"] for row in audit}
     assert {identity for identity in family_ids if content_hash(bank[identity]) != hashes[identity]} == REPAIRED
-    current_family = {d["id"] for g in get_rehab_bank() if g["type"] == "contusion" for d in g["drills"]}
+    # #2986 added reviewed RESTORE drills. This dated audit keeps comparing
+    # the original rollout inventory, using the same exact history as above.
+    current_family = {d["id"] for g in historical_bank if g["type"] == "contusion" for d in g["drills"]}
     assert current_family - hashes.keys() == ({f"{r}_contusion_recovery_support" for r in REGIONS}
         | {"hand_contusion_reviewed_restore", "fingers_contusion_reviewed_restore"})
     ledger = {r["drill_id"]: r for r in historical_ledger}
@@ -203,8 +205,14 @@ def test_original_audit_hashes_ids_and_review_history_preserved(tmp_path):
 
 def test_previous_37_profiles_hashes_decisions_schedules_and_snapshots_unchanged(tmp_path):
     raw = read("data/rehab_pathways.json")
-    from tools.rehab_metadata_review_lib import before_achilles_load_activation
+    from tools.rehab_metadata_review_lib import before_achilles_load_activation, before_elbow_content_addition
     raw = before_achilles_load_activation(raw)
+    # #2984/#2986 republished these profiles. Compare the before/after
+    # contusion rollout against its dated bank and policies on both sides.
+    bank, _ = before_elbow_content_addition(get_rehab_bank(), read("data/rehab_metadata_review.json"))
+    after_path = tmp_path / "after.json"
+    after_path.write_text(json.dumps(raw), encoding="utf-8")
+    after_policies = load_clinical_policies(after_path, bank=bank)
     previous = read("tests/fixtures/rehab_profiles_before_contusion.json")
     assert len(previous) == 37
     previous_ids = {p["policy_id"] for p in previous}
@@ -212,7 +220,8 @@ def test_previous_37_profiles_hashes_decisions_schedules_and_snapshots_unchanged
     raw["profiles"] = previous
     baseline = tmp_path / "before.json"
     baseline.write_text(json.dumps(raw), encoding="utf-8")
-    for policy in load_clinical_policies(baseline):
+    before_policies = load_clinical_policies(baseline, bank=bank)
+    for policy in before_policies:
         if policy.policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain", "shoulder_tendonitis"}:
             # Versioned LOAD activations have their own baseline, ownership and
             # frozen-history assertions; all other profiles remain identical.
@@ -220,8 +229,8 @@ def test_previous_37_profiles_hashes_decisions_schedules_and_snapshots_unchanged
         for stage in ("calm", "restore"):
             for side in ("left", "unknown"):
                 row = injury(policy.region, policy.injury_type, stage, side=side)
-                old = resolve_injury_policy(row, policies=load_clinical_policies(baseline), bank=get_rehab_bank())
-                new = resolve(row)
+                old = resolve_injury_policy(row, policies=before_policies, bank=bank)
+                new = resolve_injury_policy(row, policies=after_policies, bank=bank)
                 assert old == new
                 assert schedule_rehab(row, old, training_day=DAY) == schedule_rehab(row, new, training_day=DAY)
                 assert reconcile_session_prescription(None, decisions=[old], plan_id=PLAN, training_day=DAY) == reconcile_session_prescription(None, decisions=[new], plan_id=PLAN, training_day=DAY)
