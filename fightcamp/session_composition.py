@@ -1108,7 +1108,7 @@ def realised_role_stress(role: dict[str, Any]) -> SessionStress | None:
     """
     if not isinstance(role, dict):
         return None
-    return realised_session_stress(
+    stress = realised_session_stress(
         role.get("selected_exercise_assignments"),
         resolved_strength=_resolved_strength_doses(role),
         resolved_strength_effort={
@@ -1117,6 +1117,10 @@ def realised_role_stress(role: dict[str, Any]) -> SessionStress | None:
             if p.get("dose_authority") == "scheduled_countdown_overlay"
         },
     )
+    from .session_workload import role_has_substantial_endurance
+    if stress is None and role_has_substantial_endurance(role):
+        return SessionStress(systemic=StressLevel.LOW)
+    return stress
 
 
 def realised_session_stress(
@@ -2300,6 +2304,10 @@ def conditioning_assignment_from_slot(
     # human-readable prescription back out.
     effective_dose = _conditioning_effective_dose(option)
     metadata = option.get("selection_metadata") or {}
+    for field in ("system", "modality", "duration", "total_minutes", "duration_min", "distance_m"):
+        value = effective_dose.get(field, metadata.get(field, option.get(field)))
+        if value is not None:
+            assignment[field] = value
     for field in ("rpe", "lactate_load", "intensity"):
         if metadata.get(field) is not None:
             assignment[field] = metadata[field]
@@ -2738,6 +2746,12 @@ def _realised_load_conflicts(
         )
         if decision.directive is not PlacementDirective.ALLOW:
             conflicts.append((role, ref, decision))
+    # Preserve the strength anchor when optional aerobic support collides with
+    # it. All other conflict ordering and existing training priorities stay put.
+    from .session_workload import UNSAFE_STACKING_CODE
+    conflicts.sort(key=lambda item: (
+        item[2].reason_code == UNSAFE_STACKING_CODE and item[0].get("category") == "strength"
+    ))
     return conflicts
 
 
