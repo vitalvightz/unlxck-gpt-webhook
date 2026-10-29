@@ -102,12 +102,14 @@ def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any],
     recovered = deepcopy(plan)
     from .structured_plan_faithfulness import project_source_adjustments
     recovered = project_source_adjustments(recovered, validated_text)
+    # Malformed saved weeks/days/sessions/blocks carry no coaching to recover.
     for week in recovered.get("weeks") or []:
-        for day in week.get("days") or []:
+        for day in week.get("days") or [] if isinstance(week, dict) else []:
+            if not isinstance(day, dict):
+                continue
             label = str(day.get("countdown_label") or "")
             offset = int(label[2:]) if label.startswith("D-") and label[2:].isdigit() else None
             for session in day.get("sessions") or []:
-                # Malformed saved sessions/blocks carry no coaching to recover.
                 for block in session.get("blocks") or [] if isinstance(session, dict) else []:
                     if not isinstance(block, dict) or block.get("athlete_change") or block.get("prescription_source") == "athlete":
                         continue

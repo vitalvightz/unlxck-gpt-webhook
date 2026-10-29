@@ -2744,6 +2744,34 @@ class TestCommandView:
         assert view.active_plan.get("phase") == "GPP"
         assert view.today.next_session == {}
 
+    def test_malformed_structured_weeks_days_and_blocks_degrade_without_crashing(self):
+        store = _store_with_plan()
+        store.plans[PLAN]["structured_plan"] = {
+            "weeks": [
+                "bad-week",
+                {
+                    "phase_label": "GPP",
+                    "days": [
+                        "bad-day",
+                        {
+                            "date": "2026-06-23",
+                            "day_type": "high",
+                            "sessions": [{"title": "Strength", "blocks": ["bad-block"]}],
+                        },
+                    ],
+                },
+            ]
+        }
+
+        view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=datetime(2026, 6, 23, 12, 0, tzinfo=timezone.utc),
+        )
+
+        assert view.active_plan.get("phase") == "GPP"
+
     def test_other_plan_checkin_warning_surfaces_in_command_view_without_blocking(self):
         store = _store_with_plan()
         store.plans[OTHER_PLAN] = {
