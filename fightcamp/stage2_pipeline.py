@@ -973,10 +973,13 @@ def build_stage2_retry(
         for field in ("errors", "blocking_warnings")
         for item in validator_report.get(field, []) or []
     )
+    # Release policy flags rather than holds, so deterministic defects must be
+    # named here or they would never reach planner regeneration.
     if (
         validator_report.get("release_decision") != "hold"
         and not missing_closed_conditioning
         and not has_goal_failure
+        and not conditioning_underfilled
     ):
         return {
             "status": status,

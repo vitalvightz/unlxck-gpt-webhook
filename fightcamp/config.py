@@ -147,7 +147,7 @@ def conditioning_work_is_timed(dose: dict) -> bool:
     """
     text = str(dose.get("duration") or dose.get("timing") or "").lower()
     if re.search(
-        r"\breps?\b|/side|per side|\d\s*(?:m|yds?|yards?|metres?|meters?|ft|feet)\b", text
+        r"\breps?\b|/side|per side|\d\s*(?:k?m|yds?|yards?|(?:kilo)?metres?|(?:kilo)?meters?|ft|feet|mi|miles?)\b", text
     ):
         return False
     count = re.match(r"\s*\d+\s*[x×]\s*\d+(?:\.\d+)?\s*(.*)", text)
