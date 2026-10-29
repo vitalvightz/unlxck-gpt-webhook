@@ -48,11 +48,12 @@ def exercise_instructions(assignment):
 def recover_execution_instructions(plan):
     """Recover descriptions for every saved card, including cards without a brief."""
     result = plan
+    # Malformed saved cards are skipped; readers degrade rather than crash.
     for wi, week in enumerate(plan.get("weeks") or []):
-        for di, day in enumerate(week.get("days") or []):
-            for si, session in enumerate(day.get("sessions") or []):
-                for bi, block in enumerate(session.get("blocks") or []):
-                    if block.get("execution_instructions") or block.get("athlete_change") or block.get("prescription_source") == "athlete":
+        for di, day in enumerate(week.get("days") or [] if isinstance(week, dict) else []):
+            for si, session in enumerate(day.get("sessions") or [] if isinstance(day, dict) else []):
+                for bi, block in enumerate(session.get("blocks") or [] if isinstance(session, dict) else []):
+                    if not isinstance(block, dict) or block.get("execution_instructions") or block.get("athlete_change") or block.get("prescription_source") == "athlete":
                         continue
                     explanation = exercise_instructions({**block, "name": block.get("display_name")})
                     if explanation:

@@ -107,8 +107,9 @@ def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any],
             label = str(day.get("countdown_label") or "")
             offset = int(label[2:]) if label.startswith("D-") and label[2:].isdigit() else None
             for session in day.get("sessions") or []:
-                for block in session.get("blocks") or []:
-                    if block.get("athlete_change") or block.get("prescription_source") == "athlete":
+                # Malformed saved sessions/blocks carry no coaching to recover.
+                for block in session.get("blocks") or [] if isinstance(session, dict) else []:
+                    if not isinstance(block, dict) or block.get("athlete_change") or block.get("prescription_source") == "athlete":
                         continue
                     # Old converters put labelled adjustments in the cue list.
                     # Route before validation so React cannot resurrect a rejected rule.
