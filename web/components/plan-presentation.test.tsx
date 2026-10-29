@@ -38,32 +38,38 @@ test("exercise stop criteria appear only after opening the exercise", async () =
   } finally { await act(async () => root.unmount()); host.remove(); }
 });
 
-test("recovery limits and global stop/review actions remain outside disclosures", () => {
+test("recovery limits and active notes stay visible; general red flags fold into one row", () => {
   const html = renderToStaticMarkup(<><SessionCard session={recovery} layout="plan" />
     <ActiveNotesCard plan={trainingPlan} /><RedFlagsCard plan={trainingPlan} /></>);
   const host = document.createElement("div"); host.innerHTML = html;
-  for (const selector of [".rehab-guide-safety", ".sp-note", ".sp-redflag"]) {
+  for (const selector of [".rehab-guide-safety", ".sp-note"]) {
     const node = host.querySelector(selector);
     assert.ok(node, selector); assert.equal(node.closest("details"), null);
   }
+  const redFlags = host.querySelector(".sp-redflag")?.closest("details.sp-redflags") as HTMLDetailsElement | null;
+  assert.ok(redFlags); assert.equal(redFlags.open, false);
+  assert.match(redFlags.querySelector("summary")?.textContent ?? "", /Red flags - stop & report/);
   assert.match(html, /No contact training/);
   assert.match(html, /Seek medical review/);
 });
 
-test("structured mindset content opens full instructions and progression in focused sheets", async () => {
-  const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
-  try {
-    await act(async () => root.render(<SessionCard session={mental} layout="plan" />));
-    assert.equal(host.querySelector(".sp-mental-steps"), null);
-    assert.match(host.textContent ?? "", /12 min/);
-    assert.doesNotMatch(host.textContent ?? "", /Stop if the rehearsal causes distress/);
-    await act(async () => (host.querySelector(".sp-instructions-open") as HTMLButtonElement).click());
-    const sheet = document.querySelector('[role="dialog"]')!;
-    assert.equal(sheet.querySelectorAll(".sp-mental-steps li").length, 4);
-    assert.match(sheet.textContent ?? "", /Stop if the rehearsal causes distress/);
-    await act(async () => (sheet.querySelector(".ex-row-toggle") as HTMLButtonElement).click());
-    assert.match(document.body.textContent ?? "", /Repeat the same scenario with a different opponent reaction/);
-  } finally { await act(async () => root.unmount()); host.remove(); }
+test("structured mindset content renders its steps and stop rule in full on the plan card", () => {
+  const html = renderToStaticMarkup(<SessionCard session={mental} layout="plan" />);
+  const host = document.createElement("div"); host.innerHTML = html;
+  assert.equal(host.querySelectorAll(".sp-mental-steps li").length, 4);
+  assert.match(host.textContent ?? "", /12 min/);
+  assert.match(host.textContent ?? "", /Stop if the rehearsal causes distress/);
+  assert.equal(host.querySelector(".sp-instructions-open"), null);
+  assert.equal(host.querySelector('[role="dialog"]'), null);
+});
+
+test("plan mental cards keep the objective and progression inline", () => {
+  const host = document.createElement("div");
+  host.innerHTML = renderToStaticMarkup(<SessionCard session={mental} layout="plan" />);
+  assert.match(host.querySelector(".sp-session-objective")?.textContent ?? "", /Practise recovering your composure/);
+  const progression = host.querySelector('[data-kind="progression"]');
+  assert.match(progression?.textContent ?? "", /Repeat the same scenario with a different opponent reaction/);
+  assert.equal(host.textContent?.split("Repeat the same scenario").length, 2, "printed once");
 });
 
 test("day toggles survive refreshed data and explicit navigation reopens a closed day", async () => {

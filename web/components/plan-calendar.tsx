@@ -11,18 +11,25 @@ const LEGEND: { state: CalendarCellState; label: string }[] = [
   { state: "done", label: "Done" },
   { state: "missed", label: "Missed" },
   { state: "planned", label: "Planned" },
-  { state: "coach", label: "Coach/gym" },
+  { state: "coach", label: "Coach / gym" },
+  { state: "outside", label: "Outside camp" },
 ];
 
 /** Whole-block calendar: one row per week, Monday first. Tapping a training
- * day hands its plan week/day back so the list view can open it. */
+ * day selects it; the caller shows that day's sessions below. */
 export function PlanCalendar({
   rows,
   selectedWeekPos,
+  selected = null,
+  phaseFor,
   onSelectDay,
 }: {
   rows: CalendarRow[];
   selectedWeekPos: number;
+  /** The day whose sessions are shown below the calendar. */
+  selected?: { weekPos: number; dayIndex: number } | null;
+  /** Phase (GPP / SPP / Taper) printed under each week label. */
+  phaseFor?: (weekPos: number) => string | null;
   onSelectDay: (weekPos: number, dayIndex: number) => void;
 }) {
   if (rows.length === 0) {
@@ -32,7 +39,8 @@ export function PlanCalendar({
   return (
     <section className="sp-card cm-calendar">
       <table className="cm-cal-table">
-        <caption className={caption ? "cm-cal-caption" : "sr-only"}>{caption ?? "Plan calendar"}</caption>
+        {/* The month range is printed in the header above. */}
+        <caption className="sr-only">{caption ?? "Plan calendar"}</caption>
         <thead>
           <tr>
             <th scope="col" className="cm-cal-week-head">
@@ -52,10 +60,14 @@ export function PlanCalendar({
               className={`cm-cal-row${row.weekPos !== null && row.weekPos === selectedWeekPos ? " cm-cal-row-selected" : ""}`}
             >
               <th scope="row" className="cm-cal-week">
-                {row.label}
+                <span className="cm-cal-week-label">{row.label}</span>
+                {row.weekPos !== null && phaseFor?.(row.weekPos) ? (
+                  <span className="cm-cal-week-phase">{phaseFor(row.weekPos)}</span>
+                ) : null}
               </th>
               {row.cells.map((cell) => {
-                const className = `cm-cal-cell${cell.isToday ? " cm-cal-today" : ""}`;
+                const isSelected = selected !== null && cell.weekPos === selected.weekPos && cell.dayIndex === selected.dayIndex;
+                const className = `cm-cal-cell${cell.isToday ? " cm-cal-today" : ""}${isSelected ? " cm-cal-selected" : ""}`;
                 const content = (
                   <>
                     <span className="cm-cal-num" aria-hidden="true">
@@ -76,6 +88,7 @@ export function PlanCalendar({
                       <button
                         type="button"
                         className={className}
+                        aria-pressed={isSelected}
                         onClick={() => onSelectDay(cell.weekPos as number, cell.dayIndex as number)}
                       >
                         {content}

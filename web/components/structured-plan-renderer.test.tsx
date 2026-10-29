@@ -407,9 +407,9 @@ test("open ongoing renderer uses renewable block labels instead of fight-camp ph
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} openOngoing />);
 
   assert.equal(html.includes('aria-label="Training block weeks"'), true);
-  for (const label of ["Baseline", "Progress", "Highest Controlled", "Deload + Reassess"]) {
-    assert.equal(html.includes(`cm-week-pill-phase" title="${label}">${label}</span>`), true);
-  }
+  // The squares stay bare (W1 · progress); the selected week's intent names it.
+  assert.equal(html.includes("cm-week-pill-phase"), false);
+  assert.equal(html.includes('<span class="sp-tag sp-accent">Baseline</span>'), true);
   assert.equal(html.includes("Specific prep"), false);
   assert.equal(html.includes("General prep"), false);
   assert.equal(html.includes(">Taper<"), false);
@@ -1619,7 +1619,7 @@ test("marks the current day and keeps the camp overview title compact", () => {
 
   // Countdown + week focus surface via the week strip / overview.
   assert.equal(html.includes("D-28"), true);
-  assert.equal(html.includes("sp-redflags-title\">Week 1<"), true);
+  assert.equal(html.includes("class=\"cm-week-dates\""), true);
   assert.equal(html.includes("Convert strength into speed."), false);
   // The day's readiness_status must never leak the exact train/modify/pull-back
   // call — that stays on Today.
@@ -1693,7 +1693,7 @@ test("compresses the plan: dedupes safety, folds the disclaimer, trims the week 
   // status chips and the week pill).
   assert.equal(html.includes(">Phase</span>"), false);
   // Fight-camp overviews intentionally show only the selected week number.
-  assert.equal(html.includes("sp-redflags-title\">Week 1<"), true);
+  assert.equal(html.includes("class=\"cm-week-dates\""), true);
   assert.equal(count("Build single-leg drive."), 0);
 });
 
@@ -1981,9 +1981,10 @@ test("week overview separates app sessions, coach-led days, and app completion",
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 18)} />);
 
   assert.equal(html.includes(">2 app sessions</span>"), true);
-  assert.equal(html.includes(">3 coach/gym days</span>"), true);
-  assert.equal(html.includes(">1/2 app done</span>"), true);
-  assert.equal(html.includes("1/2 app"), true);
+  assert.equal(html.includes(">3 coach days</span>"), true);
+  // App completion lives on the week square only, never repeated in the card.
+  assert.equal(html.includes("app done"), false);
+  assert.equal(html.includes('1/2<span class="sr-only"> sessions completed'), true);
   assert.equal(html.includes("Coach/gym days are tracked separately."), true);
   // The facts sit on one line, not in a grid of bordered stat tiles.
   assert.equal(html.includes("cm-week-overview-stats"), false);
@@ -2024,8 +2025,8 @@ test("week overview hides source counters that are not present", () => {
     },
   ]);
   assert.equal(appOnlyHtml.includes(">1 app session</span>"), true);
-  assert.equal(appOnlyHtml.includes(">0/1 app done</span>"), true);
-  assert.equal(appOnlyHtml.includes("coach/gym day"), false);
+  assert.equal(appOnlyHtml.includes("app done"), false);
+  assert.equal(appOnlyHtml.includes("coach day"), false);
 
   const coachOnlyHtml = renderDays([
     {
@@ -2034,7 +2035,7 @@ test("week overview hides source counters that are not present", () => {
       sessions: [],
     },
   ]);
-  assert.equal(coachOnlyHtml.includes(">1 coach/gym day</span>"), true);
+  assert.equal(coachOnlyHtml.includes(">1 coach day</span>"), true);
   assert.equal(coachOnlyHtml.includes("app session"), false);
   assert.equal(coachOnlyHtml.includes("app done"), false);
 
@@ -2046,7 +2047,7 @@ test("week overview hides source counters that are not present", () => {
     },
   ]);
   assert.equal(emptyHtml.includes("app session"), false);
-  assert.equal(emptyHtml.includes("coach/gym day"), false);
+  assert.equal(emptyHtml.includes("coach day"), false);
   assert.equal(emptyHtml.includes("app done"), false);
 });
 
@@ -2506,9 +2507,10 @@ test("D-10 countdown plans render taper mini-titles with a compact week overview
     <StructuredPlanRenderer plan={plan} today={new Date(2026, 6, 27)} />,
   );
 
-  assert.equal(countOccurrences(html, 'class="cm-week-pill-phase"'), 2);
-  assert.equal(countOccurrences(html, 'title="Taper"'), 2);
-  assert.equal(html.includes("sp-redflags-title\">Week 1<"), true);
+  // The squares stay bare; the selected week's overview names the phase once.
+  assert.equal(countOccurrences(html, 'class="cm-week-pill-phase"'), 0);
+  assert.equal(countOccurrences(html, 'title="Taper"'), 1);
+  assert.equal(html.includes("class=\"cm-week-dates\""), true);
   assert.equal(html.includes("Week 1: Compressed Pre-Fight Week"), false);
 });
 
@@ -2573,7 +2575,7 @@ test("a long phase label retains its full text and accessible title", () => {
   // Wrapping is handled by CSS; the full label remains available in both the
   // text node and the title attribute.
   assert.equal(html.includes(`title="${expected}"`), true);
-  assert.equal(html.includes(`<span class="cm-week-pill-phase" title="${expected}">${expected}</span>`), true);
+  assert.equal(html.includes(`<span class="sp-tag sp-accent" title="${expected}">${expected}</span>`), true);
 });
 
 test("weekStripCenterOffset centres the active card and clamps at the start", () => {

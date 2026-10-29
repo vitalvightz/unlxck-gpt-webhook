@@ -63,13 +63,18 @@ function cleanup(container: HTMLElement, root: Root) {
   container.remove();
 }
 
-function weekPillByPhase(container: HTMLElement, phase: string): HTMLButtonElement {
+function weekPill(container: HTMLElement, label: string): HTMLButtonElement {
   const pill = Array.from(container.querySelectorAll<HTMLButtonElement>("button.cm-week-pill")).find(
-    (el) => (el.textContent ?? "").toLowerCase().includes(phase.toLowerCase()),
+    (el) => (el.textContent ?? "").includes(label),
   );
-  assert.ok(pill, `expected a week pill for phase "${phase}"`);
+  assert.ok(pill, `expected a week pill "${label}"`);
   return pill;
 }
+
+// The squares show only W# and progress; the selected week's phase is named in
+// the overview below them.
+const overviewPhase = (container: HTMLElement) =>
+  (container.querySelector(".cm-week-overview .cm-week-phase")?.textContent ?? "").toLowerCase();
 
 test("open-plan overview follows the selected week instead of the current calendar week", async () => {
   const { container, root } = mount();
@@ -114,8 +119,8 @@ test("open-plan overview follows the selected week instead of the current calend
       weekTwo.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     });
 
-    const overview = container.querySelector(".cm-week-overview h2")?.textContent ?? "";
-    assert.equal(overview.includes("Block 1 · Week 2 of 4"), true);
+    const heading = container.querySelector(".cm-week-navigation-label")?.textContent ?? "";
+    assert.equal(heading.includes("Block 1 · Week 2 of 4"), true);
   } finally {
     cleanup(container, root);
   }
@@ -130,14 +135,12 @@ test("swapping in a structurally different plan resets the stale week selection"
 
     // Select the second week (index 1) on the two-week plan.
     await act(async () => {
-      weekPillByPhase(container, "taper").dispatchEvent(
+      weekPill(container, "W2").dispatchEvent(
         new window.MouseEvent("click", { bubbles: true }),
       );
     });
-    assert.equal(
-      (container.querySelector("button.cm-week-pill-selected")?.textContent ?? "").toLowerCase().includes("taper"),
-      true,
-    );
+    assert.equal((container.querySelector("button.cm-week-pill-selected")?.textContent ?? "").includes("W2"), true);
+    assert.equal(overviewPhase(container).includes("taper"), true);
 
     // Swap to a one-week plan WITHOUT remounting. A retained selectedPos of 1
     // would be out of range / point at the wrong week; the render-time reset must
@@ -152,7 +155,8 @@ test("swapping in a structurally different plan resets the stale week selection"
     // The selected pill is the new plan's only week (no stale selection carried).
     const selected = container.querySelector("button.cm-week-pill-selected");
     assert.ok(selected, "a week is selected");
-    assert.equal((selected?.textContent ?? "").toLowerCase().includes("specific prep"), true);
+    assert.equal((selected?.textContent ?? "").includes("W1"), true);
+    assert.equal(overviewPhase(container).includes("spp"), true);
   } finally {
     cleanup(container, root);
   }
@@ -292,7 +296,7 @@ test("the rail does not scroll (or throw) when it fits without overflow", async 
   }
 });
 
-test("calendar view opens the tapped day back in the list", async () => {
+test("calendar taps stay in the calendar and list that day's sessions below it", async () => {
   const { container, root } = mount();
   const plan = {
     schema_version: "1.0",
@@ -308,7 +312,13 @@ test("calendar view opens the tapped day back in the list", async () => {
         week_index: 2,
         days: [
           { date: "2026-06-22", sessions: [{ session_id: "b", title: "Strength B", blocks: [] }] },
-          { date: "2026-06-24", sessions: [{ session_id: "c", title: "Conditioning C", blocks: [] }] },
+          {
+            date: "2026-06-24",
+            sessions: [
+              { session_id: "c", title: "Conditioning C", blocks: [] },
+              { session_id: "d", title: "Mobility D", blocks: [] },
+            ],
+          },
         ],
       },
     ],
@@ -329,6 +339,9 @@ test("calendar view opens the tapped day back in the list", async () => {
     assert.equal(container.querySelector(".cm-week-strip"), null);
     assert.equal(container.querySelector(".cm-days"), null);
     assert.equal(window.localStorage.getItem("unlxck.plan-view"), "calendar");
+    // Today (Mon 15 Jun) is selected when the calendar opens.
+    const panel = () => container.querySelector(".cm-cal-day");
+    assert.match(panel()?.textContent ?? "", /Strength A/);
 
     // Wed 24 Jun is week 2, day 1.
     const cell = Array.from(container.querySelectorAll<HTMLButtonElement>("button.cm-cal-cell")).find(
@@ -337,11 +350,31 @@ test("calendar view opens the tapped day back in the list", async () => {
     assert.ok(cell, "expected a tappable Wed 24 Jun cell");
     await act(async () => cell.click());
 
-    assert.equal(container.querySelector(".cm-calendar"), null);
-    assert.equal(container.querySelector(".cm-week-pill-selected")?.getAttribute("data-week-pos"), "1");
-    const opened = container.querySelector<HTMLDetailsElement>('.cm-days [data-day-index="1"]');
-    assert.equal(opened?.open, true);
-    assert.equal(window.localStorage.getItem("unlxck.plan-view"), "list");
+    assert.ok(container.querySelector(".cm-calendar"), "the calendar stays on screen");
+    assert.equal(container.querySelector(".cm-days"), null);
+    assert.equal(cell.getAttribute("aria-pressed"), "true");
+    assert.equal(window.localStorage.getItem("unlxck.plan-view"), "calendar");
+    const rows = Array.from(panel()?.querySelectorAll<HTMLButtonElement>(".cm-cal-day-row") ?? []);
+    assert.deepEqual(rows.map(row => row.querySelector(".cm-cal-day-name")?.textContent), ["Conditioning C", "Mobility D"]);
+    assert.doesNotMatch(panel()?.textContent ?? "", /Strength A/);
+
+    // A replacement plan drops the picked day instead of reusing its position.
+    const replacement = structuredClone(plan);
+    replacement.weeks = replacement.weeks!.map((week, index) => ({ ...week, week_id: `new-${index}` }));
+    replacement.weeks[1].days![1].sessions = [{ session_id: "e", title: "Replacement E", blocks: [] }];
+    await act(async () => {
+      root.render(<StructuredPlanRenderer plan={replacement} today={new Date(2026, 5, 15)} />);
+    });
+    assert.match(panel()?.textContent ?? "", /Strength A/, "back on today, not the old week 2 / day 1 slot");
+    await act(async () => {
+      root.render(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 15)} />);
+    });
+    await act(async () => Array.from(container.querySelectorAll<HTMLButtonElement>("button.cm-cal-cell"))
+      .find((button) => (button.textContent ?? "").includes("Wed 24 Jun 2026"))!.click());
+    await act(async () => Array.from(panel()!.querySelectorAll<HTMLButtonElement>(".cm-cal-day-row"))[1].click());
+    const sheet = document.querySelector('[role="dialog"]');
+    assert.ok(sheet, "tapping a session opens its details");
+    assert.match(sheet.textContent ?? "", /Mobility D/);
   } finally {
     window.localStorage.removeItem("unlxck.plan-view");
     cleanup(container, root);
