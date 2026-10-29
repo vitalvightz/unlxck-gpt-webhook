@@ -174,12 +174,35 @@ html[data-app-surface="brand"] .app-safety-footer {
    the page. The language control leads the row so its list can open down and
    to the right without leaving the screen, even when the row wraps. */
 .settings-quick-account {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex-wrap: wrap;
   max-width: 420px;
 }
 
 .settings-quick-account > .ghost-button {
+  width: auto;
+  flex: 0 0 auto;
   white-space: nowrap;
+}
+
+.settings-section-picker { display: none; }
+.settings-page .settings-sync-card { display: none; }
+.settings-card .appearance-mode-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.settings-card .appearance-mode-preview { display: none; }
+.settings-card .appearance-mode-card { min-width: 0; padding: 14px; }
+.settings-card .settings-toggle-row { min-height: 60px; padding: 12px 0; border: 0; border-bottom: 1px solid var(--border-subtle); border-radius: 0; background: transparent; }
+
+@media (max-width: 1180px) {
+  .settings-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .settings-section-nav { position: sticky; top: var(--mobile-nav-clearance, 64px); z-index: 4; display: block; padding: 10px 12px; }
+  .settings-section-nav-label, .settings-section-nav-list { display: none; }
+  .settings-section-picker { display: flex; align-items: center; gap: 12px; color: var(--text-secondary); font-size: 12px; }
+  .settings-section-picker select { flex: 1; min-width: 0; min-height: 44px; margin: 0; color: var(--text-primary); background: var(--bg-panel); border: 1px solid var(--border-default); border-radius: 10px; padding: 8px 12px; font: inherit; font-size: 14px; }
+  .settings-layout { scroll-margin-top: calc(var(--mobile-nav-clearance, 64px) + 8px); }
+  .settings-disclosure > summary { flex-wrap: wrap; gap: 4px 10px; }
+  .settings-disclosure > summary span { order: 3; flex-basis: 100%; margin-left: 0; }
 }
 
 /* The heading's entrance animation makes it a stacking context; lift it so the

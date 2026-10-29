@@ -303,12 +303,20 @@ function writeLocalJson(key: string, value: unknown) {
 function SettingsNav({
   activeSection,
   sections,
+  onSelect,
 }: Readonly<{
   activeSection: string;
   sections: SettingsSection[];
+  onSelect: (id: string) => void;
 }>) {
   return (
     <nav className="settings-section-nav" aria-label="Settings sections">
+      <label className="settings-section-picker">
+        <span>Section</span>
+        <select value={activeSection} onChange={(event) => onSelect(event.target.value)}>
+          {sections.map((section) => <option key={section.id} value={section.id}>{section.label}</option>)}
+        </select>
+      </label>
       <p className="settings-section-nav-label">Sections</p>
       <div className="settings-section-nav-list">
         {sections.map((section) => (
@@ -317,6 +325,10 @@ function SettingsNav({
             href={`#${section.id}`}
             className="settings-section-nav-link"
             aria-current={activeSection === section.id ? "true" : undefined}
+            onClick={(event) => {
+              event.preventDefault();
+              onSelect(section.id);
+            }}
           >
             {section.label}
           </a>
@@ -567,34 +579,24 @@ export default function SettingsPage() {
     };
   }, [previewAppearanceMode]);
 
-  // Highlight the section the reader is actually on. The rootMargin keeps the
-  // "active" band near the top of the viewport so a card lights up as its
-  // heading arrives, not when its footer finally scrolls in.
+  // Keep direct links to a settings section working while showing one section
+  // at a time. This avoids a long stack of unrelated forms on phones.
   useEffect(() => {
-    if (!isReady || typeof IntersectionObserver === "undefined") {
-      return;
-    }
-    const cards = sections
-      .map((section) => document.getElementById(section.id))
-      .filter((card): card is HTMLElement => card !== null);
-    if (!cards.length) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const topMost = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (topMost) {
-          setActiveSection(topMost.target.id);
-        }
-      },
-      { rootMargin: "-15% 0px -70% 0px" },
-    );
-    cards.forEach((card) => observer.observe(card));
-    return () => observer.disconnect();
+    if (!isReady) return;
+    const syncHash = () => {
+      const requested = decodeURIComponent(window.location.hash.slice(1));
+      setActiveSection(sections.some((section) => section.id === requested) ? requested : sections[0].id);
+    };
+    syncHash();
+    window.addEventListener("hashchange", syncHash);
+    return () => window.removeEventListener("hashchange", syncHash);
   }, [isReady, sections]);
+
+  function selectSection(id: string) {
+    setActiveSection(id);
+    window.history.replaceState(null, "", `#${id}`);
+    document.querySelector(".settings-layout")?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
 
   useEffect(() => {
     const node = accountActionsRef.current;
@@ -977,6 +979,9 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        <details className="settings-disclosure">
+          <summary>Security and sign-in <span>Date of birth, username, password</span></summary>
+          <div className="settings-disclosure-body">
         <div className="settings-subsection">
           <div className="settings-subsection-header">
             <h3 className="settings-subsection-title">Date of birth</h3>
@@ -1184,6 +1189,12 @@ export default function SettingsPage() {
           </div>
         </form>
 
+          </div>
+        </details>
+
+        <details className="settings-disclosure">
+          <summary>Appearance and app <span>Theme, install</span></summary>
+          <div className="settings-disclosure-body">
         <div className="settings-subsection">
           <div className="settings-subsection-header">
             <h3 className="settings-subsection-title">Workspace theme</h3>
@@ -1227,6 +1238,8 @@ export default function SettingsPage() {
         </div>
 
         <InstallUnlxck />
+          </div>
+        </details>
 
         <div ref={accountActionsRef} className="settings-account-actions">
           <p className="settings-account-actions-status" aria-live="polite">
@@ -1255,7 +1268,7 @@ export default function SettingsPage() {
   function renderAthleteSettings() {
     return (
       <div className="settings-stack athlete-motion-slot athlete-motion-main">
-        <article id="account" className="step-card settings-card">
+        <article id="account" className="step-card settings-card" hidden={activeSection !== "account"}>
           <div className="form-section-header">
             <p className="kicker">Account</p>
             <h2 className="form-section-title">Profile and sign-in</h2>
@@ -1264,7 +1277,7 @@ export default function SettingsPage() {
           {renderAccountControls()}
         </article>
 
-        <article id="training-profile" className="step-card settings-card">
+        <article id="training-profile" className="step-card settings-card" hidden={activeSection !== "training-profile"}>
           <div className="settings-card-header-row">
             <div className="form-section-header">
               <p className="kicker">Training Profile</p>
@@ -1281,7 +1294,7 @@ export default function SettingsPage() {
           </div>
         </article>
 
-        <article id="notifications" className="step-card settings-card">
+        <article id="notifications" className="step-card settings-card" hidden={activeSection !== "notifications"}>
           <div className="form-section-header">
             <p className="kicker">Notifications</p>
             <h2 className="form-section-title">Reminders and messages</h2>
@@ -1293,7 +1306,7 @@ export default function SettingsPage() {
           )}
         </article>
 
-        <article id="subscription" className="step-card settings-card">
+        <article id="subscription" className="step-card settings-card" hidden={activeSection !== "subscription"}>
           <div className="form-section-header">
             <p className="kicker">Subscription</p>
             <h2 className="form-section-title">Plan and billing access</h2>
@@ -1306,7 +1319,7 @@ export default function SettingsPage() {
           <p className="settings-coming-soon">Billing arrives with subscriptions.</p>
         </article>
 
-        <article id="privacy" className="step-card settings-card">
+        <article id="privacy" className="step-card settings-card" hidden={activeSection !== "privacy"}>
           <AnalyticsPreference />
           <div className="form-section-header">
             <p className="kicker">Privacy</p>
@@ -1383,7 +1396,7 @@ export default function SettingsPage() {
         {/* The same briefing shown at sign-up, kept readable for the whole
             trial: testers ask what they are supposed to be checking weeks after
             the one-time screen. */}
-        <article id="private-trial" className="step-card settings-card">
+        <article id="private-trial" className="step-card settings-card" hidden={activeSection !== "private-trial"}>
           <div className="form-section-header">
             <p className="kicker">Private trial</p>
             <h2 className="form-section-title" id="settings-private-trial-heading">
@@ -1393,7 +1406,7 @@ export default function SettingsPage() {
           <PrivateTrialGuide headingId="settings-private-trial-heading" showTitle={false} />
         </article>
 
-        <article id="send-feedback" className="step-card settings-card">
+        <article id="send-feedback" className="step-card settings-card" hidden={activeSection !== "send-feedback"}>
           <div className="form-section-header">
             <p className="kicker">Beta feedback</p>
             <h2 className="form-section-title">Send feedback</h2>
@@ -1408,7 +1421,7 @@ export default function SettingsPage() {
   function renderAdminSettings() {
     return (
       <div className="settings-stack athlete-motion-slot athlete-motion-main">
-        <article id="admin-account" className="step-card settings-card">
+        <article id="admin-account" className="step-card settings-card" hidden={activeSection !== "admin-account"}>
           <div className="form-section-header">
             <p className="kicker">Admin Account</p>
             <h2 className="form-section-title">Profile and sign-in</h2>
@@ -1417,7 +1430,7 @@ export default function SettingsPage() {
           {renderAccountControls()}
         </article>
 
-        <article id="organisation" className="step-card settings-card">
+        <article id="organisation" className="step-card settings-card" hidden={activeSection !== "organisation"}>
           <div className="form-section-header">
             <p className="kicker">Organisation</p>
             <h2 className="form-section-title">Branding and contact defaults</h2>
@@ -1430,7 +1443,7 @@ export default function SettingsPage() {
           <p className="settings-coming-soon">Organisation settings appear once organisation records are connected.</p>
         </article>
 
-        <article id="coaches-roles" className="step-card settings-card">
+        <article id="coaches-roles" className="step-card settings-card" hidden={activeSection !== "coaches-roles"}>
           <div className="form-section-header">
             <p className="kicker">Coaches & Roles</p>
             <h2 className="form-section-title">Access control</h2>
@@ -1443,7 +1456,7 @@ export default function SettingsPage() {
           <p className="settings-coming-soon">Coach invites and roles arrive with team management.</p>
         </article>
 
-        <article id="programme-controls" className="step-card settings-card">
+        <article id="programme-controls" className="step-card settings-card" hidden={activeSection !== "programme-controls"}>
           <div className="form-section-header">
             <p className="kicker">Programme Defaults</p>
             <h2 className="form-section-title">Coming soon</h2>
@@ -1515,7 +1528,7 @@ export default function SettingsPage() {
           </div>
         </article>
 
-        <article id="templates-billing" className="step-card settings-card">
+        <article id="templates-billing" className="step-card settings-card" hidden={activeSection !== "templates-billing"}>
           <div className="form-section-header">
             <p className="kicker">Templates & Billing</p>
             <h2 className="form-section-title">Reusable copy, layouts, and payments</h2>
@@ -1563,7 +1576,7 @@ export default function SettingsPage() {
           <p className="settings-coming-soon">Billing arrives with subscriptions.</p>
         </article>
 
-        <article id="send-feedback" className="step-card settings-card">
+        <article id="send-feedback" className="step-card settings-card" hidden={activeSection !== "send-feedback"}>
           <div className="form-section-header">
             <p className="kicker">Beta feedback</p>
             <h2 className="form-section-title">Send feedback</h2>
@@ -1618,7 +1631,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="settings-layout">
-          <SettingsNav sections={sections} activeSection={activeSection} />
+          <SettingsNav sections={sections} activeSection={activeSection} onSelect={selectSection} />
 
           <div className="settings-main">
             <div aria-live="polite">
