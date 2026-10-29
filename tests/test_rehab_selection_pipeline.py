@@ -30,6 +30,7 @@ from api.contracts.rehab_stage import (
 )
 from fightcamp import rehab_protocols
 from fightcamp.rehab_protocols import generate_rehab_protocols, rehab_drill_by_id
+from fightcamp.rehab_clinical import load_clinical_policies
 from fightcamp.stage2_payload import _build_rehab_slots
 
 
@@ -61,6 +62,9 @@ def _parsed_entry_from_flag(flag: dict, stage: str) -> dict:
         "id": flag["id"],
         "episode_id": "episode-a",
         "rehab_stage": stage,
+        # #2984 uses published prescriptions only. The live ankle RESTORE
+        # policy requires stable support; an unequipped fixture cannot select it.
+        "available_equipment": ["stable_support"],
     }
 
 
@@ -112,6 +116,8 @@ def test_the_selector_actually_runs_during_plan_generation(monkeypatch):
 @pytest.mark.parametrize("stage", [STAGE_CALM, STAGE_RESTORE])
 def test_live_stage_reaches_the_structured_rehab_block_with_a_canonical_id(stage):
     """The full chain, ending at the id the app stores against a completion."""
+    policy = next(p for p in load_clinical_policies() if p.policy_id == "ankle_sprain")
+    assert policy.activation == "live"
     flag = _injury_flag()
     entry = _parsed_entry_from_flag(flag, stage)
 
@@ -122,9 +128,8 @@ def test_live_stage_reaches_the_structured_rehab_block_with_a_canonical_id(stage
         parsed_entries=[entry],
     )
 
-    # Stage-aware selection must not empty the rehab block: the whole bank is
-    # still unmigrated for rehab_stage, and rejecting it wholesale is what
-    # replaced real drills with a "consult a professional" note.
+    # #2984: a live published policy with its required equipment must reach
+    # the structured card; unreviewed legacy bank drills grant no prescription.
     assert "Consult with a healthcare professional" not in rehab_block
     assert rehab_block.strip()
 
@@ -288,3 +293,4 @@ def test_a_drill_with_nothing_to_say_in_this_phase_is_not_a_candidate():
     assert not rehab_protocols._drill_is_prescribable(
         {"id": "nameless", "notes": "x"}, "GPP", "low"
     )
+
