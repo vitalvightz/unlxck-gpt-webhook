@@ -4102,17 +4102,18 @@ def _total_session_budget_warnings(planning_brief: dict) -> list[dict]:
     if not frequency:
         return []
     role_map = _effective_map(planning_brief)
-    appointments = dated_appointments(role_map)
+    occupied_days = {r["countdown_offset"] for r in dated_appointments(role_map)}
     slots = [(d["d_day"], d.get("weekday", ""))
              for w in role_map.get("weeks") or [] for d in w.get("calendar_days") or []]
     warnings = []
     for days in cadence_windows(slots):
         offsets = {d for d, _ in days}
-        count = sum(r["countdown_offset"] in offsets for r in appointments)
+        count = len(occupied_days & offsets)
         if count > frequency:
             warnings.append(_issue(code="total_session_budget_exceeded", severity="warning", confidence="high",
-                message=f"D-{max(offsets)}..D-{min(offsets)} schedules {count} standalone physical appointments "
-                        f"versus {frequency} requested. Compatible selected work retained; requested count exceeded.",
+                message=f"D-{max(offsets)}..D-{min(offsets)} schedules {count} distinct physical training days "
+                        f"versus {frequency} requested. Compatible selected work retained; requested day count exceeded.",
+                requested_training_days=frequency, scheduled_training_days=count,
                 requested_sessions=frequency, scheduled_sessions=count,
                 max_d_day=max(offsets), min_d_day=min(offsets)))
     return warnings
