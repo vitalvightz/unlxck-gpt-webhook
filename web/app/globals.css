@@ -22785,3 +22785,21 @@ fieldset.priority-clarification-options,
 /* Native iOS tap shading paints a rectangular flash on custom controls.
    Keyboard focus remains styled by the existing :focus-visible rules. */
 a, button, summary, [role="button"] { -webkit-tap-highlight-color: transparent; }
+
+/* Optional mental support keeps its authored task behind a calm disclosure. */
+.sp-session-optional { padding: 0; overflow: hidden; background: #211e32; border-color: #50466f; }
+.sp-optional-summary { position: relative; display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 60px; padding: 9px 12px; cursor: pointer; list-style: none; }
+.sp-optional-summary::-webkit-details-marker { display: none; }
+.sp-optional-heading { display: grid; gap: 4px; min-width: 0; }
+.sp-optional-heading strong { color: var(--text-primary); font-size: 1rem; }
+.sp-optional-heading > span { color: var(--text-secondary); font-size: .85rem; }
+.sp-optional-side { display: grid; justify-items: end; gap: 4px; flex: none; color: #c8b7ef; font-size: .78rem; }
+.sp-optional-chevron { font-size: 1.2rem; line-height: 1; transition: transform .2s ease; }
+.sp-optional-disclosure[open] .sp-optional-chevron { transform: rotate(180deg); }
+.sp-optional-content { padding: 0 16px 16px; }
+.sp-optional-disclosure:not([open]) .sp-optional-summary::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 35%, #ad93e510 50%, transparent 65%); transform: translateX(-120%); animation: sp-optional-sweep 10s ease-in-out infinite; }
+@keyframes sp-optional-sweep { 0%, 83% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+@media (prefers-reduced-motion: reduce) { .sp-optional-disclosure:not([open]) .sp-optional-summary::after { animation: none; } .sp-optional-chevron { transition: none; } }
+
+.sp-optional-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.sp-optional-icon { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border-radius: 10px; background: #392d60; color: #c8b7ef; font-size: 21px; }

@@ -1252,8 +1252,10 @@ export function SessionCard({
     // drill and bloat the card. A constraint Context line still prints.
     const context = getSessionCoachingLines(sessionMindset).filter(line =>
       line.label === "Context" && !steps.some(step => sameCopy(step, line.value)));
-    return (
-      <article className="sp-session sp-mental-task" data-layout={planLayout ? "plan" : undefined} data-mental-category={mentalCategory.toLowerCase()}>
+    const optional = /^Optional[.:]\s*/i.test(objective || "");
+    const cleanOptional = (value: string) => optional ? value.replace(/^Optional[.:]\s*/i, "") : value;
+    const content = (
+      <>
         <header className="sp-mental-head">
           {hideTitle ? (mentalDuration ? <p className="sp-mental-duration">{compactTimeUnits(mentalDuration)}</p> : null)
             : <h3 className="sp-session-title">{title || mentalCategory}{mentalDuration ? ` · ${compactTimeUnits(mentalDuration)}` : ""}</h3>}
@@ -1264,12 +1266,12 @@ export function SessionCard({
           ) : null}
         </header>
         {mentalDrill ? <p className="sp-session-instruction">{mentalDrill}</p> : null}
-        {mentalObjective ? <p className="sp-session-objective">{mentalObjective}</p> : null}
+        {mentalObjective ? <p className="sp-session-objective">{cleanOptional(mentalObjective)}</p> : null}
         {steps.length > 0 ? (
           <ol className="sp-cues sp-mental-steps">
             {steps.map((instruction, index) => <li key={`${index}-${instruction}`}>{instruction}</li>)}
           </ol>
-        ) : <p className="sp-session-instruction">{summary}</p>}
+        ) : <p className="sp-session-instruction">{cleanOptional(summary)}</p>}
         <SessionCompletionDetails info={completionInfo} compact={planLayout} />
         {context.map(line => <p className="sp-block-aside" key={`${line.label}-${line.value}`}>
           <span className="sp-stat-label">{line.label}</span>{line.value}
@@ -1287,8 +1289,11 @@ export function SessionCard({
         ) : null}
         {warning ? <p className="sp-warning">{warning}</p> : null}
         {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
-      </article>
+      </>
     );
+    return <article className={`sp-session sp-mental-task${optional ? " sp-session-optional" : ""}`} data-layout={planLayout ? "plan" : undefined} data-mental-category={mentalCategory.toLowerCase()}>
+      {optional ? <details className="sp-optional-disclosure"><summary className="sp-optional-summary"><span className="sp-optional-main"><span className="sp-optional-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{mentalCategory === "Visualise" ? <><path d="M12 5a3 3 0 0 0-5.5-1.5A4 4 0 0 0 4 9a4 4 0 0 0 1 7 3.5 3.5 0 0 0 7 1V5Z"/><path d="M12 5a3 3 0 0 1 5.5-1.5A4 4 0 0 1 20 9a4 4 0 0 1-1 7 3.5 3.5 0 0 1-7 1V5ZM8 8c2 0 2 2 2 3M16 8c-2 0-2 2-2 3M8 15c2 0 2-2 2-3M16 15c-2 0-2-2-2-3"/></> : mentalCategory === "Analyse" ? <><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="3"/></> : <><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h7M8 12h7M8 16h4"/></>}</svg></span><span className="sp-optional-heading"><strong>{title || mentalCategory}</strong>{mentalDuration ? <span>{compactTimeUnits(mentalDuration)}</span> : null}</span></span><span className="sp-optional-side">Optional <span className="sp-optional-chevron" aria-hidden="true">⌄</span></span></summary><div className="sp-optional-content">{content}</div></details> : content}
+    </article>;
   }
 
   if (layout === "section") {
