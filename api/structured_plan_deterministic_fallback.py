@@ -409,7 +409,12 @@ def _lift_dose_fields(dose: str, name: str | None = None) -> tuple[dict[str, Any
     # The deterministic programme uses compact lifting and interval notation.
     # Lift its exact numbers without discarding the accompanying intent/cues.
     reps = re.match(r"\s*(\d+)\s*(?:sets?\s*)?[x×]\s*(\d+)\b(?!\s*(?:s|secs?|seconds?|mins?|minutes?)\b)", dose, re.I)
-    timed = re.match(r"\s*(\d+)\s*(?:sets?|holds?|rounds?)?\s*[x×]\s*" + _NUMBER + r"\s*" + _TIME_UNIT + r"\b", dose, re.I)
+    # Final text also spells intervals as "3 rounds of 60s work". Keep the
+    # round count and per-round work separate, just as for "3 rounds x 60s".
+    timed = re.match(
+        r"\s*(\d+)\s*(?:rounds?\s+of\s+|(?:sets?|holds?|rounds?)?\s*[x×]\s*)"
+        + _NUMBER + r"\s*" + _TIME_UNIT + r"\b", dose, re.I,
+    )
     interval = re.match(r"\s*(\d+(?:\.\d+)?)\s*(s|secs?|seconds?|mins?|minutes?)\s+(?:work|effort)\s*[,/]\s*"
                         r"(\d+(?:\.\d+)?)\s*(s|secs?|seconds?|mins?|minutes?)\s+rest\s*[x×]\s*(\d+)\s+rounds?", dose, re.I)
     if reps:
