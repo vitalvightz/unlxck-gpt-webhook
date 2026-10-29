@@ -1,6 +1,6 @@
 """Which structured sessions the athlete may skip without missing anything.
 
-Non-mandatory planner support inserts, camp Fight Visualisation and athlete-added custom recovery are offered,
+Planner mental support inserts, camp Fight Visualisation and athlete-added custom recovery are offered,
 never required. A session is
 optional only when the server says so: ``structured_plan_locked_merge`` sets
 ``optional: True`` on these trusted sessions and clears the field elsewhere, so the model
@@ -26,24 +26,28 @@ def is_optional_session(session: Any) -> bool:
 
 
 def mark_optional_support_inserts(plan: dict, planning_brief: Mapping) -> None:
-    """Only trusted, non-mandatory planner fillers are offered rather than owed.
+    """Trusted mental support is offered, never owed, even when placement is locked.
 
-    Mandatory countdown watches stay required. Match one standalone session on
-    the role's authoritative day; never make a mixed physical session optional.
+    Match one standalone session on the role's authoritative day; never make a
+    mixed physical session optional. Placement requirements govern scheduling,
+    not athlete completion or adherence.
     """
     names = {
+        "neural_visualization": {"neural visualisation", "neural visualization"},
+        "fight_visualization": {"fight visualisation", "fight visualization"},
         "self_review": {"self-review cues", "self review cues"},
         "breathing_reset": {"breathing reset"},
         "tactical_watch": {"fight tactical watch", "tactical watch", "tactical focus"},
     }
-    for week in planning_brief.get("weeks") or []:
+    role_map = planning_brief.get("weekly_role_map") or {}
+    weeks = [*(planning_brief.get("weeks") or []), *(role_map.get("weeks") or [])]
+    for week in weeks:
         for role in week.get("session_roles") or []:
             key = role.get("role_key")
             governance = role.get("governance") or {}
             if (key not in names or role.get("category") != "support_insert"
-                    or governance.get("authority") not in {"gap_fill_support_insert", "camp_week_support_insert"}
-                    or role.get("mandatory_tactical_watch") or governance.get("mandatory")
-                    or role.get("optional") is False):
+                    or governance.get("authority") not in {"gap_fill_support_insert", "camp_week_support_insert", "fight_visualization_library", "late_fight_tail_allocator"}
+                    or (key == "breathing_reset" and (role.get("optional") is False or governance.get("mandatory")))):
                 continue
             label = role.get("scheduled_countdown_label") or role.get("countdown_label")
             role_day = re.match(r"D-\d+", str(label or ""))
@@ -65,7 +69,15 @@ def mark_optional_support_inserts(plan: dict, planning_brief: Mapping) -> None:
                     allowed_blocks = {None, "mindset"}
                     if key == "breathing_reset":
                         allowed_blocks.add("recovery")
-                    if any(block.get("exercise_key") or block.get("block_type") not in allowed_blocks
-                           for block in session.get("blocks") or []):
+                    def support_block(block):
+                        if block.get("exercise_key"):
+                            return False
+                        if block.get("block_type") in allowed_blocks:
+                            return True
+                        # Older converters use skill for a standalone mental task.
+                        return (block.get("block_type") == "skill"
+                                and str(block.get("display_name") or "").strip().lower() in names[key])
+
+                    if not all(support_block(block) for block in session.get("blocks") or []):
                         continue
                     session["optional"] = True

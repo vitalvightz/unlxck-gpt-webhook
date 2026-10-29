@@ -264,6 +264,12 @@ def resolve_effective_structured_plan(
                                 continue
                             for field in fields:
                                 block.pop(field, None)
+    # Reconcile old saved cards on read so Plan, Today, logging and adherence
+    # consume the same server-owned optional flag without rewriting stored plans.
+    from api.optional_sessions import mark_optional_support_inserts
+
+    resolved = deepcopy(resolved)
+    mark_optional_support_inserts(resolved, brief)
     resolved = _with_coach_led_contact(resolved, brief)
     resolved = ensure_structured_session_ids(resolved, plan_id=plan_row.get("id"))
     return ensure_structured_block_ids(resolved)
