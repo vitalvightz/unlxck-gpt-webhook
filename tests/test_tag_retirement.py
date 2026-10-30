@@ -55,7 +55,18 @@ def test_only_reviewed_declarations_are_removed_in_original_order(review):
 
 
 def test_all_banks_clinical_reviews_aliases_and_historical_identities_are_unchanged(review):
+    # Retain the original retirement freeze; explicitly bind only subsequent
+    # reviewed bank/policy publications. Every source edit is cited in the
+    # follow-up manifest rather than silently replacing the original register.
+    followups = json.loads((check.ROOT / "tests/fixtures/tag_retirement_reviewed_followups.json")
+                           .read_text(encoding="utf-8"))["sources"]
+    assert set(followups) <= set(review["protected_source_sha256"])
     for source, expected in review["protected_source_sha256"].items():
+        if source in followups:
+            change = followups[source]
+            assert change["original_sha256"] == expected
+            assert change["commits"]
+            expected = change["reviewed_sha256"]
         assert check.digest(check.ROOT / source) == expected, source
 
 
