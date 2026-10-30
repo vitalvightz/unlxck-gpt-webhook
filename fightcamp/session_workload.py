@@ -51,13 +51,17 @@ def substantial_endurance(item: Mapping) -> bool:
     metadata = dict(rows[0]) if rows else {}
     metadata.update({k: v for k, v in item.items() if v is not None})
     text = " ".join(
-        str(metadata.get(k) or "") for k in ("modality", "name", "display_name")
+        str(metadata.get(k) or "")
+        for k in ("modality", "name", "display_name", "category", "primary_stressor")
     ).replace("_", " ")
     modality = next(
         (key for key, pattern in _MODALITIES.items() if re.search(pattern, text, re.I)),
         None,
     )
-    if modality is None:
+    classification = str(
+        metadata.get("block_type") or metadata.get("category") or metadata.get("session_type") or ""
+    ).lower()
+    if modality is None and classification not in {"conditioning", "cardio", "aerobic", "endurance"}:
         return False
     dose = str(
         item.get("effective_prescription")
@@ -102,7 +106,7 @@ def substantial_endurance(item: Mapping) -> bool:
         distance = float(match[1]) * _DISTANCE_METERS[match[2].lower()]
     return bool(
         (minutes is not None and minutes >= 30)
-        or distance >= _DISTANCE_FLOORS[modality]
+        or (modality is not None and distance >= _DISTANCE_FLOORS[modality])
     )
 
 
@@ -181,6 +185,51 @@ def _rendered_profiles(label: str, items: list[dict]) -> list:
     return profiles
 
 
+_REALIZED_DOSE_FIELDS = (
+    "effective_prescription", "prescription", "base_prescription", "duration",
+    "timing", "total_minutes", "duration_min", "distance_m",
+)
+
+
+def _has_current_dose(record: Mapping) -> bool:
+    for field in (*_REALIZED_DOSE_FIELDS, "prescription_text", "work", "distance"):
+        value = record.get(field)
+        if isinstance(value, str):
+            if value.strip():
+                return True
+        elif isinstance(value, Mapping):
+            if value.get("value") is not None:
+                return True
+        elif value is not None:
+            return True
+    return False
+
+
+def _structured_workload_item(record: Mapping) -> dict:
+    """Keep authored metadata while translating quantities into shared units."""
+    item = {key: value for key, value in record.items() if value is not None}
+    item["name"] = record.get("display_name") or record.get("name") or record.get("title")
+    if text := str(record.get("prescription_text") or "").strip():
+        item["effective_prescription"] = text
+    duration = record.get("duration") or record.get("work") or record.get("planned_duration")
+    for target, measured, factors in (
+        ("duration_min", duration, _DURATION_MINUTES),
+        ("distance_m", record.get("distance"), _DISTANCE_METERS),
+    ):
+        if not isinstance(measured, Mapping):
+            continue
+        value = _number(measured.get("value"))
+        unit = str(measured.get("unit") or "").strip().lower()
+        factor = factors.get(unit)
+        if factor is not None:
+            item[target] = value * factor
+        if target == "duration_min":
+            # The quantity field disambiguates "m": duration means minutes,
+            # whereas the same alias in a distance quantity means metres.
+            item["duration"] = f"{value * factor:g} min" if factor is not None else f"{value:g} {unit}"
+    return item
+
+
 def structured_stacking_findings(plan: dict) -> list[dict]:
     findings = []
     for wi, week in enumerate(plan.get("weeks") or []):
@@ -188,26 +237,23 @@ def structured_stacking_findings(plan: dict) -> list[dict]:
             profiles = []
             for session in day.get("sessions") or []:
                 items = []
+                session_item = _structured_workload_item(session)
+                session_endurance = session.get("session_type") == "conditioning" or bool(session.get("modality"))
                 for block in session.get("blocks") or []:
-                    item = {
-                        "name": block.get("display_name") or block.get("name"),
-                        "block_type": block.get("block_type"),
-                        "effective_prescription": block.get("prescription_text"),
-                        "rounds": block.get("rounds"),
-                        "effective_rounds": block.get("effective_rounds"),
-                    }
-                    for field in ("duration", "distance"):
-                        measured = block.get(field)
-                        if isinstance(measured, dict):
-                            value, unit = (
-                                _number(measured.get("value")),
-                                str(measured.get("unit") or "").strip().lower(),
-                            )
-                            factors = _DURATION_MINUTES if field == "duration" else _DISTANCE_METERS
-                            factor = factors.get(unit)
-                            if factor is not None:
-                                item["duration_min" if field == "duration" else "distance_m"] = value * factor
+                    item = _structured_workload_item(block)
+                    for field in ("modality", "category", "primary_stressor", "session_type", "rounds", "effective_rounds"):
+                        if field not in item and field in session_item:
+                            item[field] = session_item[field]
+                    # A session budget is fallback evidence, never a replacement
+                    # for a shortened exercise or a per-round interval dose.
+                    if (session_endurance and item.get("block_type") in {None, "conditioning", "other"}
+                            and not _has_current_dose(block)):
+                        for field in _REALIZED_DOSE_FIELDS:
+                            if field not in item and field in session_item:
+                                item[field] = session_item[field]
                     items.append(item)
+                if not items and session_endurance:
+                    items.append(session_item)
                 label = str(session.get("title") or "")
                 if session.get("session_type") == "strength_power":
                     label += " strength"

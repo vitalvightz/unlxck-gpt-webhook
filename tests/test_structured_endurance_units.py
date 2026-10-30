@@ -28,3 +28,8 @@ def test_short_second_quantities_are_not_interpreted_as_minutes(unit):
 
 def test_current_mile_prescription_is_also_measured_outside_structured_cards():
     assert substantial_endurance({"name": "Continuous run", "effective_prescription": "5 mi continuous"})
+
+
+def test_duration_minute_alias_is_not_reinterpreted_as_metres():
+    plan = _structured("Continuous run", duration={"value": 45, "unit": "m"})
+    assert structured_stacking_findings(plan)
