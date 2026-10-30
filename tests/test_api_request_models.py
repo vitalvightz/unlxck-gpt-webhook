@@ -27,7 +27,7 @@ def test_plan_request_to_payload_uses_existing_parser_labels():
     assert "When is your next fight?" in labels
     assert "Training Availability" in labels
     assert "Athlete Time Zone" in labels
-    assert "Sessions per Week" in labels
+    assert "Training Days per Week" in labels
 
 
 def test_plan_request_to_payload_keeps_list_backed_fields_as_lists_when_empty():

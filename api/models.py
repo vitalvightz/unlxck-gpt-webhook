@@ -946,11 +946,10 @@ class PlanRequest(BaseModel):
         if isinstance(value, bool):
             raise ValueError("weekly_training_frequency must be numeric")
         if isinstance(value, (int, float)):
-            # Accept a requested double-day cadence. This is intake capacity,
-            # not permission to add work: calendar/readiness policies still gate it.
+            # Training frequency counts distinct days, not double-day workouts.
             parsed = int(round(float(value)))
-            if parsed < 1 or parsed > 14:
-                raise ValueError("weekly_training_frequency must be between 1 and 14")
+            if parsed < 1 or parsed > 7:
+                raise ValueError("weekly_training_frequency must be between 1 and 7")
             return parsed
         return value
 
@@ -1058,6 +1057,8 @@ class PlanRequest(BaseModel):
     @model_validator(mode="after")
     def validate_schedule_days(self) -> "PlanRequest":
         normalized_training_days = {day.strip().lower() for day in self.training_availability if str(day).strip()}
+        if self.weekly_training_frequency and normalized_training_days and self.weekly_training_frequency > len(normalized_training_days):
+            raise ValueError("weekly_training_frequency cannot exceed selected training_availability days")
 
         invalid_hard_days = [day for day in self.hard_sparring_days if str(day).strip().lower() not in normalized_training_days]
         if invalid_hard_days:
@@ -1136,7 +1137,7 @@ class PlanRequest(BaseModel):
             _field("When is your next fight?", normalized_fight_date),
             _field("Athlete Time Zone", athlete.athlete_timezone),
             _field("Rounds x Minutes", self.rounds_format),
-            _field("Sessions per Week", self.weekly_training_frequency),
+            _field("Training Days per Week", self.weekly_training_frequency),
             _field("Fatigue Level", self.fatigue_level),
             _field("Equipment Access", self.equipment_access),
             _field("Training Availability", self.training_availability),

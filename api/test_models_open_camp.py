@@ -119,3 +119,19 @@ def test_open_camp_weeks_rejects_out_of_range(raw: object) -> None:
     # clamped, so malformed payloads surface instead of being masked.
     with pytest.raises(ValidationError, match=f"between 1 and {MAX_OPEN_CAMP_WEEKS}"):
         PlanRequest(athlete=_athlete(), open_camp_weeks=raw)
+
+
+@pytest.mark.parametrize("days", [1, 7])
+def test_training_days_per_week_accepts_one_through_seven(days: int) -> None:
+    assert PlanRequest(athlete=_athlete(), weekly_training_frequency=days).weekly_training_frequency == days
+
+
+@pytest.mark.parametrize("days", [0, 8, 10])
+def test_training_days_per_week_rejects_out_of_range(days: int) -> None:
+    with pytest.raises(ValidationError, match="between 1 and 7"):
+        PlanRequest(athlete=_athlete(), weekly_training_frequency=days)
+
+
+def test_training_days_per_week_cannot_exceed_availability() -> None:
+    with pytest.raises(ValidationError, match="cannot exceed selected training_availability days"):
+        PlanRequest(athlete=_athlete(), weekly_training_frequency=3, training_availability=["Monday", "Wednesday"])

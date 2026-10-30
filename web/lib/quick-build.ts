@@ -74,7 +74,7 @@ export function planRequestToQuickBuildInput(plan: PlanRequest): QuickBuildInput
   const weeklyFrequencyRaw = plan.weekly_training_frequency ?? 4;
   const weeklyFrequency = Math.min(
     Math.max(Number.isFinite(weeklyFrequencyRaw) ? weeklyFrequencyRaw : 4, 1),
-    14,
+    Math.max(trainingAvailability.length, 1),
   );
   return {
     full_name: plan.athlete?.full_name ?? "",
@@ -182,13 +182,13 @@ export function validateQuickBuildInput(
   if (!ROUNDS_FORMAT_PATTERN.test(input.rounds_format)) {
     errors.rounds_format = "Pick a rounds format.";
   }
-  if (!Number.isInteger(input.weekly_training_frequency) || input.weekly_training_frequency < 1 || input.weekly_training_frequency > 14) {
-    errors.weekly_training_frequency = "Sessions per week must be between 1 and 14.";
+  if (!Number.isInteger(input.weekly_training_frequency) || input.weekly_training_frequency < 1 || input.weekly_training_frequency > 7) {
+    errors.weekly_training_frequency = "Training days per week must be between 1 and 7.";
   }
   if (input.training_availability.length === 0) {
     errors.training_availability = "Choose at least one training day.";
-  } else if (input.weekly_training_frequency > input.training_availability.length * 2) {
-    errors.training_availability = "Allow up to two sessions per selected training day.";
+  } else if (input.weekly_training_frequency > input.training_availability.length) {
+    errors.training_availability = "Training days per week cannot exceed selected available days.";
   }
   const combatSchedule = getSparringConsistency(
     input.training_availability,
@@ -207,6 +207,9 @@ export function validateQuickBuildInput(
     errors.key_goals = "Choose at least one focus.";
   } else if (input.key_goals.length > QUICK_BUILD_KEY_GOAL_CAP) {
     errors.key_goals = `Pick at most ${QUICK_BUILD_KEY_GOAL_CAP} goals.`;
+  }
+  if (input.key_goals.some((goal) => KEY_GOAL_OPTIONS.some((option) => option.value === goal && option.disabled))) {
+    errors.key_goals = "Selected goal is not available.";
   }
   if (input.weak_areas.length > QUICK_BUILD_WEAK_AREA_CAP) {
     errors.weak_areas = `Pick at most ${QUICK_BUILD_WEAK_AREA_CAP} weak areas.`;
