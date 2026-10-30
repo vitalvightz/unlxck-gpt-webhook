@@ -205,6 +205,7 @@ def test_consumer_completion_and_better_do_not_override_missing_or_worse_respons
 def test_consumer_changes_invalidate_unstarted_work_preserving_started_and_completed(mutation):
     b = consumer_bundle()
     live = deepcopy(view(b).live_prescription)
+    assert not frozen_review_hold(b[0], b[3], live, work_state="unstarted", as_of=NOW)
     row = b[0].injury_flags[b[3]][0]
     if mutation == "location":
         row["description"] = row["description"].replace("elbow_site:lateral", "elbow_site:unknown")
@@ -224,7 +225,9 @@ def test_consumer_changes_invalidate_unstarted_work_preserving_started_and_compl
     elif mutation == "no_work":
         b[0].rehab_exposures.clear()
     original = deepcopy(live)
-    assert frozen_review_hold(b[0], b[3], live, work_state="unstarted", as_of=NOW) is (mutation != "no_work")
+    # #3003: permission cannot replace progression evidence. Removing the
+    # completed work invalidates unstarted LOAD just like the other mutations.
+    assert frozen_review_hold(b[0], b[3], live, work_state="unstarted", as_of=NOW)
     assert not frozen_review_hold(b[0], b[3], live, work_state="started", as_of=NOW)
     assert not frozen_review_hold(b[0], b[3], live, work_state="completed", as_of=NOW)
     assert live == original
