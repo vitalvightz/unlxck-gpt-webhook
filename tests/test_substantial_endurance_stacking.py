@@ -409,3 +409,97 @@ def test_raw_checks_same_day_sessions_and_combined_session():
         "Wednesday — Strength + endurance\n- Tire Flip: 4x2\n- Easy run: 5 km continuous",
     ]:
         assert raw_stacking_findings(text)
+
+
+@pytest.mark.parametrize(
+    "dose",
+    [
+        {"work": {"value": 300, "unit": "seconds"}},
+        {"prescription_text": "10 min easy run"},
+        {"effective_prescription": "10 min easy run"},
+        {"duration": {"value": 40, "unit": "minutes"}, "rounds": 6},
+        {"distance": {"value": 5, "unit": "km"}, "rounds": 5},
+        {"work": {"value": 60, "unit": "seconds"}, "rounds": 8},
+    ],
+)
+def test_structured_current_dose_and_rounds_override_bank_and_session_duration(dose):
+    plan = _structured()
+    session = plan["weeks"][0]["days"][0]["sessions"][1]
+    session["planned_duration"] = {"value": 45, "unit": "minutes"}
+    session["blocks"][0].update(dose)
+    assert not structured_stacking_findings(plan)
+    assert not any(
+        UNSAFE_STACKING_CODE in finding for finding in audit_structured_plan(plan)
+    )
+
+
+@pytest.mark.parametrize("unit", ["mi", "mile", "miles"])
+def test_structured_miles_are_converted_to_metres(unit):
+    assert structured_stacking_findings(
+        _structured("Easy run", distance={"value": 5, "unit": unit})
+    )
+    assert not structured_stacking_findings(
+        _structured("Easy run", distance={"value": 0.5, "unit": unit})
+    )
+
+
+def test_raw_mi_distance_is_substantial():
+    assert raw_stacking_findings(
+        "Wednesday — Strength\n- Tire Flip: 4x2\nWednesday — Aerobic\n- Easy run: 5 mi continuous"
+    )
+
+
+@pytest.mark.parametrize(
+    "identity",
+    [
+        {"title": "Continuous cycling"},
+        {"title": "Aerobic base", "objective": "Continuous swimming"},
+        {"title": "Aerobic base", "modality": "row"},
+        {"title": "Aerobic base", "primary_stressor": "Steady run"},
+    ],
+)
+@pytest.mark.parametrize(
+    "blocks",
+    [[], [{"display_name": "Steady aerobic work", "block_type": "conditioning"}]],
+)
+def test_structured_session_duration_and_modality_detect_endurance(identity, blocks):
+    plan = _structured()
+    session = plan["weeks"][0]["days"][0]["sessions"][1]
+    session.update(
+        identity, planned_duration={"value": 45, "unit": "minutes"}, blocks=blocks
+    )
+    assert structured_stacking_findings(plan)
+    session["planned_duration"] = {"value": 10, "unit": "minutes"}
+    assert not structured_stacking_findings(plan)
+
+
+def test_session_modality_applies_to_current_block_dose():
+    plan = _structured("Steady aerobic work", duration={"value": 45, "unit": "minutes"})
+    plan["weeks"][0]["days"][0]["sessions"][1]["title"] = "Continuous swim"
+    assert structured_stacking_findings(plan)
+
+
+def test_strength_session_duration_does_not_become_endurance_time():
+    plan = _structured("Easy run", duration={"value": 10, "unit": "minutes"})
+    plan["weeks"][0]["days"][0]["sessions"][0]["planned_duration"] = {
+        "value": 45,
+        "unit": "minutes",
+    }
+    assert not structured_stacking_findings(plan)
+
+
+def test_session_context_does_not_erase_bank_modality(monkeypatch):
+    import fightcamp.session_workload as workload
+
+    original = workload.original_bank_entries
+
+    def entries(assignment):
+        if (
+            assignment.get("name") == "Aerobic base"
+            and assignment.get("slot_group") == "conditioning_slots"
+        ):
+            return [{"name": "Aerobic base", "modality": "swim", "total_minutes": 45}]
+        return original(assignment)
+
+    monkeypatch.setattr(workload, "original_bank_entries", entries)
+    assert structured_stacking_findings(_structured("Aerobic base"))

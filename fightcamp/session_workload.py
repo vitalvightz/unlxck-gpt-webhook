@@ -52,7 +52,7 @@ def substantial_endurance(item: Mapping) -> bool:
     metadata.update({k: v for k, v in item.items() if v is not None})
     text = " ".join(
         str(metadata.get(k) or "")
-        for k in ("modality", "name", "display_name", "category", "primary_stressor")
+        for k in ("modality", "name", "display_name", "category", "primary_stressor", "context_modality")
     ).replace("_", " ")
     modality = next(
         (key for key, pattern in _MODALITIES.items() if re.search(pattern, text, re.I)),
@@ -73,7 +73,7 @@ def substantial_endurance(item: Mapping) -> bool:
     )
     # A rendered/realised shorter dose takes precedence over the bank dose.
     if dose or any(
-        item.get(k) is not None for k in ("total_minutes", "duration_min", "distance_m")
+        item.get(k) is not None for k in ("total_minutes", "duration_min", "distance_m", "work_sec")
     ):
         for key in (
             "total_minutes",
@@ -81,6 +81,10 @@ def substantial_endurance(item: Mapping) -> bool:
             "distance_m",
             "duration",
             "timing",
+            "rounds",
+            "effective_rounds",
+            "work_sec",
+            "rest_sec",
         ):
             if key not in item:
                 metadata.pop(key, None)
@@ -97,6 +101,8 @@ def substantial_endurance(item: Mapping) -> bool:
     if _number(rounds) > 1:
         return False
     minutes = conditioning_dose_minutes(metadata)
+    if minutes is None and _number(metadata.get("work_sec")) > 0:
+        minutes = _number(metadata["work_sec"]) / 60
     if minutes is None and (
         hours := re.search(r"\b(\d+(?:\.\d+)?)\s*(?:h|hours?)\b", duration, re.I)
     ):
@@ -238,10 +244,15 @@ def structured_stacking_findings(plan: dict) -> list[dict]:
             for session in day.get("sessions") or []:
                 items = []
                 session_item = _structured_workload_item(session)
+                if session.get("session_type") == "conditioning":
+                    session_item["context_modality"] = " ".join(
+                        str(session.get(key) or "")
+                        for key in ("modality", "title", "objective", "primary_stressor")
+                    )
                 session_endurance = session.get("session_type") == "conditioning" or bool(session.get("modality"))
                 for block in session.get("blocks") or []:
                     item = _structured_workload_item(block)
-                    for field in ("modality", "category", "primary_stressor", "session_type", "rounds", "effective_rounds"):
+                    for field in ("modality", "category", "primary_stressor", "session_type", "rounds", "effective_rounds", "context_modality"):
                         if field not in item and field in session_item:
                             item[field] = session_item[field]
                     # A session budget is fallback evidence, never a replacement
