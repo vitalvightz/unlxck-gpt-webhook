@@ -1,11 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  getAnalyticsPreference,
-  setAnalyticsPreference,
   trackProductEvent,
   productEventIdentity,
 } from "./api";
+import { __resetConnectivityForTests, getConnectivitySnapshot } from "./connectivity";
 import { percent } from "./product-analytics";
 
 test("beta events send without a preference read and retry with the same identity", async () => {
@@ -72,7 +71,7 @@ test("background plan, history and bodyweight reads do not manufacture feature o
     const path = String(input);
     if (path.endsWith("/events")) events.push(JSON.parse(String(init?.body)));
     return new Response(
-      JSON.stringify(path.endsWith("/preference") ? { enabled: true } : {}),
+      JSON.stringify({}),
       {
         status: fail && path.endsWith("/nutrition/current") ? 422 : 200,
         headers: { "Content-Type": "application/json" },
@@ -80,7 +79,6 @@ test("background plan, history and bodyweight reads do not manufacture feature o
     );
   };
   try {
-    await setAnalyticsPreference("read-background", true);
     await getPlan("read-background", "00000000-0000-4000-8000-000000000001");
     await getTrainingHistory("read-background");
     await getNutritionCurrent("read-background");
@@ -99,5 +97,39 @@ test("background plan, history and bodyweight reads do not manufacture feature o
     );
   } finally {
     globalThis.fetch = original;
+  }
+});
+
+
+test("analytics network and gateway failures never degrade app connectivity", async () => {
+  const original = globalThis.fetch;
+  try {
+    for (const status of [null, 502, 503, 504]) {
+      __resetConnectivityForTests();
+      let attempts = 0;
+      globalThis.fetch = async () => {
+        attempts++;
+        if (status === null) throw new TypeError("Failed to fetch");
+        return new Response("unavailable", { status });
+      };
+      assert.equal(await trackProductEvent("beta", "app_opened", "onboarding"), false);
+      assert.equal(attempts, 3);
+      assert.deepEqual(getConnectivitySnapshot(), { offline: false, degraded: false });
+    }
+    // Isolation is limited to background event delivery. Real app failures
+    // must still activate the shared connection warning and recovery flow.
+    const { getNutritionCurrent } = await import("./api");
+    for (const status of [null, 503]) {
+      __resetConnectivityForTests();
+      globalThis.fetch = async () => {
+        if (status === null) throw new TypeError("Failed to fetch");
+        return new Response("unavailable", { status });
+      };
+      await assert.rejects(getNutritionCurrent("foreground"));
+      assert.equal(getConnectivitySnapshot().degraded, true);
+    }
+  } finally {
+    globalThis.fetch = original;
+    __resetConnectivityForTests();
   }
 });

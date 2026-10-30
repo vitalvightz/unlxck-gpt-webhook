@@ -31,3 +31,9 @@ The beta notice replaces the optional checkbox in Settings and onboarding. This 
 - PostgreSQL 17 with pg_cron: replayed the analytics migrations and the new migration; beta SQL assertions passed (new account, old disabled preference, retry uniqueness, report delivery, exclusions, privileges and unhealthy-retention rejection).
 - Playwright: three tests passed, covering automatic beta requests without any preference request and populated admin analytics at 390px/1280px, filters, pagination, coverage, runtime errors and overflow. Reports in UI tests are synthetic fixtures; they do not claim production totals.
 - Read-only production preflight found the retention scheduler healthy, one enabled preference and one existing product event. No live records, migrations or deployments were changed during this work. Production browser/API delivery checks remain a rollout step.
+
+## Review follow-up
+
+Background event transport failures and HTTP 502/503/504 responses no longer change the app-wide connection status. Foreground request failures still trigger recovery. Removed unused browser preference helpers/cache and test-only opt-in setup. SQL assertions now require explicit expected values, so missing health fields, NULL aggregates and missing coverage cannot pass silently.
+
+Verification: 37 affected frontend tests and TypeScript passed. PostgreSQL beta assertions passed; injecting a missing health object and empty facts independently caused the expected assertion failures. Python lint passed. No production changes were made.

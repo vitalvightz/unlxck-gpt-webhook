@@ -343,6 +343,8 @@ async function executeRequest(path: string, init?: ApiRequestInit): Promise<Exec
 }
 
 async function sendRequest(path: string, method: string, init?: ApiRequestInit): Promise<ExecutedRequest> {
+  // Telemetry delivery is not evidence that training/API connectivity is degraded.
+  const backgroundAnalytics = path === "/api/analytics/events";
   const headers = new Headers(init?.headers ?? {});
   if (init?.body && !(typeof FormData !== "undefined" && init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
@@ -410,7 +412,7 @@ async function sendRequest(path: string, method: string, init?: ApiRequestInit):
             : networkError,
       });
     }
-    reportNetworkFailure();
+    if (!backgroundAnalytics) reportNetworkFailure();
     throw new Error(isBrowserOffline() ? OFFLINE_NETWORK_MESSAGE : RETRYABLE_NETWORK_MESSAGE, {
       cause: networkError,
     });
@@ -425,8 +427,8 @@ async function sendRequest(path: string, method: string, init?: ApiRequestInit):
   const durationMs = Date.now() - startedAt;
   const contentType = response.headers.get("content-type") ?? "";
   const requestId = response.headers.get("x-request-id");
-  // A gateway error means the edge answered but the plan service did not.
-  if (RETRYABLE_GATEWAY_STATUSES.has(response.status)) {
+  // Foreground gateway failures activate the shared connection recovery flow.
+  if (!backgroundAnalytics && RETRYABLE_GATEWAY_STATUSES.has(response.status)) {
     reportNetworkFailure();
   }
 
@@ -1698,21 +1700,7 @@ export function reportCommunityExercise(token: string, revision: string, reason:
   return requestVoid(`/api/community-exercises/revisions/${revision}/report`, { token, method: 'POST', body: JSON.stringify({ reason }) });
 }
 
-// Legacy preference reads retained for older callers. Ingestion is automatic for beta accounts.
-const analyticsPreferences = new Map<string, { enabled: boolean; expires: number }>();
-export async function getAnalyticsPreference(token: string): Promise<{ enabled: boolean }> {
-  const cached = analyticsPreferences.get(token);
-  if (cached && cached.expires > Date.now()) return { enabled: cached.enabled };
-  const result = await readJson<{ enabled: boolean }>("/api/analytics/preference", { token });
-  analyticsPreferences.set(token, { ...result, expires: Date.now() + 30_000 });
-  return result;
-}
-export async function setAnalyticsPreference(token: string, enabled: boolean) {
-  const result = await readJson<{ enabled: boolean }>("/api/analytics/preference", { token, method: "PUT", body: JSON.stringify({ enabled }) });
-  analyticsPreferences.clear();
-  analyticsPreferences.set(token, { ...result, expires: Date.now() + 30_000 });
-  return result;
-}
+// First-party beta telemetry retries independently of app connectivity.
 export async function trackProductEvent(token: string, event_name: string, feature: string, request_id?: string, flow_id?: string) {
   try {
     const body = JSON.stringify({ event_name, feature, request_id: request_id ?? crypto.randomUUID(), flow_id });
