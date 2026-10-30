@@ -129,7 +129,20 @@ def test_injury_stages_and_reviewed_progression_match_pre_retirement_decisions()
             **case["kwargs"], policy=policy,
             as_of=datetime(2026, 10, 11, 9, tzinfo=timezone.utc),
         )
-        assert actual == case["expected"], case["case"]
+        expected = deepcopy(case["expected"])
+        if case["case"] == "improving_after_setback":
+            # #2976 (4af1dfb9): an injury check-in setback needs the bounded
+            # improvement + reviewed response path, even without an adverse
+            # exposure. Keep the original frozen decision and align only its
+            # newly explicit diagnostic; RESTORE and blocked LOAD are unchanged.
+            transition = expected["next_transition"]
+            requirement = next(r for r in transition["requirements"]
+                               if r["requirement_id"] == "no_unresolved_setback")
+            assert requirement["status"] == "pass"
+            assert requirement["reason_code"] == "no_negative_response"
+            requirement.update(status="unknown", reason_code="unresolved_injury_checkin_setback")
+            transition["reason_codes"].insert(0, "unresolved_injury_checkin_setback")
+        assert actual == expected, case["case"]
 
 
 def test_complete_current_plans_match_pre_retirement_selection_dose_and_personalisation(tmp_path):
