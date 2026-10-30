@@ -21,6 +21,7 @@ def test_nutrition_workspace_update_adds_visible_sparring_days_to_hidden_trainin
         _build_request(
             {
                 "training_availability": ["Monday", "Wednesday"],
+                "weekly_training_frequency": 2,
                 "hard_sparring_days": ["Wednesday"],
         "support_work_days": [],
             }
