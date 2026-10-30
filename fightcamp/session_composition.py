@@ -1476,6 +1476,21 @@ def compose_normal_strength_assignments(
             strength_index += 1
             if role.get("late_fight_tail_owned"):
                 continue
+            if role.get("pre_hard_contact_microdose_only") is True:
+                # This is a receiver for existing donor work, not another
+                # independently composed session. Prefilling it makes the
+                # conserving redistribution owner skip it, leaving a token
+                # after the dose resolver rejects unsuitable members.
+                members = role.get("selected_exercise_assignments") or []
+                funded = bool(members) and all(
+                    member.get("redistribution_reason") == "pre_hard_session_rebalance"
+                    for member in members
+                )
+                if not funded:
+                    role["selected_exercise_assignments"] = []
+                    for field in ("strength_composition_policy", "effective_strength_prescriptions", "effective_strength_envelope"):
+                        role.pop(field, None)
+                continue
 
             # Candidate authority follows the phase that owns this role's D-day,
             # not the weekly container's label, so a week straddling a phase

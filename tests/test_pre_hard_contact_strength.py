@@ -1012,3 +1012,41 @@ def test_dense_receiver_uses_its_seven_day_window_in_eight_day_phase_week():
     receivers = [r for r in week["session_roles"] if r.get("dense_day_receiver_provisional")]
     assert len(receivers) == 1
     assert receivers[0]["scheduled_d_day"] == 23
+
+
+def test_composition_leaves_pre_hard_receivers_for_conserving_redistribution() -> None:
+    """A provisional microdose must not become an independently composed token."""
+    weekly = _secondary_power_geometry()
+    slots = list(_transfer_slots())
+    _seed_main(weekly, *slots)
+    athlete = {"primary_goal": "power", "fatigue": "low"}
+    apply_pre_hard_contact_strength_exposure_cap(weekly, athlete)
+    receiver = weekly["weeks"][0]["session_roles"][1]
+    assert receiver["pre_hard_contact_microdose_only"] is True
+    provisional = deepcopy(slots[-1])
+    provisional.update(slot_id="provisional-independent-power", session_index=2)
+    provisional["selected"]["name"] = "Independent provisional power"
+    pools = _candidate_pools(*slots, provisional)
+    original_names = {a["name"] for a in weekly["weeks"][0]["session_roles"][0]["selected_exercise_assignments"]}
+    compose_normal_strength_assignments(
+        weekly_role_map=weekly, candidate_pools=pools,
+        only_roles={id(receiver)}, allow_relocation=False,
+    )
+    assert receiver.get("selected_exercise_assignments") == []
+    redistribute_pre_hard_power_from_main(
+        weekly_role_map=weekly, candidate_pools=pools, athlete_model=athlete,
+    )
+    assert 2 <= len(receiver["selected_exercise_assignments"]) <= 3
+    assert all(a["redistribution_reason"] == "pre_hard_session_rebalance"
+               for a in receiver["selected_exercise_assignments"])
+    after = [a["name"] for r in weekly["weeks"][0]["session_roles"]
+             if r.get("category") == "strength" for a in r.get("selected_exercise_assignments", [])]
+    assert len(after) == len(set(after)) == len(original_names)
+    assert set(after) == original_names
+    apply_effective_strength_prescriptions(weekly_role_map=weekly, candidate_pools=pools, athlete_model=athlete)
+    before = deepcopy(receiver["selected_exercise_assignments"])
+    compose_normal_strength_assignments(
+        weekly_role_map=weekly, candidate_pools=pools,
+        only_roles={id(receiver)}, allow_relocation=False,
+    )
+    assert receiver["selected_exercise_assignments"] == before
