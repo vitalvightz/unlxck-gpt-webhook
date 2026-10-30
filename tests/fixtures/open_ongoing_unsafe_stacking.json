@@ -1,0 +1,124 @@
+{
+  "case": "eca177b5-c26c-45dc-8c04-2bce9d54b242",
+  "created": "2026-10-29",
+  "weekly_sessions": 4,
+  "planning_brief": {
+    "render_mode": "open_ongoing_system",
+    "athlete_snapshot": {
+      "sport": "boxing"
+    },
+    "open_plan_spec": {
+      "plan_type": "open_ongoing_system",
+      "weekly_template": {
+        "training_days": [
+          "Monday",
+          "Wednesday",
+          "Thursday"
+        ],
+        "hard_sparring_days": [
+          "Thursday",
+          "Monday"
+        ],
+        "support_work_days": [
+          "Wednesday"
+        ],
+        "coach_owned_days": {
+          "technical_skill_days": [],
+          "hard_sparring_days": [
+            "Thursday",
+            "Monday"
+          ],
+          "support_work_days": [
+            "Wednesday"
+          ]
+        }
+      }
+    }
+  },
+  "raw_text": "Session Cards\n\nTactical Focus \u2014 Opponent Pattern Scan (exact tactical watch)\nWhy: Build basic tactical awareness by separating repeated patterns from one-off moments.\n- Opponent Pattern Scan: 10 minutes, tactical review only. No physical load.\n  Step 1: Identify the most repeated movement or exchange pattern.\n  Step 2: Choose the clearest opportunity that pattern creates.\n  Step 3: Choose the main danger linked to that pattern.\n  Step 4: Write one observation to test in training rather than treating it as fact.\n  Intent: Look for repetition before making a conclusion.\n  Focus: Track the same behaviour across several exchanges.\n  Reset: If the pattern appears once, keep watching before acting on it.\n  Anchor: Repeated beats random.\n\nMonday \u2014 Hard sparring\nWhy: Your declared hard-sparring/contact session.\n- Hard sparring, controlled hard contact. No extra S&C. Keep freshness priority.\n\nMonday \u2014 Self-Review Cues\nWhy: Short tactical check after sparring.\n- Self-Review Cues: 2 minutes, RPE 1 max.\n  How: Review the last clean technical work.\n  Do: Write three cues only, one entry, one defensive reset, one composure cue.\n\nWednesday \u2014 Light technical combat\nWhy: Keep skill work crisp and low noise.\n- Light technical combat session. Keep it skill-first and low fatigue.\n\nWednesday \u2014 Strength\nWhy: Build power, keep strength, and support your gas tank.\n- Tire Flip.\n  How: Stand close, chest over the tyre, lift with legs and hips then push forward.\n  Dose: 4 sets x 2 reps; rest 120 sec; RPE 8 (max speed intent).\n  Cue: Drive hips, push through your legs.\n  Easier: Use slower controlled flips, same sets.\n  Stop: Stop if low-back pain appears.\n- DB Bench Press \u2192 Plyo Push-Up.\n  How: Heavy dumbbell bench press then step to explosive push-up; keep tight core.\n  Dose: 3 rounds: DB bench press 2 reps @ 85% 1RM \u2192 plyo push-up 2 reps at max intent; rest 240 sec per round.\n  Cue: Tight brace, explode up fast.\n  Stop: Stop if shoulder pain or poor control.\n- Banded Row (Speed Focus).\n  How: Light band load, tall torso, pull hard and fast.\n  Dose: 4 sets x 2 reps; rest 120 sec; RPE 8.\n  Cue: Pull fast, control the return.\n  Stop: Stop if shoulder sharp pain.\n- Cossack Squat (Dynamic).\n  How: Wide stance, sit low to one side, keep chest up.\n  Dose: 2 sets x 6 reps; rest 90 sec; RPE 6.\n  Cue: Sit back, keep weight on heels.\n  Easier: Reduce depth and range of motion.\n  Stop: Stop if knee pain increases.\n- Tempo Split Squat (4-0-1).\n  How: Front foot steady, lower slowly for four seconds, stand in one second.\n  Dose: 2 sets x 6 reps; rest 90 sec; RPE 6.\n  Cue: Control the way down.\n  Stop: Stop if sharp knee pain.\n- Single-Leg Farmer Carry Hold.\n  How: Hold weight at your side, stand tall on one leg.\n  Dose: 3 holds x 10 sec; rest 120 sec between holds; effort 7/10.\n  Cue: Stand tall, squeeze glute.\n  Stop: Stop if balance loss or hip pain.\n\nWednesday \u2014 Aerobic support\nWhy: Build repeatable aerobic base for better recovery and gas tank.\n- 5K Steady Run.\n  How: Run continuous 5 km at conversational pace.\n  Dose: 5 km continuous; conversational pace.\n  Cue: Keep easy talking pace.\n  Stop: Stop if unusual chest pain or dizziness.\n\nThursday \u2014 Hard sparring\nWhy: Your declared hard-sparring/contact session.\n- Hard sparring, controlled hard contact. No extra S&C. Keep freshness priority.\n\n",
+  "source_sessions": [
+    {
+      "weekday": "Monday",
+      "role_key": "hard_sparring_day",
+      "label": "Hard sparring",
+      "category": "sparring",
+      "execution_order": 1,
+      "coach_owned": false
+    },
+    {
+      "weekday": "Monday",
+      "role_key": "self_review",
+      "label": "Self-Review Cues",
+      "category": "support_insert",
+      "execution_order": 2,
+      "coach_owned": false,
+      "display_text": "- Self-Review Cues: 2 minutes, RPE 1 max.\nReview the last clean technical work. Write three cues only: one entry, one defensive reset, one composure cue.",
+      "support_insert_category": "tactical",
+      "support_insert_cost_category": "zero_cost"
+    },
+    {
+      "weekday": "Wednesday",
+      "role_key": "light_combat_day",
+      "label": "Light technical combat",
+      "category": "technical",
+      "execution_order": 2,
+      "coach_owned": true
+    },
+    {
+      "weekday": "Wednesday",
+      "role_key": "primary_strength_day",
+      "label": "Strength",
+      "category": "strength",
+      "execution_order": 3,
+      "coach_owned": false,
+      "exercises": [
+        {
+          "name": "Tire Flip",
+          "prescription": "4x2 reps at max speed; full rest 120s."
+        },
+        {
+          "name": "DB Bench Press \u2192 Plyo Push-Up",
+          "prescription": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+        },
+        {
+          "name": "Banded Row (Speed Focus)",
+          "prescription": "4x2 reps at max speed; full rest 120s."
+        },
+        {
+          "name": "Cossack Squat (Dynamic)",
+          "prescription": "2x6 @ RPE 6, keep reps crisp."
+        },
+        {
+          "name": "Tempo Split Squat (4-0-1)",
+          "prescription": "2x6 @ RPE 6, keep reps crisp."
+        },
+        {
+          "name": "Single-Leg Farmer Carry Hold",
+          "prescription": "3 holds x 10s @ 7/10 effort; full rest between holds."
+        }
+      ]
+    },
+    {
+      "weekday": "Wednesday",
+      "role_key": "aerobic_base_day",
+      "label": "Aerobic support",
+      "category": "conditioning",
+      "execution_order": 4,
+      "coach_owned": false,
+      "exercises": [
+        {
+          "name": "5K Steady Run",
+          "prescription": "5 km continuous, conversational pace"
+        }
+      ]
+    },
+    {
+      "weekday": "Thursday",
+      "role_key": "hard_sparring_day",
+      "label": "Hard sparring",
+      "category": "sparring",
+      "execution_order": 1,
+      "coach_owned": false
+    }
+  ]
+}

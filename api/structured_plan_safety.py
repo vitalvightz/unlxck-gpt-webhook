@@ -448,6 +448,9 @@ def audit_structured_plan(structured_plan: dict, computed_support: dict | None =
     """
     try:
         findings: list[str] = []
+        from fightcamp.session_workload import structured_stacking_findings
+        findings.extend(f"{CONFLICT}: {item['code']}: {item['message']}"
+                        for item in structured_stacking_findings(structured_plan))
         findings.extend(detect_guidance_exercise_blocks(structured_plan))
         findings.extend(detect_coach_gated_leakage(structured_plan, computed_support))
         findings.extend(detect_minor_guidance_leakage_findings(structured_plan, computed_support))
