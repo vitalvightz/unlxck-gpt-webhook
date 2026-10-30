@@ -3473,7 +3473,7 @@ SYSTEM_SCENARIOS = [
         key="short_notice_contradictory",
         request_overrides={
             "fight_date": "2099-03-24",
-            "weekly_training_frequency": 6,
+            "weekly_training_frequency": 2,
             "training_availability": ["Monday", "Wednesday"],
             "equipment_access": ["assault_bike", "bands", "bodyweight"],
         },

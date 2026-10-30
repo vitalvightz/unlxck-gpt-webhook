@@ -32,16 +32,37 @@ function formatDateOffsetFrom(baseIsoDate: string, offsetDays: number): string {
   return base.toISOString().slice(0, 10);
 }
 
-test("double-day frequency survives validation and quick-build round trip", () => {
-  const input = {...buildValidInput(), weekly_training_frequency: 9,
-    training_availability: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]};
-  const errors = validateQuickBuildInput(input);
-  assert.equal(errors.weekly_training_frequency, undefined);
-  assert.equal(errors.training_availability, undefined);
+test("quick build accepts seven training days and rejects eight", () => {
+  const input = {...buildValidInput(), weekly_training_frequency: 7,
+    training_availability: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]};
+  assert.equal(validateQuickBuildInput(input).weekly_training_frequency, undefined);
   const plan = quickBuildToPlanRequest(input);
-  assert.equal(plan.weekly_training_frequency, 9);
-  assert.equal(planRequestToQuickBuildInput(plan).weekly_training_frequency, 9);
-  assert.ok(validateQuickBuildInput({...input, weekly_training_frequency: 13}).training_availability);
+  assert.equal(planRequestToQuickBuildInput(plan).weekly_training_frequency, 7);
+  assert.equal(validateQuickBuildInput({...input, weekly_training_frequency: 8}).weekly_training_frequency,
+    "Training days per week must be between 1 and 7.");
+  assert.equal(validateQuickBuildInput({...input, training_availability: input.training_availability.slice(0, 6)}).training_availability,
+    "Training days per week cannot exceed selected available days.");
+  const legacy = planRequestToQuickBuildInput({...plan, weekly_training_frequency: 10, training_availability: input.training_availability.slice(0, 6)});
+  assert.equal(legacy.weekly_training_frequency, 10);
+  assert.equal(legacy.training_availability.length, 6);
+  assert.equal(validateQuickBuildInput(legacy).weekly_training_frequency, "Training days per week must be between 1 and 7.");
+});
+
+test("normalises lowercase stored weekdays without losing frequency or sparring", () => {
+  const source = emptyPlanRequest();
+  source.weekly_training_frequency = 3;
+  source.training_availability = ["monday", "wednesday", "friday"];
+  source.hard_sparring_days = ["wednesday"];
+  const loaded = planRequestToQuickBuildInput(source);
+  assert.deepEqual(loaded.training_availability, ["Monday", "Wednesday", "Friday"]);
+  assert.deepEqual(loaded.hard_sparring_days, ["Wednesday"]);
+  assert.equal(loaded.weekly_training_frequency, 3);
+  assert.deepEqual(quickBuildToPlanRequest(loaded).training_availability, loaded.training_availability);
+});
+
+test("quick build rejects disabled weight cut goals", () => {
+  assert.equal(validateQuickBuildInput({...buildValidInput(), key_goals: ["weight_cut"]}).key_goals,
+    "Selected goal is not available.");
 });
 
 test("validateQuickBuildInput rejects multiple technical styles", () => {
@@ -440,6 +461,6 @@ test("validateQuickBuildInput blocks more combat days than total weekly sessions
     hard_sparring_days: ["monday"],
     support_work_days: ["wednesday", "friday"],
   };
-  assert.match(validateQuickBuildInput(input).combat_sessions ?? "", /3 combat sessions but entered 2 total/);
+  assert.match(validateQuickBuildInput(input).combat_sessions ?? "", /3 combat days but entered 2 training days per week/);
   assert.equal(validateQuickBuildInput({ ...input, weekly_training_frequency: 3 }).combat_sessions, undefined);
 });

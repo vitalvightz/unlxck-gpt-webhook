@@ -70,7 +70,7 @@ import {
 } from "@/lib/recommended-setup";
 import { useFadeNavigate } from "@/components/fade-through";
 
-const WEEKLY_FREQUENCY_OPTIONS: IntakeOption[] = Array.from({ length: 14 }, (_, index) => ({
+const WEEKLY_FREQUENCY_OPTIONS: IntakeOption[] = Array.from({ length: 7 }, (_, index) => ({
   label: String(index + 1),
   value: String(index + 1),
 }));
@@ -165,10 +165,10 @@ function ChipMultiSelect({
         {options.map((option) => {
           const checked = selectedValues.includes(option.value);
           const optionDisabledReason = getOptionDisabledReason?.(option, checked) ?? null;
-          const valueDisabled = !checked && (Boolean(optionDisabledReason) || disabledValueSet?.has(option.value) === true);
+          const valueDisabled = !checked && (Boolean(option.disabled) || Boolean(optionDisabledReason) || disabledValueSet?.has(option.value) === true);
           const capDisabled = !valueDisabled && disableAdditionalSelections && !checked;
           const disabled = valueDisabled || capDisabled;
-          const reason = valueDisabled ? optionDisabledReason ?? disabledValueReason : capDisabled ? capDisabledReason : undefined;
+          const reason = valueDisabled ? (option.disabled ? "Coming soon" : optionDisabledReason ?? disabledValueReason) : capDisabled ? capDisabledReason : undefined;
           return (
             <label
               key={option.value}
@@ -380,7 +380,7 @@ function QuickBuildFormInner() {
     }),
     [focusPresetLimits, input.fight_date, input.no_scheduled_fight],
   );
-  const maxWeeklySessions = input.training_availability.length * 2;
+  const maxWeeklySessions = input.training_availability.length;
   const sessionsSelectDisabled = maxWeeklySessions === 0;
   const weeklyFrequencyOptions = useMemo(
     () => (maxWeeklySessions > 0 ? WEEKLY_FREQUENCY_OPTIONS.slice(0, maxWeeklySessions) : []),
@@ -439,7 +439,7 @@ function QuickBuildFormInner() {
     return [
       { key: "profile", label: "Profile", detail: "Name and style", complete: profileComplete },
       { key: "fight", label: "Fight", detail: "Date or open camp", complete: fightComplete },
-      { key: "schedule", label: "Schedule", detail: "Days, sessions, kit", complete: scheduleComplete },
+      { key: "schedule", label: "Schedule", detail: "Training days, kit", complete: scheduleComplete },
       { key: "focus", label: "Focus", detail: "Goals selected", complete: focusComplete },
       { key: "generate", label: "Generate", detail: "Ready to build", complete: generateComplete },
     ];
@@ -1050,16 +1050,21 @@ function QuickBuildFormInner() {
           </div>
         ) : null}
         <div className="field">
-          <label htmlFor="qb-weekly-frequency">Sessions per week</label>
+          <label htmlFor="qb-weekly-frequency">Training days per week</label>
           <CustomSelect
             id="qb-weekly-frequency"
             value={sessionsSelectDisabled ? "" : String(input.weekly_training_frequency)}
             options={weeklyFrequencyOptions}
-            placeholder={sessionsSelectDisabled ? "Choose training days first" : "Sessions"}
+            placeholder={sessionsSelectDisabled ? "Choose training days first" : "Days"}
             disabled={sessionsSelectDisabled}
             onChange={(value) => patch("weekly_training_frequency", Number(value) || 1)}
           />
-          <p className="muted">Total training sessions per week: sparring, technical boxing, strength and conditioning. Count two sessions on the same day as two.</p>
+          <p className="muted">Count each training day once, even if you do multiple sessions that day.</p>
+          {input.weekly_training_frequency > 7 ? (
+            <p className="quick-build-field-error" role="alert">
+              Previous value: {input.weekly_training_frequency} sessions/week. Select your actual training days (1–7); your saved plan has not changed.
+            </p>
+          ) : null}
           <FieldError message={visibleError("weekly_training_frequency")} />
           <FieldError message={visibleError("training_availability")} />
         </div>

@@ -86,6 +86,24 @@ _GUIDED_INJURY_SEVERITY_ALIASES = {
 }
 _HARD_SPARRING_DAY_CAP = 4
 
+
+def _parse_training_days_per_week(value: Any) -> int | None:
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    if isinstance(value, bool):
+        raise ValueError("weekly_training_frequency must be numeric")
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError, OverflowError):
+        raise ValueError("weekly_training_frequency must be numeric") from None
+    if not math.isfinite(numeric) or not numeric.is_integer():
+        raise ValueError("weekly_training_frequency must be a whole number")
+    parsed = int(numeric)
+    if not 1 <= parsed <= 7:
+        raise ValueError("weekly_training_frequency must be between 1 and 7")
+    return parsed
+
+
 # Upper bound on a manually submitted Stage 2 plan body (admin-only path).
 MANUAL_STAGE2_MAX_CHARS = 80_000
 
@@ -764,20 +782,8 @@ class NutritionSharedCampContext(BaseModel):
 
     @field_validator("weekly_training_frequency", mode="before")
     @classmethod
-    def coerce_frequency(cls, value: Any) -> Any:
-        if value is None:
-            return None
-        if isinstance(value, str):
-            normalized = value.strip()
-            if not normalized:
-                return None
-            try:
-                value = int(round(float(normalized)))
-            except ValueError:
-                raise ValueError("weekly_training_frequency must be numeric") from None
-        if isinstance(value, (int, float)):
-            return max(1, min(int(round(float(value))), 14))
-        return value
+    def coerce_frequency(cls, value: Any) -> int | None:
+        return _parse_training_days_per_week(value)
 
     @field_validator("session_types_by_day", mode="before")
     @classmethod
@@ -932,27 +938,8 @@ class PlanRequest(BaseModel):
 
     @field_validator("weekly_training_frequency", mode="before")
     @classmethod
-    def validate_weekly_training_frequency(cls, value: Any) -> Any:
-        if value is None:
-            return None
-        if isinstance(value, str):
-            normalized = value.strip()
-            if not normalized:
-                return None
-            try:
-                value = int(round(float(normalized)))
-            except ValueError:
-                raise ValueError("weekly_training_frequency must be numeric") from None
-        if isinstance(value, bool):
-            raise ValueError("weekly_training_frequency must be numeric")
-        if isinstance(value, (int, float)):
-            # Accept a requested double-day cadence. This is intake capacity,
-            # not permission to add work: calendar/readiness policies still gate it.
-            parsed = int(round(float(value)))
-            if parsed < 1 or parsed > 14:
-                raise ValueError("weekly_training_frequency must be between 1 and 14")
-            return parsed
-        return value
+    def validate_weekly_training_frequency(cls, value: Any) -> int | None:
+        return _parse_training_days_per_week(value)
 
     @field_validator("no_scheduled_fight", mode="before")
     @classmethod
@@ -1058,6 +1045,8 @@ class PlanRequest(BaseModel):
     @model_validator(mode="after")
     def validate_schedule_days(self) -> "PlanRequest":
         normalized_training_days = {day.strip().lower() for day in self.training_availability if str(day).strip()}
+        if self.weekly_training_frequency and normalized_training_days and self.weekly_training_frequency > len(normalized_training_days):
+            raise ValueError("weekly_training_frequency cannot exceed selected training_availability days")
 
         invalid_hard_days = [day for day in self.hard_sparring_days if str(day).strip().lower() not in normalized_training_days]
         if invalid_hard_days:
@@ -1136,7 +1125,7 @@ class PlanRequest(BaseModel):
             _field("When is your next fight?", normalized_fight_date),
             _field("Athlete Time Zone", athlete.athlete_timezone),
             _field("Rounds x Minutes", self.rounds_format),
-            _field("Sessions per Week", self.weekly_training_frequency),
+            _field("Training Days per Week", self.weekly_training_frequency),
             _field("Fatigue Level", self.fatigue_level),
             _field("Equipment Access", self.equipment_access),
             _field("Training Availability", self.training_availability),
