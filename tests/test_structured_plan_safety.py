@@ -379,33 +379,19 @@ def test_normalization_humanizes_contact_without_changing_machine_role_keys():
     assert day["today_card"]["coach_led_contact"] == "technical_combat"
 
 
-def test_internal_label_audit_excludes_metadata_but_catches_rendered_fields():
-    from api.structured_plan_safety import detect_internal_display_label_leakage
-
-    plan = _valid_plan()
-    day = plan["weeks"][0]["days"][0]
-    day["planning_day_role_keys"] = ["technical_combat"]
-    assert detect_internal_display_label_leakage(plan) == []
-
-    day["today_card"]["coach_led_contact"] = "technical_combat"
-    assert any("technical_combat" in item for item in detect_internal_display_label_leakage(plan))
-    day["today_card"]["coach_led_contact"] = "Technical rhythm only"
-    assert detect_internal_display_label_leakage(plan) == []
-
-    day["sessions"][0]["title"] = "opaque_internal_mode"
-    assert any("opaque_internal_mode" in item for item in detect_internal_display_label_leakage(plan))
-
-
-def test_unknown_internal_display_enum_blocks_structured_card_release():
+def test_cosmetic_identifiers_do_not_block_structured_card_release():
     plan = _valid_plan()
     plan["nutrition"]["summary"] = "opaque_internal_mode"
+    plan["nutrition"]["daily_focus"] = "stop_and_modify"
+    plan["weeks"][0]["days"][0]["today_card"]["primary_warning"] = "stop_and_report"
+    plan["weeks"][0]["days"][0]["today_card"]["nutrition_summary"] = "stop_and_monitor"
 
     outcome = build_structured_plan_outcome(
         plan, raw_markdown=_faithful_source(plan), computed_support=_support()
     )
-    assert outcome.status == "blocked_by_safety_audit"
-    assert outcome.structured_plan is None
-    assert any("opaque_internal_mode" in item for item in outcome.errors)
+    assert outcome.status == "valid", outcome.errors
+    assert outcome.structured_plan is not None
+    assert not any("internal athlete-facing display label" in error for error in outcome.errors)
 
 
 def test_known_internal_contact_identifier_is_normalized_before_release():
