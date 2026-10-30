@@ -253,7 +253,7 @@ function summarizeTrainingDays(request: PlanRequest): string {
   const frequency = request.weekly_training_frequency;
   const sessions = !frequency ? "" : frequency > 7
     ? `${frequency} sessions/week (legacy)`
-    : `${frequency} training days/week`;
+    : `${frequency}/week (recorded)`;
   const days = formatList(labels, "No days set", 4);
   return sessions ? `${sessions} - ${days}` : days;
 }

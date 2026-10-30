@@ -394,3 +394,14 @@ def test_a_stored_future_weigh_in_never_sets_camp_weight_or_blocks_saves():
     assert _intake_weight(store) == 71.6
     assert workspace["shared_camp_context"]["current_weight_kg"] == 71.6
     assert [point["scale_weight_kg"] for point in workspace["derived"]["bodyweight_trend"]] == [71.6]
+
+
+def test_legacy_session_frequency_does_not_break_nutrition_reads_or_change_source():
+    from api.models import NutritionMonitoringInput
+    from api.nutrition_workspace import _build_shared_camp_context
+
+    saved = {"weekly_training_frequency": 10, "training_availability": ["Monday", "Wednesday"]}
+    shared = _build_shared_camp_context(saved, NutritionMonitoringInput())
+    assert shared.weekly_training_frequency is None
+    assert shared.training_availability == ["Monday", "Wednesday"]
+    assert saved["weekly_training_frequency"] == 10

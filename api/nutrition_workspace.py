@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
+from pydantic import ValidationError
+
 from api.bodyweight_trend import daily_readings, seven_day_average, smoothed_trend, weekly_pace
 from api.datetimes import parse_calendar_date
 from fightcamp.camp_phases import calculate_phase_weeks
@@ -407,6 +409,16 @@ def _build_shared_camp_context(
     if target_weight_kg is None:
         target_weight_kg = _coerce_optional_float(raw_shared.get("target_weight_kg"))
 
+    recorded_frequency = raw_shared.get("weekly_training_frequency")
+    if recorded_frequency is None:
+        recorded_frequency = raw_payload.get("weekly_training_frequency")
+    try:
+        training_days = NutritionSharedCampContext(weekly_training_frequency=recorded_frequency).weekly_training_frequency
+    except ValidationError:
+        # Older session-based records cannot be converted into training days without user input.
+        # Only the read model is left unset; the saved intake is unchanged.
+        training_days = None
+
     shared = NutritionSharedCampContext.model_validate(
         {
             "fight_date": _coerce_optional_str(raw_shared.get("fight_date"))
@@ -425,9 +437,7 @@ def _build_shared_camp_context(
             "phase_override": _coerce_optional_str(raw_shared.get("phase_override")),
             "fatigue_level": _coerce_optional_str(raw_shared.get("fatigue_level"))
             or _coerce_optional_str(raw_payload.get("fatigue_level")),
-            "weekly_training_frequency": raw_shared.get("weekly_training_frequency")
-            if raw_shared.get("weekly_training_frequency") is not None
-            else raw_payload.get("weekly_training_frequency"),
+            "weekly_training_frequency": training_days,
             "training_availability": raw_shared.get("training_availability")
             or raw_payload.get("training_availability")
             or [],
