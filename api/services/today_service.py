@@ -3300,6 +3300,22 @@ def build_today_command_view(
         )
 
 
+def _with_added_rehab_note(reason: str | None, *, before_cooldown: bool) -> str:
+    """Say on the day's guidance that reviewed rehab was added to the session.
+
+    The reason is title / detail / action lines (one line is the detail alone);
+    the note joins the detail so the day's verdict and action are unchanged.
+    """
+    note = ("Your reviewed rehab is added to today's session, before the cool-down." if before_cooldown
+            else "Your reviewed rehab is added to today's session.")
+    lines = [line for line in (reason or "").split("\n") if line.strip()]
+    if not lines:
+        return note
+    at = 1 if len(lines) >= 2 else 0
+    lines[at] = f"{lines[at].rstrip()} {note}"
+    return "\n".join(lines)
+
+
 def _build_today_command_view(
     store: AppStore,
     *,
@@ -3833,6 +3849,13 @@ def _build_today_command_view(
                 view.today.recommendation_reason = "Reviewed rehab today\n" + live.get("training_hold_reason", "Your planned training is held by the current injury restrictions.") + "\nFollow only the reviewed rehab shown today."
             else:
                 view.today.recommendation_reason = "Session adjusted\nCurrent injury restrictions changed today's work.\nFollow the adjusted session shown and its current injury restrictions."
+        session_blocks = live["session"].get("blocks", [])
+        rehab_at = [i for i, block in enumerate(session_blocks) if block.get("block_type") == "rehab"
+                    and block.get("policy_id") and not block.get("_policy_held")]
+        if (rehab_at and not live["safety_hold"] and not live.get("rehab_only")
+                and view.today.decision_tier in {"green", "modify"}):
+            view.today.recommendation_reason = _with_added_rehab_note(view.today.recommendation_reason,
+                before_cooldown=any(block.get("block_type") == "cooldown_recovery" for block in session_blocks[rehab_at[-1]:]))
         if policy_changed_guidance:
             view.today.recommendation_trigger_labels = list(dict.fromkeys([*view.today.recommendation_trigger_labels, "Current injury restrictions"]))
             view.today.recommendation_sources = list(dict.fromkeys([*view.today.recommendation_sources, "your tracked injuries"]))

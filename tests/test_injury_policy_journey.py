@@ -197,6 +197,31 @@ def test_new_injury_gets_rehab_on_rest_day_and_unknown_training_is_held(reviewed
     assert unknown == original
 
 
+def test_rehab_added_to_training_goes_before_the_cool_down(reviewed):
+    decision = decide(reviewed)
+    session = {"session_id": "s-1", "session_type": "strength_power", "blocks": [
+        {"block_id": "warm", "block_type": "mobility_activation", "mechanical_load_regions": [], "tags": [], "contact_level": "none"},
+        {"block_id": "press", "block_type": "strength", "mechanical_load_regions": ["chest"], "tags": [], "contact_level": "none"},
+        {"block_id": "cool", "block_type": "cooldown_recovery", "mechanical_load_regions": [], "tags": [], "contact_level": "none"}]}
+    live = reconcile_session_prescription(session, decisions=[decision], plan_id=PLAN, training_day=DAY)
+    assert not live["safety_hold"] and not live["rehab_only"] and "training_hold_reason" not in live
+    kinds = [block["block_type"] for block in live["session"]["blocks"]]
+    assert kinds[:2] == ["mobility_activation", "strength"] and kinds[-1] == "cooldown_recovery"
+    assert set(kinds[2:-1]) == {"rehab"}
+    # No cool-down: rehab closes the session.
+    session["blocks"] = session["blocks"][:2]
+    live = reconcile_session_prescription(session, decisions=[decision], plan_id=PLAN, training_day=DAY)
+    assert live["session"]["blocks"][-1]["block_type"] == "rehab"
+
+
+def test_added_rehab_note_keeps_the_days_verdict_and_action():
+    from api.services.today_service import _with_added_rehab_note
+    assert _with_added_rehab_note("All clear today.", before_cooldown=True) == (
+        "All clear today. Your reviewed rehab is added to today's session, before the cool-down.")
+    assert _with_added_rehab_note("Keep it light\nSleep was short.\nCut the volume.", before_cooldown=False) == (
+        "Keep it light\nSleep was short. Your reviewed rehab is added to today's session.\nCut the volume.")
+
+
 def test_substitution_requires_same_role_and_workload(reviewed):
     block = {"block_id": "b-1", "role": "control", "dose": {"sets": 1, "reps": 2},
              "mechanical_load_regions": ["ankle"], "contact_level": "none"}

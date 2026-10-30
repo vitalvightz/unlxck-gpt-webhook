@@ -670,6 +670,10 @@ def reconcile_session_prescription(
     if allocation_ceiling in (1, 2):
         day_budget = min(day_budget, allocation_ceiling)
     budget = max(0, day_budget - rehab_allocation_count(blocks))
+    # Added rehab goes before the closing cool-down, not after it.
+    rehab_at = len(blocks)
+    while rehab_at and blocks[rehab_at - 1].get("block_type") == "cooldown_recovery":
+        rehab_at -= 1
     for index, decision in enumerate(sorted((d for d in prescribed if (d["injury_id"], d["injury_episode_id"]) not in replaced),
                                              key=lambda d: d["injury_id"])):
         if athlete_owned:
@@ -677,7 +681,9 @@ def reconcile_session_prescription(
         if index >= budget:
             changes.append({"injury_id": decision["injury_id"], "action": "deferred", "reason": "rehab_slot_budget"})
             continue
-        blocks.extend(prescribed_blocks(decision))
+        added = prescribed_blocks(decision)
+        blocks[rehab_at:rehab_at] = added
+        rehab_at += len(added)
     if block_contact_ceiling and not blocks:
         hold = True
     entry["blocks"] = blocks
