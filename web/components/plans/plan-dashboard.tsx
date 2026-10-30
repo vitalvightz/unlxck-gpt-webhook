@@ -60,7 +60,7 @@ function formatWeeklyTrainingDays(value: number | null | undefined): string | nu
   if (!Number.isFinite(value) || value === null || value === undefined || value <= 0) {
     return null;
   }
-  return `${value} training day${value === 1 ? "" : "s"} per week`;
+  return value > 7 ? `${value} sessions per week (legacy)` : `${value} training day${value === 1 ? "" : "s"} per week`;
 }
 
 function countTrainingDays(availability: string[] | undefined): number | null {

@@ -250,7 +250,10 @@ function summarizeGoal(request: PlanRequest): string {
 
 function summarizeTrainingDays(request: PlanRequest): string {
   const labels = getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, request.training_availability);
-  const sessions = request.weekly_training_frequency ? `${request.weekly_training_frequency} training days/week` : "";
+  const frequency = request.weekly_training_frequency;
+  const sessions = !frequency ? "" : frequency > 7
+    ? `${frequency} sessions/week (legacy)`
+    : `${frequency} training days/week`;
   const days = formatList(labels, "No days set", 4);
   return sessions ? `${sessions} - ${days}` : days;
 }

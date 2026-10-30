@@ -42,7 +42,22 @@ test("quick build accepts seven training days and rejects eight", () => {
     "Training days per week must be between 1 and 7.");
   assert.equal(validateQuickBuildInput({...input, training_availability: input.training_availability.slice(0, 6)}).training_availability,
     "Training days per week cannot exceed selected available days.");
-  assert.equal(planRequestToQuickBuildInput({...plan, weekly_training_frequency: 10, training_availability: input.training_availability.slice(0, 6)}).weekly_training_frequency, 6);
+  const legacy = planRequestToQuickBuildInput({...plan, weekly_training_frequency: 10, training_availability: input.training_availability.slice(0, 6)});
+  assert.equal(legacy.weekly_training_frequency, 10);
+  assert.equal(legacy.training_availability.length, 6);
+  assert.equal(validateQuickBuildInput(legacy).weekly_training_frequency, "Training days per week must be between 1 and 7.");
+});
+
+test("normalises lowercase stored weekdays without losing frequency or sparring", () => {
+  const source = emptyPlanRequest();
+  source.weekly_training_frequency = 3;
+  source.training_availability = ["monday", "wednesday", "friday"];
+  source.hard_sparring_days = ["wednesday"];
+  const loaded = planRequestToQuickBuildInput(source);
+  assert.deepEqual(loaded.training_availability, ["Monday", "Wednesday", "Friday"]);
+  assert.deepEqual(loaded.hard_sparring_days, ["Wednesday"]);
+  assert.equal(loaded.weekly_training_frequency, 3);
+  assert.deepEqual(quickBuildToPlanRequest(loaded).training_availability, loaded.training_availability);
 });
 
 test("quick build rejects disabled weight cut goals", () => {
@@ -446,6 +461,6 @@ test("validateQuickBuildInput blocks more combat days than total weekly sessions
     hard_sparring_days: ["monday"],
     support_work_days: ["wednesday", "friday"],
   };
-  assert.match(validateQuickBuildInput(input).combat_sessions ?? "", /3 combat sessions but entered 2 total/);
+  assert.match(validateQuickBuildInput(input).combat_sessions ?? "", /3 combat days but entered 2 training days per week/);
   assert.equal(validateQuickBuildInput({ ...input, weekly_training_frequency: 3 }).combat_sessions, undefined);
 });

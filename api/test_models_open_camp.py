@@ -135,3 +135,24 @@ def test_training_days_per_week_rejects_out_of_range(days: int) -> None:
 def test_training_days_per_week_cannot_exceed_availability() -> None:
     with pytest.raises(ValidationError, match="cannot exceed selected training_availability days"):
         PlanRequest(athlete=_athlete(), weekly_training_frequency=3, training_availability=["Monday", "Wednesday"])
+
+
+@pytest.mark.parametrize("value", [1, 7, "7.0", None])
+def test_nutrition_training_days_accepts_valid_values(value: object) -> None:
+    from api.models import NutritionSharedCampContext
+    expected = None if value is None else int(float(value))
+    assert NutritionSharedCampContext(weekly_training_frequency=value).weekly_training_frequency == expected
+
+
+@pytest.mark.parametrize("value", [0, 8, 10, 14])
+def test_nutrition_training_days_rejects_legacy_session_counts(value: int) -> None:
+    from api.models import NutritionSharedCampContext
+    with pytest.raises(ValidationError, match="between 1 and 7"):
+        NutritionSharedCampContext(weekly_training_frequency=value)
+
+
+@pytest.mark.parametrize("value", [5.4, "5.4"])
+def test_nutrition_training_days_rejects_fractions(value: object) -> None:
+    from api.models import NutritionSharedCampContext
+    with pytest.raises(ValidationError, match="whole number"):
+        NutritionSharedCampContext(weekly_training_frequency=value)

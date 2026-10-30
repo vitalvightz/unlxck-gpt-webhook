@@ -222,7 +222,7 @@ function buildOverviewSections(athlete: AdminAthleteRecord): OverviewSection[] {
       { label: "Fight date", value: formatDateOnly(intake.fight_date), emphasize: true },
       { label: "Rounds format", value: formatValue(intake.rounds_format), emphasize: true },
       {
-        label: "Training days / week",
+        label: (intake.weekly_training_frequency ?? 0) > 7 ? "Sessions / week (legacy)" : "Training days / week",
         value: formatValue(intake.weekly_training_frequency),
         emphasize: true,
       },

@@ -86,6 +86,24 @@ _GUIDED_INJURY_SEVERITY_ALIASES = {
 }
 _HARD_SPARRING_DAY_CAP = 4
 
+
+def _parse_training_days_per_week(value: Any) -> int | None:
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    if isinstance(value, bool):
+        raise ValueError("weekly_training_frequency must be numeric")
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError, OverflowError):
+        raise ValueError("weekly_training_frequency must be numeric") from None
+    if not math.isfinite(numeric) or not numeric.is_integer():
+        raise ValueError("weekly_training_frequency must be a whole number")
+    parsed = int(numeric)
+    if not 1 <= parsed <= 7:
+        raise ValueError("weekly_training_frequency must be between 1 and 7")
+    return parsed
+
+
 # Upper bound on a manually submitted Stage 2 plan body (admin-only path).
 MANUAL_STAGE2_MAX_CHARS = 80_000
 
@@ -764,20 +782,8 @@ class NutritionSharedCampContext(BaseModel):
 
     @field_validator("weekly_training_frequency", mode="before")
     @classmethod
-    def coerce_frequency(cls, value: Any) -> Any:
-        if value is None:
-            return None
-        if isinstance(value, str):
-            normalized = value.strip()
-            if not normalized:
-                return None
-            try:
-                value = int(round(float(normalized)))
-            except ValueError:
-                raise ValueError("weekly_training_frequency must be numeric") from None
-        if isinstance(value, (int, float)):
-            return max(1, min(int(round(float(value))), 14))
-        return value
+    def coerce_frequency(cls, value: Any) -> int | None:
+        return _parse_training_days_per_week(value)
 
     @field_validator("session_types_by_day", mode="before")
     @classmethod
@@ -932,26 +938,8 @@ class PlanRequest(BaseModel):
 
     @field_validator("weekly_training_frequency", mode="before")
     @classmethod
-    def validate_weekly_training_frequency(cls, value: Any) -> Any:
-        if value is None:
-            return None
-        if isinstance(value, str):
-            normalized = value.strip()
-            if not normalized:
-                return None
-            try:
-                value = int(round(float(normalized)))
-            except ValueError:
-                raise ValueError("weekly_training_frequency must be numeric") from None
-        if isinstance(value, bool):
-            raise ValueError("weekly_training_frequency must be numeric")
-        if isinstance(value, (int, float)):
-            # Training frequency counts distinct days, not double-day workouts.
-            parsed = int(round(float(value)))
-            if parsed < 1 or parsed > 7:
-                raise ValueError("weekly_training_frequency must be between 1 and 7")
-            return parsed
-        return value
+    def validate_weekly_training_frequency(cls, value: Any) -> int | None:
+        return _parse_training_days_per_week(value)
 
     @field_validator("no_scheduled_fight", mode="before")
     @classmethod

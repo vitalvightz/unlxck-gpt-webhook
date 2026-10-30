@@ -65,17 +65,17 @@ export function emptyQuickBuildInput(fullName = ""): QuickBuildInput {
   };
 }
 
+function normalizeTrainingDays(values: string[] | undefined): string[] {
+  return (values ?? []).map((day) =>
+    TRAINING_AVAILABILITY_OPTIONS.find((option) => option.value.toLowerCase() === day.trim().toLowerCase())?.value,
+  ).filter((day): day is string => Boolean(day));
+}
+
 export function planRequestToQuickBuildInput(plan: PlanRequest): QuickBuildInput {
   const guidedInjuries = plan.guided_injuries?.length ? plan.guided_injuries : plan.guided_injury ? [plan.guided_injury] : [];
-  const trainingAvailability = retainKnownOptionValues(
-    plan.training_availability ?? [],
-    TRAINING_AVAILABILITY_OPTIONS,
-  );
-  const weeklyFrequencyRaw = plan.weekly_training_frequency ?? 4;
-  const weeklyFrequency = Math.min(
-    Math.max(Number.isFinite(weeklyFrequencyRaw) ? weeklyFrequencyRaw : 4, 1),
-    Math.max(trainingAvailability.length, 1),
-  );
+  const trainingAvailability = normalizeTrainingDays(plan.training_availability);
+  // Preserve legacy session counts until the athlete explicitly selects days.
+  const weeklyFrequency = plan.weekly_training_frequency ?? 4;
   return {
     full_name: plan.athlete?.full_name ?? "",
     technical_style: retainKnownOptionValues(
@@ -91,16 +91,11 @@ export function planRequestToQuickBuildInput(plan: PlanRequest): QuickBuildInput
     rounds_format: plan.rounds_format || "3 x 3",
     weekly_training_frequency: weeklyFrequency,
     training_availability: trainingAvailability,
-    hard_sparring_days: retainKnownOptionValues(
-      plan.hard_sparring_days ?? [],
-      TRAINING_AVAILABILITY_OPTIONS,
-    )
+    hard_sparring_days: normalizeTrainingDays(plan.hard_sparring_days)
       .filter((day) => trainingAvailability.includes(day))
       .slice(0, HARD_SPARRING_DAY_CAP),
-    support_work_days: retainKnownOptionValues(
-      plan.support_work_days ?? [],
-      TRAINING_AVAILABILITY_OPTIONS,
-    ).filter((day) => trainingAvailability.includes(day)),
+    support_work_days: normalizeTrainingDays(plan.support_work_days)
+      .filter((day) => trainingAvailability.includes(day)),
     equipment_access: retainKnownOptionValues(
       canonicalizeEquipmentAccessValues(plan.equipment_access ?? []),
       EQUIPMENT_ACCESS_OPTIONS,
@@ -244,6 +239,7 @@ export function quickBuildToPlanRequest(
   const base = emptyPlanRequest(trimmedName);
   const keyGoals = retainKnownOptionValues(input.key_goals, KEY_GOAL_OPTIONS);
   const weakAreas = retainKnownOptionValues(input.weak_areas, WEAK_AREA_OPTIONS);
+  const trainingAvailability = normalizeTrainingDays(input.training_availability);
   const plan: PlanRequest = {
     ...base,
     athlete: {
@@ -261,12 +257,12 @@ export function quickBuildToPlanRequest(
     // Quick Build does not ask for fatigue. Do not turn absence into a health
     // self-report; JSON serialization omits this optional field.
     fatigue_level: undefined,
-    training_availability: retainKnownOptionValues(input.training_availability, TRAINING_AVAILABILITY_OPTIONS),
-    hard_sparring_days: retainKnownOptionValues(input.hard_sparring_days, TRAINING_AVAILABILITY_OPTIONS)
-      .filter((day) => input.training_availability.includes(day))
+    training_availability: trainingAvailability,
+    hard_sparring_days: normalizeTrainingDays(input.hard_sparring_days)
+      .filter((day) => trainingAvailability.includes(day))
       .slice(0, HARD_SPARRING_DAY_CAP),
-    support_work_days: retainKnownOptionValues(input.support_work_days, TRAINING_AVAILABILITY_OPTIONS)
-      .filter((day) => input.training_availability.includes(day)),
+    support_work_days: normalizeTrainingDays(input.support_work_days)
+      .filter((day) => trainingAvailability.includes(day)),
     equipment_access: retainKnownOptionValues(
       canonicalizeEquipmentAccessValues(input.equipment_access),
       EQUIPMENT_ACCESS_OPTIONS,
