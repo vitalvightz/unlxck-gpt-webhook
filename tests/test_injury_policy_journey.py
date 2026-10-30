@@ -723,7 +723,8 @@ def test_no_contact_alone_does_not_hold_fitness_or_support_without_contact_metad
     session = {"session_id": "s", "session_type": "strength", "blocks": [block]}
     snapshot = reconcile_session_prescription(session, decisions=[decision], plan_id=PLAN, training_day=DAY)
     assert snapshot["session"]["session_id"] == "s"
-    assert snapshot["session"]["blocks"][0] == block
+    # Added rehab sits before a closing cool-down, so look the block up by id.
+    assert next(b for b in snapshot["session"]["blocks"] if b["block_id"] == "b") == block
     assert not snapshot["safety_hold"] and not snapshot["rehab_only"]
     assert not snapshot["changes"]
 
