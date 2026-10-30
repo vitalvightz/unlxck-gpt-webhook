@@ -189,6 +189,9 @@ def structured_stacking_findings(plan: dict) -> list[dict]:
                     item = {
                         "name": block.get("display_name") or block.get("name"),
                         "block_type": block.get("block_type"),
+                        "effective_prescription": block.get("prescription_text"),
+                        "rounds": block.get("rounds"),
+                        "effective_rounds": block.get("effective_rounds"),
                     }
                     for field in ("duration", "distance"):
                         measured = block.get(field)
