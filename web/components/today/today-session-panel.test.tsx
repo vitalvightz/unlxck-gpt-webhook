@@ -932,7 +932,7 @@ function reviewedSessionState(held: boolean): TodayCommandView {
       session_scope: "today", session_label: "Today's session", completion_status: held ? "started" : "not_started",
     },
     live_prescription: {
-      revision: "a".repeat(64), safety_hold: held, frozen: held, changes: [{ action: "held" }],
+      revision: "a".repeat(64), safety_hold: held, frozen: held, rehab_only: true, changes: [{ action: "held" }],
       session: { session_id: "rehab-2026-08-01", title: "Today's rehab", session_type: "rehab",
         blocks: [{ block_id: "reviewed-1", block_type: "rehab", display_name: "Reviewed test rehab" }] },
     },
@@ -1122,7 +1122,7 @@ test("one live rehab session renders every reviewed bundle drill", () => {
   };
   state.live_prescription = {
     revision: "a".repeat(64),
-    safety_hold: false, frozen: false, changes: [],
+    safety_hold: false, frozen: false, rehab_only: true, changes: [],
     session: {
       session_id: "rehab-2026-09-25", title: "Today's rehab", session_type: "rehab",
       blocks: [
@@ -1137,6 +1137,21 @@ test("one live rehab session renders every reviewed bundle drill", () => {
   assert.match(html, /Reviewed supported balance/);
   assert.match(html, /Reviewed heel lowering/);
   assert.equal((html.match(/>Completed</g) ?? []).length, 1);
+});
+
+test("a planned mobility session typed rehab does not ask whether rehab was completed", () => {
+  // The plan types mobility support (Joint Prep) as "rehab". On a rehab
+  // recovery day the live prescription is that planned session, not rehab.
+  const state = contactDayState("green");
+  state.today.next_session = { session_id: "2026-09-25-joint-prep", title: "Joint Prep", session_relation: "today" };
+  state.live_prescription = {
+    revision: "a".repeat(64), safety_hold: false, frozen: false, rehab_only: false, changes: [],
+    session: { session_id: "2026-09-25-joint-prep", title: "Joint Prep", session_type: "rehab",
+      blocks: [{ block_id: "joint-prep", block_type: "mobility_activation", display_name: "Joint Prep" }] },
+  };
+  const html = renderPanel(state);
+  assert.doesNotMatch(html, /Did you complete your rehab/);
+  assert.doesNotMatch(html, /Did you follow the guidance/);
 });
 
 test("contact actions respect live holds and reviewed rehab replacements", () => {
