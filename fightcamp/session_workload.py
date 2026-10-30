@@ -20,6 +20,21 @@ _MODALITIES = {
     "cycle": r"\b(?:cycle|cycling|bike|biking|ride|riding)\b",
     "row": r"\b(?:row|rowing|rower|erg)\b",
 }
+_DISTANCE_METERS = {
+    **dict.fromkeys(("m", "meter", "meters", "metre", "metres"), 1),
+    **dict.fromkeys(("km", "kilometer", "kilometers", "kilometre", "kilometres"), 1000),
+    **dict.fromkeys(("mi", "mile", "miles"), 1609.344),
+    **dict.fromkeys(("yd", "yard", "yards"), 0.9144),
+}
+_DURATION_MINUTES = {
+    **dict.fromkeys(("s", "sec", "secs", "second", "seconds"), 1 / 60),
+    **dict.fromkeys(("m", "min", "mins", "minute", "minutes"), 1),
+    **dict.fromkeys(("h", "hr", "hrs", "hour", "hours"), 60),
+}
+_DISTANCE_RE = re.compile(
+    r"\b(\d+(?:\.\d+)?)\s*(" + "|".join(map(re.escape, _DISTANCE_METERS)) + r")\b",
+    re.I,
+)
 
 
 def _number(value) -> float:
@@ -83,20 +98,8 @@ def substantial_endurance(item: Mapping) -> bool:
     ):
         minutes = float(hours[1]) * 60
     distance = _number(metadata.get("distance_m"))
-    if not distance and (
-        match := re.search(
-            r"\b(\d+(?:\.\d+)?)\s*(km|kilomet(?:er|re)s?|miles?|m|met(?:er|re)s?)\b",
-            duration,
-            re.I,
-        )
-    ):
-        distance = float(match[1]) * (
-            1000
-            if match[2].lower().startswith("k")
-            else 1609.344
-            if match[2].lower().startswith("mile")
-            else 1
-        )
+    if not distance and (match := _DISTANCE_RE.search(duration)):
+        distance = float(match[1]) * _DISTANCE_METERS[match[2].lower()]
     return bool(
         (minutes is not None and minutes >= 30)
         or distance >= _DISTANCE_FLOORS[modality]
@@ -198,24 +201,12 @@ def structured_stacking_findings(plan: dict) -> list[dict]:
                         if isinstance(measured, dict):
                             value, unit = (
                                 _number(measured.get("value")),
-                                str(measured.get("unit") or "").lower(),
+                                str(measured.get("unit") or "").strip().lower(),
                             )
-                            if field == "duration":
-                                item["duration_min"] = (
-                                    value / 60
-                                    if unit in {"s", "sec", "seconds"}
-                                    else value * 60
-                                    if unit in {"h", "hours"}
-                                    else value
-                                )
-                            else:
-                                item["distance_m"] = value * (
-                                    1000
-                                    if unit in {"km", "kilometers", "kilometres"}
-                                    else 1609.344
-                                    if unit in {"mile", "miles"}
-                                    else 1
-                                )
+                            factors = _DURATION_MINUTES if field == "duration" else _DISTANCE_METERS
+                            factor = factors.get(unit)
+                            if factor is not None:
+                                item["duration_min" if field == "duration" else "distance_m"] = value * factor
                     items.append(item)
                 label = str(session.get("title") or "")
                 if session.get("session_type") == "strength_power":
