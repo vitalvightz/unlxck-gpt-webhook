@@ -8,47 +8,20 @@ import {
 } from "./api";
 import { percent } from "./product-analytics";
 
-test("no consent means no interaction requests; opt-in and withdrawal are account scoped", async () => {
+test("beta events send without a preference read and retry with the same identity", async () => {
   const original = globalThis.fetch;
-  const calls: { path: string; body: unknown }[] = [];
-  let enabled = false;
+  const bodies: string[] = [];
   globalThis.fetch = async (input, init) => {
-    const path = String(input);
-    const body = init?.body ? JSON.parse(String(init.body)) : null;
-    calls.push({ path, body });
-    if (path.endsWith("/preference")) {
-      if (init?.method === "PUT") enabled = body.enabled;
-      return new Response(JSON.stringify({ enabled }), { status: 200 });
-    }
-    return new Response(JSON.stringify({ accepted: true }), { status: 202 });
+    assert.ok(String(input).endsWith("/events"));
+    bodies.push(String(init?.body));
+    return new Response(JSON.stringify(bodies.length === 1 ? { detail: "temporary" } : { accepted: true }), { status: bodies.length === 1 ? 503 : 202 });
   };
   try {
-    await trackProductEvent("unloaded-account", "timer_started", "timer");
-    assert.equal(calls.length, 0);
-    await getAnalyticsPreference("consent-account");
-    await trackProductEvent("consent-account", "timer_started", "timer");
-    assert.equal(calls.length, 1);
-    await setAnalyticsPreference("consent-account", true);
-    await trackProductEvent(
-      "consent-account",
-      "timer_started",
-      "timer",
-      "00000000-0000-4000-8000-000000000001",
-    );
-    const event = calls.find((c) => c.path.endsWith("/events"))!;
-    assert.deepEqual(event.body, {
-      event_name: "timer_started",
-      feature: "timer",
-      request_id: "00000000-0000-4000-8000-000000000001",
-    });
-    assert.equal(calls.filter((c) => c.path.endsWith("/events")).length, 1);
-    await trackProductEvent("other-account", "timer_started", "timer");
-    await setAnalyticsPreference("consent-account", false);
-    await trackProductEvent("consent-account", "timer_started", "timer");
-    assert.equal(calls.filter((c) => c.path.endsWith("/events")).length, 1);
-  } finally {
-    globalThis.fetch = original;
-  }
+    assert.equal(await trackProductEvent("no-choice", "timer_started", "timer"), true);
+    assert.equal(bodies.length, 2);
+    assert.equal(bodies[0], bodies[1]);
+    assert.deepEqual(Object.keys(JSON.parse(bodies[0])).sort(), ["event_name", "feature", "request_id"]);
+  } finally { globalThis.fetch = original; }
 });
 test("retry identities are stable, valid UUIDs and do not contain their input", async () => {
   const id = await productEventIdentity("flow:123:start");

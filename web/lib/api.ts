@@ -1698,8 +1698,7 @@ export function reportCommunityExercise(token: string, revision: string, reason:
   return requestVoid(`/api/community-exercises/revisions/${revision}/report`, { token, method: 'POST', body: JSON.stringify({ reason }) });
 }
 
-// Optional first-party interaction measurement. Preference is account scoped,
-// held only in memory and never presumed enabled when it cannot be loaded.
+// Legacy preference reads retained for older callers. Ingestion is automatic for beta accounts.
 const analyticsPreferences = new Map<string, { enabled: boolean; expires: number }>();
 export async function getAnalyticsPreference(token: string): Promise<{ enabled: boolean }> {
   const cached = analyticsPreferences.get(token);
@@ -1716,8 +1715,17 @@ export async function setAnalyticsPreference(token: string, enabled: boolean) {
 }
 export async function trackProductEvent(token: string, event_name: string, feature: string, request_id?: string, flow_id?: string) {
   try {
-    if (analyticsPreferences.get(token)?.enabled !== true) return;
-    await readJson("/api/analytics/events", { token, method: "POST", body: JSON.stringify({ event_name, feature, request_id: request_id ?? crypto.randomUUID(), flow_id }) });
+    const body = JSON.stringify({ event_name, feature, request_id: request_id ?? crypto.randomUUID(), flow_id });
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const result = await readJson<{ accepted: boolean }>("/api/analytics/events", { token, method: "POST", body });
+        return result.accepted;
+      } catch (error) {
+        if (error instanceof ApiError && error.status < 500 && error.status !== 429) return false;
+        if (attempt === 2) return false;
+        await new Promise(resolve => setTimeout(resolve, 250 * 2 ** attempt));
+      }
+    }
   } catch { /* Analytics must never prevent training or replace Sentry. */ }
 }
 

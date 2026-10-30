@@ -33,7 +33,7 @@ from typing import Iterable, Mapping, Sequence
 INTAKES_TABLE = "athlete_intakes"
 
 REQUIRED_TABLES: tuple[str, ...] = (
-    "product_events", "product_analytics_preferences", "product_analytics_excluded_emails",
+    "product_events", "product_analytics_preferences", "product_analytics_excluded_emails", "product_analytics_rollout",
     "profiles",
     "plans",
     "generation_jobs",
@@ -512,6 +512,7 @@ REQUIRED_NOTIFICATION_EVALUATIONS_COLUMNS: tuple[str, ...] = (
 REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
     "product_analytics_excluded_emails": ("email",),
     "product_events": ("id", "athlete_id", "event_name", "feature", "request_id", "flow_id", "created_at"),
+    "product_analytics_rollout": ("singleton", "started_at"),
     "product_analytics_preferences": ("athlete_id", "enabled", "consent_version", "updated_at"),
     "product_activity": ("id", "athlete_id", "occurred_at", "feature", "action", "meaningful", "flow_id"),
     "admin_athlete_rollups": ("last_meaningful_activity_at",),
@@ -765,7 +766,7 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
 # ---------------------------------------------------------------------------
 
 RLS_REQUIRED_TABLES: tuple[str, ...] = (
-    "product_events", "product_analytics_preferences", "product_analytics_excluded_emails",
+    "product_events", "product_analytics_preferences", "product_analytics_excluded_emails", "product_analytics_rollout",
     "private_video_assets",
     "private_exercise_media",
     "private_media_budget",

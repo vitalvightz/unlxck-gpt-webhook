@@ -94,7 +94,7 @@ test("a check-in's first answer records one start without any answer values", as
   });
 });
 
-test("a check-in sends nothing when consent was declined or withdrawn", async () => {
+test("beta check-in starts record without an optional choice", async () => {
   await withApi({}, async (events) => {
     await getAnalyticsPreference("checkin-declined");
     await setAnalyticsPreference("checkin-withdrawn", true);
@@ -109,7 +109,7 @@ test("a check-in sends nothing when consent was declined or withdrawn", async ()
         view.unmount();
       }
     }
-    assert.equal(events.length, 0);
+    assert.equal(events.length, 3);
   });
 });
 

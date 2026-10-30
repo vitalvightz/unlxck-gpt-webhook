@@ -1,4 +1,4 @@
-"""Effective-admin reports and strictly owner-bound optional event ingestion."""
+"""Effective-admin reports and strictly owner-bound beta event ingestion."""
 
 from typing import Literal
 from uuid import UUID
@@ -37,15 +37,17 @@ def build_product_analytics_router():
 
     @router.get("/api/analytics/preference")
     def preference(profile=Depends(require_profile), store=Depends(get_store)):
-        if getattr(profile, "is_minor", False):
-            return {"enabled": False}
         result = (
-            store.client.table("product_analytics_preferences")
-            .select("enabled")
-            .eq("athlete_id", profile.athlete_id)
+            store.client.table("profiles")
+            .select("analytics_excluded,role")
+            .eq("id", profile.athlete_id)
             .execute()
         )
-        enabled = bool(result.data and result.data[0]["enabled"])
+        enabled = bool(
+            result.data
+            and result.data[0]["role"] == "athlete"
+            and not result.data[0]["analytics_excluded"]
+        )
         email = (getattr(profile, "email", None) or "").strip().lower()
         if enabled:
             internal = (
@@ -63,31 +65,15 @@ def build_product_analytics_router():
     def save_preference(
         body: Preference, profile=Depends(require_profile), store=Depends(get_store)
     ):
-        if body.enabled and getattr(profile, "is_minor", False):
-            raise HTTPException(
-                403, "Optional product analytics is available to adults only"
-            )
-        result = store.client.rpc(
-            "set_product_analytics_preference",
-            {
-                "p_athlete_id": profile.athlete_id,
-                "p_enabled": body.enabled,
-            },
-        ).execute()
-        enabled = bool(result.data)
-        if body.enabled and not enabled:
-            raise HTTPException(
-                503,
-                "Optional product analytics is temporarily unavailable. Try again later.",
-            )
-        return {"enabled": enabled}
+        raise HTTPException(
+            409,
+            "Usage analytics is included in this private beta; there is no optional analytics switch.",
+        )
 
     @router.post("/api/analytics/events", status_code=202)
     def ingest(body: Event, profile=Depends(require_profile), store=Depends(get_store)):
-        if getattr(profile, "is_minor", False):
-            return {"accepted": False}
         if EVENT_FEATURES.get(body.event_name) != body.feature and not (
-            body.event_name == "frontend_error"
+            body.event_name in ("frontend_error", "page_viewed")
             and body.feature in (*FEATURES, "onboarding")
         ):
             raise HTTPException(422, "Unsupported event and feature combination")
@@ -118,7 +104,13 @@ def build_product_analytics_router():
         )
         if (
             not isinstance(result, dict)
-            or not {"optional_coverage", "training_records", "error_returns"}
+            or not {
+                "optional_coverage",
+                "training_records",
+                "error_returns",
+                "tracking_health",
+                "tracking_since",
+            }
             <= result.keys()
         ):
             raise HTTPException(
@@ -150,7 +142,7 @@ def build_product_analytics_router():
         result["athlete_total"] = len(result["athletes"])
         result["athletes"] = sorted(
             result["athletes"],
-            key=lambda p: (p["last_activity"] or "", p["id"]),
+            key=lambda p: (p.get("last_seen") or "", p["id"]),
             reverse=True,
         )[offset : offset + limit]
         result["offset"] = offset
@@ -171,7 +163,6 @@ def build_product_analytics_router():
             store.client.table("product_activity")
             .select("id,occurred_at,feature,action")
             .eq("athlete_id", str(athlete_id))
-            .eq("meaningful", True)
             .order("occurred_at", desc=True)
             .order("id")
             .range(offset, offset + limit - 1)

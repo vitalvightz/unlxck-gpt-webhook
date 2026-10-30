@@ -76,7 +76,7 @@ export function ProductAnalytics() {
         <div>
           <p className="kicker">Admin / B2C athletes</p>
           <h1>Product Analytics</h1>
-          <p className="muted">Verified actions. Clearer product decisions.</p>
+          <p className="muted">See who visits, what they use, and whether they come back.</p>
         </div>
         <Link className="ghost-button" href="/admin">
           Operational dashboard
@@ -172,6 +172,19 @@ export function ProductAnalytics() {
       ) : null}
       {!loading && !error && data ? (
         <>
+          <div className={styles.note} role="status">
+            <strong>{data.tracking_health?.healthy ? "Tracking collector ready" : "Tracking needs attention"}</strong>
+            <p>{data.tracking_health?.healthy
+              ? "The database is ready to receive beta usage events. Visits below confirm which accounts have actually sent events."
+              : "Usage events may be missing. Check the analytics migration and retention job before relying on visit counts."}</p>
+            <p>Automatic beta tracking since {stamp(data.tracking_since ?? null)}. Earlier visits were not recorded and cannot be recovered. Counts update when you refresh.</p>
+            <button className="secondary-button" onClick={() => setReload(n => n + 1)}>Refresh activity</button>
+          </div>
+          <div className={styles.grid}>
+            <Metric label="Visited today" value={data.visitors_today ?? null} definition="People who opened or returned to the app today. Each person counts once." />
+            <Metric label="Visited this week" value={data.visitors_7d ?? null} definition="People who opened the app in the last 7 days, including today." />
+            <Metric label="Visited this month" value={data.visitors_30d ?? null} definition="People who opened the app in the last 30 days, including today. A visit does not mean they trained." />
+          </div>
           <p className="muted">
             UTC calendar days · Updated {stamp(data.as_of)} · Admin and
             explicitly excluded internal accounts omitted. Acquisition channel:
@@ -185,7 +198,7 @@ export function ProductAnalytics() {
               timer interaction or nutrition save. Sign-ins, views, profile
               updates and generated plans are excluded. Existing records retain
               their original timestamps; missing interaction history is unknown.
-              Optional browser events require consent and expire after 180 days.
+              Beta feature events are recorded automatically and expire after 180 days. Visits and browsing are shown separately from training activity.
               Discovery, plan edit and nutrition save counts are deduplicated
               per feature, resource and UTC day. Counts represent recorded
               evidence and may undercount usage. Historical figures can change
@@ -264,13 +277,13 @@ export function ProductAnalytics() {
               {(["dau", "wau", "mau"] as const).map((k) => (
                 <Metric
                   key={k}
-                  label={k.toUpperCase()}
+                  label={k === "dau" ? "Used a feature today" : k === "wau" ? "Used a feature in 7 days" : "Used a feature in 30 days"}
                   value={data[k]}
                   definition={`Distinct meaningful athletes over ${k === "dau" ? 1 : k === "wau" ? 7 : 30} UTC calendar days, including today.`}
                 />
               ))}
               <Metric
-                label="Stickiness"
+                label="Daily users as a share of monthly users"
                 value={percent(data.stickiness)}
                 definition="DAU / MAU. No denominator means insufficient data."
               />
@@ -287,7 +300,7 @@ export function ProductAnalytics() {
               {[1, 7, 30].map((n) => (
                 <Metric
                   key={n}
-                  label={`D${n} retention`}
+                  label={`Returned ${n} day${n === 1 ? "" : "s"} after signup`}
                   value={percent(data.retention[n].percent)}
                   definition={`${data.retention[n].returned} returned / ${data.retention[n].eligible} signup-cohort athletes with a fully observed return day.`}
                 />
@@ -410,7 +423,7 @@ export function ProductAnalytics() {
                       ? "Feature opens not measured"
                       : `${f.discovered} athletes with an observed open`}
                     {f.coverage
-                      ? ` · ${measurementLabel(f.coverage)} for optional interactions`
+                      ? ` · ${measurementLabel(f.coverage)} for feature events`
                       : ""}
                   </p>
                   {f.feature === "plans" ? (
@@ -436,7 +449,7 @@ export function ProductAnalytics() {
                   ) : (
                     <p>
                       {f.coverage?.status === "not_measured"
-                        ? "Optional completion flow: Not measured."
+                        ? "Feature completion: no events recorded."
                         : "Completion rate unavailable: no separate measured completion flow."}
                     </p>
                   )}
@@ -510,7 +523,7 @@ export function ProductAnalytics() {
                     c.measurement_note
                       ? `${c.measurement_note}${c.converted === null ? "" : ` ${c.converted} / ${c.eligible} recorded.`}`
                       : c.eligible === null
-                        ? "Optional interactions are not measured for this population."
+                        ? "Feature events have not been recorded for these accounts."
                         : `${c.converted} / ${c.eligible} eligible${c.median_seconds === null ? "" : ` · median ${Math.round(c.median_seconds / 60)} minutes`}`
                   }
                 />
@@ -542,7 +555,7 @@ export function ProductAnalytics() {
                   <tr>
                     <th>Athlete</th>
                     <th>First action</th>
-                    <th>Last action</th>
+                    <th>Last seen in app</th>
                     <th>Active days 7 / 30</th>
                     <th>Inactive days</th>
                     <th>Observed signals</th>
@@ -557,7 +570,7 @@ export function ProductAnalytics() {
                         </Link>
                       </td>
                       <td>{stamp(p.first_activity)}</td>
-                      <td>{stamp(p.last_activity)}</td>
+                      <td>{stamp(p.last_seen ?? null)}</td>
                       <td>
                         {p.active_days_7} / {p.active_days_30}
                       </td>
@@ -590,7 +603,7 @@ export function ProductAnalytics() {
               Failed generation jobs use existing diagnostics. Other operation
               failures are observed prospectively; Sentry remains the source for
               frontend exceptions. No failure or abandonment is inferred from
-              missing events. Optional feature error coverage:{" "}
+              missing events. Feature error tracking coverage:{" "}
               {measurementLabel(data.coverage)}.
             </p>
             {data.errors.length ? (
@@ -658,18 +671,19 @@ export function AthleteActivityPanel({ athleteId }: { athleteId: string }) {
       ) : data ? (
         <>
           <div className={styles.grid}>
+            <Metric label="Last seen in app" value={stamp(data.summary.last_seen ?? null)} definition="Latest recorded visit, feature action or training save. No record means unknown, not proof they never visited." />
             <Metric
               label="Registered"
               value={stamp(data.summary.registered_at)}
               definition="Account registration timestamp."
             />
             <Metric
-              label="First meaningful action"
+              label="First feature action"
               value={stamp(data.summary.first_activity)}
               definition="Earliest verified meaningful action."
             />
             <Metric
-              label="Latest meaningful activity"
+              label="Latest feature action"
               value={stamp(data.summary.last_activity)}
               definition="Latest verified action, excluding generated plans and profile updates."
             />
@@ -725,7 +739,7 @@ export function AthleteActivityPanel({ athleteId }: { athleteId: string }) {
               </p>
             ))}
           </details>
-          <h3>Meaningful activity timeline</h3>
+          <h3>Activity timeline — visits, feature actions and training</h3>
           {data.timeline.length ? (
             <ol>
               {data.timeline.map((e) => (
