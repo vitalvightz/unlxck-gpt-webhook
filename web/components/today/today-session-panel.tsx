@@ -586,7 +586,9 @@ export function TodaySessionPanel({
   const sessionHasRehab = Boolean(livePrescription?.session.blocks?.some(block =>
     block.block_type === "rehab" && !isGuidanceOnlyRehabBlock(block)));
   const rehabChoiceRequired = (intent === "done" || reviewOpen) && sessionHasRehab;
-  const rehabOnlyPrescription = livePrescription?.session.session_type === "rehab";
+  // Only the server's standalone rehab occurrence is a rehab day. A planned
+  // mobility session (Joint Prep) is also typed "rehab" but is not rehab.
+  const rehabOnlyPrescription = livePrescription?.rehab_only === true;
   const sessionHasGuidanceRehab = Boolean(livePrescription?.session.blocks?.some(isGuidanceOnlyRehabBlock));
   // Followed guidance is all there is to report: no amount to choose.
   const guidanceOnlyRehab = sessionHasGuidanceRehab && !sessionHasRehab;
