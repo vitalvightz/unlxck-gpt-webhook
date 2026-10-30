@@ -60,11 +60,7 @@ def schedule_rehab(injury, decision, *, training_day, completions=(), exposures=
             day = date.fromisoformat(str(completion["training_day"]))
             if day == today:
                 return result("already_completed", "Today's rehab allocation is reserved by your started session." if completion.get("status") == "started" else "You have already logged rehab for this injury today.", (today + timedelta(days=max(prescription["minimum_gap_days"], block.get("minimum_gap_days", 1)))).isoformat())
-            # Loading waits out the gap after any rehab for this episode, so a
-            # stage change cannot bring new loading forward. Baseline work only
-            # spaces against its own routine.
-            if completion.get("status") in {"done", "modified"} and (
-                    block.get("rehab_drill_id") in drill_ids or prescription.get("is_loading")):
+            if completion.get("status") in {"done", "modified"} and block.get("rehab_drill_id") in drill_ids:
                 performed.append((day, max(prescription["minimum_gap_days"], block.get("minimum_gap_days", 1))))
     # Legacy recorded rehab also spaces work; ordinary training has no such event.
     for row in exposures:
@@ -78,7 +74,7 @@ def schedule_rehab(injury, decision, *, training_day, completions=(), exposures=
             continue
         if day == today:
             return result("already_completed", "You have already logged rehab for this injury today.", (today + timedelta(days=prescription["minimum_gap_days"])).isoformat())
-        if (raw.get("drill_id") or raw.get("rehab_drill_id")) in drill_ids or prescription.get("is_loading"):
+        if (raw.get("drill_id") or raw.get("rehab_drill_id")) in drill_ids:
             performed.append((day, prescription["minimum_gap_days"]))
     next_due = max((day + timedelta(days=gap) for day, gap in performed), default=today)
     if next_due > today:

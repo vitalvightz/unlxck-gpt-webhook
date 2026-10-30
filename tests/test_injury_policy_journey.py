@@ -185,11 +185,14 @@ def test_new_injury_gets_rehab_on_rest_day_and_unknown_training_is_held(reviewed
     snapshot = reconcile_session_prescription(None, decisions=[decision], plan_id=PLAN, training_day=DAY)
     assert snapshot["session"]["session_id"].startswith(f"rehab-{DAY}-")
     assert snapshot["session"]["blocks"][0]["injury_episode_id"] == decision["injury_episode_id"]
+    # Nothing planned was held, so rest-day rehab is additional work, not a hold.
+    assert "training_hold_reason" not in snapshot
     unknown = {"session_id": "s-1", "blocks": [{"block_id": "b-1", "block_type": "strength"}]}
     original = deepcopy(unknown)
     held = reconcile_session_prescription(unknown, decisions=[decision], plan_id=PLAN, training_day=DAY)
     assert not held["safety_hold"] and held["changes"][0]["action"] == "held"
     assert held["rehab_only"] and held["held_session_id"] == "s-1"
+    assert held["training_hold_reason"]
     assert all(block.get("policy_id") for block in held["session"]["blocks"])
     assert unknown == original
 

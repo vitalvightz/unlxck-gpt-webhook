@@ -713,7 +713,9 @@ def reconcile_session_prescription(
                 "allocation_limit": day_budget}
     if clearance_hold and hold and not any(d.get("outcome") == "medical_review" for d in decisions):
         snapshot["safety_hold_reason"] = clearance_hold
-    if hold or rehab_only:
+    # Standalone rehab with no planned session (a rest day, or training already
+    # logged) is additional work: nothing was held, so there is no hold reason.
+    if hold or (rehab_only and session is not None):
         reasons = {reason for change in changes for reason in change.get("restriction_reasons", [])}
         detail = ("The injury-loading details for your planned training are unavailable."
                   if reasons & {"missing_load_details", "unknown_load_regions"}

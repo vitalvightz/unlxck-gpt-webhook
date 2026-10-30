@@ -3822,7 +3822,10 @@ def _build_today_command_view(
             view.today.recommendation_state = "pull_back"
             view.today.decision_tier = "stop"
             view.today.recommendation_reason = "Session blocked\n" + live.get("safety_hold_reason", "This session is on hold for the current injury guidance.") + "\nDo not start this session. Review your injury guidance."
-        elif not live["safety_hold"] and view.today.decision_tier in {"green", "modify"} and (live.get("rehab_only") or live.get("changes")):
+        # Rehab added beside finished or absent training changes nothing: only a
+        # held planned session (it carries a hold reason) adjusts the guidance.
+        elif not live["safety_hold"] and view.today.decision_tier in {"green", "modify"} and (
+                (live.get("rehab_only") and live.get("training_hold_reason")) or live.get("changes")):
             policy_changed_guidance = True
             view.today.recommendation_state = "modify"
             view.today.decision_tier = "modify"

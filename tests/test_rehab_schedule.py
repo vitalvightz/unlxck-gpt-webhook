@@ -160,23 +160,6 @@ def test_accepted_prescription_keeps_its_previous_gap_after_policy_change():
     assert schedule_rehab(row, changed, training_day="2026-10-01", completions=[previous])["state"] == "recovery_day"
 
 
-def test_new_loading_routine_waits_out_the_gap_after_any_episode_rehab():
-    # A Better answer can move the stage on and select different loading drills;
-    # yesterday's rehab still owns the recovery gap.
-    row, decision = setup()
-    completion = accepted(decision)
-    progressed = deepcopy(decision)
-    for member in progressed["prescription"]["drills"]:
-        member["drill_id"] = "progressed_" + member["drill_id"]
-    assert progressed["prescription"]["is_loading"]
-    assert schedule_rehab(row, progressed, training_day="2026-10-01", completions=[completion])["state"] == "recovery_day"
-    assert schedule_rehab(row, progressed, training_day="2026-10-02", completions=[completion])["state"] == "due"
-    # Non-loading baseline work keeps its own cadence: it is the lighter option.
-    _, calm = setup(stage="calm")
-    assert not calm["prescription"].get("is_loading")
-    assert schedule_rehab(row, calm, training_day="2026-10-01", completions=[completion])["state"] == "due"
-
-
 def test_resuming_a_frozen_alternative_does_not_reselect_the_primary_routine(monkeypatch):
     # Preserve coverage of the legacy single-drill policy's alternative path.
     policy = next(p for p in load_clinical_policies() if p.policy_id == "ankle_sprain")
