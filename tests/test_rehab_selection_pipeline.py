@@ -178,7 +178,7 @@ def _block_has_drills(block: str) -> bool:
 
 
 @pytest.mark.parametrize("live_stage", [STAGE_CALM, STAGE_RESTORE])
-def test_stage_aware_selection_never_empties_a_block_the_bank_can_fill(live_stage):
+def test_stage_aware_selection_never_empties_a_block_the_bank_can_fill(live_stage, monkeypatch):
     """Across the whole real bank, turning selection on never removes rehab.
 
     Selection narrows *which* drill is prescribed. If it also silently removed
@@ -186,6 +186,10 @@ def test_stage_aware_selection_never_empties_a_block_the_bank_can_fill(live_stag
     professional" note where they used to get drills — which is what happens
     when an unmigrated bank field is treated as a rejection.
     """
+    # This sweep never edits policy files. Keep the real published input
+    # constant across bank pairs instead of repeatedly composing it from disk.
+    policies = load_clinical_policies()
+    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: policies)
     bank = rehab_protocols.get_rehab_bank()
     pairs = sorted(
         {
