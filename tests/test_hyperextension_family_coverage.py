@@ -229,8 +229,14 @@ def test_original_audit_hashes_ids_and_review_history_preserved():
 
 def test_previous_31_profiles_hashes_decisions_schedules_and_snapshots_unchanged(tmp_path):
     raw = read("data/rehab_pathways.json")
-    from tools.rehab_metadata_review_lib import before_achilles_load_activation
+    from tools.rehab_metadata_review_lib import before_achilles_load_activation, before_elbow_content_addition
     raw = before_achilles_load_activation(raw)
+    # #2984/#2986 republished profiles and bank content. Compare this dated
+    # rollout with the same hash-checked historical bank on both sides.
+    dated_bank, _ = before_elbow_content_addition(get_rehab_bank(), read("data/rehab_metadata_review.json"))
+    after_path = tmp_path / "after.json"
+    after_path.write_text(json.dumps(raw), encoding="utf-8")
+    after_policies = load_clinical_policies(after_path, bank=dated_bank)
     previous = read("tests/fixtures/rehab_profiles_before_hyperextension.json")
     assert len(previous) == 31
     previous_ids = {p["policy_id"] for p in previous}
@@ -238,7 +244,8 @@ def test_previous_31_profiles_hashes_decisions_schedules_and_snapshots_unchanged
     raw["profiles"] = previous
     baseline = tmp_path / "before.json"
     baseline.write_text(json.dumps(raw), encoding="utf-8")
-    for policy in load_clinical_policies(baseline):
+    before_policies = load_clinical_policies(baseline, bank=dated_bank)
+    for policy in before_policies:
         if policy.policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain", "shoulder_tendonitis"}:
             # Exact versioned activations are covered by their own journey and
             # baseline tests; every other profile still compares identically.
@@ -246,8 +253,8 @@ def test_previous_31_profiles_hashes_decisions_schedules_and_snapshots_unchanged
         for stage in ("calm", "restore"):
             for side in ("left", "unknown"):
                 row = injury(policy.region, policy.injury_type, stage, side=side)
-                old = resolve_injury_policy(row, policies=load_clinical_policies(baseline), bank=get_rehab_bank())
-                new = resolve(row)
+                old = resolve_injury_policy(row, policies=before_policies, bank=dated_bank)
+                new = resolve_injury_policy(row, policies=after_policies, bank=dated_bank)
                 assert old == new
                 assert schedule_rehab(row, old, training_day=DAY) == schedule_rehab(row, new, training_day=DAY)
                 assert reconcile_session_prescription(None, decisions=[old], plan_id=PLAN, training_day=DAY) == reconcile_session_prescription(None, decisions=[new], plan_id=PLAN, training_day=DAY)
