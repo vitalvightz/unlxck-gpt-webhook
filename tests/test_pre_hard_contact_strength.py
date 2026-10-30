@@ -1050,3 +1050,26 @@ def test_composition_leaves_pre_hard_receivers_for_conserving_redistribution() -
         only_roles={id(receiver)}, allow_relocation=False,
     )
     assert receiver["selected_exercise_assignments"] == before
+
+
+def test_transfer_records_calendar_day_before_prescriptions_stamp_it() -> None:
+    from fightcamp.calendar_context import role_d_day
+    from fightcamp.session_composition import rollback_invalid_dense_day_redistributions
+
+    weekly = _secondary_power_geometry()
+    slots = _transfer_slots()
+    _seed_main(weekly, *slots)
+    athlete = {"primary_goal": "power", "fatigue": "low"}
+    apply_pre_hard_contact_strength_exposure_cap(weekly, athlete)
+    week = weekly["weeks"][0]
+    receiver = next(r for r in week["session_roles"] if r.get("pre_hard_contact_microdose_only"))
+    receiver.pop("scheduled_d_day", None)
+    expected_day = role_d_day(week, receiver)
+    assert expected_day is not None
+    pools = _candidate_pools(*slots)
+    redistribute_pre_hard_power_from_main(weekly_role_map=weekly, candidate_pools=pools, athlete_model=athlete)
+    assert week["pre_hard_power_redistribution"]["receiver_original_d_day"] == expected_day
+    apply_effective_strength_prescriptions(weekly_role_map=weekly, candidate_pools=pools, athlete_model=athlete)
+    before = deepcopy(receiver["selected_exercise_assignments"])
+    assert not rollback_invalid_dense_day_redistributions(weekly, athlete_model=athlete)
+    assert receiver["selected_exercise_assignments"] == before

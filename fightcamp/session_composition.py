@@ -3056,7 +3056,7 @@ def redistribute_pre_hard_power_from_main(
             receiver["dense_day_receiver_provisional"] = True
             receiver.setdefault(
                 "dense_day_receiver_token",
-                f"{week.get('week_index')}:{receiver.get('scheduled_d_day')}",
+                f"{week.get('week_index')}:{role_d_day(week, receiver)}",
             )
             sources = [
                 role for role in roles
@@ -3243,7 +3243,7 @@ def redistribute_pre_hard_power_from_main(
                 # relocates or suppresses the proposed receiving appointment.
                 "source_strength_session_index": source.get("strength_session_index"),
                 "receiver_strength_session_index": receiver.get("strength_session_index"),
-                "receiver_original_d_day": receiver.get("scheduled_d_day"),
+                "receiver_original_d_day": role_d_day(week, receiver),
                 "receiver_token": receiver.get("dense_day_receiver_token"),
                 "original_source_assignments": original_source_assignments,
             }
