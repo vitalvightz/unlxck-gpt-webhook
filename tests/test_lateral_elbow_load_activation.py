@@ -361,14 +361,18 @@ def test_other_presentations_cannot_borrow_lateral_observations(description, kin
     assert view(b).open_injuries[0]["rehab_decision"]["stage"] != "load"
 
 
-def test_known_missing_responses_hold_but_no_history_allows_permission_entry():
+def test_missing_responses_and_history_hold_below_permission_ceiling():
     for field in ("during_response", "next_day_response"):
         b = bundle()
         next(iter(b[0].rehab_exposures.values()))["event_json"]["response"][field] = "not_reported"
         assert view(b).open_injuries[0]["rehab_decision"]["stage"] == "restore"
     b = bundle()
-    b[0].rehab_exposures.clear()
     assert view(b).open_injuries[0]["rehab_decision"]["stage"] == "load"
+    b[0].rehab_exposures.clear()
+    # #3003: reported permission is a ceiling, never progression evidence.
+    decision = view(b).open_injuries[0]["rehab_decision"]
+    assert decision["stage"] == "restore"
+    assert "no_reviewed_stage_exposure" in decision["progression"]["next_transition"]["reason_codes"]
 
 
 def test_no_dynamic_return_or_training_grant():
