@@ -9,6 +9,7 @@ import {
   ExerciseRow,
   SessionCard,
   SessionlessDayCard,
+  TodayCard,
   StructuredPlanRenderer,
   weekStripCenterOffset,
 } from "./structured-plan-renderer";
@@ -2943,4 +2944,17 @@ test("How is shown only when the exercise has no demo video", async () => {
     const html = renderToStaticMarkup(<BlockCard block={{ ...block, ...video }} />);
     assert.doesNotMatch(html, /ex-execution-instructions/);
   }
+});
+
+test("legacy raw day and session labels do not reach the athlete renderer", () => {
+  const day = { today_card: { headline: "technical_combat" }, sessions: [] };
+  const headline = renderToStaticMarkup(<TodayCard day={day as never} />);
+  assert.match(headline, /Technical Combat/);
+  assert.doesNotMatch(headline, /technical_combat/);
+
+  const session = renderToStaticMarkup(<SessionCard session={{
+    session_id: "legacy", title: "technical_combat", session_type: "skill", blocks: [],
+  } as never} />);
+  assert.match(session, /Technical Combat/);
+  assert.doesNotMatch(session, /technical_combat/);
 });
