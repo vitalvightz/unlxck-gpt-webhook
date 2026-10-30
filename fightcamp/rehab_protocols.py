@@ -870,7 +870,10 @@ def _log_episode_selection(
 def is_rehab_guidance_name(name: str) -> bool:
     """Recognize advisory bank entries, including legacy rendered lines."""
     title = re.split(r"\s+[–—]\s+|:\s+", str(name), maxsplit=1)[0]
-    return bool(re.search(r"\b(?:activity guidance|safety guidance|medical advice|precautions|seek assessment)\b", title, re.I))
+    return bool(re.search(
+        r"\b(?:(?:activity|safety|protective|protection) guidance|medical advice|precautions|seek assessment)\b",
+        title, re.I,
+    ))
 
 
 def _reviewed_episode_option(episode: dict, location: str | None, phase: str):
