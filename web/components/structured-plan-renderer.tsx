@@ -82,6 +82,7 @@ import { PlanCalendar } from "@/components/plan-calendar";
 import {
   DECLARED_LIGHT_COMBAT_TITLE,
   formatPlanLabel,
+  humanizeIfRawEnum,
   isDeclaredLightCombatTitle,
   stripLeadingWeekday,
 } from "@/lib/plan-labels";
@@ -1224,11 +1225,11 @@ export function SessionCard({
   }, [defaultOpenBlocks]);
 
   const card = day?.today_card;
-  const title = stripLeadingWeekday(
+  const title = humanizeIfRawEnum(stripLeadingWeekday(
     ((session.blocks?.length ?? 0) > 0 && session.blocks!.every(isCalmRehabBlock) ? (cleanText(session.title) ?? "").replace(/rehab/gi, "guidance") : cleanText(session.title)) ||
     cleanText(card?.headline) ||
     titleize(cleanText(session.session_type) || "Session"),
-  );
+  ));
   const isDeclaredLightCombat = isDeclaredLightCombatTitle(title);
   const isTechnicalSession = /^(?:D[-−]\d+\s*[—–:-]\s*)?Technical[ -]only combat$/i.test(title);
   const sessionType = cleanText(session.session_type);
@@ -1579,7 +1580,7 @@ export function SessionCard({
 
 export function TodayCard({ day }: { day: StructuredDay }) {
   const card = day.today_card;
-  const headline = cleanText(card?.headline);
+  const headline = humanizeIfRawEnum(cleanText(card?.headline));
   const readiness = cleanText(card?.readiness_status);
   const warning = cleanText(card?.primary_warning);
   const nutrition = cleanText(card?.nutrition_summary);
@@ -2144,7 +2145,7 @@ function CalendarDayPanel({
   const items: Item[] = [
     ...(coachTitle ? [{ key: "coach", title: coachTitle, detail: null, glyph: "strength" as const }] : []),
     ...sessions.map((session, index): Item => {
-      const title = stripLeadingWeekday(cleanText(session.title) || titleize(cleanText(session.session_type) || "Session"));
+      const title = humanizeIfRawEnum(stripLeadingWeekday(cleanText(session.title) || titleize(cleanText(session.session_type) || "Session")));
       const duration = formatMeasured(session.planned_duration);
       const status = sessionCompletionInfo(day, session, completionOptions)?.display.label;
       const blocks = getBlocks(session);
@@ -3294,7 +3295,7 @@ export function StructuredPlanRenderer({
                       dayIndex={index}
                       countdown={formatCountdownLabel(day.countdown_label)}
                       weekday={openOngoing ? openTimelineDayLabel(displayDay, safePos + 1, `Training day ${index + 1}`) : weekdayLabel(restDate)}
-                      label={cleanText(day.today_card?.headline) || "Rest"}
+                      label={humanizeIfRawEnum(cleanText(day.today_card?.headline)) || "Rest"}
                       isCurrent={isCurrent}
                       currentLabel={calendarProgress.currentWeekPos != null ? "Today" : focusLabel}
                     />
