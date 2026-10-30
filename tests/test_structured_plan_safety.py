@@ -360,3 +360,59 @@ def test_athlete_facing_strings_includes_stop_rules():
 
     plan = {"weeks": [{"days": [{"sessions": [{"blocks": [{"stop_rules": ["Stop if punch speed collapses"]}]}]}]}]}
     assert "Stop if punch speed collapses" in athlete_facing_strings(plan)
+
+
+def test_normalization_humanizes_contact_without_changing_machine_role_keys():
+    from api.structured_plan_generation import normalize_structured_plan_candidate
+
+    plan = _valid_plan()
+    day = plan["weeks"][0]["days"][0]
+    day["planning_day_role_keys"] = ["technical_combat"]
+    day["today_card"]["headline"] = "technical_combat"
+    day["today_card"]["coach_led_contact"] = "technical_combat"
+
+    normalized = normalize_structured_plan_candidate(plan)
+    rendered_day = normalized["weeks"][0]["days"][0]
+    assert rendered_day["today_card"]["headline"] == "Technical Combat"
+    assert rendered_day["today_card"]["coach_led_contact"] == "Technical Combat"
+    assert rendered_day["planning_day_role_keys"] == ["technical_combat"]
+    assert day["today_card"]["coach_led_contact"] == "technical_combat"
+
+
+def test_internal_label_audit_excludes_metadata_but_catches_rendered_fields():
+    from api.structured_plan_safety import detect_internal_display_label_leakage
+
+    plan = _valid_plan()
+    day = plan["weeks"][0]["days"][0]
+    day["planning_day_role_keys"] = ["technical_combat"]
+    assert detect_internal_display_label_leakage(plan) == []
+
+    day["today_card"]["coach_led_contact"] = "technical_combat"
+    assert any("technical_combat" in item for item in detect_internal_display_label_leakage(plan))
+    day["today_card"]["coach_led_contact"] = "Technical rhythm only"
+    assert detect_internal_display_label_leakage(plan) == []
+
+    day["sessions"][0]["title"] = "opaque_internal_mode"
+    assert any("opaque_internal_mode" in item for item in detect_internal_display_label_leakage(plan))
+
+
+def test_unknown_internal_display_enum_blocks_structured_card_release():
+    plan = _valid_plan()
+    plan["nutrition"]["summary"] = "opaque_internal_mode"
+
+    outcome = build_structured_plan_outcome(
+        plan, raw_markdown=_faithful_source(plan), computed_support=_support()
+    )
+    assert outcome.status == "blocked_by_safety_audit"
+    assert outcome.structured_plan is None
+    assert any("opaque_internal_mode" in item for item in outcome.errors)
+
+
+def test_known_internal_contact_identifier_is_normalized_before_release():
+    plan = _valid_plan()
+    plan["weeks"][0]["days"][0]["today_card"]["coach_led_contact"] = "technical_combat"
+    outcome = build_structured_plan_outcome(
+        plan, raw_markdown=_faithful_source(plan), computed_support=_support()
+    )
+    assert outcome.status == "valid", outcome.errors
+    assert outcome.structured_plan["weeks"][0]["days"][0]["today_card"]["coach_led_contact"] == "Technical Combat"

@@ -1529,6 +1529,8 @@ def _coerce_optional_text(value: Any) -> str | None:
 def _normalize_today_card(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     out["headline"] = _coerce_str(out.get("headline"))
+    if out["headline"].strip().casefold() == "technical_combat":
+        out["headline"] = "Technical Combat"
     out["readiness_status"] = _enum(out.get("readiness_status"), _READINESS_VALUES, "train_as_planned")
     out["mindset_anchor"] = _normalize_mindset(out.get("mindset_anchor"))
     for key in ("primary_warning", "nutrition_summary", "weight_cut_warning"):
@@ -1538,7 +1540,7 @@ def _normalize_today_card(value: Any) -> dict[str, Any]:
     # non-empty string so the renderer never shows a blank contact block.
     contact = _coerce_str(out.get("coach_led_contact")).strip()
     if contact:
-        out["coach_led_contact"] = contact
+        out["coach_led_contact"] = "Technical Combat" if contact.casefold() == "technical_combat" else contact
     else:
         out.pop("coach_led_contact", None)
     reason = _coerce_str(out.get("contact_reason")).strip()
@@ -1594,7 +1596,8 @@ def _fold_coach_led_sessions_into_today_card(day: dict[str, Any]) -> None:
         card = _normalize_today_card(card)
         day["today_card"] = card
     if not _coerce_str(card.get("coach_led_contact")).strip():
-        card["coach_led_contact"] = contact_labels[0]
+        label = contact_labels[0]
+        card["coach_led_contact"] = "Technical Combat" if label.casefold() == "technical_combat" else label
     day["sessions"] = app_sessions
 
 

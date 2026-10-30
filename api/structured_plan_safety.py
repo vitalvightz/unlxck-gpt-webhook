@@ -154,23 +154,51 @@ def athlete_facing_strings(structured_plan: dict) -> list[str]:
         for day in _as_list(_as_dict(week).get("days")):
             day = _as_dict(day)
             card = _as_dict(day.get("today_card"))
-            for key in ("headline", "primary_warning", "nutrition_summary", "weight_cut_warning"):
+            for key in ("headline", "coach_led_contact", "contact_reason", "primary_warning", "nutrition_summary", "weight_cut_warning"):
                 if card.get(key):
                     strings.append(str(card[key]))
             strings.extend(_mindset_lines(card.get("mindset_anchor")))
             for session in _as_list(day.get("sessions")):
                 session = _as_dict(session)
+                for key in ("title", "objective"):
+                    if session.get(key):
+                        strings.append(str(session[key]))
                 strings.extend(_mindset_lines(session.get("mindset_anchor")))
                 for block in _as_list(session.get("blocks")):
                     block = _as_dict(block)
-                    if block.get("purpose"):
-                        strings.append(str(block["purpose"]))
+                    for key in ("display_name", "purpose"):
+                        if block.get(key):
+                            strings.append(str(block[key]))
                     for key in ("coaching_cues", "regression_options", "substitutions", "stop_rules"):
                         strings.extend(str(x) for x in _as_list(block.get(key)) if x)
                     for text_key in ("progression_rule", "deload_rule"):
                         if block.get(text_key):
                             strings.append(str(block[text_key]))
     return strings
+
+
+# --- internal athlete-facing labels ----------------------------------------
+
+# Internal identifiers are not presentation copy. Recognise known keys even
+# inside prose, and catch unknown raw snake_case labels occupying a whole field.
+_INTERNAL_LABEL_RE = re.compile(
+    r"\b(?:technical_combat|taper_micro_support|role_key|candidate_pool|planning_brief|"
+    r"stage2_payload|stage2_handoff|validator_report|why_log|render_contract)\b",
+    re.I,
+)
+_RAW_DISPLAY_ENUM_RE = re.compile(r"[a-z][a-z0-9]*(?:_[a-z0-9]+)+", re.I)
+
+
+def detect_internal_display_label_leakage(structured_plan: dict) -> list[str]:
+    findings: list[str] = []
+    seen: set[str] = set()
+    for value in athlete_facing_strings(structured_plan):
+        match = _INTERNAL_LABEL_RE.search(value)
+        label = match.group(0) if match else value.strip() if _RAW_DISPLAY_ENUM_RE.fullmatch(value.strip()) else ""
+        if label and label.casefold() not in seen:
+            seen.add(label.casefold())
+            findings.append(f"{LEAKAGE}: internal athlete-facing display label: {label}")
+    return findings
 
 
 # --- coach_gated leakage ----------------------------------------------------
@@ -452,6 +480,7 @@ def audit_structured_plan(structured_plan: dict, computed_support: dict | None =
         findings.extend(f"{CONFLICT}: {item['code']}: {item['message']}"
                         for item in structured_stacking_findings(structured_plan))
         findings.extend(detect_guidance_exercise_blocks(structured_plan))
+        findings.extend(detect_internal_display_label_leakage(structured_plan))
         findings.extend(detect_coach_gated_leakage(structured_plan, computed_support))
         findings.extend(detect_minor_guidance_leakage_findings(structured_plan, computed_support))
         findings.extend(detect_computed_support_conflicts(structured_plan, computed_support))
