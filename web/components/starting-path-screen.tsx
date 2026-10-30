@@ -80,7 +80,7 @@ export function StartingPathScreen() {
     </div>
     {/* Before the choices: each choice saves and leaves this screen at once.
         Still default-off and freely skippable; it never blocks a choice. */}
-    <details open><summary>Optional product analytics</summary><AnalyticsPreference /></details>
+    <AnalyticsPreference />
     <p className={styles.label}>Start with</p>
     <div className={styles.choices} aria-busy={Boolean(saving)}>
       <button className={styles.choice} type="button" disabled={Boolean(saving) || isSigningOut} onClick={() => void choose("plan_first")}>

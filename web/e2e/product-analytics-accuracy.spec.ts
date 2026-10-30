@@ -56,7 +56,7 @@ for (const width of [390, 1280]) {
         });
       if (url.pathname === "/api/admin/product-analytics") {
         requests.push(url.search);
-        const data = structuredClone(fixture);
+        const data = { ...structuredClone(fixture), tracking_health: { healthy: true }, tracking_since: "2026-10-30T00:00:00Z", visitors_today: 2, visitors_7d: 3, visitors_30d: 4 };
         const offset = Number(url.searchParams.get("offset") || 0);
         data.athletes = data.athletes.slice(offset, offset + 25);
         data.offset = offset;
@@ -97,9 +97,11 @@ for (const width of [390, 1280]) {
     await expect(
       page.getByRole("link", { name: "abcdef00", exact: true }),
     ).toBeVisible();
+    await expect(page.getByText("Tracking collector ready", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Visited today", exact: true })).toBeVisible();
     const history = page
       .locator("#analytics-2 details")
-      .filter({ hasText: "history" });
+      .filter({ has: page.locator("summary span", { hasText: /^history$/ }) });
     await history.locator("summary").click();
     await expect(history).toContainText(
       "Training logs do not establish a History visit",

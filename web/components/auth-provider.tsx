@@ -2,8 +2,9 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 
+import { usePathname } from "next/navigation";
 import { checkSignupAccess } from "@/app/signup/access-check";
-import { ApiError, getAnalyticsPreference, getMe } from "@/lib/api";
+import { ApiError, trackProductEvent, getMe } from "@/lib/api";
 import { clearSharedReads } from "@/lib/shared-reads";
 import { INVITE_PENDING_FLAG, INVITE_REQUIRED_HREF, needsInviteCheck } from "@/lib/signup-invite-guard";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
@@ -65,17 +66,28 @@ function applyAppearanceMode(mode: AppearanceMode) {
 }
 
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
-  // Load the optional choice once per authenticated account/token. Interaction
-  // hooks stay silent until an explicit opt-in has been loaded.
+  const pathname = usePathname();
   const [isReady, setIsReady] = useState(false);
   const [isMeHydrated, setIsMeHydrated] = useState(false);
   const [session, setSession] = useState<AppSession | null>(null);
   const [me, setMe] = useState<MeResponse | null>(null);
   useEffect(() => {
-    if (session?.access_token && me?.profile.role === "athlete" && !me.profile.is_minor) {
-      void getAnalyticsPreference(session.access_token).catch(() => {});
-    }
-  }, [session?.access_token, me?.profile.role, me?.profile.is_minor]);
+    if (!session?.access_token || me?.profile.role !== "athlete") return;
+    const token = session.access_token;
+    const recordVisit = () => {
+      if (document.visibilityState === "visible") void trackProductEvent(token, "app_opened", "onboarding");
+    };
+    recordVisit();
+    document.addEventListener("visibilitychange", recordVisit);
+    return () => document.removeEventListener("visibilitychange", recordVisit);
+  }, [session?.access_token, me?.profile.role]);
+  useEffect(() => {
+    if (!session?.access_token || me?.profile.role !== "athlete") return;
+    // Only categorical names leave the browser. Never send URLs, queries or IDs.
+    const section = pathname?.split("/")[1] ?? "";
+    const features: Record<string, string> = { plan: "plans", plans: "plans", today: "recovery", timer: "timer", history: "history", nutrition: "nutrition", strength: "strength", sparring: "sparring" };
+    void trackProductEvent(session.access_token, "page_viewed", features[section] ?? "onboarding");
+  }, [pathname, session?.access_token, me?.profile.role]);
   const [hasTransientMeError, setHasTransientMeError] = useState(false);
   const [appearancePreview, setAppearancePreview] = useState<AppearanceMode | null>(null);
   const handledAccessTokenRef = useRef<string | null>(null);
