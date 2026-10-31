@@ -821,7 +821,7 @@ function QuickBuildFormInner() {
     <form onSubmit={handleSubmit} className="onboarding-form quick-build-form">
       <section className="hero-panel">
         <p className="eyebrow">Quick Build</p>
-        <h1 className="hero-title">Generate a plan in about two minutes.</h1>
+        <h1 className="hero-title">Generate your plan in 5–10 minutes.</h1>
         <p className="muted">
           Safe defaults for fatigue, sparring and goals. Refine later in Camp Setup.
         </p>
