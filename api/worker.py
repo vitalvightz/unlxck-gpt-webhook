@@ -87,6 +87,30 @@ async def _run_morning_push_sweep_if_due(
 _MORNING_PUSH_SWEEP_TASK: dict[str, asyncio.Task[None] | None] = {"task": None}
 
 
+_PLAN_READY_EMAIL_TASK: dict[str, asyncio.Task[None] | None] = {"task": None}
+
+
+async def _run_plan_ready_email_sweep_if_due(
+    *, store: AppStore, state: dict[str, float], shutdown_event: asyncio.Event,
+) -> None:
+    """Deliver queued plan-ready emails independently of generation jobs."""
+    if shutdown_event.is_set() or time.monotonic() - state.get("last_sweep_at", 0.0) < 30:
+        return
+    running = _PLAN_READY_EMAIL_TASK["task"]
+    if running is not None and not running.done():
+        return
+    state["last_sweep_at"] = time.monotonic()
+
+    async def _sweep() -> None:
+        try:
+            from .services.plan_ready_email import deliver_pending_plan_ready_emails
+            await asyncio.to_thread(deliver_pending_plan_ready_emails, store)
+        except Exception:  # noqa: BLE001 - email must never affect job processing
+            logger.exception("[worker] plan-ready email sweep failed")
+
+    _PLAN_READY_EMAIL_TASK["task"] = asyncio.create_task(_sweep())
+
+
 class ContributionReplayState(TypedDict, total=False):
     last_sweep_at: float
     after_id: str | None
@@ -441,6 +465,7 @@ async def run_worker() -> None:
 
     recovery_sweep_state: dict[str, float] = {}
     morning_sweep_state: dict[str, float] = {}
+    plan_ready_email_sweep_state: dict[str, float] = {}
     morning_sweep_interval = _morning_push_sweep_interval_seconds()
     contribution_replay_state: ContributionReplayState = {}
     media_sweep_state: dict[str, float] = {}
@@ -456,6 +481,9 @@ async def run_worker() -> None:
                 max_concurrent_jobs=max_concurrent_jobs,
                 recovery_state=recovery_sweep_state,
                 recovery_interval_seconds=recovery_interval_seconds,
+            )
+            await _run_plan_ready_email_sweep_if_due(
+                store=store, state=plan_ready_email_sweep_state, shutdown_event=shutdown_event,
             )
             await _run_morning_push_sweep_if_due(
                 store=store,
