@@ -7,6 +7,8 @@ import Image from "next/image";
 import { usePwaRuntime } from "@/components/pwa-register";
 import {
   hasSeenInstallPrompt,
+  isInstagramBrowser,
+  PWA_INSTAGRAM_EXIT_SEEN_KEY,
   rememberInstallGuideDismissal,
   rememberInstallPromptSeen,
   resolveIosInstallBrowser,
@@ -83,25 +85,49 @@ const IOS_STEPS: Record<IosGuide, InstallStep[]> = {
   ],
 };
 
-/** One-time automatic offer after a saved session. Takes priority over the
+const INSTAGRAM_STEPS: InstallStep[] = [
+  { icon: <MoreIcon />, title: "Tap ••• in Instagram", hint: "Open the menu in Instagram’s in-app browser." },
+  { icon: <ShareIcon />, title: "Select Open in browser", hint: "It may say Open in Safari or Open in Chrome." },
+];
+
+/** Instagram entry guidance or a one-time install offer after a saved session. Takes priority over the
  * notification prompt for that moment and reuses the PWA runtime's install
  * detection; Settings keeps the manual route. */
 export function InstallPrompt() {
-  const { installAvailability, promptInstall } = usePwaRuntime();
+  const { installAvailability, isInstalled, promptInstall } = usePwaRuntime();
   const dialog = useRef<HTMLDialogElement>(null);
   const availability = useRef(installAvailability);
-  const [guide, setGuide] = useState<"native" | IosGuide | null>(null);
+  const [guide, setGuide] = useState<"native" | IosGuide | "instagram" | null>(null);
+  const instagramOffered = useRef(false);
   const [busy, setBusy] = useState(false);
   // A guide only stays up while the browser still offers that route.
-  const shown = guide === "native" ? installAvailability === "native" : guide !== null && installAvailability === "ios-manual";
+  const shown = guide === "instagram"
+    ? isInstalled === false
+    : guide === "native" ? installAvailability === "native" : guide !== null && installAvailability === "ios-manual";
 
   useEffect(() => {
     availability.current = installAvailability;
   }, [installAvailability]);
 
   useEffect(() => {
+    if (isInstalled !== false || guide !== null || instagramOffered.current ||
+        !isInstagramBrowser(navigator.userAgent) || !["/", "/signup", "/login"].includes(window.location.pathname)) return;
+    try {
+      if (window.sessionStorage.getItem(PWA_INSTAGRAM_EXIT_SEEN_KEY) !== null) return;
+    } catch { /* In-memory guard still prevents repeats during this visit. */ }
+    const timer = window.setInterval(() => {
+      if (!["/", "/signup", "/login"].includes(window.location.pathname)) { window.clearInterval(timer); return; }
+      if (document.visibilityState !== "visible" || document.querySelector('dialog[open], [aria-modal="true"]')) return;
+      window.clearInterval(timer);
+      setGuide("instagram");
+    }, 500);
+    return () => window.clearInterval(timer);
+  }, [isInstalled, guide]);
+
+  useEffect(() => {
     let timer: ReturnType<typeof setInterval> | undefined;
     const resolveGuide = () => {
+      if (isInstagramBrowser(navigator.userAgent)) return null;
       if (availability.current === "native") return "native";
       if (availability.current !== "ios-manual") return null;
       const browser = resolveIosInstallBrowser(navigator.userAgent);
@@ -135,7 +161,13 @@ export function InstallPrompt() {
       release();
       return;
     }
-    if (node.open) rememberInstallPromptSeen(window.localStorage);
+    if (node.open) {
+      if (guide === "instagram") {
+        instagramOffered.current = true;
+        try { window.sessionStorage.setItem(PWA_INSTAGRAM_EXIT_SEEN_KEY, "1"); }
+        catch { /* Only the current visit can be remembered. */ }
+      } else rememberInstallPromptSeen(window.localStorage);
+    }
     return () => {
       node.close();
       release();
@@ -164,9 +196,11 @@ export function InstallPrompt() {
         <Image src="/brand/unlxck-one-angle-48.png" alt="" width={28} height={28} className={promptStyles.mark} />
         <p className={promptStyles.eyebrow}>GET UNLXCK ON YOUR PHONE</p>
       </div>
-      <h2 id="install-prompt-title"><span className={styles.headline}>Your training. One tap away.</span></h2>
+      <h2 id="install-prompt-title"><span className={styles.headline}>{guide === "instagram" ? "Open UNLXCK outside Instagram." : "Your training. One tap away."}</span></h2>
       <p id="install-prompt-description" className={`${promptStyles.description} ${styles.description}`}>
-        Add UNLXCK to your Home Screen, like an app.
+        {guide === "instagram"
+          ? "Open UNLXCK in Safari or Chrome to add it to your Home Screen."
+          : "Add UNLXCK to your Home Screen, like an app."}
       </p>
       {guide === "native" ? (
         <button type="button" className={promptStyles.enable} onClick={() => void install()} disabled={busy}>
@@ -174,15 +208,17 @@ export function InstallPrompt() {
         </button>
       ) : (
         <>
-          <ol className={styles.steps} aria-label="Add UNLXCK to your Home Screen">
-            {IOS_STEPS[guide!].map((step) => (
+          <ol className={styles.steps} aria-label={guide === "instagram" ? "Open UNLXCK outside Instagram" : "Add UNLXCK to your Home Screen"}>
+            {(guide === "instagram" ? INSTAGRAM_STEPS : IOS_STEPS[guide!]).map((step) => (
               <li key={step.title}>
                 <span className={styles.stepIcon}>{step.icon}</span>
                 <span><strong>{step.title}</strong><small>{step.hint}</small></span>
               </li>
             ))}
           </ol>
-          <p className={styles.done}>That’s it. UNLXCK will be on your Home Screen.</p>
+          <p className={styles.done}>{guide === "instagram"
+            ? "No option? Copy the page link and paste it into Safari or Chrome."
+            : "That’s it. UNLXCK will be on your Home Screen."}</p>
           <button type="button" className={promptStyles.enable} onClick={() => dismiss()}>
             Got it<AddIcon />
           </button>
@@ -288,6 +324,7 @@ export function InstallUnlxck({ variant = "panel" }: { variant?: "panel" | "inli
   // animations retain a transform (they become the containing block and push
   // the sheet off-screen). Portaling to <body> keeps it viewport-anchored.
   const sheetBrowser = showGuide ? resolveIosInstallBrowser(navigator.userAgent) : "unsupported";
+  const inInstagram = showGuide && isInstagramBrowser(navigator.userAgent);
   const installSheet = showGuide
     ? createPortal(
         <div
@@ -320,12 +357,14 @@ export function InstallUnlxck({ variant = "panel" }: { variant?: "panel" | "inli
               </button>
             </div>
             <p id="pwa-install-sheet-description" className="muted">
-              {sheetBrowser === "unsupported"
-                ? "This browser can’t add to Home Screen. Open UNLXCK in Safari, then:"
-                : "Your browser’s Share menu adds UNLXCK to your Home Screen."}
+              {inInstagram
+                ? "Open UNLXCK in Safari or Chrome first. Use Instagram’s menu:"
+                : sheetBrowser === "unsupported"
+                  ? "This browser can’t add to Home Screen. Open UNLXCK in Safari, then:"
+                  : "Your browser’s Share menu adds UNLXCK to your Home Screen."}
             </p>
             <ol className="pwa-install-steps">
-              {IOS_STEPS[sheetBrowser === "unsupported" ? "safari" : sheetBrowser].map((step) => (
+              {(inInstagram ? INSTAGRAM_STEPS : IOS_STEPS[sheetBrowser === "unsupported" ? "safari" : sheetBrowser]).map((step) => (
                 <li key={step.title}>
                   <span className="pwa-install-step-icon">{step.icon}</span>
                   <span><strong>{step.title}</strong><small>{step.hint}</small></span>

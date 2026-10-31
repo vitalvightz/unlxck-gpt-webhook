@@ -6,11 +6,13 @@ import { createRoot } from "react-dom/client";
 import { InstallPrompt } from "./install-unlxck";
 import { PwaRegister } from "./pwa-register";
 import { INSTALL_PROMPT_EVENT, offerPushNotifications, PUSH_PROMPT_EVENT } from "@/lib/push-prompt";
-import { PWA_INSTALL_GUIDE_DISMISSED_KEY, PWA_INSTALL_PROMPT_SEEN_KEY } from "@/lib/pwa";
+import { PWA_INSTALL_GUIDE_DISMISSED_KEY, PWA_INSTALL_PROMPT_SEEN_KEY, PWA_INSTAGRAM_EXIT_SEEN_KEY } from "@/lib/pwa";
 import { SHEET_EXIT_MS } from "@/lib/use-sheet-exit";
 
 const SAFARI_26 = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1";
 const CHROME_IOS = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/141.0.0.0 Mobile/15E148 Safari/604.1";
+const INSTAGRAM_IOS = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 400.0.0";
+const INSTAGRAM_ANDROID = "Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Mobile Safari/537.36 Instagram 400.0.0";
 
 const prototype = window.HTMLDialogElement.prototype;
 prototype.showModal = function () { this.setAttribute("open", ""); };
@@ -123,4 +125,68 @@ test("iPhone Safari 26 shows the ••• → Share → Add to Home Screen rout
     assert.equal(noDialog(app.container), true);
     assert.equal(offer(), false, "a dismissed prompt is not offered again");
   } finally { await app.cleanup(); }
+});
+
+test("Instagram entry reuses the branded guide without consuming the later install offer", async () => {
+  window.sessionStorage.clear();
+  const app = await mount({ userAgent: INSTAGRAM_IOS });
+  try {
+    await wait();
+    const dialog = app.container.querySelector("dialog")!;
+    assert.ok(dialog);
+    assert.match(dialog.textContent!, /GET UNLXCK ON YOUR PHONE/);
+    assert.match(dialog.textContent!, /Open UNLXCK outside Instagram/);
+    assert.match(dialog.textContent!, /Tap ••• in Instagram/);
+    assert.match(dialog.textContent!, /Select Open in browser/);
+    assert.match(dialog.textContent!, /Copy the page link/);
+    assert.doesNotMatch(dialog.textContent!, /Tap Add to Home Screen/);
+    assert.equal(offer(), false, "the ordinary install prompt is not offered inside Instagram");
+    assert.equal(window.localStorage.getItem(PWA_INSTALL_PROMPT_SEEN_KEY), null);
+    assert.equal(window.sessionStorage.getItem(PWA_INSTAGRAM_EXIT_SEEN_KEY), "1");
+    await act(async () => button(dialog, "Maybe later")!.click());
+    await wait(SHEET_EXIT_MS + 50);
+  } finally { await app.cleanup(); }
+  const returnVisit = await mount({ userAgent: INSTAGRAM_IOS });
+  try {
+    await wait();
+    assert.equal(noDialog(returnVisit.container), true, "no repeat in the same Instagram browser session");
+  } finally { await returnVisit.cleanup(); window.sessionStorage.clear(); }
+});
+
+test("Android Instagram gets the exit instructions without a native install prompt", async () => {
+  window.sessionStorage.clear();
+  const app = await mount({ userAgent: INSTAGRAM_ANDROID });
+  try {
+    await wait();
+    assert.match(app.container.querySelector("dialog")?.textContent ?? "", /Select Open in browser/);
+    assert.equal(window.localStorage.getItem(PWA_INSTALL_PROMPT_SEEN_KEY), null);
+  } finally { await app.cleanup(); window.sessionStorage.clear(); }
+});
+
+test("Instagram entry waits for existing modals and excludes workouts and installed mode", async () => {
+  window.sessionStorage.clear();
+  const safety = document.createElement("dialog");
+  safety.setAttribute("open", "");
+  document.body.append(safety);
+  const app = await mount({ userAgent: INSTAGRAM_IOS });
+  try {
+    await wait();
+    assert.equal(noDialog(app.container), true);
+    safety.remove();
+    await wait();
+    assert.match(app.container.querySelector("dialog")?.textContent ?? "", /Open UNLXCK outside Instagram/);
+  } finally { safety.remove(); await app.cleanup(); window.sessionStorage.clear(); }
+
+  window.history.replaceState({}, "", "/today");
+  const working = await mount({ userAgent: INSTAGRAM_IOS });
+  try {
+    await wait();
+    assert.equal(noDialog(working.container), true);
+  } finally { await working.cleanup(); window.history.replaceState({}, "", "/"); window.sessionStorage.clear(); }
+
+  const installed = await mount({ userAgent: INSTAGRAM_IOS, standalone: true });
+  try {
+    await wait();
+    assert.equal(noDialog(installed.container), true);
+  } finally { await installed.cleanup(); window.sessionStorage.clear(); }
 });
