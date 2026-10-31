@@ -491,7 +491,7 @@ export function CurrentCampCard({
         <p className="muted">
           {hasSavedIntake
             ? "No active plan is selected. Make one of your saved plans active."
-            : "Set your goals and get a plan in about two minutes."}
+            : "Set your goals and get a plan in 5–10 minutes."}
         </p>
         {hasSavedIntake ? <Link href="/onboarding" className="cta">Resume Camp Setup</Link> :
           <Link href="/create" className="cta">Create a plan</Link>}

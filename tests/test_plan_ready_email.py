@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import httpx
+import logging
 from unittest.mock import MagicMock
 
 from api.services import plan_ready_email
@@ -118,3 +119,29 @@ def test_delivery_success_records_sent_at(monkeypatch):
     values = client.table.return_value.update.call_args.args[0]
     assert values["status"] == "sent"
     assert "sent_at" in values
+
+
+def test_missing_email_configuration_warns_once(monkeypatch, caplog):
+    monkeypatch.delenv("RESEND_API_KEY", raising=False)
+    monkeypatch.delenv("PLAN_READY_FROM_EMAIL", raising=False)
+    monkeypatch.delenv("FEEDBACK_FROM_EMAIL", raising=False)
+    plan_ready_email._warn_missing_config.cache_clear()
+    store = Store()
+    with caplog.at_level(logging.WARNING):
+        assert not plan_ready_email.send_plan_ready_email(store, athlete_id="a", plan_id="p", job_id="j")
+        assert plan_ready_email.deliver_pending_plan_ready_emails(store) == 0
+    assert caplog.text.count("email_not_configured") == 1
+
+
+def test_http_error_includes_status_code_without_response_body(monkeypatch, caplog):
+    monkeypatch.setenv("RESEND_API_KEY", "test-key")
+    monkeypatch.setenv("PLAN_READY_FROM_EMAIL", "UNLXCK <notifications@unlxck.test>")
+
+    def rejected(url, **kwargs):
+        return httpx.Response(422, text="private provider response", request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(plan_ready_email.httpx, "post", rejected)
+    with caplog.at_level(logging.ERROR):
+        assert not plan_ready_email.send_plan_ready_email(Store(), athlete_id="a", plan_id="p", job_id="j")
+    assert "status_code=422" in caplog.text
+    assert "private provider response" not in caplog.text
