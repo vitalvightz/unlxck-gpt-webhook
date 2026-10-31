@@ -727,7 +727,7 @@ async def persist_plan_and_finalize(
             heartbeat_at=terminal_at,
         )
     else:
-        completed_job = await asyncio.to_thread(
+        await asyncio.to_thread(
             store.complete_generation_job,
             job_id,
             expected_attempt_count=int(job.get("attempt_count") or 0),
@@ -737,20 +737,6 @@ async def persist_plan_and_finalize(
             completed_at=terminal_at,
             heartbeat_at=terminal_at,
         )
-        if (
-            final_status == "completed"
-            and str(completed_job.get("status") or "") == "completed"
-            and plan_status in {"ready", "publishable_with_flags"}
-        ):
-            try:
-                from ..services.plan_ready_email import send_plan_ready_email
-
-                await asyncio.to_thread(
-                    send_plan_ready_email, store, athlete_id=athlete_id,
-                    plan_id=plan_id or "", job_id=job_id,
-                )
-            except Exception:  # noqa: BLE001 - email cannot affect plan persistence
-                logger.exception("[plan_ready_email] delivery setup failed job_id=%s", job_id)
     emit_milestone(
         "generation_job_terminal_status_persisted",
         "Generation job terminal status persisted",
