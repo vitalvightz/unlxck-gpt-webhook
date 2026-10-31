@@ -6,6 +6,7 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 from email.utils import parseaddr
+from functools import lru_cache
 from html import escape
 from pathlib import Path
 from urllib.parse import quote
@@ -20,6 +21,11 @@ _RESEND_URL = "https://api.resend.com/emails"
 _TEMPLATE = Path(__file__).with_suffix(".html")
 
 
+@lru_cache(maxsize=1)
+def _warn_missing_config() -> None:
+    logger.warning("[plan_ready_email] disabled error_code=email_not_configured")
+
+
 def send_plan_ready_email(store: AppStore, *, athlete_id: str, plan_id: str, job_id: str) -> bool:
     """Best-effort delivery. A failed email never changes the generated plan."""
     api_key = os.getenv("RESEND_API_KEY", "").strip()
@@ -27,6 +33,7 @@ def send_plan_ready_email(store: AppStore, *, athlete_id: str, plan_id: str, job
     fallback_address = parseaddr(os.getenv("FEEDBACK_FROM_EMAIL", ""))[1]
     sender = configured_sender or (f"UNLXCK <{fallback_address}>" if fallback_address else "")
     if not api_key or not sender:
+        _warn_missing_config()
         return False
 
     plan = store.get_plan_for_athlete(plan_id, athlete_id)
@@ -59,7 +66,8 @@ def send_plan_ready_email(store: AppStore, *, athlete_id: str, plan_id: str, job
         logger.info("[plan_ready_email] sent job_id=%s plan_id=%s", job_id, plan_id)
         return True
     except Exception as exc:  # noqa: BLE001 - email must not break generation
-        logger.error("[plan_ready_email] failed job_id=%s error_type=%s", job_id, type(exc).__name__)
+        status_code = getattr(getattr(exc, "response", None), "status_code", None)
+        logger.error("[plan_ready_email] failed job_id=%s error_type=%s status_code=%s", job_id, type(exc).__name__, status_code)
         return False
 
 
@@ -69,6 +77,7 @@ def deliver_pending_plan_ready_emails(store: AppStore) -> int:
         os.getenv("PLAN_READY_FROM_EMAIL", "").strip()
         or parseaddr(os.getenv("FEEDBACK_FROM_EMAIL", ""))[1]
     ):
+        _warn_missing_config()
         return 0
 
     try:
