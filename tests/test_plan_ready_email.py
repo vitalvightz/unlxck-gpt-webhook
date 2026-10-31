@@ -81,7 +81,7 @@ def test_delivery_failure_is_queued_for_retry(monkeypatch):
     values = client.table.return_value.update.call_args.args[0]
     assert values["status"] == "pending"
     assert "next_attempt_at" in values
-    assert client.table.return_value.eq.call_count == 3
+    client.table.return_value.update.return_value.eq.assert_called_once_with("job_id", "job-1")
 
 
 def test_delivery_stops_after_six_failed_attempts(monkeypatch):
