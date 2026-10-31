@@ -39,7 +39,8 @@ export function RequireAuth({
       return;
     }
     if (isMeHydrated && !me) {
-      router.replace("/login");
+      const next = getSafePlanReturnHref(pathname);
+      router.replace(next ? `/login?next=${encodeURIComponent(next)}` : "/login");
       return;
     }
     if (adminOnly && role && role !== "admin") {
