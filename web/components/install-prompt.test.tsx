@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import "./test-dom";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
+import { PathnameContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime";
 import { InstallPrompt } from "./install-unlxck";
 import { PwaRegister } from "./pwa-register";
 import { INSTALL_PROMPT_EVENT, offerPushNotifications, PUSH_PROMPT_EVENT } from "@/lib/push-prompt";
@@ -22,16 +23,23 @@ async function wait(ms = 600) {
   await act(async () => { await new Promise(resolve => setTimeout(resolve, ms)); });
 }
 
-async function mount({ userAgent = SAFARI_26, standalone = false } = {}) {
+async function mount({ userAgent = SAFARI_26, standalone = false, pathname = "/" } = {}) {
   window.localStorage.clear();
   Object.defineProperty(window, "matchMedia", { configurable: true, value: () => ({ matches: standalone, addEventListener() {}, removeEventListener() {} }) });
   Object.defineProperty(navigator, "userAgent", { configurable: true, value: userAgent });
   const container = document.createElement("div");
   document.body.append(container);
   const root = createRoot(container);
-  await act(async () => root.render(<PwaRegister><InstallPrompt /></PwaRegister>));
+  const render = (path: string) => root.render(
+    <PwaRegister><PathnameContext.Provider value={path}><InstallPrompt /></PathnameContext.Provider></PwaRegister>,
+  );
+  await act(async () => render(pathname));
   await wait(30);
-  return { container, cleanup: async () => { await act(async () => root.unmount()); container.remove(); } };
+  return {
+    container,
+    navigate: async (path: string) => { await act(async () => render(path)); },
+    cleanup: async () => { await act(async () => root.unmount()); container.remove(); },
+  };
 }
 
 function offer() {
@@ -137,8 +145,8 @@ test("Instagram entry reuses the branded guide without consuming the later insta
     assert.match(dialog.textContent!, /GET UNLXCK ON YOUR PHONE/);
     assert.match(dialog.textContent!, /Open UNLXCK outside Instagram/);
     assert.match(dialog.textContent!, /Tap ••• in Instagram/);
-    assert.match(dialog.textContent!, /Select Open in browser/);
-    assert.match(dialog.textContent!, /Copy the page link/);
+    assert.match(dialog.textContent!, /Choose Open in external browser/);
+    assert.match(dialog.textContent!, /Copy the link instead/);
     assert.doesNotMatch(dialog.textContent!, /Tap Add to Home Screen/);
     assert.equal(offer(), false, "the ordinary install prompt is not offered inside Instagram");
     assert.equal(window.localStorage.getItem(PWA_INSTALL_PROMPT_SEEN_KEY), null);
@@ -158,7 +166,7 @@ test("Android Instagram gets the exit instructions without a native install prom
   const app = await mount({ userAgent: INSTAGRAM_ANDROID });
   try {
     await wait();
-    assert.match(app.container.querySelector("dialog")?.textContent ?? "", /Select Open in browser/);
+    assert.match(app.container.querySelector("dialog")?.textContent ?? "", /Choose Open in external browser/);
     assert.equal(window.localStorage.getItem(PWA_INSTALL_PROMPT_SEEN_KEY), null);
   } finally { await app.cleanup(); window.sessionStorage.clear(); }
 });
@@ -177,16 +185,65 @@ test("Instagram entry waits for existing modals and excludes workouts and instal
     assert.match(app.container.querySelector("dialog")?.textContent ?? "", /Open UNLXCK outside Instagram/);
   } finally { safety.remove(); await app.cleanup(); window.sessionStorage.clear(); }
 
-  window.history.replaceState({}, "", "/today");
-  const working = await mount({ userAgent: INSTAGRAM_IOS });
+  const working = await mount({ userAgent: INSTAGRAM_IOS, pathname: "/today" });
   try {
     await wait();
     assert.equal(noDialog(working.container), true);
-  } finally { await working.cleanup(); window.history.replaceState({}, "", "/"); window.sessionStorage.clear(); }
+    await working.navigate("/plans/plan-1");
+    await wait();
+    assert.match(working.container.querySelector("dialog")?.textContent ?? "", /Open UNLXCK outside Instagram/);
+  } finally { await working.cleanup(); window.sessionStorage.clear(); }
 
   const installed = await mount({ userAgent: INSTAGRAM_IOS, standalone: true });
   try {
     await wait();
     assert.equal(noDialog(installed.container), true);
   } finally { await installed.cleanup(); window.sessionStorage.clear(); }
+});
+
+test("a deep-linked plan opens the guide and Copy link strips sensitive URL parameters", async () => {
+  window.sessionStorage.clear();
+  window.history.replaceState({}, "", "/plans/demo?code=secret#access_token=secret");
+  const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  let copied = "";
+  Object.defineProperty(navigator, "clipboard", { configurable: true, value: {
+    writeText: async (value: string) => { copied = value; },
+  } });
+  const app = await mount({ userAgent: INSTAGRAM_IOS, pathname: "/plans/demo" });
+  try {
+    await wait();
+    const dialog = app.container.querySelector("dialog")!;
+    assert.match(dialog.textContent!, /Choose Open in external browser/);
+    await act(async () => button(dialog, "Copy link")!.click());
+    assert.equal(copied, "http://localhost/plans/demo");
+    assert.match(dialog.querySelector('[role="status"]')?.textContent ?? "", /Paste it into your phone/);
+    assert.match(button(dialog, "Link copied")?.textContent ?? "", /Link copied/);
+  } finally {
+    await app.cleanup();
+    window.history.replaceState({}, "", "/");
+    if (original) Object.defineProperty(navigator, "clipboard", original);
+    else Reflect.deleteProperty(navigator, "clipboard");
+    window.sessionStorage.clear();
+  }
+});
+
+test("clipboard failure explains the manual option without claiming success", async () => {
+  window.sessionStorage.clear();
+  const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  Object.defineProperty(navigator, "clipboard", { configurable: true, value: {
+    writeText: async () => { throw new Error("blocked"); },
+  } });
+  const app = await mount({ userAgent: INSTAGRAM_IOS });
+  try {
+    await wait();
+    const dialog = app.container.querySelector("dialog")!;
+    await act(async () => button(dialog, "Copy link")!.click());
+    assert.match(dialog.querySelector('[role="status"]')?.textContent ?? "", /Couldn’t copy automatically/);
+    assert.ok(button(dialog, "Copy link"));
+  } finally {
+    await app.cleanup();
+    if (original) Object.defineProperty(navigator, "clipboard", original);
+    else Reflect.deleteProperty(navigator, "clipboard");
+    window.sessionStorage.clear();
+  }
 });
